@@ -65,8 +65,39 @@ menu_items = (
         ),
     ),
     NavMenuTab(
-        name="Extensibility",
+        name="Secrets",
         weight=700,
+        groups=(
+            NavMenuGroup(
+                name="Secrets",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="extras:secret_list",
+                        name="Secrets",
+                        weight=100,
+                        permissions=["extras.view_secret"],
+                        buttons=(
+                            NavMenuAddButton(link="extras:secret_add", permissions=["extras.add_secret"]),
+                            NavMenuImportButton(link="extras:secret_import", permissions=["extras.add_secret"]),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:secretsgroup_list",
+                        name="Secret Groups",
+                        weight=200,
+                        permissions=["extras.view_secretsgroup"],
+                        buttons=(
+                            NavMenuAddButton(link="extras:secretsgroup_add", permissions=["extras.add_secretsgroup"]),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+    NavMenuTab(
+        name="Extensibility",
+        weight=800,
         groups=(
             NavMenuGroup(
                 name="Logging",
@@ -263,33 +294,8 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
-                name="Secrets",
-                weight=600,
-                items=(
-                    NavMenuItem(
-                        link="extras:secret_list",
-                        name="Secrets",
-                        weight=200,
-                        permissions=["extras.view_secret"],
-                        buttons=(
-                            NavMenuAddButton(link="extras:secret_add", permissions=["extras.add_secret"]),
-                            NavMenuImportButton(link="extras:secret_import", permissions=["extras.add_secret"]),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="extras:secretsgroup_list",
-                        name="Secret Groups",
-                        weight=300,
-                        permissions=["extras.view_secretsgroup"],
-                        buttons=(
-                            NavMenuAddButton(link="extras:secretsgroup_add", permissions=["extras.add_secretsgroup"]),
-                        ),
-                    ),
-                ),
-            ),
-            NavMenuGroup(
                 name="Miscellaneous",
-                weight=700,
+                weight=600,
                 items=(
                     NavMenuItem(
                         link="extras:computedfield_list",
