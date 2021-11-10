@@ -2,9 +2,13 @@ import logging
 import os
 
 from abc import ABC, abstractproperty
-from django.apps import AppConfig, apps as global_apps
-from django.db.models.signals import post_migrate
 from collections import OrderedDict
+
+from django.apps import AppConfig, apps as global_apps
+from django.db.models import JSONField, BigIntegerField, BinaryField
+from django.db.models.signals import post_migrate
+
+from graphene.types import generic, String
 
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins.utils import import_object
@@ -41,30 +45,6 @@ class NautobotConfig(AppConfig):
         menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
             register_menu_items(menu_items)
-
-
-def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):
-    """
-    Send the `nautobot_database_ready` signal to all installed apps and plugins.
-
-    Signal handler for Django's post_migrate() signal.
-    """
-    kwargs.setdefault("apps", global_apps)
-    for app_conf in global_apps.get_app_configs():
-        nautobot_database_ready.send(sender=app_conf, app_config=app_conf, **kwargs)
-
-
-class CoreConfig(NautobotConfig):
-    """
-    NautobotConfig for nautobot.core app.
-    """
-
-    name = "nautobot.core"
-    verbose_name = "Nautobot Core"
-
-    def ready(self):
-        post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
-        super().ready()
 
 
 def create_or_check_entry(grouping, record, key, path):
@@ -622,3 +602,46 @@ class NavMenuImportButton(NavMenuButton):
         if "weight" not in kwargs:
             kwargs["weight"] = 200
         super().__init__(*args, **kwargs)
+
+
+def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):
+    """
+    Send the `nautobot_database_ready` signal to all installed apps and plugins.
+
+    Signal handler for Django's post_migrate() signal.
+    """
+    kwargs.setdefault("apps", global_apps)
+    for app_conf in global_apps.get_app_configs():
+        nautobot_database_ready.send(sender=app_conf, app_config=app_conf, **kwargs)
+
+
+class CoreConfig(NautobotConfig):
+    """
+    AppConfig for the core of Nautobot.
+    """
+
+    name = "nautobot.core"
+    verbose_name = "Nautobot Core"
+
+    def ready(self):
+        from graphene_django.converter import convert_django_field
+        from nautobot.core.graphql import BigInteger
+
+        @convert_django_field.register(JSONField)
+        def convert_json(field, registry=None):
+            """Convert JSONField to GenericScalar."""
+            return generic.GenericScalar()
+
+        @convert_django_field.register(BinaryField)
+        def convert_binary(field, registry=None):
+            """Convert BinaryField to String."""
+            return String()
+
+        @convert_django_field.register(BigIntegerField)
+        def convert_biginteger(field, registry=None):
+            """Convert BigIntegerField to BigInteger scalar."""
+            return BigInteger()
+
+        post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
+
+        super().ready()

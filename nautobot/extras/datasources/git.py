@@ -641,7 +641,7 @@ def update_git_config_context_schemas(repository_record, job_result):
             continue
         job_result.log(
             f"Loading config context schema from `{file_name}`",
-            grouping="config contexts",
+            grouping="config context schemas",
             logger=logger,
         )
         try:

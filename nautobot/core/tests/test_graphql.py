@@ -796,13 +796,14 @@ class GraphQLQueryTest(TestCase):
             return document.execute(context_value=self.request)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_config_context(self):
+    def test_query_config_context_and_custom_field_data(self):
 
         query = """
         query {
             devices {
                 name
                 config_context
+                _custom_field_data
             }
         }
         """
@@ -815,9 +816,13 @@ class GraphQLQueryTest(TestCase):
         device_names = [item["name"] for item in result.data["devices"]]
         self.assertEqual(sorted(device_names), ["Device 1", "Device 2", "Device 3"])
 
-        config_context = [item["config_context"] for item in result.data["devices"]]
-        self.assertIsInstance(config_context[0], dict)
-        self.assertDictEqual(config_context[0], expected_data)
+        config_contexts = [item["config_context"] for item in result.data["devices"]]
+        self.assertIsInstance(config_contexts[0], dict)
+        self.assertDictEqual(config_contexts[0], expected_data)
+
+        custom_field_data = [item["_custom_field_data"] for item in result.data["devices"]]
+        self.assertIsInstance(custom_field_data[0], dict)
+        self.assertEqual(custom_field_data[0], {})
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_device_role_filter(self):

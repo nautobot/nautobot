@@ -353,14 +353,21 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
+        cls.sites = (
             Site.objects.create(name="Site 1", slug="site-1"),
             Site.objects.create(name="Site 2", slug="site-2"),
         )
 
+        powerpanels = (
+            PowerPanel.objects.create(site=cls.sites[0], name="Power Panel 1"),
+            PowerPanel.objects.create(site=cls.sites[0], name="Power Panel 2"),
+        )
+
+        # Assign power panels generated to the class object for use later.
+        cls.powerpanels = powerpanels
         rackgroups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
+            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=cls.sites[0]),
+            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[1]),
         )
 
         rackroles = (
@@ -369,11 +376,15 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Rack)
-        status_active = statuses.get(slug="active")
+        cls.status_active = statuses.get(slug="active")
+
+        cable_statuses = Status.objects.get_for_model(Cable)
+        cls.cable_connected = cable_statuses.get(slug="connected")
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
         )
+
         CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="red")
         CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="green")
         CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="blue")
@@ -382,15 +393,21 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         racks = (
             Rack.objects.create(
-                name="Rack 1", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["red"]}
+                name="Rack 1", site=cls.sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["red"]}
             ),
             Rack.objects.create(
-                name="Rack 2", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["green"]}
+                name="Rack 2",
+                site=cls.sites[0],
+                status=cls.status_active,
+                _custom_field_data={"rack-colors": ["green"]},
             ),
             Rack.objects.create(
-                name="Rack 3", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["blue"]}
+                name="Rack 3", site=cls.sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["blue"]}
             ),
         )
+
+        # Create a class racks variable
+        cls.racks = racks
 
         cls.relationships = (
             Relationship(
@@ -408,7 +425,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         for rack in racks:
             RelationshipAssociation(
-                relationship=cls.relationships[0], source=rack, destination=sites[1]
+                relationship=cls.relationships[0], source=rack, destination=cls.sites[1]
             ).validated_save()
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
@@ -416,7 +433,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "name": "Rack X",
             "facility_id": "Facility X",
-            "site": sites[1].pk,
+            "site": cls.sites[1].pk,
             "group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="planned").pk,
@@ -433,7 +450,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "Some comments",
             "tags": [t.pk for t in tags],
             "cf_rack-colors": ["red", "green", "blue"],
-            "cr_backup-sites__destination": [sites[0].pk],
+            "cr_backup-sites__destination": [cls.sites[0].pk],
         }
 
         cls.csv_data = (
@@ -444,7 +461,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "site": sites[1].pk,
+            "site": cls.sites[1].pk,
             "group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="deprecated").pk,
@@ -466,6 +483,64 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Test viewing the list of rack elevations.
         """
         response = self.client.get(reverse("dcim:rack_elevation_list"))
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_powerports(self):
+        # Create Devices
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+
+        device_types = (
+            DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
+        )
+
+        device_roles = (DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),)
+
+        platforms = (Platform.objects.create(name="Platform 1", slug="platform-1"),)
+
+        devices = (
+            Device.objects.create(
+                name="Power Panel 1",
+                site=self.sites[0],
+                rack=self.racks[0],
+                device_type=device_types[0],
+                device_role=device_roles[0],
+                platform=platforms[0],
+                status=self.status_active,
+            ),
+            Device.objects.create(
+                name="Dev 1",
+                site=self.sites[0],
+                rack=self.racks[0],
+                device_type=device_types[0],
+                device_role=device_roles[0],
+                platform=platforms[0],
+                status=self.status_active,
+            ),
+        )
+
+        # Create Power Port for device
+        powerport1 = PowerPort.objects.create(device=devices[0], name="Power Port 11")
+        powerfeed1 = PowerFeed.objects.create(
+            power_panel=self.powerpanels[0], name="Power Feed 11", phase="three-phase"
+        )
+
+        # Create power outlet to the power port
+        poweroutlet1 = PowerOutlet.objects.create(device=devices[0], name="Power Outlet 11")
+
+        # connect power port to power feed (3 phase)
+        cable1 = Cable(termination_a=powerfeed1, termination_b=powerport1, status=self.cable_connected)
+        cable1.save()
+
+        # Create power port for 2nd device
+        powerport2 = PowerPort.objects.create(device=devices[1], name="Power Port 12")
+
+        # Connect power port to power outlet (dev1)
+        cable2 = Cable(termination_a=powerport2, termination_b=poweroutlet1, status=self.cable_connected)
+        cable2.save()
+
+        # Test the view
+        response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
         self.assertHttpStatus(response, 200)
 
 

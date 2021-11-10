@@ -28,9 +28,6 @@ MySQL 8.x is now fully supported as a database backend!
 
 The installation and configuration guides have been revised to include MySQL. If you prefer MySQL or it is more easily supported in your environment, configuring Nautobot to use MySQL is as easy as changing value of `ENGINE` in your `DATABASES` setting to point to `django.db.backends.mysql` and installing the MySQL Python driver using `pip3 install nautobot[mysql]`.
 
-!!! note
-    You will not be able to directly migrate your data from PostgreSQL to MySQL. A fresh start is required.
-
 A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for specifying the desired database engine at runtime without needing to modify your `nautobot_config.py`. Please see the [configuration guide on `DATABASES`](../configuration/required-settings.md#databases) for more details on how to configure Nautobot to use MySQL.
 
 Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-setup) and [CentOS](../installation/centos.md#mysql-setup) to get started.
@@ -82,6 +79,36 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
+
+## v1.1.5 (2021-MM-DD)
+
+### Added
+
+- [#931](https://github.com/nautobot/nautobot/issues/931) - Added support for direct upload of CSV files as an alternative to copy-pasting CSV text into a form field. (Partially based on [NetBox #6561](https://github.com/netbox-community/netbox/pull/6561))
+- [#953](https://github.com/nautobot/nautobot/pull/953) - Added option to use MySQL in the docker-compose development environment
+- [#954](https://github.com/nautobot/nautobot/pull/954) - Added documentation for migrating from PostgreSQL to MySQL, improved documentation as to recommended MySQL database configuration.
+- [#989](https://github.com/nautobot/nautobot/issues/989) - Added `id` and `name` fields to `NestedJobResultSerializer` for the REST API.
+- [#1019](https://github.com/nautobot/nautobot/pull/1019) - Added GitHub action to redeploy the Nautobot sandbox on pushes to `main`, `develop`, and `next`.
+- [#1031](https://github.com/nautobot/nautobot/pull/1031) - Added a troubleshooting note around the combination of RedHat/CentOS, uWSGI, and static files.
+- [#1057](https://github.com/nautobot/nautobot/pull/1057) - Added GitHub action to automatically push Docker images to `ghcr.io`.
+
+### Fixed
+
+- [#555](https://github.com/nautobot/nautobot/issues/555) - Fixed `Status.DoesNotExist` during `nautobot-server loaddata`.
+- [#567](https://github.com/nautobot/nautobot/issues/567) - Fixed incorrect GraphQL schema generation for `_custom_field_data` when certain plugins are installed.
+- [#733](https://github.com/nautobot/nautobot/issues/733) - A Job erroring out early in initialization could result in its associated JobResult staying in Pending state indefinitely.
+- [#816](https://github.com/nautobot/nautobot/issues/816) - Fixed `AttributeError` reported when viewing a Rack with certain associated power configurations.
+- [#948](https://github.com/nautobot/nautobot/issues/948) - Fixed advanced logging example to use `EXTRA_MIDDLEWARE` instead of `MIDDLEWARE.append()`.
+- [#970](https://github.com/nautobot/nautobot/pull/970) - Clarified documentation around config context definition in Git repositories.
+- [#981](https://github.com/nautobot/nautobot/pull/981) - Fixed incorrect handling of missing custom fields in the `fix_custom_fields` management command.
+- [#986](https://github.com/nautobot/nautobot/issues/986) - Fixed `TemplateDoesNotExist` exception when running a Job containing a `FileVar` variable.
+- [#991](https://github.com/nautobot/nautobot/pull/991) - Fixed incorrect logging when importing ConfigContextSchemas from Git.
+- [#993](https://github.com/nautobot/nautobot/pull/993) - Fixed incorrect `git` command when refreshing a previously checked out repository.
+- [#1023](https://github.com/nautobot/nautobot/issues/1023) - Removed invalid link in "Deploying Nautobot" documentation.
+
+### Security
+
+- [#998](https://github.com/nautobot/nautobot/pull/998) - Update `mkdocs` dependency to avoid a potential path-traversal vulnerability; note that mkdocs is only used in development and is not a production deployment dependency of Nautobot.
 
 ## v1.1.4 (2021-10-04)
 

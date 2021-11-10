@@ -1,27 +1,11 @@
-from django.db.models import JSONField, BigIntegerField
-from django.db.models.fields import BinaryField
 from django.test.client import RequestFactory
 
 from nautobot.extras.models import GraphQLQuery
 
-import graphene
-from graphene.types import generic
-from graphene_django.converter import convert_django_field
+from graphene.types import Scalar
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.language import ast
-
-
-@convert_django_field.register(JSONField)
-def convert_json(field, registry=None):
-    """Convert JSONField to GenericScalar."""
-    return generic.GenericScalar()
-
-
-@convert_django_field.register(BinaryField)
-def convert_binary(field, registry=None):
-    """Convert BinaryField to String."""
-    return graphene.String()
 
 
 def execute_query(query, variables=None, request=None, user=None):
@@ -69,7 +53,7 @@ def execute_saved_query(saved_query_slug, **kwargs):
 # See also:
 # https://github.com/graphql-python/graphene-django/issues/241
 # https://github.com/graphql-python/graphene/pull/1261 (graphene 3.0)
-class BigInteger(graphene.types.Scalar):
+class BigInteger(Scalar):
     """An integer which, unlike GraphQL's native Int type, doesn't reject values outside (-2^31, 2^31-1).
 
     Currently only used for ASNField, which goes up to 2^32-1 (i.e., unsigned 32-bit int); it's possible
@@ -83,9 +67,3 @@ class BigInteger(graphene.types.Scalar):
     def parse_literal(node):
         if isinstance(node, ast.IntValue):
             return int(node.value)
-
-
-@convert_django_field.register(BigIntegerField)
-def convert_biginteger(field, registry=None):
-    """Convert BigIntegerField to BigInteger scalar."""
-    return BigInteger()
