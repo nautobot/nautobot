@@ -114,7 +114,7 @@ django-debug-toolbar = "~3.2.1"
 # Nautobot dummy plugin used for testing
 dummy-plugin = {path = "examples/dummy_plugin", develop = true}
 # Code style checking and limited static analysis
-flake8 = "~3.9.1"
+flake8 = "~4.0.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.5.0"
 # Allow Markdown files to include other files
