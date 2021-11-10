@@ -31,7 +31,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.6.2"
 # Background task processing
 celery = "~5.1.0"
 # Fundamental web framework for Nautobot
@@ -106,7 +106,7 @@ mysql = ["mysqlclient"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = "^20.8b1"
+black = "~21.10b0"
 # Test code coverage measurement
 coverage = "~5.4"
 # Tool for debugging Django
