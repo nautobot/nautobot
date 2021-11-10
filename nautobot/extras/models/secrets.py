@@ -147,6 +147,9 @@ class SecretsGroup(OrganizationalModel):
         return secret.get_value(obj=obj, **kwargs)
 
 
+@extras_features(
+    "graphql",
+)
 class SecretsGroupAssociation(BaseModel):
     """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
 
