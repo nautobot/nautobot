@@ -1,17 +1,12 @@
 from abc import ABC, abstractmethod, abstractproperty
-from functools import total_ordering
 
 from nautobot.extras.registry import registry
 
 from .exceptions import SecretError, SecretParametersError, SecretProviderError, SecretValueNotFoundError
 
 
-@total_ordering
 class SecretsProvider(ABC):
     """Abstract base class for concrete providers of secret retrieval features."""
-
-    def __lt__(self, other):
-        return self.slug.lower() < other.slug.lower()
 
     def __repr__(self):
         return f"<{self.name}>"
