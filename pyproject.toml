@@ -36,6 +36,8 @@ python = "^3.6"
 celery = "~5.1.0"
 # Fundamental web framework for Nautobot
 Django = "~3.1.12"
+# LDAP Support
+django-auth-ldap = {version = "~3.0.0", optional = true}
 # Caching with Redis
 django-cacheops = "~5.1"
 # Permit cross-domain API requests
@@ -58,6 +60,8 @@ django-prometheus = "~2.1.0"
 django-redis = "~4.12.1"
 # RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
 django-rq = "~2.4.1"
+# External Storage support (i.e. S3)
+django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
 django-tables2 = "~2.3.4"
 # Tags
@@ -96,13 +100,19 @@ pycryptodome = "~3.10.1"
 pyuwsgi = "~2.0.19.1.post0"
 # YAML parsing and rendering
 PyYAML = "~5.4.1"
+# Social authentication core
+social-auth-core = {extras = ["openidconnect", "saml"], version = "~4.1.0", optional = true}
 # Social authentication/registration with support for many auth providers
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
 
 [tool.poetry.extras]
+all = ["mysqlclient", "social-auth-core[openidconnect]", "social-auth-core[saml]", "django-auth-ldap", "django-storages"]
 mysql = ["mysqlclient"]
+openid = ["social-auth-core[openidconnect]"]
+saml = ["social-auth-core[saml]"]
+storages = ["django-storages"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
