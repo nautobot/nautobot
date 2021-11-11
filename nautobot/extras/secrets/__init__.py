@@ -8,6 +8,9 @@ from .exceptions import SecretError, SecretParametersError, SecretProviderError,
 class SecretsProvider(ABC):
     """Abstract base class for concrete providers of secret retrieval features."""
 
+    def __repr__(self):
+        return f"<{self.name}>"
+
     @abstractproperty
     def slug(self):
         """String uniquely identifying this class; will be used as a key to look up the class owning a given Secret."""
