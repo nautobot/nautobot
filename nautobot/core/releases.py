@@ -1,16 +1,16 @@
 import logging
 
 from cacheops import CacheMiss, cache
-from django.conf import settings
 from django_rq import get_queue
 
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.tasks import get_releases
 
 logger = logging.getLogger("nautobot.releases")
 
 
 def get_latest_release(pre_releases=False):
-    if settings.RELEASE_CHECK_URL:
+    if get_settings_or_config("RELEASE_CHECK_URL"):
         logger.debug("Checking for most recent release")
         try:
             latest_release = cache.get("latest_release")

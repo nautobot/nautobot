@@ -19,6 +19,7 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
@@ -468,8 +469,8 @@ class Rack(PrimaryModel, StatusModel):
         self,
         face=DeviceFaceChoices.FACE_FRONT,
         user=None,
-        unit_width=settings.RACK_ELEVATION_DEFAULT_UNIT_WIDTH,
-        unit_height=settings.RACK_ELEVATION_DEFAULT_UNIT_HEIGHT,
+        unit_width=None,
+        unit_height=None,
         legend_width=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
         include_images=True,
         base_url=None,
@@ -487,6 +488,10 @@ class Rack(PrimaryModel, StatusModel):
         :param include_images: Embed front/rear device images where available
         :param base_url: Base URL for links and images. If none, URLs will be relative.
         """
+        if unit_width is None:
+            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH")
+        if unit_height is None:
+            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
         elevation = RackElevationSVG(self, user=user, include_images=include_images, base_url=base_url)
 
         return elevation.render(face, unit_width, unit_height, legend_width)

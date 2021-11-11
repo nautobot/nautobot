@@ -123,9 +123,6 @@ CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", 900))
 # Set to False to disable caching with cacheops. (Default: True)
 CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", True))
 
-# Maximum number of days to retain logged changes. Set to 0 to retain changes indefinitely. (Default: 90)
-CHANGELOG_RETENTION = int(os.getenv("NAUTOBOT_CHANGELOG_RETENTION", 90))
-
 # If True, all origins will be allowed. Other settings restricting allowed origins will be ignored.
 # Defaults to False. Setting this to True can be dangerous, as it allows any website to make
 # cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with
@@ -174,9 +171,6 @@ EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 # If hosting Nautobot in a subdirectory, you must set this value to match the base URL prefix configured in your HTTP server (e.g. `/nautobot/`). When not set, URLs will default to being prefixed by `/`.
 FORCE_SCRIPT_NAME = None
 
-# When set to `True`, users with limited permissions will only be able to see items in the UI they have access too.
-HIDE_RESTRICTED_UI = is_truthy(os.getenv("NAUTOBOT_HIDE_RESTRICTED_UI", False))
-
 # HTTP proxies Nautobot should use when sending outbound HTTP requests (e.g. for webhooks).
 # HTTP_PROXIES = {
 #     'http': 'http://10.10.1.10:3128',
@@ -193,11 +187,6 @@ LOGGING = {}
 
 # Setting this to True will display a "maintenance mode" banner at the top of every page.
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", False))
-
-# An API consumer can request an arbitrary number of objects =by appending the "limit" parameter to the URL (e.g.
-# "?limit=1000"). This setting defines the maximum limit. Setting it to 0 or None will allow an API consumer to request
-# all objects by specifying "?limit=0".
-MAX_PAGE_SIZE = int(os.getenv("NAUTOBOT_MAX_PAGE_SIZE", 1000))
 
 # The file path where uploaded media such as image attachments are stored. A trailing slash is not needed. Note that
 # the default value of this setting is within the invoking user's home directory
@@ -227,9 +216,6 @@ NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", 30))
 # be provided as a dictionary.
 NAPALM_ARGS = {}
 
-# Determine how many objects to display per page within a list. (Default: 50)
-PAGINATE_COUNT = int(os.getenv("NAUTOBOT_PAGINATE_COUNT", 50))
-
 # Enable installed plugins. Add the name of each plugin to the list.
 PLUGINS = []
 
@@ -242,25 +228,9 @@ PLUGINS = []
 #     }
 # }
 
-# When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to
-# prefer IPv4 instead.
-PREFER_IPV4 = is_truthy(os.getenv("NAUTOBOT_PREFER_IPV4", False))
-
-# Rack elevation size defaults, in pixels. For best results, the ratio of width to height should be roughly 10:1.
-RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = int(os.getenv("NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", 22))
-RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.getenv("NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH", 220))
-
 # Remote auth backend settings
 REMOTE_AUTH_AUTO_CREATE_USER = False
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
-
-# This determines how often the GitHub API is called to check the latest release of Nautobot. Must be at least 1 hour.
-RELEASE_CHECK_TIMEOUT = int(os.getenv("NAUTOBOT_RELEASE_CHECK_TIMEOUT", 24 * 3600))
-
-# This repository is used to check whether there is a new release of Nautobot available. Set to None to disable the
-# version check or use the URL below to check for release in the official Nautobot repository.
-RELEASE_CHECK_URL = os.getenv("NAUTOBOT_RELEASE_CHECK_URL", None)
-# RELEASE_CHECK_URL = 'https://api.github.com/repos/nautobot/nautobot/releases'
 
 # The length of time (in seconds) for which a user will remain logged into the web UI before being prompted to
 # re-authenticate. (Default: 1209600 [14 days])
