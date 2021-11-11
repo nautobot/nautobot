@@ -90,6 +90,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#954](https://github.com/nautobot/nautobot/pull/954) - Added documentation for migrating from PostgreSQL to MySQL, improved documentation as to recommended MySQL database configuration.
 - [#989](https://github.com/nautobot/nautobot/issues/989) - Added `id` and `name` fields to `NestedJobResultSerializer` for the REST API.
 - [#1019](https://github.com/nautobot/nautobot/pull/1019) - Added GitHub action to redeploy the Nautobot sandbox on pushes to `main`, `develop`, and `next`.
+- [#1025](https://github.com/nautobot/nautobot/issues/1025) - Added reference documentation for how to hide navigation menu items with no permissions.
 - [#1031](https://github.com/nautobot/nautobot/pull/1031) - Added a troubleshooting note around the combination of RedHat/CentOS, uWSGI, and static files.
 - [#1057](https://github.com/nautobot/nautobot/pull/1057) - Added GitHub action to automatically push Docker images to `ghcr.io`.
 
