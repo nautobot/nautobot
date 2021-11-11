@@ -80,10 +80,11 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
 
-## v1.1.5 (2021-MM-DD)
+## v1.1.5 (2021-11-11)
 
 ### Added
 
+- [#263](https://github.com/nautobot/nautobot/issues/263) - Added a link in the Docker deployment guide to the Nautobot Docker Compose repository.
 - [#931](https://github.com/nautobot/nautobot/issues/931) - Added support for direct upload of CSV files as an alternative to copy-pasting CSV text into a form field. (Partially based on [NetBox #6561](https://github.com/netbox-community/netbox/pull/6561))
 - [#953](https://github.com/nautobot/nautobot/pull/953) - Added option to use MySQL in the docker-compose development environment
 - [#954](https://github.com/nautobot/nautobot/pull/954) - Added documentation for migrating from PostgreSQL to MySQL, improved documentation as to recommended MySQL database configuration.
