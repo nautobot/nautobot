@@ -8,6 +8,12 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Admin Configuration UI ([#370](https://github.com/nautobot/nautobot/issues/370))
+
+The Nautobot Admin UI now includes a "Configuration" page that can be used to dynamically customize a number of [optional settings](../configuration/optional-settings.md#administratively-configurable-settings) as an alternative to editing `nautobot_config.py` and restarting the Nautobot processes.
+
+If upgrading from a previous Nautobot version where these settings were defined in your `nautobot_config.py`, you must remove those definitions in order to use this feature, as explicit configuration in `nautobot_config.py` takes precedence over values configured in the Admin UI.
+
 #### Common Base Template for Object Detail Views ([#479](https://github.com/nautobot/nautobot/issues/479), [#585](https://github.com/nautobot/nautobot/issues/585))
 
 All "object detail" views (pages displaying details of a single Nautobot record) now inherit from a common base template, providing improved UI consistency, reducing the amount of boilerplate code needed to create a new detail view, and fixing a number of bugs in various views. Plugin developers are encouraged to make use of this new template (`generic/object_detail.html`) to take advantage of these improvements.
@@ -120,6 +126,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#171](https://github.com/nautobot/nautobot/issues/171) - GraphQL queries have been greatly optimized by integration with `graphene-django-optimizer`
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
 - [#248](https://github.com/nautobot/nautobot/issues/248) - Added support for filtering GraphQL queries at all levels
+- [#370](https://github.com/nautobot/nautobot/issues/370) - Added support for server configuration via the Admin UI.
 - [#374](https://github.com/nautobot/nautobot/issues/374) - Added ability to schedule Jobs for future and/or recurring execution
 - [#478](https://github.com/nautobot/nautobot/issues/478) - CustomFieldChoice model now supports GraphQL.
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
