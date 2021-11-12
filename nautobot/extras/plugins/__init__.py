@@ -74,6 +74,7 @@ class PluginConfig(NautobotConfig):
     jinja_filters = "jinja_filters"
 
     def ready(self):
+        # We don't call super().ready here because we don't need or use the on-ready behavior of a core Nautobot app
 
         # Register model validators (if defined)
         validators = import_object(f"{self.__module__}.{self.custom_validators}")

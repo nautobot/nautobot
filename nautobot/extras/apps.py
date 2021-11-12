@@ -1,8 +1,11 @@
 import logging
 
-from health_check.plugins import plugin_dir
-from nautobot.core.apps import NautobotConfig
 from django.db.utils import ProgrammingError
+
+import graphene
+from health_check.plugins import plugin_dir
+
+from nautobot.core.apps import NautobotConfig
 
 
 logger = logging.getLogger("nautobot.extras.apps")
@@ -14,6 +17,16 @@ class ExtrasConfig(NautobotConfig):
     def ready(self):
         super().ready()
         import nautobot.extras.signals  # noqa
+
+        from graphene_django.converter import convert_django_field
+        from taggit.managers import TaggableManager
+        from nautobot.extras.graphql.types import TagType
+
+        @convert_django_field.register(TaggableManager)
+        def convert_field_to_list_tags(field, registry=None):
+            """Convert TaggableManager to List of Tags."""
+            return graphene.List(TagType)
+
         from nautobot.extras.plugins.validators import wrap_model_clean_methods
 
         try:
