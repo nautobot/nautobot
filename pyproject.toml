@@ -109,10 +109,11 @@ svgwrite = "~1.4.1"
 
 [tool.poetry.extras]
 all = ["mysqlclient", "social-auth-core[openidconnect]", "social-auth-core[saml]", "django-auth-ldap", "django-storages"]
+ldap = ["django-auth-ldap"]
 mysql = ["mysqlclient"]
 openid = ["social-auth-core[openidconnect]"]
+remote_storage = ["django-storages"]
 saml = ["social-auth-core[saml]"]
-storages = ["django-storages"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement

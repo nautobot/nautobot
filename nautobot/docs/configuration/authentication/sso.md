@@ -23,7 +23,7 @@ If you are using OpenID Connect or SAML you will also need to install the extra 
 
 #### OpenID Connect
 
-For OpenID connect, you'll need to install the `openidconnect` Python extra.
+For OpenID connect, you'll need to install the `openid` Python extra.
 
 ```no-highlight
 $ pip3 install "nautobot[openid]"

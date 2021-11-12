@@ -9,8 +9,8 @@ Nautobot can use [`django-storages`](https://django-storages.readthedocs.io/en/s
 TLDR:
 
 ```shell
-$ echo django-storages >> $NAUTOBOT_ROOT/local_requirements.txt
-$ pip3 install django-storages
+$ echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
+$ pip3 install "nautobot[remote_storage]"
 ```
 
 ## Configuration

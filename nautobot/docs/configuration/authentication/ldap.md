@@ -35,7 +35,7 @@ $ source /opt/nautobot/bin/activate
 Once installed, add the package to `local_requirements.txt` to ensure it is re-installed during future rebuilds of the virtual environment:
 
 ```no-highlight
-(nautobot) $ echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
+(nautobot) $ echo "nautobot[ldap]" >> /opt/nautobot/local_requirements.txt
 ```
 
 ## Configuration
