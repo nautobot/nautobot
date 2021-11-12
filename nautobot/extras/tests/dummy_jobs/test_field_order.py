@@ -1,4 +1,4 @@
-from nautobot.extras.jobs import Job, StringVar
+from nautobot.extras.jobs import Job, FileVar, StringVar
 
 
 class TestFieldOrder(Job):
@@ -8,7 +8,9 @@ class TestFieldOrder(Job):
 
     var2 = StringVar(description="Hello")
 
+    var1 = FileVar(description="Some file wants to be first")
+
     class Meta:
         """Metaclass attrs."""
 
-        field_order = ["var2", "var23"]
+        field_order = ["var1", "var2", "var23"]

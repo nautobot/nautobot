@@ -28,6 +28,7 @@ from nautobot.utilities.forms import (
     BulkRenameForm,
     ConfirmationForm,
     CSVDataField,
+    CSVFileField,
     ImportForm,
     TableConfigForm,
     restrict_form_fields,
@@ -700,7 +701,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def _import_form(self, *args, **kwargs):
         class ImportForm(BootstrapMixin, Form):
-            csv = CSVDataField(from_form=self.model_form, widget=Textarea(attrs=self.widget_attrs))
+            csv_data = CSVDataField(from_form=self.model_form, widget=Textarea(attrs=self.widget_attrs))
+            csv_file = CSVFileField(from_form=self.model_form)
 
         return ImportForm(*args, **kwargs)
 
@@ -723,13 +725,14 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "fields": self.model_form().fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
+                "active_tab": "csv-data",
             },
         )
 
     def post(self, request):
         logger = logging.getLogger("nautobot.views.BulkImportView")
         new_objs = []
-        form = self._import_form(request.POST)
+        form = self._import_form(request.POST, request.FILES)
 
         if form.is_valid():
             logger.debug("Form validation was successful")
@@ -737,7 +740,11 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
-                    headers, records = form.cleaned_data["csv"]
+                    if request.FILES:
+                        field_name = "csv_file"
+                    else:
+                        field_name = "csv_data"
+                    headers, records = form.cleaned_data[field_name]
                     for row, data in enumerate(records, start=1):
                         obj_form = self.model_form(data, headers=headers)
                         restrict_form_fields(obj_form, request.user)
@@ -747,7 +754,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             new_objs.append(obj)
                         else:
                             for field, err in obj_form.errors.items():
-                                form.add_error("csv", "Row {} {}: {}".format(row, field, err[0]))
+                                form.add_error(field_name, "Row {} {}: {}".format(row, field, err[0]))
                             raise ValidationError("")
 
                     # Enforce object-level permissions
@@ -790,6 +797,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "fields": self.model_form().fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
+                "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",
             },
         )
 

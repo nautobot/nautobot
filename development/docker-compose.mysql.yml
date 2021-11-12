@@ -1,0 +1,15 @@
+---
+version: "3.4"
+services:
+  nautobot:
+    depends_on:
+      - mysql
+  mysql:
+    image: mysql:8
+    command: "--character-set-server=utf8mb4 --collation-server=utf8mb4_bin"
+    env_file:
+      - dev.env
+    volumes:
+      - mysqldata_nautobot:/var/lib/mysql
+volumes:
+  mysqldata_nautobot:

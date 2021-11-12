@@ -304,6 +304,7 @@ INSTALLED_APPS = [
     "health_check",
     "health_check.cache",
     "health_check.storage",
+    "db_file_storage",
 ]
 
 # Middleware
