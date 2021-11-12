@@ -2,6 +2,7 @@ import os
 import platform
 
 from django.contrib.messages import constants as messages
+import django.forms
 
 from nautobot import __version__
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
@@ -88,10 +89,6 @@ NAPALM_ARGS = {}
 NAPALM_PASSWORD = ""
 NAPALM_TIMEOUT = 30
 NAPALM_USERNAME = ""
-
-# Pagination
-# TODO
-PER_PAGE_DEFAULTS = [25, 50, 100, 250, 500, 1000]
 
 # Plugins
 PLUGINS = []
@@ -279,8 +276,8 @@ INSTALLED_APPS = [
     "social_django",
     "taggit",
     "timezone_field",
+    "nautobot.core.apps.NautobotServerConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
-    "constance",  # Needs to come after `nautobot.core` so templates can be overridden
     "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
     "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
     "db_file_storage",
@@ -412,6 +409,17 @@ LOGIN_REDIRECT_URL = "home"
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
+CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
+
+CONSTANCE_ADDITIONAL_FIELDS = {
+    "per_page_defaults_field": [
+        "nautobot.utilities.forms.fields.JSONArrayFormField",
+        {
+            "widget": "django.forms.TextInput",
+            "base_field": django.forms.IntegerField(min_value=1),
+        },
+    ],
+}
 
 CONSTANCE_CONFIG = {
     "CHANGELOG_RETENTION": [
@@ -432,11 +440,13 @@ CONSTANCE_CONFIG = {
         50,
         "Default number of objects to display per page when listing objects.",
     ],
-    # TODO need a custom widget here
-    # "PER_PAGE_DEFAULTS": [
-    #     [25, 50, 100, 250, 500, 1000],
-    #     "Pagination options to present to the user to choose amongst.",
-    # ],
+    "PER_PAGE_DEFAULTS": [
+        [25, 50, 100, 250, 500, 1000],
+        "Pagination options to present to the user to choose amongst.\n"
+        "For proper user experience, this list should include the PAGINATE_COUNT and MAX_PAGE_SIZE values as options.",
+        # Use custom field type defined above
+        "per_page_defaults_field",
+    ],
     "PREFER_IPV4": [
         False,
         "Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
@@ -465,7 +475,7 @@ CONSTANCE_CONFIG = {
 CONSTANCE_CONFIG_FIELDSETS = {
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["PREFER_IPV4"],
-    "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE"],  # TODO PER_PAGE_DEFAULTS
+    "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["HIDE_RESTRICTED_UI"],

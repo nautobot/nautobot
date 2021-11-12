@@ -1,6 +1,6 @@
 from django.contrib.admin import site as admin_site
-from social_django.models import Association, Nonce, UserSocialAuth
-from taggit.models import Tag
+
+from constance.admin import ConstanceAdmin, ConstanceForm, Config
 from django_celery_beat import admin  # noqa: F401
 from django_celery_beat.models import (
     ClockedSchedule,
@@ -9,6 +9,10 @@ from django_celery_beat.models import (
     PeriodicTask,
     SolarSchedule,
 )
+from social_django.models import Association, Nonce, UserSocialAuth
+from taggit.models import Tag
+
+from nautobot.utilities.forms import BootstrapMixin
 
 
 # Override default AdminSite attributes so we can avoid creating and
@@ -30,3 +34,14 @@ admin_site.unregister(SolarSchedule)
 admin_site.unregister(Association)
 admin_site.unregister(Nonce)
 admin_site.unregister(UserSocialAuth)
+
+# Customize Constance admin
+class ConfigForm(BootstrapMixin, ConstanceForm):
+    """Apply Bootstrap styling to ConstanceForm."""
+
+class ConfigAdmin(ConstanceAdmin):
+    change_list_form = ConfigForm
+    change_list_template = "admin/config/config.html"
+
+admin_site.unregister([Config])
+admin_site.register([Config], ConfigAdmin)

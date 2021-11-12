@@ -29,9 +29,15 @@
             {% endif %}
         {% endfor %}
         <select name="per_page" id="per_page">
-            {% for n in settings.PER_PAGE_DEFAULTS %}
-                <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
-            {% endfor %}
+            {% if settings.PER_PAGE_DEFAULTS %}
+                {% for n in settings.PER_PAGE_DEFAULTS %}
+                    <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
+                {% endfor %}
+            {% else %}
+                {% for n in config.PER_PAGE_DEFAULTS %}
+                    <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
+                {% endfor %}
+            {% endif %}
         </select> per page
     </form>
     {% if page %}
