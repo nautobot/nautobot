@@ -568,3 +568,8 @@ BRANDING_URLS = {
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
 BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
+
+# Do not annotate the depth of prefix parent/child relationships in the prefix list view
+# TODO: we should consider this a temporary workaround available to users
+# for https://github.com/nautobot/nautobot/issues/947, until a proper data model change is made.
+DISABLE_PREFIX_LIST_HIERARCHY = is_truthy(os.getenv("NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY", False))

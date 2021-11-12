@@ -308,6 +308,18 @@ Please see the [official Django documentation on `DEBUG`](https://docs.djangopro
 
 ---
 
+# DISABLE_PREFIX_LIST_HIERARCHY
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY`
+
+This setting disable rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large set of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes.
+
+A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
+
+---
+
 ## DOCS_ROOT
 
 Default: `$BASE_DIR/docs`

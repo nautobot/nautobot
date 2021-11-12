@@ -1,10 +1,13 @@
-from django.db.models import Prefetch, Q
+from django.conf import settings
+from django.db.models import Prefetch, Q, Value, Count
 from django.db.models.expressions import RawSQL
+from django.db.models.fields import IntegerField
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device, Interface
+from nautobot.utilities.forms.fields import JSONField
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -394,7 +397,8 @@ class RoleBulkDeleteView(generic.BulkDeleteView):
 
 
 class PrefixListView(generic.ObjectListView):
-    queryset = Prefix.objects.annotate_tree()
+    # By default we annotate the prefix hierarchy such that child prefixes are intended in the table
+    queryset = Prefix.objects.annotate(parents=Count(None)) if settings.DISABLE_PREFIX_LIST_HIERARCHY else Prefix.objects.annotate_tree()
     filterset = filters.PrefixFilterSet
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
