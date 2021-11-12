@@ -24,7 +24,7 @@ def get_releases(pre_releases=False):
     try:
         if url == cache.get("latest_release_no_retry"):
             logger.info("Skipping release check; URL failed recently: {}".format(url))
-            return []
+            return False
     except CacheMiss:
         pass
 
@@ -46,9 +46,9 @@ def get_releases(pre_releases=False):
         # The request failed. Set a flag in the cache to disable future checks to this URL for 15 minutes.
         logger.exception("Error while fetching {}. Disabling checks for 15 minutes.".format(url))
         cache.set("latest_release_no_retry", url, 900)
-        return []
+        return False
 
     # Cache the most recent release
     cache.set("latest_release", max(releases), get_settings_or_config("RELEASE_CHECK_TIMEOUT"))
 
-    return releases
+    return True

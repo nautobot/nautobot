@@ -419,6 +419,18 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "base_field": django.forms.IntegerField(min_value=1),
         },
     ],
+    "release_check_timeout_field": [
+        "django.forms.IntegerField",
+        {
+            "min_value": 3600,
+        }
+    ],
+    "release_check_url_field": [
+        "django.forms.URLField",
+        {
+            "required": False,
+        },
+    ],
 }
 
 CONSTANCE_CONFIG = {
@@ -463,12 +475,16 @@ CONSTANCE_CONFIG = {
         24 * 3600,
         "Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
         "before checking again for a new release.",
+        # Use custom field type defined above
+        "release_check_timeout_field",
     ],
     "RELEASE_CHECK_URL": [
         "",
         "URL of GitHub repository REST API endpoint to poll periodically for availability of new Nautobot releases.\n"
         'This can be set to the official repository "https://api.github.com/repos/nautobot/nautobot/releases" or '
         "a custom fork.\nSet this to an empty string to disable automatic update checks.",
+        # Use custom field type defined above
+        "release_check_url_field",
     ],
 }
 
