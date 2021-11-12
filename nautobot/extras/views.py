@@ -1458,7 +1458,7 @@ class SecretsGroupEditView(generic.ObjectEditView):
                     return redirect(self.get_return_url(request, obj))
 
             except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
+                msg = "Object save failed due to object-level permissions violation."
                 logger.debug(msg)
                 form.add_error(None, msg)
             except RuntimeError:
