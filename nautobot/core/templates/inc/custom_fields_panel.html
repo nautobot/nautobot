@@ -1,3 +1,4 @@
+{% load helpers %}
 {% with custom_fields=object.get_custom_fields %}
     {% if custom_fields %}
         <div class="panel panel-default">
@@ -17,6 +18,13 @@
                                 <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
                             {% elif field.type == 'multi-select' and value %}
                                 {{ value|join:", " }}
+                            {% elif field.type == 'json' and value %}
+                            <p>
+                                <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse" data-target="#cf_json" aria-expanded="false" aria-controls="cf_json">
+                                    Expand/Collapse
+                                </button>
+                            </p>
+                            <pre class="collapse" id="cf_json">{{ value|render_json }}</pre>
                             {% elif value or value == 0 %}
                                 {{ value }}
                             {% elif field.required %}
@@ -43,4 +51,3 @@
         </table>
     </div>
 {% endif %}
-

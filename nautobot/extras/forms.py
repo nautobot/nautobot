@@ -146,9 +146,11 @@ class CustomFieldFilterForm(forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        # Add all applicable CustomFields to the form
-        custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
-            filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
+        # Add all applicable CustomFields to the form, but exclude JSON
+        custom_fields = (
+            CustomField.objects.filter(content_types=self.obj_type)
+            .exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+            .exclude(type=CustomFieldTypeChoices.TYPE_JSON)
         )
         for cf in custom_fields:
             field_name = "cf_{}".format(cf.name)

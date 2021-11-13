@@ -1,5 +1,6 @@
 import logging
 import re
+import json
 from collections import OrderedDict
 from datetime import datetime, date
 
@@ -22,6 +23,7 @@ from nautobot.utilities.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
+    JSONField,
     LaxURLField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -368,6 +370,10 @@ class CustomField(BaseModel):
                         message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
                     )
                 ]
+
+        # JSON
+        elif self.type == CustomFieldTypeChoices.TYPE_JSON:
+            field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=initial)
 
         # Select or Multi-select
         else:
