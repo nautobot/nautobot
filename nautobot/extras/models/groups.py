@@ -30,7 +30,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         if not dynamicgroupmap:
             return self
 
-        dynamicgroup_filter = dynamicgroupmap.get_group_queryset_filter(obj)
+        dynamicgroup_filter = dynamicgroupmap.get_queryset_filter(obj)
         return self.filter(content_type=ContentType.objects.get_for_model(obj)).filter(dynamicgroup_filter)
 
 
