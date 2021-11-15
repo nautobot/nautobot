@@ -170,7 +170,7 @@ $ poetry publish --username __token__ --password <api_token>
 Build the images locally:
 
 ```no-highlight
-for ver in 3.6 3.7 3.8 3.9; do
+for ver in 3.6 3.7 3.8 3.9 3.10; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
   invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
@@ -191,7 +191,7 @@ nautobot:
     You should *not* include `docker-compose.dev.yml` in this test scenario!
 
 ```no-highlight
-for ver in 3.6 3.7 3.8 3.9; do
+for ver in 3.6 3.7 3.8 3.9 3.10; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke stop
   invoke integration-tests
@@ -202,7 +202,7 @@ Push the images to GitHub Container Registry and Docker Hub
 ```no-highlight
 docker login
 docker login ghcr.io
-for ver in 3.6 3.7 3.8 3.9; do
+for ver in 3.6 3.7 3.8 3.9 3.10; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke docker-push main
 done

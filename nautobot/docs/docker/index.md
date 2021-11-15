@@ -41,6 +41,7 @@ Currently images are pushed for the following python versions:
 * 3.7
 * 3.8
 * 3.9
+* 3.10
 
 !!! info
     A dev image `networktocode/nautobot-dev` is also provided with the same tags, this image provides the development dependencies needed to build Nautobot.  This container can be used as a base for development to develop additional Nautobot plugins but should **NOT** be used in production.
