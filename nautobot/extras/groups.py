@@ -10,7 +10,7 @@ def extract_value_from_object_from_queryset(obj, attrs_list):
     if not attrs_list:
         raise ValueError("A list of attribute must be provided")
 
-    print(obj, attrs_list)
+    # print(obj, attrs_list)
     attr = attrs_list.pop(0)
     # TODO Catch exception if the attribute doesn't exist
 
@@ -90,12 +90,21 @@ class BaseDynamicGroupMap:
             queryset_filter_item = getattr(cls, class_name)(field_name, obj)
 
             if queryset_filter_item:
-                queryset_filter |= queryset_filter_item
+                queryset_filter &= queryset_filter_item
 
         return queryset_filter
 
     @classmethod
     def get_queryset_filter_default(cls, field_name, obj):
+        """Return a queryset filter for a specific field.
+
+        Args:
+            field_name (str]): name of the field in the DynamicGroupMap
+            obj (): instance of the object
+
+        Returns:
+            queryset filter
+        """
 
         filterset = cls.filterset()
         # TODO Add check to ensure that field is present
@@ -103,22 +112,26 @@ class BaseDynamicGroupMap:
         field = filterset.declared_filters[field_name]
 
         # ----------------------------------------------
-        # Construct the query label first
-        # ----------------------------------------------
-        query_label = f"filter__{field_name}"
-
-        # Identify if the field is is a list or not
-        match_type = None
-        if isinstance(field, django_filters.ModelMultipleChoiceFilter):
-            match_type = "contains"
-
-        if match_type:
-            query_label = query_label + f"__{match_type}"
-
-        # ----------------------------------------------
         # Construct the value of the query based on the
         # ----------------------------------------------
         query_value = extract_value_from_object_from_queryset(obj, field.field_name.split("__"))
 
-        if query_value:
-            return Q(**{query_label: query_value})
+        # ----------------------------------------------
+        # Construct the query label first
+        # ----------------------------------------------
+        query_label = f"filter__{field_name}"
+
+        # ----------------------------------------------
+        # Field of type list (multichoice)
+        #  if query_value is not null, search for value in list or empty list
+        #  if query_value is None, list must be empty
+        # ----------------------------------------------
+        # import pdb
+        # pdb.set_trace()
+        if isinstance(field, django_filters.ModelMultipleChoiceFilter):
+            if query_value:
+                return Q(**{f"{query_label}__contains": query_value}) | Q(**{f"{query_label}__exact": []})
+
+            return Q(**{f"{query_label}__exact": []})
+
+        return Q(**{f"{query_label}__exact": query_value})
