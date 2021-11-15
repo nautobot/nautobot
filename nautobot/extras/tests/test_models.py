@@ -783,9 +783,11 @@ class SecretTest(TestCase):
 
     def test_environment_variable_templated_missing_object(self):
         """A templated secret requires an object for context."""
-        with self.assertRaises(SecretParametersError):
+        # Since we're not using Jinja2's StrictUndefined, it just renders as an empty string if obj is omitted or None,
+        # For this secret it results in a rendered value of "", which is of course not a defined environment variable.
+        with self.assertRaises(SecretValueNotFoundError):
             self.environment_secret_templated.get_value()
-        with self.assertRaises(SecretParametersError):
+        with self.assertRaises(SecretValueNotFoundError):
             self.environment_secret_templated.get_value(obj=None)
 
     def test_environment_variable_templated_bad_template(self):
@@ -795,8 +797,9 @@ class SecretTest(TestCase):
         with self.assertRaises(SecretParametersError):
             self.environment_secret_templated.get_value(obj=self.site)
         # Template references attribute not present on the provided obj
+        # Since we're not using Jinja2's StrictUndefined, this just renders as an empty string
         self.environment_secret_templated.parameters["variable"] = "{{ obj.primary_ip4 }}"
-        with self.assertRaises(SecretParametersError):
+        with self.assertRaises(SecretValueNotFoundError):
             self.environment_secret_templated.get_value(obj=self.site)
 
     @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})

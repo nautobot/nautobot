@@ -5,7 +5,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
-from jinja2 import Environment, StrictUndefined
 from jinja2.exceptions import UndefinedError, TemplateSyntaxError
 
 from nautobot.core.fields import AutoSlugField
@@ -15,6 +14,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretParametersError, SecretProviderError
 from nautobot.extras.utils import extras_features
+from nautobot.utilities.utils import render_jinja2
 
 
 logger = logging.getLogger(__name__)
@@ -73,9 +73,8 @@ class Secret(PrimaryModel):
 
     def rendered_parameters(self, obj=None):
         """Render self.parameters as a Jinja2 template with the given object as context."""
-        environment = Environment(undefined=StrictUndefined)
         try:
-            return {key: environment.from_string(value).render(obj=obj) for key, value in self.parameters.items()}
+            return {key: render_jinja2(value, {"obj": obj}) for key, value in self.parameters.items()}
         except (TemplateSyntaxError, UndefinedError) as exc:
             raise SecretParametersError(self, registry["secrets_providers"].get(self.provider), str(exc)) from exc
 
