@@ -688,23 +688,20 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
                 field_to_query = field.to_field_name or "pk"
                 print(f"{self.cleaned_data[field_name]} - {field_to_query}")
                 values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
-                if values:
-                    filter[field_name] = values
+                filter[field_name] = values or []
 
-            elif isinstance(field, forms.ModelChoiceField) and self.cleaned_data[field_name] is not None:
+            elif isinstance(field, forms.ModelChoiceField):
                 field_to_query = field.to_field_name or "pk"
                 value = getattr(self.cleaned_data[field_name], field_to_query)
-                if value:
-                    filter[field_name] = value
+                filter[field_name] = value or None
 
-            elif isinstance(field, forms.NullBooleanField) and self.cleaned_data[field_name] is not None:
+            elif isinstance(field, forms.NullBooleanField):
                 filter[field_name] = self.cleaned_data[field_name]
 
-            elif self.cleaned_data[field_name] is not None:
+            else:
                 filter[field_name] = self.cleaned_data[field_name]
                 print(f"{field_name}: {self.cleaned_data[field_name]}")
 
-        # print(filter)
         self.instance.filter = filter
         self.instance.save()
 

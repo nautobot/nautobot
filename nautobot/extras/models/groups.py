@@ -85,7 +85,7 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
         model = self.content_type.model_class()
 
         if not self.filter:
-            return model.objects.all()
+            return model.objects.none()
 
         dynamicgroupmap_class = get_dynamicgroupmap_for_model(model)
         return dynamicgroupmap_class.get_queryset(self.filter)
