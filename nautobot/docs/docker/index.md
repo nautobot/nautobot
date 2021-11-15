@@ -211,3 +211,7 @@ If you do not have a development environment created you can also build the cont
 ```no-highlight
 $ docker build -t networktocode/nautobot -f ./docker/Dockerfile --build-arg PYTHON_VER=3.6 .
 ```
+
+## Docker Compose
+
+An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using plugins.
