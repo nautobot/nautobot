@@ -12,6 +12,7 @@ from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
+    APISelect,
     APISelectMultiple,
     BootstrapMixin,
     BulkEditForm,
@@ -19,6 +20,7 @@ from nautobot.utilities.forms import (
     ColorSelect,
     CSVModelChoiceField,
     CSVModelForm,
+    CSVMultipleChoiceField,
     CSVMultipleContentTypeField,
     DateTimePicker,
     DynamicModelChoiceField,
@@ -28,9 +30,18 @@ from nautobot.utilities.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
+    TagFilterField,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
+from .choices import (
+    CustomFieldFilterLogicChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
@@ -48,19 +59,15 @@ from .models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
 )
+from .registry import registry
 from .utils import FeatureQuery
-from .choices import (
-    CustomFieldFilterLogicChoices,
-    JobExecutionType,
-    JobResultStatusChoices,
-    ObjectChangeActionChoices,
-    RelationshipSideChoices,
-    RelationshipTypeChoices,
-)
 
 
 #
@@ -700,9 +707,16 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
 
-    username = forms.CharField(required=False, label="Username", help_text="Username for token authentication.")
+    username = forms.CharField(
+        required=False,
+        label="Username",
+        help_text="Username for token authentication.<br><em>Deprecated</em> - use a secrets group instead",
+    )
+
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     provided_contents = forms.MultipleChoiceField(
         required=False,
@@ -719,17 +733,36 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "slug",
             "remote_url",
             "branch",
-            "_token",
             "username",
+            "_token",
+            "secrets_group",
             "provided_contents",
             "tags",
         ]
 
 
 class GitRepositoryCSVForm(CSVModelForm):
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        help_text="Secrets group for repository access (if any)",
+    )
+
     class Meta:
         model = GitRepository
         fields = GitRepository.csv_headers
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["provided_contents"] = CSVMultipleChoiceField(
+            choices=get_git_datasource_content_choices(),
+            required=False,
+            help_text=mark_safe(
+                "The data types this repository provides. Multiple values must be comma-separated and wrapped in "
+                'double quotes (e.g. <code>"extras.job,extras.configcontext"</code>).'
+            ),
+        )
 
 
 class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
@@ -748,14 +781,19 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
     username = forms.CharField(
         required=False,
         label="Username",
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
+
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
         model = GitRepository
+        nullable_fields = ["secrets_group"]
 
 
 #
@@ -1018,6 +1056,90 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     destination_type = MultipleContentTypeField(
         feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
+
+
+#
+# Secrets
+#
+
+
+def provider_choices():
+    return sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()])
+
+
+class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `Secret` objects."""
+
+    slug = SlugField()
+
+    provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
+
+    parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
+
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = Secret
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "provider",
+            "parameters",
+            "tags",
+        ]
+
+
+class SecretCSVForm(CustomFieldModelCSVForm):
+    class Meta:
+        model = Secret
+        fields = Secret.csv_headers
+
+
+def provider_choices_with_blank():
+    return add_blank_choice(sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()]))
+
+
+class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = Secret
+    q = forms.CharField(required=False, label="Search")
+    provider = forms.MultipleChoiceField(
+        choices=provider_choices_with_blank, widget=StaticSelect2Multiple(), required=False
+    )
+    tag = TagFilterField(model)
+
+
+# Inline formset for use with providing dynamic rows when creating/editing assignments of Secrets to SecretsGroups.
+SecretsGroupAssociationFormSet = inlineformset_factory(
+    parent_model=SecretsGroup,
+    model=SecretsGroupAssociation,
+    fields=("access_type", "secret_type", "secret"),
+    extra=5,
+    widgets={
+        "access_type": StaticSelect2,
+        "secret_type": StaticSelect2,
+        "secret": APISelect(api_url="/api/extras/secrets/"),
+    },
+)
+
+
+class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `SecretsGroup` objects."""
+
+    slug = SlugField()
+
+    class Meta:
+        model = SecretsGroup
+        fields = [
+            "name",
+            "slug",
+            "description",
+        ]
+
+
+class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = SecretsGroup
+    q = forms.CharField(required=False, label="Search")
 
 
 #

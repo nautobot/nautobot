@@ -44,7 +44,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import ConfigContextSchema, Status
+from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -1077,6 +1077,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             Cluster.objects.create(name="Cluster 2", type=cluster_type),
         )
 
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        )
+
         Device.objects.create(
             device_type=device_types[0],
             device_role=device_roles[0],
@@ -1085,6 +1090,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
+            secrets_group=secrets_groups[0],
             local_context_data={"A": 1},
         ),
         Device.objects.create(
@@ -1095,6 +1101,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
+            secrets_group=secrets_groups[0],
             local_context_data={"B": 2},
         ),
         Device.objects.create(
@@ -1105,6 +1112,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
+            secrets_group=secrets_groups[0],
             local_context_data={"C": 3},
         ),
 
@@ -1125,6 +1133,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
+                "secrets_group": secrets_groups[1].pk,
             },
             {
                 "device_type": device_types[1].pk,
@@ -1134,6 +1143,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
+                "secrets_group": secrets_groups[1].pk,
             },
             {
                 "device_type": device_types[1].pk,
@@ -1143,6 +1153,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
+                "secrets_group": secrets_groups[1].pk,
             },
         ]
 

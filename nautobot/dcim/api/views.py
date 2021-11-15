@@ -2,6 +2,7 @@ import socket
 from collections import OrderedDict
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
 from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -60,6 +61,8 @@ from nautobot.extras.api.views import (
     CustomFieldModelViewSet,
     StatusViewSetMixin,
 )
+from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import count_related
@@ -467,11 +470,48 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
 
         napalm_methods = request.GET.getlist("method")
         response = OrderedDict([(m, None) for m in napalm_methods])
-        username = settings.NAPALM_USERNAME
-        password = settings.NAPALM_PASSWORD
+
+        # Get NAPALM credentials for the device, or fall back to the legacy global NAPALM credentials
+        if device.secrets_group:
+            try:
+                try:
+                    username = device.secrets_group.get_secret_value(
+                        SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                        SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                        obj=device,
+                    )
+                except ObjectDoesNotExist:
+                    # No defined secret, fall through to legacy behavior
+                    username = settings.NAPALM_USERNAME
+                try:
+                    password = device.secrets_group.get_secret_value(
+                        SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                        SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+                        obj=device,
+                    )
+                except ObjectDoesNotExist:
+                    # No defined secret, fall through to legacy behavior
+                    password = settings.NAPALM_PASSWORD
+            except SecretError as exc:
+                raise ServiceUnavailable(f"Unable to retrieve device credentials: {exc.message}") from exc
+
         optional_args = settings.NAPALM_ARGS.copy()
         if device.platform.napalm_args is not None:
             optional_args.update(device.platform.napalm_args)
+
+        # Get NAPALM enable-secret from the device if present
+        if device.secrets_group:
+            try:
+                optional_args["secret"] = device.secrets_group.get_secret_value(
+                    SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                    SecretsGroupSecretTypeChoices.TYPE_SECRET,
+                    obj=device,
+                )
+            except ObjectDoesNotExist:
+                # No defined secret, this is OK
+                pass
+            except SecretError as exc:
+                raise ServiceUnavailable(f"Unable to retrieve device credentials: {exc.message}") from exc
 
         # Update NAPALM parameters according to the request headers
         for header in request.headers:

@@ -13,7 +13,13 @@ from django.utils import timezone
 from unittest import mock
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
-from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, ObjectChangeActionChoices
+from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
+    JobExecutionType,
+    ObjectChangeActionChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.jobs import Job
 from nautobot.extras.models import (
@@ -29,6 +35,9 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -478,6 +487,8 @@ class ExportTemplateTestCase(
 
 
 class GitRepositoryTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -489,13 +500,17 @@ class GitRepositoryTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        )
 
         # Create four GitRepository records
         repos = (
             GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
             GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
             GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
-            GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git"),
+            GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
         for repo in repos:
             repo.save(trigger_resync=False)
@@ -506,6 +521,7 @@ class GitRepositoryTestCase(
             "remote_url": "http://example.com/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
+            "secrets_group": secrets_groups[1].pk,
             "provided_contents": [
                 "extras.configcontext",
                 "extras.job",
@@ -513,8 +529,132 @@ class GitRepositoryTestCase(
             ],
         }
 
+        cls.csv_data = (
+            "name,slug,remote_url,branch,secrets_group,provided_contents",
+            "Git Repository 5,git-repo-5,https://example.com,main,,extras.configcontext",
+            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,",
+            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
+        )
+
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
+
+
+# Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
+class SecretTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkImportObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = Secret
+
+    @classmethod
+    def setUpTestData(cls):
+        tags = cls.create_tags("alpha", "beta", "gamma")
+
+        secrets = (
+            Secret(
+                name="View Test 1",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_1"},
+                tags=[t.pk for t in tags],
+            ),
+            Secret(
+                name="View Test 2",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_2"},
+            ),
+            Secret(
+                name="View Test 3",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_3"},
+            ),
+        )
+
+        for secret in secrets:
+            secret.validated_save()
+
+        cls.form_data = {
+            "name": "View Test 4",
+            "slug": "view-test-4",
+            "provider": "environment-variable",
+            "parameters": '{"variable": "VIEW_TEST_4"}',
+        }
+
+        cls.csv_data = (
+            "name,slug,provider,parameters",
+            'View Test 5,view-test-5,environment-variable,{"variable": "VIEW_TEST_5"}',
+            'View Test 6,,environment-variable,{"variable": "VIEW_TEST_6"}',
+            'View Test 7,,environment-variable,{"variable": "VIEW_TEST_7"}',
+        )
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "View Test 3"
+
+
+# Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
+class SecretsGroupTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = SecretsGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Group 1", slug="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
+            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+        )
+
+        secrets = (
+            Secret.objects.create(name="secret 1", slug="secret-1", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 2", slug="secret-2", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 3", slug="secret-3", provider="text-file", parameters={"path": "/tmp"}),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            group=secrets_groups[0],
+            secret=secrets[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=secrets_groups[0],
+            secret=secrets[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=secrets_groups[1],
+            secret=secrets[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+
+        cls.form_data = {
+            "name": "Group 4",
+            "slug": "group-4",
+            "description": "Some description",
+            # Management form fields required for the dynamic Secret formset
+            "secretsgroupassociation_set-TOTAL_FORMS": "0",
+            "secretsgroupassociation_set-INITIAL_FORMS": "1",
+            "secretsgroupassociation_set-MIN_NUM_FORMS": "0",
+            "secretsgroupassociation_set-MAX_NUM_FORMS": "1000",
+        }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Group 3"
 
 
 class GraphQLQueriesTestCase(

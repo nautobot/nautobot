@@ -49,8 +49,22 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Token</td>
+                        <td>Username <em>(deprecated)</em></td>
+                        <td>{{ object.username | placeholder }}</td>
+                    <tr>
+                    <tr>
+                        <td>Token <em>(deprecated)</em></td>
                         <td>{{ object.token_rendered }}</td>
+                    </tr>
+                    <tr>
+                        <td>Secrets Group</td>
+                        <td>
+                            {% if object.secrets_group %}
+                                <a href="{{ object.secrets_group.get_absolute_url }}">{{ object.secrets_group }}</a>
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
                     </tr>
                 </table>
             </div>

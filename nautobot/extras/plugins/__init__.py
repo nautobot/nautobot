@@ -21,11 +21,12 @@ from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.secrets import register_secrets_provider
 from nautobot.utilities.choices import ButtonColorChoices
 
 
 # Initialize plugin registry stores
-# registry['datasource_content'] is a non-plugin-exclusive registry and is initialized in extras.registry
+# registry["datasource_content"], registry["secrets_providers"] are not plugin-exclusive; initialized in extras.registry
 registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
@@ -88,6 +89,7 @@ class PluginConfig(NautobotConfig):
     jinja_filters = "jinja_filters"
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
+    secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
 
     def ready(self):
@@ -162,6 +164,13 @@ class PluginConfig(NautobotConfig):
             self.features["jinja_filters"] = True
         except ModuleNotFoundError:
             pass
+
+        # Register secrets providers (if any)
+        secrets_providers = import_object(f"{self.__module__}.{self.secrets_providers}")
+        if secrets_providers is not None:
+            for secrets_provider in secrets_providers:
+                register_secrets_provider(secrets_provider)
+            self.features["secrets_providers"] = secrets_providers
 
     @classmethod
     def validate(cls, user_config, nautobot_version):

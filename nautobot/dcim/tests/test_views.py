@@ -72,6 +72,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     Relationship,
     RelationshipAssociation,
+    SecretsGroup,
     Status,
 )
 from nautobot.ipam.models import VLAN, IPAddress
@@ -1187,6 +1188,11 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Platform.objects.create(name="Platform 2", slug="platform-2"),
         )
 
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        )
+
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses.get(slug="active")
 
@@ -1224,6 +1230,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
+                secrets_group=secrets_groups[0],
                 _custom_field_data={"crash-counter": 15},
             ),
         )
@@ -1271,6 +1278,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "primary_ip4": None,
             "primary_ip6": None,
             "cluster": None,
+            "secrets_group": secrets_groups[1].pk,
             "virtual_chassis": None,
             "vc_position": None,
             "vc_priority": None,
@@ -1282,10 +1290,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "device_role,manufacturer,device_type,status,name,site,rack_group,rack,position,face",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,Site 1,Rack Group 1,Rack 1,10,front",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,Site 1,Rack Group 1,Rack 1,20,front",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,Site 1,Rack Group 1,Rack 1,30,front",
+            "device_role,manufacturer,device_type,status,name,site,rack_group,rack,position,face,secrets_group",
+            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,Site 1,Rack Group 1,Rack 1,10,front,",
+            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,Site 1,Rack Group 1,Rack 1,20,front,",
+            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,Site 1,Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
@@ -1297,6 +1305,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses.get(slug="decommissioning").pk,
             "site": sites[1].pk,
             "rack": racks[1].pk,
+            "secrets_group": secrets_groups[1].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

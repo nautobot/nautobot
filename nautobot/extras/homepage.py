@@ -24,7 +24,7 @@ layout = (
         items=(
             HomePageItem(
                 name="Git Repositories",
-                link="dcim:site_list",
+                link="extras:gitrepository_list",
                 model=GitRepository,
                 description="Collections of data and/or job files",
                 permissions=["extras.view_gitrepository"],

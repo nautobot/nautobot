@@ -2,7 +2,6 @@ from .change_logging import ChangeLoggedModel, ObjectChange
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
-from .relationships import Relationship, RelationshipModel, RelationshipAssociation
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -20,6 +19,8 @@ from .models import (
     ScheduledJobs,
     Webhook,
 )
+from .relationships import Relationship, RelationshipModel, RelationshipAssociation
+from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from .tags import Tag, TaggedItem
 
 __all__ = (
@@ -47,6 +48,9 @@ __all__ = (
     "RelationshipAssociation",
     "ScheduledJob",
     "ScheduledJobs",
+    "Secret",
+    "SecretsGroup",
+    "SecretsGroupAssociation",
     "Status",
     "StatusField",
     "StatusModel",

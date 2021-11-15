@@ -44,3 +44,10 @@ class ExtrasConfig(NautobotConfig):
         from nautobot.extras.health_checks import DatabaseBackend
 
         plugin_dir.register(DatabaseBackend)
+
+        # Register built-in SecretsProvider classes
+        from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider
+        from nautobot.extras.secrets import register_secrets_provider
+
+        register_secrets_provider(EnvironmentVariableSecretsProvider)
+        register_secrets_provider(TextFileSecretsProvider)
