@@ -89,7 +89,7 @@ Jinja2 = "~2.11.3"
 # Optional data validation of config contexts
 jsonschema = "~3.2.0"
 # Rendering of markdown files to HTML
-Markdown = "~3.3.4"
+Markdown = "3.3.4"
 # MySQL database adapter
 mysqlclient = {version = "~2.0.3", optional = true}
 # IP prefix and address handling
