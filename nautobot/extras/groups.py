@@ -126,8 +126,6 @@ class BaseDynamicGroupMap:
         #  if query_value is not null, search for value in list or empty list
         #  if query_value is None, list must be empty
         # ----------------------------------------------
-        # import pdb
-        # pdb.set_trace()
         if isinstance(field, django_filters.ModelMultipleChoiceFilter):
             if query_value:
                 return Q(**{f"{query_label}__contains": query_value}) | Q(**{f"{query_label}__exact": []})
@@ -135,3 +133,26 @@ class BaseDynamicGroupMap:
             return Q(**{f"{query_label}__exact": []})
 
         return Q(**{f"{query_label}__exact": query_value})
+
+    @classmethod
+    def get_queryset_filter_tag(cls, field_name, obj):
+        """Return a queryset filter for the tag field.
+
+        Args:
+            field_name (str]): name of the field in the DynamicGroupMap
+            obj (): instance of the object
+
+        Returns:
+            queryset filter
+        """
+        # TODO only 1 tag is supported, but enforce that.
+        tag_slugs = [tag for tag in obj.tags.slugs()]
+
+        if tag_slugs:
+            query_filter = Q(filter__tag__exact=[])
+            for tag in tag_slugs:
+                query_filter |= Q(filter__tag__contains=tag)
+
+            return query_filter
+
+        return Q(filter__tag__exact=[])
