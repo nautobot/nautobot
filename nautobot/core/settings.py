@@ -418,7 +418,7 @@ CONSTANCE_ADDITIONAL_FIELDS = {
         "django.forms.IntegerField",
         {
             "min_value": 3600,
-        }
+        },
     ],
     "release_check_url_field": [
         "django.forms.URLField",
