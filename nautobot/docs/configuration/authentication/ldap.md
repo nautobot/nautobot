@@ -88,7 +88,7 @@ LDAP_IGNORE_CERT_ERRORS = True
 
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
 
-Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`. 
+Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`.
 
 ```
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
@@ -127,6 +127,12 @@ AUTH_LDAP_USER_ATTR_MAP = {
 ```
 
 The following snippet shows how to search for users in multiple LDAP groups:
+
+- Import LDAPSearchUnion
+
+    ```python
+    from django_auth_ldap.config import ..., LDAPSearchUnion
+    ```
 
 - Define the user-groups in *.env file (delimiter `';'`)
 
