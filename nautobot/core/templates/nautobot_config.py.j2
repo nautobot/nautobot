@@ -109,14 +109,6 @@ ALLOWED_URL_SCHEMES = (
     "xmpp",
 )
 
-# Optionally display a persistent banner at the top and/or bottom of every page. HTML is allowed. To display the same
-# content in both banners, define BANNER_TOP and set BANNER_BOTTOM = BANNER_TOP.
-BANNER_TOP = os.getenv("NAUTOBOT_BANNER_TOP", "")
-BANNER_BOTTOM = os.getenv("NAUTOBOT_BANNER_BOTTOM", "")
-
-# Text to include on the login page above the login form. HTML is allowed.
-BANNER_LOGIN = os.getenv("NAUTOBOT_BANNER_LOGIN", "")
-
 # Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
 CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", 900))}
 

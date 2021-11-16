@@ -53,9 +53,6 @@ ALLOWED_URL_SCHEMES = (
     "vnc",
     "xmpp",
 )
-BANNER_BOTTOM = ""
-BANNER_LOGIN = ""
-BANNER_TOP = ""
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
@@ -432,6 +429,18 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 
 CONSTANCE_CONFIG = {
+    "BANNER_BOTTOM": [
+        "",
+        "Custom HTML to display in a banner at the bottom of all pages.",
+    ],
+    "BANNER_LOGIN": [
+        "",
+        "Custom HTML to display in a banner at the top of the login page.",
+    ],
+    "BANNER_TOP": [
+        "",
+        "Custom HTML to display in a banner at the top of all pages.",
+    ],
     "CHANGELOG_RETENTION": [
         90,
         "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
@@ -487,6 +496,7 @@ CONSTANCE_CONFIG = {
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
+    "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["PREFER_IPV4"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],

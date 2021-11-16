@@ -4,6 +4,9 @@
 
 As of Nautobot 1.2.0, it is now possible to configure a number of settings via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
+- [BANNER_BOTTOM](#banner_bottom)
+- [BANNER_LOGIN](#banner_login)
+- [BANNER_TOP](#banner_top)
 - [CHANGELOG_RETENTION](#changelog_retention)
 - [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 - [MAX_PAGE_SIZE](#max_page_size)
@@ -64,8 +67,6 @@ A list of permitted URL schemes referenced when rendering links within Nautobot.
 
 Default: `""` (Empty string)
 
-Environment Variables: `NAUTOBOT_BANNER_TOP` and `NAUTOBOT_BANNER_BOTTOM`
-
 Setting these variables will display custom content in a banner at the top and/or bottom of the page, respectively. HTML is allowed. To replicate the content of the top banner in the bottom banner, set:
 
 ```python
@@ -73,15 +74,19 @@ BANNER_TOP = 'Your banner text'
 BANNER_BOTTOM = BANNER_TOP
 ```
 
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
+
 ---
 
 ## BANNER_LOGIN
 
 Default: `""` (Empty string)
 
-Environment Variable: `NAUTOBOT_BANNER_LOGIN`
-
 This defines custom content to be displayed on the login page above the login form. HTML is allowed.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
