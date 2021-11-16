@@ -126,6 +126,25 @@ AUTH_LDAP_USER_ATTR_MAP = {
 }
 ```
 
+The following snippet shows how to search for users in multiple LDAP groups:
+
+- Define the user-groups in *.env file (delimiter `';'`)
+
+    ```bash
+    # Groups to search for user objects. "(sAMAccountName=%(user)s),..."
+    NAUTOBOT_AUTH_LDAP_USER_SEARCH_DN=OU=IT-Admins,OU=special-users,OU=Acme-User,DC=Acme,DC=local;OU=Infrastruktur,OU=IT,OU=my-location,OU=User,OU=Acme-User,DC=Acme,DC=local
+    ```
+
+- Replace the AUTH_LDAP_USER_SEARCH command from above with:
+
+    ```bash
+    user_search_dn_list = str(AUTH_LDAP_USER_SEARCH_DN).split(";")
+    ldapsearch_objects = []
+    for sdn in user_search_dn_list:
+        ldapsearch_objects.append(LDAPSearch(sdn.strip(), ldap.SCOPE_SUBTREE, "(sAMAccountName=%(user)s)"))
+    AUTH_LDAP_USER_SEARCH = LDAPSearchUnion(*ldapsearch_objects)
+    ```
+
 ### User Groups for Permissions
 
 !!! info
