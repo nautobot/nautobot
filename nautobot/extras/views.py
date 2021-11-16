@@ -2,6 +2,7 @@ import inspect
 from datetime import datetime
 import logging
 
+from celery_singleton import DuplicateTaskError
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -857,17 +858,23 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             else:
                 # Enqueue job for immediate execution
                 job_content_type = ContentType.objects.get(app_label="extras", model="job")
-                job_result = JobResult.enqueue_job(
-                    run_job,
-                    job.class_path,
-                    job_content_type,
-                    request.user,
-                    data=job_class.serialize_data(job_form.cleaned_data),
-                    request=copy_safe_request(request),
-                    commit=commit,
-                )
-
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                try:
+                    job_result = JobResult.enqueue_job(
+                        run_job,
+                        job.class_path,
+                        job_content_type,
+                        request.user,
+                        data=job_class.serialize_data(job_form.cleaned_data),
+                        request=copy_safe_request(request),
+                        commit=commit,
+                    )
+                except DuplicateTaskError as err:
+                    messages.error(
+                        request,
+                        f"Unable to run job: Singleon job already running. {err}",
+                    )
+                else:
+                    return redirect("extras:job_jobresult", pk=job_result.pk)
 
         return render(
             request,

@@ -196,6 +196,10 @@ class BaseJob:
     def approval_required(cls):
         return getattr(cls.Meta, "approval_required", False)
 
+    @classproperty
+    def singleton(cls):
+        return getattr(cls.Meta, "singleton", False)
+
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
@@ -978,7 +982,7 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
-@nautobot_task
+@nautobot_task(unique_on=["data", "commit"])
 def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.

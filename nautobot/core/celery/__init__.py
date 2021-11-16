@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # NOT need to be called here.
 # nautobot.setup()
 
-app = Celery("nautobot")
+app = Celery("nautobot", task_cls="nautobot.core.celery.task:NautobotTask")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes. Again, this is possible
@@ -93,8 +93,8 @@ def nautobot_kombu_json_loads_hook(data):
 
 
 # Encoder function
-def _dumps(obj):
-    return json.dumps(obj, cls=NautobotKombuJSONEncoder)
+def _dumps(obj, **kwargs):
+    return json.dumps(obj, cls=NautobotKombuJSONEncoder, **kwargs)
 
 
 # Decoder function

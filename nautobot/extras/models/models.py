@@ -5,6 +5,7 @@ from collections import OrderedDict
 from datetime import timedelta
 
 from celery import schedules
+from celery_singleton import DuplicateTaskError
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
@@ -764,6 +765,7 @@ class JobResult(BaseModel, CustomFieldModel):
         but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
         to plugin model instances.
         """
+
         from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
 
         if self.obj_type == ContentType.objects.get(app_label="extras", model="job"):
@@ -825,10 +827,24 @@ class JobResult(BaseModel, CustomFieldModel):
         kwargs: additional kargs passed to the callable
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
+        job_class = job_result.related_object
 
+        # Explicitly pass along the PK of the JobResult
         kwargs["job_result_pk"] = job_result.pk
 
-        func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id))
+        # Execute the Celery task to capture the AsyncResult, or if it fails to be scheduled such as
+        # it being a duplicate Singleton execution, clean up the JobResult.
+        try:
+            task_result = func.apply_async(args=args, kwargs=kwargs, really_singleton=job_class.singleton)
+        except DuplicateTaskError:
+            job_result.delete()
+            raise
+
+        # After successful publish, explicitly set the task_id on the JobResult and refresh it
+        # before returning it.
+        job_result.job_id = task_result.task_id
+        job_result.save()
+        job_result.refresh_from_db()
 
         return job_result
 
