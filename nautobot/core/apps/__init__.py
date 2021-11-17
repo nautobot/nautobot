@@ -8,6 +8,7 @@ from django.apps import AppConfig, apps as global_apps
 from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
 
+from constance.apps import ConstanceConfig
 from graphene.types import generic, String
 
 from nautobot.core.signals import nautobot_database_ready
@@ -645,3 +646,9 @@ class CoreConfig(NautobotConfig):
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
 
         super().ready()
+
+
+class NautobotServerConfig(ConstanceConfig):
+    """Override "Constance" app name to "Configuration"."""
+
+    verbose_name = "Configuration"
