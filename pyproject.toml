@@ -108,6 +108,8 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+# Library of network related Jinja Filters
+netutils = "~0.2.4"
 
 [tool.poetry.extras]
 mysql = ["mysqlclient"]

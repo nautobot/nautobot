@@ -1006,6 +1006,14 @@ python-versions = "*"
 importlib-resources = {version = "*", markers = "python_version < \"3.7\""}
 
 [[package]]
+name = "netutils"
+version = "0.2.4"
+description = "Common helper functions useful in network automation."
+category = "main"
+optional = false
+python-versions = ">=3.6.2,<4.0.0"
+
+[[package]]
 name = "oauthlib"
 version = "3.1.1"
 description = "A generic, spec-compliant, thorough implementation of the OAuth request-signing logic"
@@ -1567,7 +1575,11 @@ mysql = ["mysqlclient"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.2"
+<<<<<<< HEAD
 content-hash = "aa64b37fa4e593d0863fc76304932d19f0019fe6a1064ad29e48d8474159c32b"
+=======
+content-hash = "e4a1ca1b5b8f5ba6a98c30200ee2fe5a541076d88389975e2ae2f6800f981fc7"
+>>>>>>> Add netutils and register all jinja filters
 
 [metadata.files]
 amqp = [
@@ -1591,8 +1603,13 @@ billiard = [
     {file = "billiard-3.6.4.0.tar.gz", hash = "sha256:299de5a8da28a783d51b197d496bef4f1595dd023a93a4f59dde1886ae905547"},
 ]
 black = [
+<<<<<<< HEAD
     {file = "black-21.10b0-py3-none-any.whl", hash = "sha256:6eb7448da9143ee65b856a5f3676b7dda98ad9abe0f87fce8c59291f15e82a5b"},
     {file = "black-21.10b0.tar.gz", hash = "sha256:a9952229092e325fe5f3dae56d81f639b23f7131eb840781947e4b2886030f33"},
+=======
+    {file = "black-20.8b1-py3-none-any.whl", hash = "sha256:70b62ef1527c950db59062cda342ea224d772abdf6adc58b86a45421bab20a6b"},
+    {file = "black-20.8b1.tar.gz", hash = "sha256:1c02557aa099101b9d21496f8a914e9ed2222ef70336404eeeac8edba836fbea"},
+>>>>>>> Add netutils and register all jinja filters
 ]
 cached-property = [
     {file = "cached-property-1.5.2.tar.gz", hash = "sha256:9fa5755838eecbb2d234c3aa390bd80fbd3ac6b6869109bfc1b499f7bd89a130"},
@@ -2017,6 +2034,10 @@ mysqlclient = [
 netaddr = [
     {file = "netaddr-0.8.0-py2.py3-none-any.whl", hash = "sha256:9666d0232c32d2656e5e5f8d735f58fd6c7457ce52fc21c98d45f2af78f990ac"},
     {file = "netaddr-0.8.0.tar.gz", hash = "sha256:d6cc57c7a07b1d9d2e917aa8b36ae8ce61c35ba3fcd1b83ca31c5a0ee2b5a243"},
+]
+netutils = [
+    {file = "netutils-0.2.4-py3-none-any.whl", hash = "sha256:a6cd90fc446f00778ddc8e3538221f0e46e12b3c9d4b434d5cefa18807995d05"},
+    {file = "netutils-0.2.4.tar.gz", hash = "sha256:362850aa5933a9df66f497f9074828f8651aed103d1c390dcb2868bcffc58679"},
 ]
 oauthlib = [
     {file = "oauthlib-3.1.1-py2.py3-none-any.whl", hash = "sha256:42bf6354c2ed8c6acb54d971fce6f88193d97297e18602a3a886603f9d7730cc"},
