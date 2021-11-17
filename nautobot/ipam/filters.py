@@ -645,7 +645,7 @@ class VLANFilterSet(
         return queryset.filter(qs_filter)
 
 
-class ServiceFilterSet(BaseFilterSet, CreatedUpdatedFilterSet):
+class ServiceFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

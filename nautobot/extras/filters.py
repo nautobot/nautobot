@@ -409,7 +409,7 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
 #
 
 
-class JobResultFilterSet(BaseFilterSet):
+class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
