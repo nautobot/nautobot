@@ -42,9 +42,9 @@
 <body>
     {% include 'inc/nav_menu.html' %}
     <div class="container-fluid wrapper">
-        {% if settings.BANNER_TOP %}
+        {% if "BANNER_TOP"|settings_or_config %}
             <div class="alert alert-info text-center" role="alert">
-                {{ settings.BANNER_TOP|safe }}
+                {{ "BANNER_TOP"|settings_or_config|safe }}
             </div>
         {% endif %}
         {% if settings.MAINTENANCE_MODE %}
@@ -65,9 +65,9 @@
         {% block header %}{% endblock header %}
         {% block content %}{% endblock content %}
         <div class="push"></div>
-        {% if settings.BANNER_BOTTOM %}
+        {% if "BANNER_BOTTOM"|settings_or_config %}
             <div class="alert alert-info text-center banner-bottom" role="alert">
-                {{ settings.BANNER_BOTTOM|safe }}
+                {{ "BANNER_BOTTOM"|settings_or_config|safe }}
             </div>
         {% endif %}
     </div>

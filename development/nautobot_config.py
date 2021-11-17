@@ -11,7 +11,6 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 
 ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
-HIDE_RESTRICTED_UI = os.getenv("HIDE_RESTRICTED_UI", False)
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
 
 #

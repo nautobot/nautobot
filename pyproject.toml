@@ -40,6 +40,8 @@ Django = "~3.1.12"
 django-cacheops = "~5.1"
 # Base functionality for task scheduling with Celery
 django-celery-beat = "^2.2.0"
+# Management of app configuration via the Django admin UI
+django-constance = {version = "~2.8.0", extras = ["database"]}
 # Permit cross-domain API requests
 django-cors-headers = "~3.7.0"
 # Support for encrypted database fields
@@ -87,7 +89,7 @@ Jinja2 = "~2.11.3"
 # Optional data validation of config contexts
 jsonschema = "~3.2.0"
 # Rendering of markdown files to HTML
-Markdown = "~3.3.4"
+Markdown = "3.3.4"
 # MySQL database adapter
 mysqlclient = {version = "~2.0.3", optional = true}
 # IP prefix and address handling

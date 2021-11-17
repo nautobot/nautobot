@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
+
+from constance.test import override_config
 
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
@@ -488,6 +491,36 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'class="slot" height="22" width="230"', response.content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=27, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=255)
+    @override_config(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=19, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=190)
+    def test_get_rack_elevation_svg_settings_overridden(self):
+        """
+        GET a single rack elevation in SVG format, with Django settings specifying a non-standard unit size.
+        """
+        rack = Rack.objects.first()
+        self.add_permissions("dcim.view_rack")
+        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'class="slot" height="27" width="255"', response.content)
+
+    @override_config(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=19, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=190)
+    def test_get_rack_elevation_svg_config_overridden(self):
+        """
+        GET a single rack elevation in SVG format, with Constance config specifying a non-standard unit size.
+        """
+        rack = Rack.objects.first()
+        self.add_permissions("dcim.view_rack")
+        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'class="slot" height="19" width="190"', response.content)
 
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):

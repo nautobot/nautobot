@@ -6,7 +6,6 @@ import logging
 from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models.signals import m2m_changed, pre_delete
@@ -16,6 +15,7 @@ from django_prometheus.models import model_deletes, model_inserts, model_updates
 from prometheus_client import Counter
 
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
+from nautobot.utilities.config import get_settings_or_config
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
@@ -83,8 +83,9 @@ def _handle_changed_object(request, sender, instance, **kwargs):
         model_updates.labels(instance._meta.model_name).inc()
 
     # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
-    if settings.CHANGELOG_RETENTION and random.randint(1, 1000) == 1:
-        cutoff = timezone.now() - timedelta(days=settings.CHANGELOG_RETENTION)
+    changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
+    if changelog_retention and random.randint(1, 1000) == 1:
+        cutoff = timezone.now() - timedelta(days=changelog_retention)
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 

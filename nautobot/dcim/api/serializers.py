@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
@@ -82,6 +81,7 @@ from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -422,12 +422,17 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
         choices=RackElevationDetailRenderChoices,
         default=RackElevationDetailRenderChoices.RENDER_JSON,
     )
-    unit_width = serializers.IntegerField(default=settings.RACK_ELEVATION_DEFAULT_UNIT_WIDTH)
-    unit_height = serializers.IntegerField(default=settings.RACK_ELEVATION_DEFAULT_UNIT_HEIGHT)
+    unit_width = serializers.IntegerField(required=False)
+    unit_height = serializers.IntegerField(required=False)
     legend_width = serializers.IntegerField(default=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT)
     exclude = serializers.UUIDField(required=False, default=None)
     expand_devices = serializers.BooleanField(required=False, default=True)
     include_images = serializers.BooleanField(required=False, default=True)
+
+    def validate(self, attrs):
+        attrs.setdefault("unit_width", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH"))
+        attrs.setdefault("unit_height", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"))
+        return attrs
 
 
 #

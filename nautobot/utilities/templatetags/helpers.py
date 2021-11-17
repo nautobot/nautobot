@@ -11,6 +11,7 @@ from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
 from markdown import markdown
 
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.utils import foreground_color
 
@@ -242,6 +243,11 @@ def meters_to_feet(n):
 @register.filter
 def get_item(d, key):
     return d.get(key)
+
+
+@register.filter
+def settings_or_config(key):
+    return get_settings_or_config(key)
 
 
 #
