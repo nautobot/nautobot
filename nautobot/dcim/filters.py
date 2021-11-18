@@ -327,7 +327,7 @@ class RackFilterSet(
         )
 
 
-class RackReservationFilterSet(BaseFilterSet, CustomFieldModelFilterSet, TenancyFilterSet):
+class RackReservationFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1068,7 +1068,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         return queryset.filter(qs_filter)
 
 
-class VirtualChassisFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+class VirtualChassisFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1131,7 +1131,7 @@ class VirtualChassisFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         return queryset.filter(qs_filter)
 
 
-class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet, CustomFieldModelFilterSet):
+class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1215,7 +1215,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = []
 
 
-class PowerPanelFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+class PowerPanelFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
