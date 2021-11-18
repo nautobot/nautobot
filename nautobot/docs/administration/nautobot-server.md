@@ -129,6 +129,18 @@ nautobot=> \q
 
 ### `dumpdata`
 
+```no-highlight
+$ nautobot-server dumpdata \
+  --natural-foreign \
+  --natural-primary \
+  --exclude contenttypes \
+  --exclude auth.permission \
+  --exclude extras.job \
+  --format json \
+  --indent 2 \
+  --traceback  > nautobot_dump.json
+```
+
 Use this command to generate a JSON dump of the database contents.
 
 Details see: [`Export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql)
@@ -208,6 +220,8 @@ There are a number of other options not covered here.
 
 
 ### `loaddata`
+
+`nautobot-server loaddata --traceback nautobot_dump.json`
 
 To import the data exported that was exported with `dumpdata` see the following descriptions:
 
