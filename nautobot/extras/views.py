@@ -618,7 +618,13 @@ class GitRepositorySyncView(View):
         if not get_worker_count(request):
             messages.error(request, "Unable to run job: Celery worker process not running.")
         else:
-            enqueue_pull_git_repository_and_refresh_data(repository, request)
+            try:
+                enqueue_pull_git_repository_and_refresh_data(repository, request)
+            except DuplicateTaskError as err:
+                messages.error(
+                    request,
+                    f"Unable to run job: Repository sync job already running. {err}",
+                )
 
         return redirect("extras:gitrepository_result", slug=slug)
 
@@ -871,7 +877,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 except DuplicateTaskError as err:
                     messages.error(
                         request,
-                        f"Unable to run job: Singleon job already running. {err}",
+                        f"Unable to run job: Singleton job already running. {err}",
                     )
                 else:
                     return redirect("extras:job_jobresult", pk=job_result.pk)

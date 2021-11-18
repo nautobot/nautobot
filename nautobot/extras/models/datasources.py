@@ -80,6 +80,10 @@ class GitRepository(PrimaryModel):
     csv_headers = ["name", "slug", "remote_url", "branch", "secrets_group", "provided_contents"]
     clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
+    # (FIXME:jathan) This is is a hack to get this class to be compatible with `job_class.singleton`
+    # check in `JobResult.enqueue_job()` until I come up with a better pattern.
+    singleton = True
+
     class Meta:
         ordering = ["name"]
         verbose_name = "Git repository"

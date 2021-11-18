@@ -57,7 +57,7 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
     )
 
 
-@nautobot_task
+@nautobot_task(unique_on=["repository_pk"])
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().

@@ -1,6 +1,33 @@
+"""Custom Task class for use with Nautobot background services."""
+
+from hashlib import md5
 import logging
 
-from celery_singleton import Singleton
+from kombu import serialization
+
+
+def nautobot_generate_lock(task_name, task_args=None, task_kwargs=None, key_prefix="SINGLETONLOCK_"):
+    """
+    Overload of `celery_singleton.util.generate_lock()` to use `kombu` serialization vs. `json`.
+
+    This is required because the original function doesn't know how to serialize complex objects due
+    to using the vanilla `json` encoder vs. the specialized Kombu encoder.
+    """
+    _, _, str_args = serialization.dumps(sorted(task_args) or [])
+    _, _, str_kwargs = serialization.dumps({k: task_kwargs[k] for k in sorted(task_kwargs)} or {})
+    task_hash = md5((task_name + str_args + str_kwargs).encode()).hexdigest()
+    key_prefix = key_prefix
+    return key_prefix + task_hash
+
+
+# Monkey patch the `util` lib with our replacement.
+from celery_singleton import util  # noqa
+
+util.generate_lock = nautobot_generate_lock
+
+
+# Now we can import Singleton
+from celery_singleton import Singleton  # noqa
 
 
 logger = logging.getLogger(__name__)

@@ -34,6 +34,8 @@ include = [
 python = "^3.6.2"
 # Background task processing
 celery = "~5.1.0"
+# Prevent duplicate celery tasks
+celery-singleton = "^0.3.1"
 # Fundamental web framework for Nautobot
 Django = "~3.1.12"
 # Caching with Redis
@@ -104,11 +106,12 @@ pycryptodome = "~3.10.1"
 pyuwsgi = "~2.0.19.1.post0"
 # YAML parsing and rendering
 PyYAML = "~5.4.1"
+# Python client for Redis database and key-value store (pinned to <4.0.0)
+redis = "~=3.5.3"
 # Social authentication/registration with support for many auth providers
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
-celery-singleton = "^0.3.1"
 
 [tool.poetry.extras]
 mysql = ["mysqlclient"]

@@ -2,6 +2,7 @@ import os
 import platform
 import sys
 
+from celery_singleton import DuplicateTaskError
 from django.conf import settings
 from django.http import HttpResponseServerError
 from django.shortcuts import render
@@ -50,14 +51,17 @@ class HomeView(TemplateView):
         # Check whether a new release is available. (Only for staff/superusers.)
         new_release = None
         if request.user.is_staff or request.user.is_superuser:
-            latest_release, release_url = get_latest_release()
-            if isinstance(latest_release, version.Version):
-                current_version = version.parse(settings.VERSION)
-                if latest_release > current_version:
-                    new_release = {
-                        "version": str(latest_release),
-                        "url": release_url,
-                    }
+            try:
+                latest_release, release_url = get_latest_release()
+                if isinstance(latest_release, version.Version):
+                    current_version = version.parse(settings.VERSION)
+                    if latest_release > current_version:
+                        new_release = {
+                            "version": str(latest_release),
+                            "url": release_url,
+                        }
+            except DuplicateTaskError:
+                pass
 
         context = self.get_context_data()
         context.update(
