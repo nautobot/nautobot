@@ -8,8 +8,25 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from taggit.managers import TaggableManager
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+
+from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+)
+from nautobot.dcim.constants import (
+    NONCONNECTABLE_IFACE_TYPES,
+    REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
+    VIRTUAL_IFACE_TYPES,
+    WIRELESS_IFACE_TYPES,
+)
+
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
     CustomFieldModel,

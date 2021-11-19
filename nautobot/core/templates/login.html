@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load helpers %}
 {% load form_helpers %}
 
 {% block content %}
 <div class="row" style="margin-top: {% if settings.BANNER_LOGIN %}100{% else %}150{% endif %}px;">
     <div class="col-sm-4 col-sm-offset-4">
-        {% if settings.BANNER_LOGIN %}
+        {% if "BANNER_LOGIN"|settings_or_config %}
             <div style="margin-bottom: 25px">
-                {{ settings.BANNER_LOGIN|safe }}
+                {{ "BANNER_LOGIN"|settings_or_config|safe }}
             </div>
         {% endif %}
         {% if form.non_field_errors %}

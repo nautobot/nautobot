@@ -2,8 +2,42 @@ from nautobot.utilities.choices import ChoiceSet
 
 
 #
+# Banners (currently plugin-specific)
+#
+
+
+class BannerClassChoices(ChoiceSet):
+    """Styling choices for custom banners."""
+
+    CLASS_SUCCESS = "success"
+    CLASS_INFO = "info"
+    CLASS_WARNING = "warning"
+    CLASS_DANGER = "danger"
+
+    CHOICES = (
+        (CLASS_SUCCESS, "Success"),
+        (CLASS_INFO, "Info"),
+        (CLASS_WARNING, "Warning"),
+        (CLASS_DANGER, "Danger"),
+    )
+
+
+#
 # CustomFields
 #
+
+
+class CustomFieldFilterLogicChoices(ChoiceSet):
+
+    FILTER_DISABLED = "disabled"
+    FILTER_LOOSE = "loose"
+    FILTER_EXACT = "exact"
+
+    CHOICES = (
+        (FILTER_DISABLED, "Disabled"),
+        (FILTER_LOOSE, "Loose"),
+        (FILTER_EXACT, "Exact"),
+    )
 
 
 class CustomFieldTypeChoices(ChoiceSet):
@@ -25,50 +59,6 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_SELECT, "Selection"),
         (TYPE_MULTISELECT, "Multiple selection"),
     )
-
-
-class CustomFieldFilterLogicChoices(ChoiceSet):
-
-    FILTER_DISABLED = "disabled"
-    FILTER_LOOSE = "loose"
-    FILTER_EXACT = "exact"
-
-    CHOICES = (
-        (FILTER_DISABLED, "Disabled"),
-        (FILTER_LOOSE, "Loose"),
-        (FILTER_EXACT, "Exact"),
-    )
-
-
-#
-# Relationships
-#
-
-
-class RelationshipTypeChoices(ChoiceSet):
-
-    TYPE_ONE_TO_ONE = "one-to-one"
-    TYPE_ONE_TO_MANY = "one-to-many"
-    TYPE_MANY_TO_MANY = "many-to-many"
-
-    CHOICES = (
-        (TYPE_ONE_TO_ONE, "One to One"),
-        (TYPE_ONE_TO_MANY, "One to Many"),
-        (TYPE_MANY_TO_MANY, "Many to Many"),
-    )
-
-
-class RelationshipSideChoices(ChoiceSet):
-
-    SIDE_SOURCE = "source"
-    SIDE_DESTINATION = "destination"
-
-    CHOICES = (
-        (SIDE_SOURCE, "Source"),
-        (SIDE_DESTINATION, "Destination"),
-    )
-
-    OPPOSITE = {SIDE_SOURCE: SIDE_DESTINATION, SIDE_DESTINATION: SIDE_SOURCE}
 
 
 #
@@ -98,27 +88,72 @@ class CustomLinkButtonClassChoices(ChoiceSet):
 
 
 #
-# ObjectChanges
+# JobExecutionType
 #
 
 
-class ObjectChangeActionChoices(ChoiceSet):
+class JobExecutionType(ChoiceSet):
 
-    ACTION_CREATE = "create"
-    ACTION_UPDATE = "update"
-    ACTION_DELETE = "delete"
+    TYPE_IMMEDIATELY = "immediately"
+    TYPE_FUTURE = "future"
+    TYPE_HOURLY = "hourly"
+    TYPE_DAILY = "daily"
+    TYPE_WEEKLY = "weekly"
 
     CHOICES = (
-        (ACTION_CREATE, "Created"),
-        (ACTION_UPDATE, "Updated"),
-        (ACTION_DELETE, "Deleted"),
+        (TYPE_IMMEDIATELY, "Once immediately"),
+        (TYPE_FUTURE, "Once in the future"),
+        (TYPE_HOURLY, "Recurring hourly"),
+        (TYPE_DAILY, "Recurring daily"),
+        (TYPE_WEEKLY, "Recurring weekly"),
     )
 
-    CSS_CLASSES = {
-        ACTION_CREATE: "success",
-        ACTION_UPDATE: "primary",
-        ACTION_DELETE: "danger",
+    SCHEDULE_CHOICES = (
+        TYPE_FUTURE,
+        TYPE_HOURLY,
+        TYPE_DAILY,
+        TYPE_WEEKLY,
+    )
+
+    RECURRING_CHOICES = (
+        TYPE_HOURLY,
+        TYPE_DAILY,
+        TYPE_WEEKLY,
+    )
+
+    CELERY_INTERVAL_MAP = {
+        TYPE_HOURLY: "hours",
+        TYPE_DAILY: "days",
+        TYPE_WEEKLY: "days",  # a week is expressed as 7 days
     }
+
+
+#
+# Job results
+#
+
+
+class JobResultStatusChoices(ChoiceSet):
+
+    STATUS_PENDING = "pending"
+    STATUS_RUNNING = "running"
+    STATUS_COMPLETED = "completed"
+    STATUS_ERRORED = "errored"
+    STATUS_FAILED = "failed"
+
+    CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_RUNNING, "Running"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_ERRORED, "Errored"),
+        (STATUS_FAILED, "Failed"),
+    )
+
+    TERMINAL_STATE_CHOICES = (
+        STATUS_COMPLETED,
+        STATUS_ERRORED,
+        STATUS_FAILED,
+    )
 
 
 #
@@ -152,30 +187,115 @@ class LogLevelChoices(ChoiceSet):
 
 
 #
-# Job results
+# ObjectChanges
 #
 
 
-class JobResultStatusChoices(ChoiceSet):
+class ObjectChangeActionChoices(ChoiceSet):
 
-    STATUS_PENDING = "pending"
-    STATUS_RUNNING = "running"
-    STATUS_COMPLETED = "completed"
-    STATUS_ERRORED = "errored"
-    STATUS_FAILED = "failed"
+    ACTION_CREATE = "create"
+    ACTION_UPDATE = "update"
+    ACTION_DELETE = "delete"
 
     CHOICES = (
-        (STATUS_PENDING, "Pending"),
-        (STATUS_RUNNING, "Running"),
-        (STATUS_COMPLETED, "Completed"),
-        (STATUS_ERRORED, "Errored"),
-        (STATUS_FAILED, "Failed"),
+        (ACTION_CREATE, "Created"),
+        (ACTION_UPDATE, "Updated"),
+        (ACTION_DELETE, "Deleted"),
     )
 
-    TERMINAL_STATE_CHOICES = (
-        STATUS_COMPLETED,
-        STATUS_ERRORED,
-        STATUS_FAILED,
+    CSS_CLASSES = {
+        ACTION_CREATE: "success",
+        ACTION_UPDATE: "primary",
+        ACTION_DELETE: "danger",
+    }
+
+
+#
+# Relationships
+#
+
+
+class RelationshipSideChoices(ChoiceSet):
+
+    SIDE_SOURCE = "source"
+    SIDE_DESTINATION = "destination"
+    SIDE_PEER = "peer"  # for symmetric / non-directional relationships
+
+    CHOICES = (
+        (SIDE_SOURCE, "Source"),
+        (SIDE_DESTINATION, "Destination"),
+        (SIDE_PEER, "Peer"),
+    )
+
+    OPPOSITE = {
+        SIDE_SOURCE: SIDE_DESTINATION,
+        SIDE_DESTINATION: SIDE_SOURCE,
+        SIDE_PEER: SIDE_PEER,
+    }
+
+
+class RelationshipTypeChoices(ChoiceSet):
+
+    TYPE_ONE_TO_ONE = "one-to-one"
+    TYPE_ONE_TO_ONE_SYMMETRIC = "symmetric-one-to-one"
+    TYPE_ONE_TO_MANY = "one-to-many"
+    TYPE_MANY_TO_MANY = "many-to-many"
+    TYPE_MANY_TO_MANY_SYMMETRIC = "symmetric-many-to-many"
+
+    CHOICES = (
+        (TYPE_ONE_TO_ONE, "One to One"),
+        (TYPE_ONE_TO_ONE_SYMMETRIC, "Symmetric One to One"),
+        (TYPE_ONE_TO_MANY, "One to Many"),
+        (TYPE_MANY_TO_MANY, "Many to Many"),
+        (TYPE_MANY_TO_MANY_SYMMETRIC, "Symmetric Many to Many"),
+    )
+
+
+#
+# Secrets
+#
+
+
+class SecretsGroupAccessTypeChoices(ChoiceSet):
+
+    TYPE_GENERIC = "Generic"
+
+    TYPE_CONSOLE = "Console"
+    TYPE_GNMI = "gNMI"
+    TYPE_HTTP = "HTTP(S)"
+    TYPE_NETCONF = "NETCONF"
+    TYPE_REST = "REST"
+    TYPE_RESTCONF = "RESTCONF"
+    TYPE_SNMP = "SNMP"
+    TYPE_SSH = "SSH"
+
+    CHOICES = (
+        (TYPE_GENERIC, "Generic"),
+        (TYPE_CONSOLE, "Console"),
+        (TYPE_GNMI, "gNMI"),
+        (TYPE_HTTP, "HTTP(S)"),
+        (TYPE_NETCONF, "NETCONF"),
+        (TYPE_REST, "REST"),
+        (TYPE_RESTCONF, "RESTCONF"),
+        (TYPE_SNMP, "SNMP"),
+        (TYPE_SSH, "SSH"),
+    )
+
+
+class SecretsGroupSecretTypeChoices(ChoiceSet):
+
+    TYPE_KEY = "key"
+    TYPE_PASSWORD = "password"
+    TYPE_SECRET = "secret"
+    TYPE_TOKEN = "token"
+    TYPE_USERNAME = "username"
+
+    CHOICES = (
+        (TYPE_KEY, "Key"),
+        (TYPE_PASSWORD, "Password"),
+        (TYPE_SECRET, "Secret"),
+        (TYPE_TOKEN, "Token"),
+        (TYPE_USERNAME, "Username"),
     )
 
 

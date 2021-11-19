@@ -6,7 +6,7 @@ import requests
 from cacheops import CacheMiss, RedisCache
 from django.conf import settings
 from django.test import SimpleTestCase, override_settings
-from packaging.version import Version
+from packaging import version
 from requests import Response
 
 from nautobot.utilities.tasks import get_releases
@@ -80,15 +80,15 @@ class GetReleasesTestCase(SimpleTestCase):
             releases,
             [
                 (
-                    Version("2.7.8"),
+                    "2.7.8",
                     "https://github.com/nautobot/nautobot/releases/tag/v2.7.8",
                 ),
                 (
-                    Version("2.6b1"),
+                    "2.6b1",
                     "https://github.com/nautobot/nautobot/releases/tag/v2.6-beta1",
                 ),
                 (
-                    Version("2.5.9"),
+                    "2.5.9",
                     "https://github.com/nautobot/nautobot/releases/tag/v2.5.9",
                 ),
             ],
@@ -102,7 +102,9 @@ class GetReleasesTestCase(SimpleTestCase):
         )
 
         # Check if result is put in cache
-        dummy_cache_set.assert_called_once_with("latest_release", max(releases), 160876)
+        expected_version_str, expected_url = max(releases)
+        expected_version = version.parse(expected_version_str)
+        dummy_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
 
     @patch.object(requests, "get")
     @patch.object(RedisCache, "set")
@@ -118,11 +120,11 @@ class GetReleasesTestCase(SimpleTestCase):
             releases,
             [
                 (
-                    Version("2.7.8"),
+                    "2.7.8",
                     "https://github.com/nautobot/nautobot/releases/tag/v2.7.8",
                 ),
                 (
-                    Version("2.5.9"),
+                    "2.5.9",
                     "https://github.com/nautobot/nautobot/releases/tag/v2.5.9",
                 ),
             ],
@@ -136,7 +138,9 @@ class GetReleasesTestCase(SimpleTestCase):
         )
 
         # Check if result is put in cache
-        dummy_cache_set.assert_called_once_with("latest_release", max(releases), 160876)
+        expected_version_str, expected_url = max(releases)
+        expected_version = version.parse(expected_version_str)
+        dummy_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
 
     @patch.object(requests, "get")
     @patch.object(RedisCache, "set")

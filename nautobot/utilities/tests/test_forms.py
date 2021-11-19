@@ -5,7 +5,7 @@ from netaddr import IPNetwork
 
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm
 from nautobot.ipam.models import IPAddress, Prefix
-from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField, NumericArrayField
+from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,

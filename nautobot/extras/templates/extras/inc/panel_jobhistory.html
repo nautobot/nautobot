@@ -1,0 +1,27 @@
+{% if job_results and perms.extras.view_jobresult %}
+    {% for result in job_results %}
+        <div class="list-group-item">
+            <a href="{% url 'extras:jobresult' pk=result.pk %}">
+                {{ result.obj_type.name }} - {{ result.related_name }}
+            </a>
+            <span class="pull-right" title="{{ result.created }}">{% include 'extras/inc/job_label.html' %}</span>
+            <br>
+            <small>
+                <span class="text-muted">{{ result.user }} - {{ result.completed|date:'SHORT_DATETIME_FORMAT' }}</span>
+            </small>
+        </div>
+        {% if forloop.last %}
+            <div class="list-group-item text-right">
+                <a href="{% url 'extras:jobresult_list' %}">View All History</a>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% elif perms.extras.view_jobresult %}
+    <div class="panel-body text-muted">
+        None found
+    </div>
+{% else %}
+    <div class="panel-body text-muted">
+        <i class="mdi mdi-lock"></i> No permission
+    </div>
+{% endif %}

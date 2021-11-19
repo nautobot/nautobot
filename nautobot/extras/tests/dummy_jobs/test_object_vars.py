@@ -1,8 +1,7 @@
 import json
 
 from nautobot.dcim.models import DeviceRole
-from nautobot.extras.jobs import *
-
+from nautobot.extras.jobs import Job, ObjectVar, MultiObjectVar
 
 name = "Object Vars"
 

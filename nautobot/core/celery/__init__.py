@@ -1,8 +1,6 @@
 import json
 import logging
 
-import nautobot
-
 from celery import Celery, shared_task
 from celery.fixups.django import DjangoFixup
 from django.core.serializers.json import DjangoJSONEncoder

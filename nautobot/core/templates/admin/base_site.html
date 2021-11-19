@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% load i18n %}{% load static bootstrapped_goodies_tags %}
+
+{% block title %}{% render_with_template_if_exist "admin/admin_title.html" title %} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    <a class="navbar-brand" href="{% url 'admin:index' %}">
+        {% if site_header %}
+            {{ site_header }}
+        {% else %}
+            {% render_with_template_if_exist "admin/admin_title.html" _('Django administration') %}
+        {% endif %}
+    </a>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-sm-12">
+            {% block breadcrumbs %}
+            {% endblock %}
+        </div>
+    </div>
+{% endblock %}
