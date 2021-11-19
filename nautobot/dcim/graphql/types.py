@@ -1,8 +1,7 @@
 import graphene
-from graphene_django import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
-from nautobot.dcim.fields import MACAddressField
 from nautobot.dcim.graphql.mixins import PathEndpointMixin
 from nautobot.dcim.models import Cable, CablePath, ConsoleServerPort, Device, Interface, Rack, Site
 from nautobot.dcim.filters import (
@@ -16,7 +15,7 @@ from nautobot.dcim.filters import (
 from nautobot.extras.graphql.types import TagType  # noqa: F401
 
 
-class SiteType(DjangoObjectType):
+class SiteType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Site model."""
 
     class Meta:
@@ -25,7 +24,7 @@ class SiteType(DjangoObjectType):
         exclude = ["images", "_name"]
 
 
-class DeviceType(DjangoObjectType):
+class DeviceType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Device model."""
 
     class Meta:
@@ -34,7 +33,7 @@ class DeviceType(DjangoObjectType):
         exclude = ["_name"]
 
 
-class RackType(DjangoObjectType):
+class RackType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Rack model."""
 
     class Meta:
@@ -43,7 +42,7 @@ class RackType(DjangoObjectType):
         exclude = ["images"]
 
 
-class InterfaceType(DjangoObjectType, PathEndpointMixin):
+class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
     class Meta:
@@ -53,11 +52,16 @@ class InterfaceType(DjangoObjectType, PathEndpointMixin):
 
     ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
+    # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
+    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
+    @gql_optimizer.resolver_hints(
+        model_field="ip_addresses",
+    )
     def resolve_ip_addresses(self, args):
         return self.ip_addresses.all()
 
 
-class ConsoleServerPortType(DjangoObjectType, PathEndpointMixin):
+class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
     """Graphql Type Object for ConsoleServerPort model."""
 
     class Meta:
@@ -65,7 +69,7 @@ class ConsoleServerPortType(DjangoObjectType, PathEndpointMixin):
         filterset_class = ConsoleServerPortFilterSet
 
 
-class CableType(DjangoObjectType):
+class CableType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Cable model."""
 
     class Meta:
@@ -89,7 +93,7 @@ class CableType(DjangoObjectType):
         return None
 
 
-class CablePathType(DjangoObjectType):
+class CablePathType(gql_optimizer.OptimizedDjangoObjectType):
     """GraphQL type object for CablePath model."""
 
     class Meta:

@@ -6,7 +6,6 @@ from nautobot.dcim.models import DeviceRole, Platform, Site
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, post_data
-from nautobot.virtualization.choices import *
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -25,6 +24,7 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
         ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2")
         ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3")
+        ClusterGroup.objects.create(name="Cluster Group 8")
 
         cls.form_data = {
             "name": "Cluster Group X",
@@ -37,7 +37,10 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Cluster Group 4,cluster-group-4,Fourth cluster group",
             "Cluster Group 5,cluster-group-5,Fifth cluster group",
             "Cluster Group 6,cluster-group-6,Sixth cluster group",
+            "Cluster Group 7,,Seventh cluster group",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "Cluster Group 8"
 
 
 class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -49,6 +52,7 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2")
         ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3")
+        ClusterType.objects.create(name="Cluster Type 8")
 
         cls.form_data = {
             "name": "Cluster Type X",
@@ -61,7 +65,10 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Cluster Type 4,cluster-type-4,Fourth cluster type",
             "Cluster Type 5,cluster-type-5,Fifth cluster type",
             "Cluster Type 6,cluster-type-6,Sixth cluster type",
+            "Cluster Type 7,,Seventh cluster type",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "Cluster Type 8"
 
 
 class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):

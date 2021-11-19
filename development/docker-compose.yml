@@ -46,6 +46,21 @@ services:
     env_file:
       - ./dev.env
     tty: true
+  celery_beat:
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "nautobot-server celery beat -l INFO -s /tmp/celerybeat-schedule"
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "health_check"]
+    depends_on:
+      - nautobot
+      - redis
+    env_file:
+      - ./dev.env
+    tty: true
   redis:
     image: redis:6-alpine
     command:
@@ -56,6 +71,6 @@ services:
       - dev.env
   selenium:
     image: selenium/standalone-firefox:latest
-    ports: 
+    ports:
         - "4444:4444"
     shm_size: 2g

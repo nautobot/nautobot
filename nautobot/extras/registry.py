@@ -1,4 +1,4 @@
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
 
 class Registry(dict):
@@ -22,7 +22,10 @@ class Registry(dict):
         raise TypeError("Cannot delete stores from registry")
 
 
-registry = Registry()
+registry = Registry(
+    datasource_contents=defaultdict(list),
+    secrets_providers={},
+)
 
 
 class DatasourceContent:
@@ -46,9 +49,6 @@ class DatasourceContent:
         self.icon = icon
         self.callback = callback
         self.weight = weight
-
-
-registry["datasource_contents"] = defaultdict(list)
 
 
 def register_datasource_contents(datasource_contents_list):

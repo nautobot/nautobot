@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
@@ -12,8 +11,27 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+
+from nautobot.dcim.choices import (
+    CableLengthUnitChoices,
+    ConsolePortTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    RackDimensionUnitChoices,
+    RackElevationDetailRenderChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+    SubdeviceRoleChoices,
+)
+from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -51,10 +69,10 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.customfields import CustomFieldModelSerializer
 from nautobot.extras.api.serializers import (
-    TaggedObjectSerializer,
     StatusModelSerializerMixin,
+    TaggedObjectSerializer,
 )
-from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
+from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -63,8 +81,45 @@ from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
-from .nested_serializers import *
+
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
+    NestedCableSerializer,
+    NestedConsolePortSerializer,
+    NestedConsolePortTemplateSerializer,
+    NestedConsoleServerPortSerializer,
+    NestedConsoleServerPortTemplateSerializer,
+    NestedDeviceBaySerializer,
+    NestedDeviceBayTemplateSerializer,
+    NestedDeviceRoleSerializer,
+    NestedDeviceSerializer,
+    NestedDeviceTypeSerializer,
+    NestedFrontPortSerializer,
+    NestedFrontPortTemplateSerializer,
+    NestedInterfaceSerializer,
+    NestedInterfaceTemplateSerializer,
+    NestedInventoryItemSerializer,
+    NestedManufacturerSerializer,
+    NestedPlatformSerializer,
+    NestedPowerFeedSerializer,
+    NestedPowerOutletSerializer,
+    NestedPowerOutletTemplateSerializer,
+    NestedPowerPanelSerializer,
+    NestedPowerPortSerializer,
+    NestedPowerPortTemplateSerializer,
+    NestedRackGroupSerializer,
+    NestedRackReservationSerializer,
+    NestedRackRoleSerializer,
+    NestedRackSerializer,
+    NestedRearPortSerializer,
+    NestedRearPortTemplateSerializer,
+    NestedRegionSerializer,
+    NestedSiteSerializer,
+    NestedVirtualChassisSerializer,
+)
 
 
 class CableTerminationSerializer(serializers.ModelSerializer):
@@ -225,6 +280,22 @@ class RackGroupSerializer(CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
+        # prevents slug from being interpreted as a required field.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "name"))]
+
+    def validate(self, data):
+        # Validate uniqueness of (site, slug) since we omitted the automatically-created validator from Meta.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        if data.get("slug", None):
+            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "slug"))
+            validator(data, self)
+
+        # Enforce model validation
+        super().validate(data)
+
+        return data
 
 
 class RackRoleSerializer(CustomFieldModelSerializer):
@@ -351,12 +422,17 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
         choices=RackElevationDetailRenderChoices,
         default=RackElevationDetailRenderChoices.RENDER_JSON,
     )
-    unit_width = serializers.IntegerField(default=settings.RACK_ELEVATION_DEFAULT_UNIT_WIDTH)
-    unit_height = serializers.IntegerField(default=settings.RACK_ELEVATION_DEFAULT_UNIT_HEIGHT)
+    unit_width = serializers.IntegerField(required=False)
+    unit_height = serializers.IntegerField(required=False)
     legend_width = serializers.IntegerField(default=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT)
     exclude = serializers.UUIDField(required=False, default=None)
     expand_devices = serializers.BooleanField(required=False, default=True)
     include_images = serializers.BooleanField(required=False, default=True)
+
+    def validate(self, attrs):
+        attrs.setdefault("unit_width", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH"))
+        attrs.setdefault("unit_height", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"))
+        return attrs
 
 
 #
@@ -418,6 +494,22 @@ class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
+        # prevents slug from being interpreted as a required field.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        validators = [UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "model"))]
+
+    def validate(self, data):
+        # Validate uniqueness of (manufacturer, slug) since we omitted the automatically-created validator from Meta.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        if data.get("slug", None):
+            validator = UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "slug"))
+            validator(data, self)
+
+        # Enforce model validation
+        super().validate(data)
+
+        return data
 
 
 class ConsolePortTemplateSerializer(CustomFieldModelSerializer):
@@ -663,6 +755,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
     primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
     primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)
     parent_device = serializers.SerializerMethodField()
+    secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
     local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
@@ -688,6 +781,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
+            "secrets_group",
             "cluster",
             "virtual_chassis",
             "vc_position",
@@ -751,6 +845,7 @@ class DeviceWithConfigContextSerializer(DeviceSerializer):
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
+            "secrets_group",
             "cluster",
             "virtual_chassis",
             "vc_position",

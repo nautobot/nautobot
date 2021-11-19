@@ -1,6 +1,6 @@
 import json
 
-from nautobot.extras.jobs import *
+from nautobot.extras.jobs import Job, IPAddressVar, IPAddressWithMaskVar
 
 
 name = "IP Addresses"

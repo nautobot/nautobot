@@ -5,7 +5,7 @@ from django.test import TestCase
 from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
 
-from nautobot.dcim.choices import *
+from nautobot.dcim.choices import DeviceFaceChoices
 from nautobot.dcim.fields import MACAddressField
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.models import (
