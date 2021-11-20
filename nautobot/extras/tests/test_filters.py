@@ -5,7 +5,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import (
+    ObjectChangeActionChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
     ConfigContextFilterSet,
@@ -16,6 +20,9 @@ from nautobot.extras.filters import (
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
+    SecretFilterSet,
+    SecretsGroupFilterSet,
+    SecretsGroupAssociationFilterSet,
     StatusFilterSet,
     TagFilterSet,
     WebhookFilterSet,
@@ -30,8 +37,11 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
-    Tag,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
+    Tag,
     Webhook,
 )
 from nautobot.ipam.models import IPAddress, VLAN
@@ -601,27 +611,27 @@ class RelationshipTestCase(TestCase):
         interface_type = ContentType.objects.get_for_model(Interface)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
-        Relationship.objects.create(
+        Relationship(
             name="Device VLANs",
             slug="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Primary VLAN",
             slug="primary-vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Primary Interface",
             slug="primary-interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
-        )
+        ).validated_save()
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -654,14 +664,14 @@ class RelationshipAssociationTestCase(TestCase):
         cls.vlan_type = ContentType.objects.get_for_model(VLAN)
 
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="Device VLANs",
                 slug="device-vlans",
                 type="many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.vlan_type,
             ),
-            Relationship.objects.create(
+            Relationship(
                 name="Primary VLAN",
                 slug="primary-vlan",
                 type="one-to-many",
@@ -669,6 +679,8 @@ class RelationshipAssociationTestCase(TestCase):
                 destination_type=cls.device_type,
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
@@ -683,34 +695,34 @@ class RelationshipAssociationTestCase(TestCase):
             VLAN.objects.create(vid=2, name="VLAN 2"),
         )
 
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=cls.relationships[0],
             source_type=cls.device_type,
             source_id=cls.devices[0].pk,
             destination_type=cls.vlan_type,
             destination_id=cls.vlans[0].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationships[0],
             source_type=cls.device_type,
             source_id=cls.devices[1].pk,
             destination_type=cls.vlan_type,
             destination_id=cls.vlans[1].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationships[1],
             source_type=cls.vlan_type,
             source_id=cls.vlans[0].pk,
             destination_type=cls.device_type,
             destination_id=cls.devices[0].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationships[1],
             source_type=cls.vlan_type,
             source_id=cls.vlans[1].pk,
             destination_type=cls.device_type,
             destination_id=cls.devices[1].pk,
-        )
+        ).validated_save()
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -737,31 +749,147 @@ class RelationshipAssociationTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class TagTestCase(TestCase):
-    queryset = Tag.objects.all()
-    filterset = TagFilterSet
+class SecretTestCase(TestCase):
+    queryset = Secret.objects.all()
+    filterset = SecretFilterSet
 
     @classmethod
     def setUpTestData(cls):
+        secrets = (
+            Secret(
+                name="Secret 1",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_1"},
+            ),
+            Secret(
+                name="Secret 2",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_2"},
+            ),
+            Secret(
+                name="Secret 3",
+                provider="text-file",
+                parameters={"path": "/github-tokens/user/myusername.txt"},
+            ),
+        )
 
-        Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000")
-        Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00")
-        Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff")
+        for secret in secrets:
+            secret.validated_save()
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {"name": ["Tag 1", "Tag 2"]}
+        params = {"name": ["Secret 1", "Secret 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_slug(self):
-        params = {"slug": ["tag-1", "tag-2"]}
+        params = {"slug": ["secret-1", "secret-2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_color(self):
-        params = {"color": ["ff0000", "00ff00"]}
+    def test_provider(self):
+        params = {"provider": ["environment-variable"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class SecretsGroupTestCase(TestCase):
+    queryset = SecretsGroup.objects.all()
+    filterset = SecretsGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        SecretsGroup.objects.create(name="Group 1", slug="group-1")
+        SecretsGroup.objects.create(name="Group 2", slug="group-2")
+        SecretsGroup.objects.create(name="Group 3", slug="group-3")
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Group 1", "Group 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {"slug": ["group-1", "group-2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class SecretsGroupAssociationTestCase(TestCase):
+    queryset = SecretsGroupAssociation.objects.all()
+    filterset = SecretsGroupAssociationFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.secrets = (
+            Secret(
+                name="Secret 1",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_1"},
+            ),
+            Secret(
+                name="Secret 2",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_2"},
+            ),
+            Secret(
+                name="Secret 3",
+                provider="text-file",
+                parameters={"path": "/github-tokens/user/myusername.txt"},
+            ),
+        )
+
+        for secret in cls.secrets:
+            secret.validated_save()
+
+        cls.groups = (
+            SecretsGroup.objects.create(name="Group 1", slug="group-1"),
+            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
+            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            group=cls.groups[0],
+            secret=cls.secrets[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=cls.groups[1],
+            secret=cls.secrets[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=cls.groups[2],
+            secret=cls.secrets[2],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_group(self):
+        params = {"group_id": [self.groups[0].pk, self.groups[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"group": [self.groups[0].slug, self.groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_secret(self):
+        params = {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"secret": [self.secrets[0].slug, self.secrets[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_access_type(self):
+        params = {"access_type": [SecretsGroupAccessTypeChoices.TYPE_GENERIC]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_secret_type(self):
+        params = {"secret_type": [SecretsGroupSecretTypeChoices.TYPE_PASSWORD]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -813,6 +941,34 @@ class StatusTestCase(TestCase):
     def test_search(self):
         params = {"q": "active"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class TagTestCase(TestCase):
+    queryset = Tag.objects.all()
+    filterset = TagFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+
+        Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000")
+        Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00")
+        Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff")
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Tag 1", "Tag 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {"slug": ["tag-1", "tag-2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_color(self):
+        params = {"color": ["ff0000", "00ff00"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class WebhookTestCase(TestCase):

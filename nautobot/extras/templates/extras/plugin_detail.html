@@ -219,6 +219,24 @@
                                 </td>
                             </tr>
                             <tr>
+                                <td>Secrets Providers</td>
+                                <td>
+                                    {% if features.secrets_providers %}
+                                        <ul class="list-unstyled">
+                                            {% for secrets_provider in features.secrets_providers %}
+                                                <li>
+                                                    <a href="{% url 'extras:secret_list' %}?provider={{secrets_provider.slug}}">
+                                                        {{ secrets_provider.name }}
+                                                    </a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.secrets_providers %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Views/URLs</td>
                                 <td>
                                     {% if features.urlpatterns %}

@@ -103,7 +103,10 @@ class JobTest(TestCase):
 
             self.assertHTMLEqual(
                 form.as_table(),
-                """<tr><th><label for="id_var2">Var2:</label></th><td>
+                """<tr><th><label for="id_var1">Var1:</label></th><td>
+<input class="form-control form-control" id="id_var1" name="var1" placeholder="None" required type="file">
+<br><span class="helptext">Some file wants to be first</span></td></tr>
+<tr><th><label for="id_var2">Var2:</label></th><td>
 <input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
 <br><span class="helptext">Hello</span></td></tr>
 <tr><th><label for="id_var23">Var23:</label></th><td>
@@ -295,6 +298,36 @@ class JobTest(TestCase):
             self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
             self.assertEqual(info_log.log_object, "Role: role")
             self.assertEqual(job_result.data["output"], "\nNice Roles, bro.")
+
+    def test_job_data_as_string(self):
+        """
+        Test that job doesn't error when not a dictionary.
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            module = "test_object_vars"
+            name = "TestObjectVars"
+            job_class = get_job(f"local/{module}/{name}")
+
+            # Prepare the job data
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+            data = "BAD DATA STRING"
+            run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+
+            # Assert stuff
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+            self.assertIn(
+                "Data should be a dictionary",
+                next(
+                    log[-1]  # actual log message in the logging tuple
+                    for log in job_result.data["initialization"]["log"]
+                ),
+            )
 
 
 @mock.patch("nautobot.extras.models.models.job_db", None)

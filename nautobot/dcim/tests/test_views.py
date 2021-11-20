@@ -72,6 +72,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     Relationship,
     RelationshipAssociation,
+    SecretsGroup,
     Status,
 )
 from nautobot.ipam.models import VLAN, IPAddress
@@ -179,7 +180,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="Region related sites",
                 slug="region-related-sites",
                 type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -189,11 +190,13 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 destination_label="Related region",
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         for site in sites:
-            RelationshipAssociation.objects.create(
-                relationship=cls.relationships[0], source=site, destination=regions[1]
-            )
+            RelationshipAssociation(
+                relationship=cls.relationships[0], source=regions[1], destination=site
+            ).validated_save()
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -350,14 +353,21 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
+        cls.sites = (
             Site.objects.create(name="Site 1", slug="site-1"),
             Site.objects.create(name="Site 2", slug="site-2"),
         )
 
+        powerpanels = (
+            PowerPanel.objects.create(site=cls.sites[0], name="Power Panel 1"),
+            PowerPanel.objects.create(site=cls.sites[0], name="Power Panel 2"),
+        )
+
+        # Assign power panels generated to the class object for use later.
+        cls.powerpanels = powerpanels
         rackgroups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
+            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=cls.sites[0]),
+            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[1]),
         )
 
         rackroles = (
@@ -366,11 +376,15 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Rack)
-        status_active = statuses.get(slug="active")
+        cls.status_active = statuses.get(slug="active")
+
+        cable_statuses = Status.objects.get_for_model(Cable)
+        cls.cable_connected = cable_statuses.get(slug="connected")
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
         )
+
         CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="red")
         CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="green")
         CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="blue")
@@ -379,18 +393,24 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         racks = (
             Rack.objects.create(
-                name="Rack 1", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["red"]}
+                name="Rack 1", site=cls.sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["red"]}
             ),
             Rack.objects.create(
-                name="Rack 2", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["green"]}
+                name="Rack 2",
+                site=cls.sites[0],
+                status=cls.status_active,
+                _custom_field_data={"rack-colors": ["green"]},
             ),
             Rack.objects.create(
-                name="Rack 3", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["blue"]}
+                name="Rack 3", site=cls.sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["blue"]}
             ),
         )
 
+        # Create a class racks variable
+        cls.racks = racks
+
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="Backup Sites",
                 slug="backup-sites",
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -400,16 +420,20 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 destination_label="Racks using this site as a backup",
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         for rack in racks:
-            RelationshipAssociation.objects.create(relationship=cls.relationships[0], source=rack, destination=sites[1])
+            RelationshipAssociation(
+                relationship=cls.relationships[0], source=rack, destination=cls.sites[1]
+            ).validated_save()
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
             "name": "Rack X",
             "facility_id": "Facility X",
-            "site": sites[1].pk,
+            "site": cls.sites[1].pk,
             "group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="planned").pk,
@@ -426,7 +450,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "Some comments",
             "tags": [t.pk for t in tags],
             "cf_rack-colors": ["red", "green", "blue"],
-            "cr_backup-sites__destination": [sites[0].pk],
+            "cr_backup-sites__destination": [cls.sites[0].pk],
         }
 
         cls.csv_data = (
@@ -437,7 +461,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "site": sites[1].pk,
+            "site": cls.sites[1].pk,
             "group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="deprecated").pk,
@@ -459,6 +483,64 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Test viewing the list of rack elevations.
         """
         response = self.client.get(reverse("dcim:rack_elevation_list"))
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_powerports(self):
+        # Create Devices
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+
+        device_types = (
+            DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
+        )
+
+        device_roles = (DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),)
+
+        platforms = (Platform.objects.create(name="Platform 1", slug="platform-1"),)
+
+        devices = (
+            Device.objects.create(
+                name="Power Panel 1",
+                site=self.sites[0],
+                rack=self.racks[0],
+                device_type=device_types[0],
+                device_role=device_roles[0],
+                platform=platforms[0],
+                status=self.status_active,
+            ),
+            Device.objects.create(
+                name="Dev 1",
+                site=self.sites[0],
+                rack=self.racks[0],
+                device_type=device_types[0],
+                device_role=device_roles[0],
+                platform=platforms[0],
+                status=self.status_active,
+            ),
+        )
+
+        # Create Power Port for device
+        powerport1 = PowerPort.objects.create(device=devices[0], name="Power Port 11")
+        powerfeed1 = PowerFeed.objects.create(
+            power_panel=self.powerpanels[0], name="Power Feed 11", phase="three-phase"
+        )
+
+        # Create power outlet to the power port
+        poweroutlet1 = PowerOutlet.objects.create(device=devices[0], name="Power Outlet 11")
+
+        # connect power port to power feed (3 phase)
+        cable1 = Cable(termination_a=powerfeed1, termination_b=powerport1, status=self.cable_connected)
+        cable1.save()
+
+        # Create power port for 2nd device
+        powerport2 = PowerPort.objects.create(device=devices[1], name="Power Port 12")
+
+        # Connect power port to power outlet (dev1)
+        cable2 = Cable(termination_a=powerport2, termination_b=poweroutlet1, status=self.cable_connected)
+        cable2.save()
+
+        # Test the view
+        response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
         self.assertHttpStatus(response, 200)
 
 
@@ -1106,6 +1188,11 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Platform.objects.create(name="Platform 2", slug="platform-2"),
         )
 
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        )
+
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses.get(slug="active")
 
@@ -1143,12 +1230,13 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
+                secrets_group=secrets_groups[0],
                 _custom_field_data={"crash-counter": 15},
             ),
         )
 
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="BGP Router-ID",
                 slug="router-id",
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
@@ -1158,6 +1246,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 destination_label="Device using this as BGP router-ID",
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         ipaddresses = (
             IPAddress.objects.create(address="1.1.1.1/32"),
@@ -1166,9 +1256,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
-            RelationshipAssociation.objects.create(
+            RelationshipAssociation(
                 relationship=cls.relationships[0], source=device, destination=ipaddress
-            )
+            ).validated_save()
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -1188,6 +1278,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "primary_ip4": None,
             "primary_ip6": None,
             "cluster": None,
+            "secrets_group": secrets_groups[1].pk,
             "virtual_chassis": None,
             "vc_position": None,
             "vc_priority": None,
@@ -1199,10 +1290,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "device_role,manufacturer,device_type,status,name,site,rack_group,rack,position,face",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,Site 1,Rack Group 1,Rack 1,10,front",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,Site 1,Rack Group 1,Rack 1,20,front",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,Site 1,Rack Group 1,Rack 1,30,front",
+            "device_role,manufacturer,device_type,status,name,site,rack_group,rack,position,face,secrets_group",
+            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,Site 1,Rack Group 1,Rack 1,10,front,",
+            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,Site 1,Rack Group 1,Rack 1,20,front,",
+            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,Site 1,Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
@@ -1214,6 +1305,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses.get(slug="decommissioning").pk,
             "site": sites[1].pk,
             "rack": racks[1].pk,
+            "secrets_group": secrets_groups[1].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

@@ -749,7 +749,7 @@ class CustomFieldImportTest(TestCase):
             data[3].append("")
         csv_data = "\n".join(",".join(row) for row in data)
 
-        response = self.client.post(reverse("dcim:site_import"), {"csv": csv_data})
+        response = self.client.post(reverse("dcim:site_import"), {"csv_data": csv_data})
         self.assertEqual(response.status_code, 200)
 
         # Validate data for site 1

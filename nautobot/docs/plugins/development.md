@@ -39,6 +39,7 @@ plugin_name/
       - 0001_initial.py     # Database Models
     - models.py             # Database Models
     - navigation.py         # Navigation Menu Items
+    - secrets.py            # Secret Providers
     - signals.py            # Signal Handler Functions
     - template_content.py   # Extending Core Templates
     - templates/
@@ -177,6 +178,7 @@ The following `PluginConfig` attributes can be configured to customize where Nau
 | `jinja_filters` | `"jinja_filters"` | Path to a module that contains [Jinja2 filters](#adding-jinja2-filters) to be registered |
 | `jobs` | `"jobs.jobs"` | Dotted path to a list of [Job classes](#including-jobs) |
 | `menu_items` | `"navigation.menu_items"` | Dotted path to a list of [navigation menu items](#adding-navigation-menu-items) provided by the plugin |
+| `secrets_providers` | `"secrets.secrets_providers"` | Dotted path to a list of [secrets providers](#implementing-secrets-providers) in the plugin |
 | `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](#extending-object-detail-views) |
 
 ### Install the Plugin for Development
@@ -545,6 +547,67 @@ config = AnimalSoundsConfig
 
 After writing this code, run `nautobot-server migrate` or `nautobot-server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.
 
+### Implementing Secrets Providers
+
+A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. By default, Nautobot looks for an iterable named `secrets_providers` within a `secrets.py` file. (This can be overridden by setting `secrets_providers` to a custom value on the plugin's `PluginConfig`.)
+
+To define a new `SecretsProvider` subclass, we must specify the following:
+
+- A unique `slug` string identifying this provider
+- A human-readable `name` string (optional; the `slug` will be used if this is not specified)
+- A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
+- An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
+
+For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
+
+!!! warning
+    This is an intentionally simplistic example and should not be used in practice! Sensitive secret data should never be stored directly in Nautobot's database itself.
+
+```python
+# secrets.py
+from nautobot.extras.secrets import SecretsProvider
+
+
+class ConstantValueSecretsProvider(SecretsProvider):
+    """
+    Example SecretsProvider - this one just returns a user-specified constant value.
+
+    Obviously this is insecure and not something you'd want to actually use!
+    """
+
+    slug = "constant-value"
+    name = "Constant Value"
+
+    class ParametersForm(BootstrapMixin, forms.Form):
+        """
+        User-friendly form for specifying the required parameters of this provider.
+        """
+        constant = forms.CharField(
+            required=True,
+            help_text="Constant secret value. <strong>DO NOT USE FOR REAL DATA</strong>"
+        )
+
+    @classmethod
+    def get_value_for_secret(cls, secret, obj=None, **kwargs):
+        """
+        Return the value defined in the Secret.parameters "constant" key.
+
+        A more realistic SecretsProvider would make calls to external APIs, etc.,
+        to retrieve a secret from another system as desired.
+
+        Args:
+            secret (nautobot.extras.models.Secret): The secret whose value should be retrieved.
+            obj (object): The object (Django model or similar) providing context for the secret's
+                parameters.
+        """
+        return secret.rendered_parameters(obj=obj).get("constant")
+
+
+secrets_providers = [ConstantValueSecretsProvider]
+```
+
+After installing and enabling your plugin, you should now be able to navigate to `Extensibility > Automation > Secrets` and create a new Secret, at which point `"constant-value"` should now be available as a new secrets provider to use.
+
 ## Adding Database Models
 
 If your plugin introduces a new type of object in Nautobot, you'll probably want to create a [Django model](https://docs.djangoproject.com/en/stable/topics/db/models/) for it. A model is essentially a Python representation of a database table, with attributes that represent individual columns. Model instances can be created, manipulated, and deleted using [queries](https://docs.djangoproject.com/en/stable/topics/db/queries/). Models must be defined within a file named `models.py`.
@@ -676,19 +739,21 @@ class Animal(BaseModel):
 
 In some cases, such as when a model is using Generic Foreign Keys, or when a model has constructed fields that should also be reflected in GraphQL, the default GraphQL type definition generated by the `@extras_features` decorator may not work as the developer intends, and it will be preferable to provide custom GraphQL types.
 
-By default, Nautobot looks for custom GraphQL types in an iterable named `graphql_types` within a `graphql/types.py` file. (This can be overridden by setting `graphql_types` to a custom value on the plugin's `PluginConfig`.) Each type defined in this way must be a class inheriting from `graphene_django.DjangoObjectType` and must follow the [standards defined by graphene-django](https://docs.graphene-python.org/projects/django/en/latest/queries/).
+By default, Nautobot looks for custom GraphQL types in an iterable named `graphql_types` within a `graphql/types.py` file. (This can be overridden by setting `graphql_types` to a custom value on the plugin's `PluginConfig`.) Each type defined in this way must be a class inheriting from `graphene_django.DjangoObjectType` or `graphene_django_optimizer.OptimizedDjangoObjectType` and must follow the [standards defined by graphene-django](https://docs.graphene-python.org/projects/django/en/latest/queries/).
+
+Nautobot uses a library called [`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) to decrease the time queries take to process. By inheriting from `graphene_django_optimizer` type classes are automatically optimized.
 
 !!! warning
     When defining types this way, do **not** use the `@extras_features("graphql")` decorator on the corresponding Model class, as no auto-generated GraphQL type is desired for this model.
 
 ```python
 # graphql/types.py
-from graphene_django import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
 
 from nautobot_animal_sounds.models import Animal
 
 
-class AnimalType(DjangoObjectType):
+class AnimalType(gql_optimizer.OptimizedDjangoObjectType):
     """GraphQL Type for Animal"""
 
     class Meta:

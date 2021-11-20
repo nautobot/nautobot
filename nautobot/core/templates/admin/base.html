@@ -1,4 +1,5 @@
 {% load bootstrapped_goodies_tags %}
+{% load helpers %}
 {% load i18n %}
 {% load plugins %}
 {% load static%}
@@ -89,9 +90,9 @@
     {% include 'inc/nav_menu.html' %}
 {% endif %}
 <div class="container-fluid wrapper" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
-    {% if settings.BANNER_TOP %}
+    {% if "BANNER_TOP"|settings_or_config %}
         <div class="alert alert-info text-center" role="alert">
-            {{ settings.BANNER_TOP|safe }}
+            {{ "BANNER_TOP"|settings_or_config|safe }}
         </div>
     {% endif %}
     {% if settings.MAINTENANCE_MODE %}
@@ -141,9 +142,9 @@
 
     {% block footer %}<footer id="footer"></footer>{% endblock %}
     <div class="push"></div>
-    {% if settings.BANNER_BOTTOM %}
+    {% if "BANNER_BOTTOM"|settings_or_config %}
         <div class="alert alert-info text-center banner-bottom" role="alert">
-                {{ settings.BANNER_BOTTOM|safe }}
+                {{ "BANNER_BOTTOM"|settings_or_config|safe }}
         </div>
     {% endif %}
 </div>

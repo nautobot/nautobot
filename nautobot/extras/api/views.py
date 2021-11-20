@@ -35,8 +35,11 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
-    Status,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
+    Status,
     Tag,
     TaggedItem,
     Webhook,
@@ -574,6 +577,41 @@ class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
+
+
+#
+# Secrets
+#
+
+
+class SecretsViewSet(ModelViewSet):
+    """
+    Manage Secrets through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = Secret.objects.all()
+    serializer_class = serializers.SecretSerializer
+    filterset_class = filters.SecretFilterSet
+
+
+class SecretsGroupViewSet(ModelViewSet):
+    """
+    Manage Secrets Groups through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = SecretsGroup.objects.all()
+    serializer_class = serializers.SecretsGroupSerializer
+    filterset_class = filters.SecretsGroupFilterSet
+
+
+class SecretsGroupAssociationViewSet(ModelViewSet):
+    """
+    Manage Secrets Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = SecretsGroupAssociation.objects.all()
+    serializer_class = serializers.SecretsGroupAssociationSerializer
+    filterset_class = filters.SecretsGroupAssociationFilterSet
 
 
 #

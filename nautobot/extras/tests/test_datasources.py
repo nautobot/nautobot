@@ -13,7 +13,11 @@ from django.test import RequestFactory, TestCase
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.ipam.models import VLAN
 
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
@@ -22,6 +26,9 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     JobResult,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
 )
 
@@ -131,6 +138,20 @@ class GitTest(TestCase):
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
                 # TODO: inspect the logs in job_result.data?
 
+    def test_pull_git_repository_and_refresh_data_with_token(self, MockGitRepo):
+        """
+        The pull_git_repository_and_refresh_data job should correctly make use of a token.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+
+                def create_empty_repo(path, url):
+                    os.makedirs(path, exist_ok=True)
+                    return mock.DEFAULT
+
+                MockGitRepo.side_effect = create_empty_repo
+                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+
                 # Check that token-based authentication is handled as expected
                 self.repo._token = "1:3@/?=ab@"
                 self.repo.save()
@@ -155,8 +176,23 @@ class GitTest(TestCase):
                     os.path.join(tempdir, self.repo.slug), "http://1%3A3%40%2F%3F%3Dab%40@localhost/git.git"
                 )
 
+    def test_pull_git_repository_and_refresh_data_with_username_and_token(self, MockGitRepo):
+        """
+        The pull_git_repository_and_refresh_data job should correctly make use of a username + token.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+
+                def create_empty_repo(path, url):
+                    os.makedirs(path, exist_ok=True)
+                    return mock.DEFAULT
+
+                MockGitRepo.side_effect = create_empty_repo
+                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+
                 # Check that username/password authentication is handled as expected
                 self.repo.username = "núñez"
+                self.repo._token = "1:3@/?=ab@"
                 self.repo.save()
                 # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
@@ -178,6 +214,76 @@ class GitTest(TestCase):
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
                     "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
+                )
+
+    def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
+        """
+        The pull_git_repository_and_refresh_data job should correctly make use of secrets.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+
+                def create_empty_repo(path, url):
+                    os.makedirs(path, exist_ok=True)
+                    return mock.DEFAULT
+
+                MockGitRepo.side_effect = create_empty_repo
+                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+
+                with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
+                    handle.write("user1234")
+
+                with open(os.path.join(tempdir, "token.txt"), "wt") as handle:
+                    handle.write("1234abcd5678ef90")
+
+                username_secret = Secret.objects.create(
+                    name="Git Username",
+                    slug="git-username",
+                    provider="text-file",
+                    parameters={"path": os.path.join(tempdir, "username.txt")},
+                )
+                token_secret = Secret.objects.create(
+                    name="Git Token",
+                    slug="git-token",
+                    provider="text-file",
+                    parameters={"path": os.path.join(tempdir, "token.txt")},
+                )
+                secrets_group = SecretsGroup.objects.create(name="Git Credentials", slug="git-credentials")
+                SecretsGroupAssociation.objects.create(
+                    secret=username_secret,
+                    group=secrets_group,
+                    access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                    secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                )
+                SecretsGroupAssociation.objects.create(
+                    secret=token_secret,
+                    group=secrets_group,
+                    access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                    secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+                )
+
+                self.repo.secrets_group = secrets_group
+                self.repo.validated_save()
+
+                self.dummy_request.id = uuid.uuid4()
+                self.job_result = JobResult.objects.create(
+                    name=self.repo.name,
+                    obj_type=ContentType.objects.get_for_model(GitRepository),
+                    job_id=uuid.uuid4(),
+                )
+
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
+
+                self.assertEqual(
+                    self.job_result.status,
+                    JobResultStatusChoices.STATUS_COMPLETED,
+                    self.job_result.data,
+                )
+                MockGitRepo.assert_called_with(
+                    os.path.join(tempdir, self.repo.slug),
+                    "http://user1234:1234abcd5678ef90@localhost/git.git",
                 )
 
     def test_pull_git_repository_and_refresh_data_with_valid_data(self, MockGitRepo):

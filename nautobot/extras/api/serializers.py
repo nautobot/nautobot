@@ -1,6 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_serializer_method
+from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.extras.models.secrets import SecretsGroupAssociation
 from rest_framework import serializers
 
 from nautobot.core.api import (
@@ -42,6 +44,8 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
     Status,
     Tag,
     Webhook,
@@ -78,10 +82,50 @@ from .nested_serializers import (  # noqa: F401
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
     NestedScheduledJobSerializer,
+    NestedSecretSerializer,
+    NestedSecretsGroupSerializer,
+    NestedSecretsGroupAssociationSerializer,
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
 )
+
+#
+# Mixins
+#
+
+
+class TaggedObjectSerializer(serializers.Serializer):
+    tags = NestedTagSerializer(many=True, required=False)
+
+    def create(self, validated_data):
+        tags = validated_data.pop("tags", None)
+        instance = super().create(validated_data)
+
+        if tags is not None:
+            return self._save_tags(instance, tags)
+        return instance
+
+    def update(self, instance, validated_data):
+        tags = validated_data.pop("tags", None)
+
+        # Cache tags on instance for change logging
+        instance._tags = tags or []
+
+        instance = super().update(instance, validated_data)
+
+        if tags is not None:
+            return self._save_tags(instance, tags)
+        return instance
+
+    def _save_tags(self, instance, tags):
+        if tags:
+            instance.tags.set(*[t.name for t in tags])
+        else:
+            instance.tags.clear()
+
+        return instance
+
 
 #
 # Computed Fields
@@ -399,6 +443,8 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
     token = serializers.CharField(source="_token", write_only=True, required=False)
 
+    secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
+
     provided_contents = MultipleChoiceJSONField(
         choices=get_datasource_content_choices("extras.gitrepository"),
         allow_blank=True,
@@ -416,6 +462,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
             "branch",
             "token",
             "username",
+            "secrets_group",
             "current_head",
             "provided_contents",
             "created",
@@ -718,6 +765,83 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
 
 
 #
+# Secrets
+#
+
+
+class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+    """Serializer for `Secret` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
+
+    class Meta:
+        model = Secret
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "description",
+            "provider",
+            "parameters",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+class SecretsGroupSerializer(CustomFieldModelSerializer):
+    """Serializer for `SecretsGroup` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
+
+    # TODO: it would be **awesome** if we could create/update SecretsGroupAssociations
+    # alongside creating/updating the base SecretsGroup, but since this is a ManyToManyField with
+    # a `through` table, that appears very non-trivial to implement. For now we have this as a
+    # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
+    # api/extras/secrets-group-associations/ REST endpoint as appropriate.
+    secrets = NestedSecretsGroupAssociationSerializer(source="secretsgroupassociation_set", many=True, read_only=True)
+
+    class Meta:
+        model = SecretsGroup
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "description",
+            "secrets",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+class SecretsGroupAssociationSerializer(BaseModelSerializer):
+    """Serializer for `SecretsGroupAssociation` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
+    group = NestedSecretsGroupSerializer()
+    secret = NestedSecretSerializer()
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = [
+            "id",
+            "url",
+            "group",
+            "access_type",
+            "secret_type",
+            "secret",
+        ]
+
+
+#
 # Custom statuses
 #
 
@@ -775,38 +899,6 @@ class TagSerializer(CustomFieldModelSerializer):
             "created",
             "last_updated",
         ]
-
-
-class TaggedObjectSerializer(serializers.Serializer):
-    tags = NestedTagSerializer(many=True, required=False)
-
-    def create(self, validated_data):
-        tags = validated_data.pop("tags", None)
-        instance = super().create(validated_data)
-
-        if tags is not None:
-            return self._save_tags(instance, tags)
-        return instance
-
-    def update(self, instance, validated_data):
-        tags = validated_data.pop("tags", None)
-
-        # Cache tags on instance for change logging
-        instance._tags = tags or []
-
-        instance = super().update(instance, validated_data)
-
-        if tags is not None:
-            return self._save_tags(instance, tags)
-        return instance
-
-    def _save_tags(self, instance, tags):
-        if tags:
-            instance.tags.set(*[t.name for t in tags])
-        else:
-            instance.tags.clear()
-
-        return instance
 
 
 #

@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.db.models.fields import TextField
+from django.forms import inlineformset_factory
 from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
@@ -10,6 +12,7 @@ from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
+    APISelect,
     APISelectMultiple,
     BootstrapMixin,
     BulkEditForm,
@@ -17,6 +20,7 @@ from nautobot.utilities.forms import (
     ColorSelect,
     CSVModelChoiceField,
     CSVModelForm,
+    CSVMultipleChoiceField,
     CSVMultipleContentTypeField,
     DateTimePicker,
     DynamicModelChoiceField,
@@ -26,15 +30,25 @@ from nautobot.utilities.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
+    TagFilterField,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
+from .choices import (
+    CustomFieldFilterLogicChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -45,19 +59,15 @@ from .models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
 )
+from .registry import registry
 from .utils import FeatureQuery
-from .choices import (
-    CustomFieldFilterLogicChoices,
-    JobExecutionType,
-    JobResultStatusChoices,
-    ObjectChangeActionChoices,
-    RelationshipSideChoices,
-    RelationshipTypeChoices,
-)
 
 
 #
@@ -84,20 +94,21 @@ class RelationshipModelForm(forms.ModelForm):
             for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # If this model is on the "source" side of the relationship, then the field will be named
-                # cr_relationship-slug__destination since it's used to pick the destination object(s).
-                # Conversely if we're on the "destination" side, the field will be cr_relationship-slug__source.
+                # cr_<relationship-slug>__destination since it's used to pick the destination object(s).
+                # If we're on the "destination" side, the field will be cr_<relationship-slug>__source.
+                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship-slug>__peer
                 field_name = f"cr_{relationship.slug}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
                     if relationship.has_many(peer_side):
-                        initial = [getattr(association, peer_side) for association in queryset.all()]
+                        initial = [association.get_peer(self.instance) for association in queryset.all()]
                         self.fields[field_name].initial = initial
                     else:
                         association = queryset.first()
                         if association:
-                            self.fields[field_name].initial = getattr(association, peer_side)
+                            self.fields[field_name].initial = association.get_peer(self.instance)
 
                 # Annotate the field in the list of Relationship form fields
                 self.relationships.append(field_name)
@@ -115,11 +126,6 @@ class RelationshipModelForm(forms.ModelForm):
         """
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
-                # If this side of the relationship is a "MANY" relation,
-                # we can coexist with other existing RelationshipAssociations and there's nothing to check now.
-                if relationship.has_many(side):
-                    continue
-
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 field_name = f"cr_{relationship.slug}__{peer_side}"
@@ -134,13 +140,33 @@ class RelationshipModelForm(forms.ModelForm):
                     target_peers = [item for item in self.cleaned_data[field_name]]
                 else:
                     target_peers = [self.cleaned_data[field_name]]
+
                 for target_peer in target_peers:
-                    existing_peer_associations = RelationshipAssociation.objects.filter(
-                        relationship=relationship,
-                        **{
-                            f"{peer_side}_id": target_peer.pk,
-                        },
-                    ).exclude(**{f"{side}_id": self.instance.pk})
+                    if target_peer.pk == self.instance.pk:
+                        raise ValidationError(
+                            {field_name: f"Object {self.instance} cannot form a relationship to itself!"}
+                        )
+
+                    if relationship.has_many(side):
+                        # No need to check for existing RelationshipAssociations since this is a "many" relationship
+                        continue
+
+                    if not relationship.symmetric:
+                        existing_peer_associations = RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            **{
+                                f"{peer_side}_id": target_peer.pk,
+                            },
+                        ).exclude(**{f"{side}_id": self.instance.pk})
+                    else:
+                        existing_peer_associations = RelationshipAssociation.objects.filter(
+                            (
+                                (Q(source_id=target_peer.pk) & ~Q(destination_id=self.instance.pk))
+                                | (Q(destination_id=target_peer.pk) & ~Q(source_id=self.instance.pk))
+                            ),
+                            relationship=relationship,
+                        )
+
                     if existing_peer_associations.exists():
                         raise ValidationError(
                             {field_name: f"{target_peer} is already involved in a {relationship} relationship"}
@@ -159,10 +185,18 @@ class RelationshipModelForm(forms.ModelForm):
             side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
                 "relationship": self.fields[field_name].model,
-                f"{side}_type": self.obj_type,
-                f"{side}_id": self.instance.pk,
             }
-            existing_associations = RelationshipAssociation.objects.filter(**filters)
+            if side != RelationshipSideChoices.SIDE_PEER:
+                filters.update({f"{side}_type": self.obj_type, f"{side}_id": self.instance.pk})
+                existing_associations = RelationshipAssociation.objects.filter(**filters)
+            else:
+                existing_associations = RelationshipAssociation.objects.filter(
+                    (
+                        Q(source_type=self.obj_type, source_id=self.instance.pk)
+                        | Q(destination_type=self.obj_type, destination_id=self.instance.pk)
+                    ),
+                    **filters,
+                )
 
             # Get the list of target peer ids (PKs) that are specified in the form
             target_peer_ids = []
@@ -183,10 +217,16 @@ class RelationshipModelForm(forms.ModelForm):
             # Conversely, if it's *not* in target_peer_ids, we should delete it.
             for association in existing_associations:
                 for peer_id in target_peer_ids:
-                    if peer_id == getattr(association, f"{peer_side}_id"):
-                        # This association already exists, so we can ignore it
-                        target_peer_ids.remove(peer_id)
-                        break
+                    if peer_side != RelationshipSideChoices.SIDE_PEER:
+                        if peer_id == getattr(association, f"{peer_side}_id"):
+                            # This association already exists, so we can ignore it
+                            target_peer_ids.remove(peer_id)
+                            break
+                    else:
+                        if peer_id == association.source_id or peer_id == association.destination_id:
+                            # This association already exists, so we can ignore it
+                            target_peer_ids.remove(peer_id)
+                            break
                 else:
                     # This association is not in target_peer_ids, so delete it
                     association.delete()
@@ -194,15 +234,25 @@ class RelationshipModelForm(forms.ModelForm):
             # Anything remaining in target_peer_ids now does not exist yet and needs to be created.
             for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
-                association = RelationshipAssociation(
-                    relationship=relationship,
-                    **{
-                        f"{side}_type": self.obj_type,
-                        f"{side}_id": self.instance.pk,
-                        f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
-                        f"{peer_side}_id": peer_id,
-                    },
-                )
+                if not relationship.symmetric:
+                    association = RelationshipAssociation(
+                        relationship=relationship,
+                        **{
+                            f"{side}_type": self.obj_type,
+                            f"{side}_id": self.instance.pk,
+                            f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
+                            f"{peer_side}_id": peer_id,
+                        },
+                    )
+                else:
+                    # Symmetric association - source/destination are interchangeable
+                    association = RelationshipAssociation(
+                        relationship=relationship,
+                        source_type=self.obj_type,
+                        source_id=self.instance.pk,
+                        destination_type=self.obj_type,  # since this is a symmetric relationship this is OK
+                        destination_id=peer_id,
+                    )
 
                 association.clean()
                 association.save()
@@ -402,10 +452,34 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 #
 
 
+# CustomFieldChoice inline formset for use with providing dynamic rows when creating/editing choices
+# for `CustomField` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+CustomFieldChoiceFormSet = inlineformset_factory(
+    parent_model=CustomField,
+    model=CustomFieldChoice,
+    exclude=(),
+    extra=5,
+    widgets={
+        "value": forms.TextInput(attrs={"class": "form-control"}),
+        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+    },
+)
+
+
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     # TODO: Migrate custom field model from name to slug #464
-    name = forms.CharField(required=True, label="Slug")
-    content_types = MultipleContentTypeField(feature="custom_fields")
+    # Once that's done we can set "name" as a proper (Auto)SlugField,
+    # but for the moment, that field only works with fields specifically named "slug"
+    description = forms.CharField(
+        required=False,
+        help_text="Also used as the help text when editing models using this custom field.<br>"
+        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
+        "Markdown</a> syntax is supported.",
+    )
+    content_types = MultipleContentTypeField(
+        feature="custom_fields", help_text="The object(s) to which this field applies."
+    )
 
     class Meta:
         model = CustomField
@@ -633,9 +707,16 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
 
-    username = forms.CharField(required=False, label="Username", help_text="Username for token authentication.")
+    username = forms.CharField(
+        required=False,
+        label="Username",
+        help_text="Username for token authentication.<br><em>Deprecated</em> - use a secrets group instead",
+    )
+
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     provided_contents = forms.MultipleChoiceField(
         required=False,
@@ -652,17 +733,36 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "slug",
             "remote_url",
             "branch",
-            "_token",
             "username",
+            "_token",
+            "secrets_group",
             "provided_contents",
             "tags",
         ]
 
 
 class GitRepositoryCSVForm(CSVModelForm):
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        help_text="Secrets group for repository access (if any)",
+    )
+
     class Meta:
         model = GitRepository
         fields = GitRepository.csv_headers
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["provided_contents"] = CSVMultipleChoiceField(
+            choices=get_git_datasource_content_choices(),
+            required=False,
+            help_text=mark_safe(
+                "The data types this repository provides. Multiple values must be comma-separated and wrapped in "
+                'double quotes (e.g. <code>"extras.job,extras.configcontext"</code>).'
+            ),
+        )
 
 
 class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
@@ -681,14 +781,19 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
     username = forms.CharField(
         required=False,
         label="Username",
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
+
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
         model = GitRepository
+        nullable_fields = ["secrets_group"]
 
 
 #
@@ -878,18 +983,22 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
     slug = SlugField()
     source_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The source object type to which this relationship applies.",
     )
     source_filter = JSONField(
         required=False,
-        help_text='Enter any filters for the source object in <a href="https://json.org/">JSON</a> format.',
+        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
     destination_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The destination object type to which this relationship applies.",
     )
     destination_filter = JSONField(
         required=False,
-        help_text='Enter any filters for the destination object in <a href="https://json.org/">JSON</a> format.',
+        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 
     class Meta:
@@ -947,6 +1056,90 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     destination_type = MultipleContentTypeField(
         feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
+
+
+#
+# Secrets
+#
+
+
+def provider_choices():
+    return sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()])
+
+
+class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `Secret` objects."""
+
+    slug = SlugField()
+
+    provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
+
+    parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
+
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = Secret
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "provider",
+            "parameters",
+            "tags",
+        ]
+
+
+class SecretCSVForm(CustomFieldModelCSVForm):
+    class Meta:
+        model = Secret
+        fields = Secret.csv_headers
+
+
+def provider_choices_with_blank():
+    return add_blank_choice(sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()]))
+
+
+class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = Secret
+    q = forms.CharField(required=False, label="Search")
+    provider = forms.MultipleChoiceField(
+        choices=provider_choices_with_blank, widget=StaticSelect2Multiple(), required=False
+    )
+    tag = TagFilterField(model)
+
+
+# Inline formset for use with providing dynamic rows when creating/editing assignments of Secrets to SecretsGroups.
+SecretsGroupAssociationFormSet = inlineformset_factory(
+    parent_model=SecretsGroup,
+    model=SecretsGroupAssociation,
+    fields=("access_type", "secret_type", "secret"),
+    extra=5,
+    widgets={
+        "access_type": StaticSelect2,
+        "secret_type": StaticSelect2,
+        "secret": APISelect(api_url="/api/extras/secrets/"),
+    },
+)
+
+
+class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `SecretsGroup` objects."""
+
+    slug = SlugField()
+
+    class Meta:
+        model = SecretsGroup
+        fields = [
+            "name",
+            "slug",
+            "description",
+        ]
+
+
+class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = SecretsGroup
+    q = forms.CharField(required=False, label="Search")
 
 
 #

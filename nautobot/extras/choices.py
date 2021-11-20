@@ -219,25 +219,83 @@ class RelationshipSideChoices(ChoiceSet):
 
     SIDE_SOURCE = "source"
     SIDE_DESTINATION = "destination"
+    SIDE_PEER = "peer"  # for symmetric / non-directional relationships
 
     CHOICES = (
         (SIDE_SOURCE, "Source"),
         (SIDE_DESTINATION, "Destination"),
+        (SIDE_PEER, "Peer"),
     )
 
-    OPPOSITE = {SIDE_SOURCE: SIDE_DESTINATION, SIDE_DESTINATION: SIDE_SOURCE}
+    OPPOSITE = {
+        SIDE_SOURCE: SIDE_DESTINATION,
+        SIDE_DESTINATION: SIDE_SOURCE,
+        SIDE_PEER: SIDE_PEER,
+    }
 
 
 class RelationshipTypeChoices(ChoiceSet):
 
     TYPE_ONE_TO_ONE = "one-to-one"
+    TYPE_ONE_TO_ONE_SYMMETRIC = "symmetric-one-to-one"
     TYPE_ONE_TO_MANY = "one-to-many"
     TYPE_MANY_TO_MANY = "many-to-many"
+    TYPE_MANY_TO_MANY_SYMMETRIC = "symmetric-many-to-many"
 
     CHOICES = (
         (TYPE_ONE_TO_ONE, "One to One"),
+        (TYPE_ONE_TO_ONE_SYMMETRIC, "Symmetric One to One"),
         (TYPE_ONE_TO_MANY, "One to Many"),
         (TYPE_MANY_TO_MANY, "Many to Many"),
+        (TYPE_MANY_TO_MANY_SYMMETRIC, "Symmetric Many to Many"),
+    )
+
+
+#
+# Secrets
+#
+
+
+class SecretsGroupAccessTypeChoices(ChoiceSet):
+
+    TYPE_GENERIC = "Generic"
+
+    TYPE_CONSOLE = "Console"
+    TYPE_GNMI = "gNMI"
+    TYPE_HTTP = "HTTP(S)"
+    TYPE_NETCONF = "NETCONF"
+    TYPE_REST = "REST"
+    TYPE_RESTCONF = "RESTCONF"
+    TYPE_SNMP = "SNMP"
+    TYPE_SSH = "SSH"
+
+    CHOICES = (
+        (TYPE_GENERIC, "Generic"),
+        (TYPE_CONSOLE, "Console"),
+        (TYPE_GNMI, "gNMI"),
+        (TYPE_HTTP, "HTTP(S)"),
+        (TYPE_NETCONF, "NETCONF"),
+        (TYPE_REST, "REST"),
+        (TYPE_RESTCONF, "RESTCONF"),
+        (TYPE_SNMP, "SNMP"),
+        (TYPE_SSH, "SSH"),
+    )
+
+
+class SecretsGroupSecretTypeChoices(ChoiceSet):
+
+    TYPE_KEY = "key"
+    TYPE_PASSWORD = "password"
+    TYPE_SECRET = "secret"
+    TYPE_TOKEN = "token"
+    TYPE_USERNAME = "username"
+
+    CHOICES = (
+        (TYPE_KEY, "Key"),
+        (TYPE_PASSWORD, "Password"),
+        (TYPE_SECRET, "Secret"),
+        (TYPE_TOKEN, "Token"),
+        (TYPE_USERNAME, "Username"),
     )
 
 

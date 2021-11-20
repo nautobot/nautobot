@@ -3,6 +3,7 @@
 import logging
 
 import graphene
+import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 
@@ -124,7 +125,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         name (str): name of the custom field to resolve
         resolver_name (str): name of the resolver as declare in DjangoObjectType
         relationship (Relationship): Relationship object to generate a resolver for
-        site (site): side of the relationship to use for the resolver
+        side (str): side of the relationship to use for the resolver
         peer_model (Model): Django Model of the peer of this relationship
     """
 
@@ -132,13 +133,35 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         """Return a queryset or an object depending on the type of the relationship."""
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
-        query_params[f"{side}_id"] = self.pk
-        queryset_ids = RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True)
+        if not relationship.symmetric:
+            # Get the objects on the other side of this relationship
+            query_params[f"{side}_id"] = self.pk
+            queryset_ids = gql_optimizer.query(
+                RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True), info
+            )
+        else:
+            # Get objects that are peers for this relationship, regardless of side
+            queryset_ids = list(
+                gql_optimizer.query(
+                    RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
+                        "destination_id", flat=True
+                    ),
+                    info,
+                )
+            )
+            queryset_ids += list(
+                gql_optimizer.query(
+                    RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
+                        "source_id", flat=True
+                    ),
+                    info,
+                )
+            )
 
         if relationship.has_many(peer_side):
-            return peer_model.objects.filter(id__in=queryset_ids)
+            return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids), info)
 
-        return peer_model.objects.filter(id__in=queryset_ids).first()
+        return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids).first(), info)
 
     resolve_relationship.__name__ = resolver_name
     return resolve_relationship
@@ -212,7 +235,7 @@ def generate_single_item_resolver(schema_type, resolver_name):
 
         obj_id = kwargs.get("id", None)
         if obj_id:
-            return model.objects.restrict(info.context.user, "view").get(pk=obj_id)
+            return gql_optimizer.query(model.objects.restrict(info.context.user, "view").get(pk=obj_id), info)
         return None
 
     single_resolver.__name__ = resolver_name
@@ -253,9 +276,9 @@ def generate_list_resolver(schema_type, resolver_name):
                 # Raising this exception will send the error message in the response of the GraphQL request
                 raise GraphQLError(errors)
 
-            return resolved_obj.qs.all()
+            return gql_optimizer.query(resolved_obj.qs.all(), info)
 
-        return model.objects.restrict(info.context.user, "view").all()
+        return gql_optimizer.query(model.objects.restrict(info.context.user, "view").all(), info)
 
     list_resolver.__name__ = resolver_name
     return list_resolver

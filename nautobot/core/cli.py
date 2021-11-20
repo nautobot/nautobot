@@ -137,14 +137,6 @@ def _configure_settings(config):
     settings.DATABASES["job_logs"] = settings.DATABASES["default"]
 
     #
-    # Pagination
-    #
-
-    if settings.PAGINATE_COUNT not in settings.PER_PAGE_DEFAULTS:
-        settings.PER_PAGE_DEFAULTS.append(settings.PAGINATE_COUNT)
-        settings.PER_PAGE_DEFAULTS = sorted(settings.PER_PAGE_DEFAULTS)
-
-    #
     # Media storage
     #
 

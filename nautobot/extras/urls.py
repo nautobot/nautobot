@@ -9,8 +9,10 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
-    Tag,
+    Secret,
+    SecretsGroup,
     Status,
+    Tag,
     Webhook,
 )
 
@@ -356,6 +358,11 @@ urlpatterns = [
         name="relationship_add",
     ),
     path(
+        "relationships/delete/",
+        views.RelationshipBulkDeleteView.as_view(),
+        name="relationship_bulk_delete",
+    ),
+    path(
         "relationships/<uuid:pk>/edit/",
         views.RelationshipEditView.as_view(),
         name="relationship_edit",
@@ -371,9 +378,45 @@ urlpatterns = [
         name="relationshipassociation_list",
     ),
     path(
+        "relationships/associations/delete/",
+        views.RelationshipAssociationBulkDeleteView.as_view(),
+        name="relationshipassociation_bulk_delete",
+    ),
+    path(
         "relationships/associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
+    ),
+    # Secrets
+    path("secrets/", views.SecretListView.as_view(), name="secret_list"),
+    path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
+    path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
+    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),
+    path(
+        "secrets/provider/<str:provider_slug>/form/",
+        views.SecretProviderParametersFormView.as_view(),
+        name="secret_provider_parameters_form",
+    ),
+    path("secrets/<str:slug>/", views.SecretView.as_view(), name="secret"),
+    path("secrets/<str:slug>/edit/", views.SecretEditView.as_view(), name="secret_edit"),
+    path("secrets/<str:slug>/delete/", views.SecretDeleteView.as_view(), name="secret_delete"),
+    path(
+        "secrets/<str:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="secret_changelog",
+        kwargs={"model": Secret},
+    ),
+    path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
+    path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),
+    path("secrets-groups/delete/", views.SecretsGroupBulkDeleteView.as_view(), name="secretsgroup_bulk_delete"),
+    path("secrets-groups/<str:slug>/", views.SecretsGroupView.as_view(), name="secretsgroup"),
+    path("secrets-groups/<str:slug>/edit/", views.SecretsGroupEditView.as_view(), name="secretsgroup_edit"),
+    path("secrets-groups/<str:slug>/delete/", views.SecretsGroupDeleteView.as_view(), name="secretsgroup_delete"),
+    path(
+        "secrets-groups/<str:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="secretsgroup_changelog",
+        kwargs={"model": SecretsGroup},
     ),
     # Custom statuses
     path("statuses/", views.StatusListView.as_view(), name="status_list"),

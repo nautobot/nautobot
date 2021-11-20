@@ -41,9 +41,11 @@ class GitRepo:
         self.fetch()
         if commit_hexsha:
             # Sanity check - GitPython doesn't provide a handy API for this so we just call a raw Git command:
-            # $ git branch <branch> --contains <commit>
+            # $ git branch origin/<branch> --remotes --contains <commit>
             # prints the branch name if it DOES contain the commit, and nothing if it DOES NOT contain the commit.
-            if branch not in self.repo.git.branch(branch, "--contains", commit_hexsha):
+            # Since we did a `fetch` and not a `pull` above, we need to check for the commit in the remote origin
+            # branch, not the local (not-yet-updated) branch.
+            if branch not in self.repo.git.branch(f"origin/{branch}", "--remotes", "--contains", commit_hexsha):
                 raise RuntimeError(f"Requested to check out commit `{commit_hexsha}`, but it's not in branch {branch}!")
             logger.info(f"Checking out commit `{commit_hexsha}` on branch `{branch}`...")
             self.repo.git.checkout(commit_hexsha)

@@ -8,6 +8,12 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Admin Configuration UI ([#370](https://github.com/nautobot/nautobot/issues/370))
+
+The Nautobot Admin UI now includes a "Configuration" page that can be used to dynamically customize a number of [optional settings](../configuration/optional-settings.md#administratively-configurable-settings) as an alternative to editing `nautobot_config.py` and restarting the Nautobot processes.
+
+If upgrading from a previous Nautobot version where these settings were defined in your `nautobot_config.py`, you must remove those definitions in order to use this feature, as explicit configuration in `nautobot_config.py` takes precedence over values configured in the Admin UI.
+
 #### Common Base Template for Object Detail Views ([#479](https://github.com/nautobot/nautobot/issues/479), [#585](https://github.com/nautobot/nautobot/issues/585))
 
 All "object detail" views (pages displaying details of a single Nautobot record) now inherit from a common base template, providing improved UI consistency, reducing the amount of boilerplate code needed to create a new detail view, and fixing a number of bugs in various views. Plugin developers are encouraged to make use of this new template (`generic/object_detail.html`) to take advantage of these improvements.
@@ -43,6 +49,15 @@ query {
 }
 ```
 
+#### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
+
+Complex GraphQL queries have been greatly optimized thanks to integration of 
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+
+In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
+
+For in depth details on our benchmarks, please see the [comment thread on the issue](https://github.com/nautobot/nautobot/issues/171#issuecomment-907483759).
+
 #### Installed Plugins List and Detail Views, Plugin Config and Home Views ([#935](https://github.com/nautobot/nautobot/pull/935))
 
 The `Plugins` menu now includes an "Installed Plugins" menu item which provides a list view of information about all installed and enabled plugins, similar to a formerly administrator-only view.
@@ -64,7 +79,11 @@ Jobs can now be scheduled for execution at a future date and time (such as durin
 !!! note
     Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
-TODO: add link to relevant documentation on enabling `nautobot-server celery beat` service!
+Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
+
+#### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
+
+Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
 
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
@@ -72,13 +91,24 @@ Each plugin is now able to optionally inject a custom banner into any of the Nau
 
 Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
 
+#### Same-Type and Symmetric Relationships ([#157](https://github.com/nautobot/nautobot/issues/157))
+
+The [Relationships](../models/extras/relationship.md) feature has been extended in two ways:
+
+1. Relationships between the same object type (e.g. device-to-device) are now permitted and supported.
+2. For same-object-type relationships specifically, *symmetric* (peer-to-peer rather than source-to-destination) relationships are now an option.
+
+For more details, refer to the [Relationships](../models/extras/relationship.md) documentation.
+
+#### Secrets Integration ([#541](https://github.com/nautobot/nautobot/issues/541))
+
+Nautobot can now read secret values (such as device or Git repository access credentials) on demand from a variety of external sources, including environment variables and text files, and extensible via plugins to support additional secrets providers such as Hashicorp Vault and AWS Secrets Manager. Both the [NAPALM device integration](../additional-features/napalm.md) and the [Git repository integration](../models/extras/gitrepository.md) can now make use of these secrets, and plugins and jobs can do so as well.
+
+For more details, please refer to the [Secrets](../core-functionality/secrets.md) documentation.
+
 #### Software-Defined Home Page ([#674](https://github.com/nautobot/nautobot/pull/674), [#716](https://github.com/nautobot/nautobot/pull/716))
 
 Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/homepage.md).
-
-#### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
-
-Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
 
 ### Changed
 
@@ -92,19 +122,23 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.0b1 (2021-??-??)
+## v1.2.0b1 (2021-11-19)
 
 ### Added
 
 - [#13](https://github.com/nautobot/nautobot/issues/13) - Added `nautobot_database_ready` signal
 - [#125](https://github.com/nautobot/nautobot/issues/125) - Added support for `approval_required = True` on Jobs
+- [#157](https://github.com/nautobot/nautobot/issues/157) - Added support for same-object-type and symmetric Relationships
+- [#171](https://github.com/nautobot/nautobot/issues/171) - GraphQL queries have been greatly optimized by integration with `graphene-django-optimizer`
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
 - [#248](https://github.com/nautobot/nautobot/issues/248) - Added support for filtering GraphQL queries at all levels
+- [#370](https://github.com/nautobot/nautobot/issues/370) - Added support for server configuration via the Admin UI.
 - [#374](https://github.com/nautobot/nautobot/issues/374) - Added ability to schedule Jobs for future and/or recurring execution
 - [#478](https://github.com/nautobot/nautobot/issues/478) - CustomFieldChoice model now supports GraphQL.
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
 - [#519](https://github.com/nautobot/nautobot/issues/519) - Added webhook support for `CustomField` and `CustomFieldChoice` models.
 - [#534](https://github.com/nautobot/nautobot/issues/534) - Added ability to inject a banner from a plugin
+- [#541](https://github.com/nautobot/nautobot/issues/541) - Added Secrets integration
 - [#580](https://github.com/nautobot/nautobot/issues/580) - Added ability for plugins to register "home" and "configuration" views.
 - [#585](https://github.com/nautobot/nautobot/issues/585) - Added "Advanced" tab to object detail views including UUID and slug information.
 - [#642](https://github.com/nautobot/nautobot/issues/642) - Added documentation of the `GIT_SSL_NO_VERIFY` environment variable for using self-signed Git repositories
@@ -131,4 +165,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#852](https://github.com/nautobot/nautobot/issues/852) - Fixed missing "Change Log" tab on certain object detail views
 - [#853](https://github.com/nautobot/nautobot/issues/853) - Fixed `AttributeError` on certain object detail views
+- [#891](https://github.com/nautobot/nautobot/issues/891) - Fixed custom field select/multiselect not handled by new UI and added integration tests
 - [#966](https://github.com/nautobot/nautobot/issues/966) - Fixed missing "Advanced" tab on Device detail views
+- [#1060](https://github.com/nautobot/nautobot/issues/1060) - Fixed documentation incorrectly indicating that the Admin UI was the only way to manage custom field definitions.
+
+### Security
+
+- [#1017](https://github.com/nautobot/nautobot/issues/1017) - Custom field descriptions no longer potentially render as arbitrary HTML in object edit forms; Markdown format is now supported as a less dangerous option.

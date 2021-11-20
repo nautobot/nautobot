@@ -52,6 +52,11 @@ router.register("object-changes", views.ObjectChangeViewSet)
 router.register("relationships", views.RelationshipViewSet)
 router.register("relationship-associations", views.RelationshipAssociationViewSet)
 
+# Secrets
+router.register("secrets", views.SecretsViewSet)
+router.register("secrets-groups", views.SecretsGroupViewSet)
+router.register("secrets-groups-associations", views.SecretsGroupAssociationViewSet)
+
 # Statuses
 router.register("statuses", views.StatusViewSet)
 

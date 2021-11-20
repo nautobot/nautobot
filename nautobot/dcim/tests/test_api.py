@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
+
+from constance.test import override_config
 
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
@@ -44,7 +47,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import ConfigContextSchema, Status
+from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -488,6 +491,36 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'class="slot" height="22" width="230"', response.content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=27, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=255)
+    @override_config(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=19, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=190)
+    def test_get_rack_elevation_svg_settings_overridden(self):
+        """
+        GET a single rack elevation in SVG format, with Django settings specifying a non-standard unit size.
+        """
+        rack = Rack.objects.first()
+        self.add_permissions("dcim.view_rack")
+        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'class="slot" height="27" width="255"', response.content)
+
+    @override_config(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=19, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=190)
+    def test_get_rack_elevation_svg_config_overridden(self):
+        """
+        GET a single rack elevation in SVG format, with Constance config specifying a non-standard unit size.
+        """
+        rack = Rack.objects.first()
+        self.add_permissions("dcim.view_rack")
+        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'class="slot" height="19" width="190"', response.content)
 
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
@@ -1077,6 +1110,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             Cluster.objects.create(name="Cluster 2", type=cluster_type),
         )
 
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        )
+
         Device.objects.create(
             device_type=device_types[0],
             device_role=device_roles[0],
@@ -1085,6 +1123,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
+            secrets_group=secrets_groups[0],
             local_context_data={"A": 1},
         ),
         Device.objects.create(
@@ -1095,6 +1134,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
+            secrets_group=secrets_groups[0],
             local_context_data={"B": 2},
         ),
         Device.objects.create(
@@ -1105,6 +1145,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
+            secrets_group=secrets_groups[0],
             local_context_data={"C": 3},
         ),
 
@@ -1125,6 +1166,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
+                "secrets_group": secrets_groups[1].pk,
             },
             {
                 "device_type": device_types[1].pk,
@@ -1134,6 +1176,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
+                "secrets_group": secrets_groups[1].pk,
             },
             {
                 "device_type": device_types[1].pk,
@@ -1143,6 +1186,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
+                "secrets_group": secrets_groups[1].pk,
             },
         ]
 

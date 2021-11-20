@@ -49,7 +49,7 @@ Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL
 
 ### Optional dependencies
 
-Nautobot will still operate without these optional dependencies, but would likely not be ready for use in a production environment without them. The installation and configuration of these dependencies are covered in the detailed guides on [Deploying Nautobot](deploying-nautobot).
+Nautobot will still operate without these optional dependencies, but would likely not be ready for use in a production environment without them. The installation and configuration of these dependencies are covered in the detailed guides which follow.
 
 For production deployment we recommend the following:
 

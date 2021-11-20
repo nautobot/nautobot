@@ -167,6 +167,7 @@ class APIViewTestCases:
             url = f"{self._get_list_url()}?brief=1"
             response = self.client.get(url, **self.header)
 
+            self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
             self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
 
