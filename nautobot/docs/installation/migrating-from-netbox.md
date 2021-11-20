@@ -134,7 +134,10 @@ Custom Fields have been overhauled for asserting data integrity and improving us
 ### IPAM Network Field Types
 
 !!! tip
-	IPAM network objects have been overhauled and network membership queries using nested filter expressions and custom lookups will need to be updated in your code.
+	Prior to Nautobot 1.2, IPAM network objects were overhauled and network membership queries using nested filter expressions and custom lookups will required updats in your code. Since Nautobot 1.2, you can use the same custom lookups for all use cases within MySQL and most use cases for Postgresql. See [filtering documentation](../rest-api/filtering.md#Network-and-Host-Fields) for more details.
+
+!!! note
+	Nautobot did not mimic the support of non-subnets for the `net_in` query to avoid mistakes and confusion caused by an IP address being mistaken for a /32 as an example.
 
 All IPAM objects with network field types (`ipam.Aggregate`, `ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types.
 
@@ -274,8 +277,6 @@ It can be used in `.get()` and `.filter()` lookups where `prefix` is the primary
 <PrefixQuerySet [<Prefix: 1.1.1.0/24>]>
 ```
 
-This field *cannot be used in **nested** filter expressions*!
-
 ##### `network` contains the network address 
 
 The network component of the address is now stored in the `network` field. 
@@ -283,12 +284,6 @@ The network component of the address is now stored in the `network` field.
 ```python
 >>> net.network
 '1.1.1.0'
-```
-
-This field *can* be used in nested filter expressions, for example:
-
-```python
->>> Prefix.objects.filter(network__lte="1.1.1.0")
 ```
 
 ##### `prefix_length` contains the prefix length 
@@ -327,178 +322,17 @@ The `broadcast` will be derived from the `prefix_length` and will be that of the
 
 #### Membership Lookups
 
-Network membership queries of IPAM objects can no longer be performed using nested filter expressions. In most cases, where custom lookups were used before (such as `prefix__net_contained`), model manager methods must be used instead. In a few cases, nested model field lookups may be used with one of the newly-added database fields (such as `prefix_length`).
+Nautobot 1.0.x and 1.1.x did not support the custom lookup expressions that NetBox supported for membership queries on IPAM objects (such as `Prefix.objects.filter(prefix__net_contained="10.0.0.0/24")`), but instead provided an alternate approach using model manager methods (such as `Prefix.objects.net_contained("10.0.0.0/24")`).
 
-Each custom filter lookup from NetBox will be enumerated here illustrating how it was done before, and how it is now done within Nautobot.
+In Nautobot 1.2.0 and later, both model manager methods and custom lookup expressions are supported for this purpose, but the latter are now preferred for most use cases and are generally equivalent to their counterparts in NetBox.
 
----
-
-!!! important
-	The following lookups only apply to `Aggregate` and `Prefix` objects
-
-##### net_contained
-
-*Returns target networks that are contained by the source network.*
-
-NetBox:
-
-```python
-Prefix.objects.filter(prefix__net_contained=str(instance.prefix))
-```
-
-Nautobot:
-
-```python
-Prefix.objects.net_contained(instance.prefix)
-```
-
-##### net_contained_or_equals
-
-*Returns target networks that are contained or equal to the source network.*
-
-NetBox:
-
-```python
-Prefix.objects.filter(prefix__net_contained_or_equals=str(self.prefix))
-```
-
-Nautobot:
-
-```python
-Prefix.objects.net_contained_or_equals(self.prefix)
-```
-
-##### net_contains
-
-*Returns target networks that contain the source network.*
-
-NetBox:
-
-```python
-Prefix.objects.filter(prefix__net_contains=str(instance.prefix))
-```
-
-Nautobot:
-
-```python
-Prefix.objects.net_contains(instance.prefix)
-```
-
-##### net_contains_or_equals
-
-*Returns target networks that contain or equal the source network.*
-
-NetBox:
-
-```python
- Aggregate.objects.filter(prefix__net_contains_or_equals=str(self.prefix))
-```
-
-Nautobot:
-
-```python
-Aggregate.objects.net_contains_or_equals(self.prefix)
-```
-
-##### net_equals
-
-*Returns target networks that equal the source network.*
-
-NetBox:
-
-```python
-Prefix.objects.filter(prefix=str(self.prefix))
-```
-
- Nautobot:
-
-```python
-Prefix.objects.net_equals(self.prefix)
-```
-
----
-
-!!! important
-	The following lookups only apply to `IPAddress` objects.
-
-##### net_host
-
-*Returns target IP addresses that match the host of the source IP address.*
-
-!!! note
-	This custom lookup does not have a manager method equivalent. This pattern should use the `host` field for filtering.
-
-NetBox:
-
-```python
-IPAddress.objects.filter(vrf=self.vrf, address__net_host=str(self.address.ip))
-```
-
-Nautobot:
-
-```python
-IPAddress.objects.filter(vrf=self.vrf, host=self.host)
-```
-
-##### net_host_contained
-
-*Returns target IP addresses that are contained by the source prefix.*
-
-NetBox:
-
-```python
-IPAddress.objects.filter(address__net_host_contained=str(self.prefix))
-```
-
-Nautobot:
-
-```python
-IPAddress.objects.net_host_contained(self.prefix)
-```
-
-##### net_in
-
-*Returns target IP addresses that are members of any of the provided source prefixes.*
-
-NetBox:
-
-```python
-IPAddress.objects.filter(address__net_in=[n1, n2, n3])
-```
-
-Nautobot:
-
-```python
-IPAddress.objects.net_in([n1, n2, n3])
-```
-
-##### ip_family
-
-*Returns target addresses matching the specified family.*
-
-NetBox:
-
-```python
-IPAddress.objects.filter(address__family=family)
-```
-
-Nautobot:
-
-```python
-IPAddress.objects.ip_family(family)
-```
-
----
-
-!!! important
-	The following lookups apply to all network objects.
 
 ##### net_mask_length
 
 *Returns target addresses matching the source address prefix length.*
 
 !!! note
-	This custom lookup does not have a manager method equivalent. This pattern should use the `prefix_length` field for filtering.
+	The NetBox filter net_mask_length should use the `prefix_length` field for filtering.
 
 NetBox:
 
