@@ -123,7 +123,7 @@ def reverse_migrate_params(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0016_joblogentry"),
+        ("extras", "0017_joblogentry"),
     ]
 
     operations = [
