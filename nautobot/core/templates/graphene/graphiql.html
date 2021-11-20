@@ -11,7 +11,7 @@ add "&raw" to the end of the URL within a browser.
 <html>
 <head>
   <!-- Nautobot template requirements -->
-  <title>{% block title %}GraphiQL{% endblock %} - Nautobot</title>
+  <title>{% block title %}GraphiQL{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
   <link rel="stylesheet"
         href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
@@ -33,12 +33,12 @@ add "&raw" to the end of the URL within a browser.
   <link rel="stylesheet"
         href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
         onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
-  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
-  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
-  <link rel="icon" type="image/png" href="{% static 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
-  <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
-  <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}">
+  <link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.png' %}">
+  <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
   <meta name="msapplication-TileColor" content="#2d89ef">
   <meta name="theme-color" content="#ffffff">
   <meta charset="UTF-8">
@@ -52,25 +52,20 @@ add "&raw" to the end of the URL within a browser.
       width: 100%;
     }
   </style>
-  <link href="https://cdn.jsdelivr.net/npm/graphiql@{{graphiql_version}}/graphiql.min.css"
-        integrity="{{graphiql_css_sri}}"
-        rel="stylesheet"
-        crossorigin="anonymous" />
-  <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@{{whatwg_fetch_version}}/dist/fetch.umd.js"
-          integrity="{{whatwg_fetch_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react@{{react_version}}/umd/react.production.min.js"
-          integrity="{{react_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@{{react_version}}/umd/react-dom.production.min.js"
-          integrity="{{react_dom_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/graphiql@{{graphiql_version}}/graphiql.min.js"
-          integrity="{{graphiql_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/subscriptions-transport-ws@{{subscriptions_transport_ws_version}}/browser/client.js"
-          integrity="{{subscriptions_transport_ws_sri}}"
-          crossorigin="anonymous"></script>
+  <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
+  <link rel="stylesheet"
+        href="{% static 'graphiql-1.0.3/graphiql.min.css' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=graphiql-1.0.3/graphiql.min.css'">
+  <script src="{% static 'whatwg-fetch-3.2.0/fetch.umd.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=whatwg-fetch-3.2.0/fetch.umd.js'"></script>
+  <script src="{% static 'react-16.13.1/react.production.min.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=react-16.13.1/react.production.min.js'"></script>
+  <script src="{% static 'react-dom-16.13.1/react-dom.production.min.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=react-dom-16.13.1/react-dom.production.min.js'"></script>
+  <script src="{% static 'graphiql-1.0.3/graphiql.min.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=graphiql-1.0.3/graphiql.min.js'"></script>
+  <script src="{% static 'subscriptions-transport-ws-0.9.17/client.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=subscriptions-transport-ws-0.9.17/client.js'"></script>
   <!-- Custom CSS to address some conflicts between the two -->
   <style>
     body {
@@ -121,6 +116,40 @@ add "&raw" to the end of the URL within a browser.
   </script>
   <script src="{% static 'graphene_django/graphiql.js' %}"></script>
   <script>
+  {% if perms.extras.view_graphqlquery %}
+    document.addEventListener('DOMContentLoaded', function() {
+      queries_tab = `
+        <div class="btn-group" role="button">
+          <button class="toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+              <span>Queries </span>
+              <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu" id="graphql-queries-menu">
+            <li class="dropdown-header">Saved Queries</li>
+              {% for query in saved_graphiql_queries %}
+                <li>
+                    {% if request.GET.id|slugify == query.id|slugify %}
+                        <div class="buttons pull-right">
+                            <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
+                        </div>
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                            <strong>{{ query.name }}</strong>
+                        </a>
+                    {% else %}
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                    {% endif %}
+                </li>
+              {% endfor %}
+              <li class="divider" role="separator"></li>
+                <li>
+                    <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
+                </li>
+            </ul>
+        </div>
+      `
+      $(".toolbar").append(queries_tab);
+    }, false);
+  {% endif %}
 
     function reload(id, query, variables) {
       if (variables == null){

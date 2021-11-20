@@ -6,7 +6,7 @@
 import os
 
 from nautobot.core.settings import *  # noqa: F401,F403
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
+from nautobot.core.settings_funcs import parse_redis_connection
 
 
 ALLOWED_HOSTS = ["*"]
@@ -53,3 +53,11 @@ CACHES = {
 
 # REDIS CACHEOPS
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
+
+# Testing storages within cli.py
+STORAGE_CONFIG = {
+    "AWS_ACCESS_KEY_ID": "ASFWDAMWWOQMEOQMWPMDA<WPDA",
+    "AWS_SECRET_ACCESS_KEY": "ASFKMWADMsacasdaw/dawrt1231541231231",
+    "AWS_STORAGE_BUCKET_NAME": "nautobot",
+    "AWS_S3_REGION_NAME": "us-west-1",
+}

@@ -17,18 +17,13 @@ __all__ = [
     "NestedJobResultSerializer",
     "NestedRelationshipSerializer",
     "NestedRelationshipAssociationSerializer",
+    "NestedScheduledJobSerializer",
+    "NestedSecretSerializer",
+    "NestedSecretsGroupSerializer",
     "NestedStatusSerializer",
     "NestedTagSerializer",
     "NestedWebhookSerializer",
 ]
-
-
-class NestedCustomFieldSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfield-detail")
-
-    class Meta:
-        model = models.CustomField
-        fields = ["id", "url", "name"]
 
 
 class NestedConfigContextSerializer(WritableNestedSerializer):
@@ -47,6 +42,25 @@ class NestedConfigContextSchemaSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name", "slug"]
 
 
+class NestedCustomFieldSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfield-detail")
+
+    class Meta:
+        model = models.CustomField
+        fields = ["id", "url", "name"]
+
+
+class NestedCustomLinkSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customlink-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.all(),
+    )
+
+    class Meta:
+        model = models.CustomLink
+        fields = ["content_type", "id", "name", "url"]
+
+
 class NestedExportTemplateSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:exporttemplate-detail")
 
@@ -63,20 +77,20 @@ class NestedGitRepositorySerializer(WritableNestedSerializer):
         fields = ["id", "url", "name"]
 
 
+class NestedGraphQLQuerySerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
+
+    class Meta:
+        model = models.GraphQLQuery
+        fields = ["id", "url", "name"]
+
+
 class NestedImageAttachmentSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:imageattachment-detail")
 
     class Meta:
         model = models.ImageAttachment
         fields = ["id", "url", "name", "image"]
-
-
-class NestedTagSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
-
-    class Meta:
-        model = models.Tag
-        fields = ["id", "url", "name", "slug", "color"]
 
 
 class NestedJobResultSerializer(serializers.ModelSerializer):
@@ -86,34 +100,7 @@ class NestedJobResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.JobResult
-        fields = ["url", "created", "completed", "user", "status"]
-
-
-class NestedCustomLinkSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customlink-detail")
-    content_type = ContentTypeField(
-        queryset=ContentType.objects.all(),
-    )
-
-    class Meta:
-        model = models.CustomLink
-        fields = ["content_type", "id", "name", "url"]
-
-
-class NestedWebhookSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:webhook-detail")
-
-    class Meta:
-        model = models.Webhook
-        fields = ["id", "url", "name"]
-
-
-class NestedStatusSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:status-detail")
-
-    class Meta:
-        model = models.Status
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name", "created", "completed", "user", "status"]
 
 
 class NestedRelationshipSerializer(WritableNestedSerializer):
@@ -124,17 +111,84 @@ class NestedRelationshipSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name", "slug"]
 
 
-class NestedGraphQLQuerySerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
-
-    class Meta:
-        model = models.GraphQLQuery
-        fields = ["id", "url", "name"]
-
-
 class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationshipassociation-detail")
 
     class Meta:
         model = models.RelationshipAssociation
         fields = ["id", "url", "relationship", "source_id", "destination_id"]
+
+
+class NestedScheduledJobSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255, required=False)
+    start_time = serializers.DateTimeField(format=None, required=False)
+
+    class Meta:
+        model = models.ScheduledJob
+        fields = ["name", "start_time", "interval"]
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        if data["interval"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+            if "name" not in data:
+                raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
+
+            if "start_time" not in data or data["start_time"] < models.ScheduledJob.earliest_possible_time():
+                raise serializers.ValidationError(
+                    {
+                        "start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+        return data
+
+
+class NestedSecretSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
+
+    class Meta:
+        model = models.Secret
+        fields = ["id", "url", "name", "slug"]
+
+
+class NestedSecretsGroupSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
+
+    class Meta:
+        model = models.SecretsGroup
+        fields = ["id", "url", "name", "slug"]
+
+
+class NestedSecretsGroupAssociationSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
+
+    secret = NestedSecretSerializer()
+
+    class Meta:
+        model = models.SecretsGroupAssociation
+        fields = ["id", "url", "access_type", "secret_type", "secret"]
+
+
+class NestedStatusSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:status-detail")
+
+    class Meta:
+        model = models.Status
+        fields = ["id", "url", "name", "slug"]
+
+
+class NestedTagSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
+
+    class Meta:
+        model = models.Tag
+        fields = ["id", "url", "name", "slug", "color"]
+
+
+class NestedWebhookSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:webhook-detail")
+
+    class Meta:
+        model = models.Webhook
+        fields = ["id", "url", "name"]

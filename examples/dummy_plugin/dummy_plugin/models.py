@@ -3,11 +3,15 @@ from django.urls import reverse
 
 from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
-from nautobot.extras.models import ObjectChange
+from nautobot.extras.models import CustomFieldModel, ObjectChange
 from nautobot.utilities.utils import serialize_object
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "graphql",
+    "webhooks",
+)
 class DummyModel(BaseModel):
     name = models.CharField(max_length=20, help_text="The name of this Dummy.")
     number = models.IntegerField(default=100, help_text="The number of this Dummy.")
@@ -39,7 +43,10 @@ class DummyModel(BaseModel):
         )
 
 
-class AnotherDummyModel(BaseModel):
+@extras_features(
+    "custom_fields",
+)
+class AnotherDummyModel(BaseModel, CustomFieldModel):
     name = models.CharField(max_length=20)
     number = models.IntegerField(default=100)
 

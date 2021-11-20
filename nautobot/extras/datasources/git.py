@@ -11,13 +11,20 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
+from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    LogLevelChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     ExportTemplate,
     GitRepository,
     JobResult,
@@ -84,6 +91,12 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
             logger=logger,
         )
 
+        job_result.log(
+            f'The current Git repository hash is "{repository_record.current_head}"',
+            level_choice=LogLevelChoices.LOG_INFO,
+            logger=logger,
+        )
+
         refresh_datasource_content("extras.gitrepository", repository_record, request, job_result, delete=False)
 
     except Exception as exc:
@@ -120,10 +133,38 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
     """
 
-    # Inject token into source URL if necessary
+    # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
-    token = repository_record._token
-    user = repository_record.username
+
+    user = None
+    token = None
+    if repository_record.secrets_group:
+        # In addition to ObjectDoesNotExist, get_secret_value() may also raise a SecretError if a secret is mis-defined;
+        # we don't catch that here but leave it up to the caller to handle as part of general exception handling.
+        try:
+            token = repository_record.secrets_group.get_secret_value(
+                SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+                obj=repository_record,
+            )
+        except ObjectDoesNotExist:
+            # No defined secret, fall through to legacy behavior
+            pass
+        try:
+            user = repository_record.secrets_group.get_secret_value(
+                SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                obj=repository_record,
+            )
+        except ObjectDoesNotExist:
+            # No defined secret, fall through to legacy behavior
+            pass
+
+    if not token and repository_record._token:
+        token = repository_record._token
+    if not user and repository_record.username:
+        user = repository_record.username
+
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
         if user:
@@ -404,6 +445,25 @@ def import_config_context(context_data, repository_record, job_result, logger):
         data = context_data.copy()
         del data["_metadata"]
 
+        if context_metadata.get("schema"):
+            if getattr(context_record.schema, "name", None) != context_metadata["schema"]:
+                try:
+                    schema = ConfigContextSchema.objects.get(name=context_metadata["schema"])
+                    context_record.schema = schema
+                    modified = True
+                except ConfigContextSchema.DoesNotExist:
+                    job_result.log(
+                        f"ConfigContextSchema {context_metadata['schema']} does not exist.",
+                        obj=context_record,
+                        level_choice=LogLevelChoices.LOG_FAILURE,
+                        grouping="config contexts",
+                        logger=logger,
+                    )
+        else:
+            if context_record.schema is not None:
+                context_record.schema = None
+                modified = True
+
         if context_record.data != data:
             context_record.data = data
             modified = True
@@ -553,6 +613,162 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
                     grouping="local config contexts",
                     logger=logger,
                 )
+
+
+#
+# Config Context Schemas
+#
+
+
+def refresh_git_config_context_schemas(repository_record, job_result, delete=False):
+    """Callback function for GitRepository updates - refresh all ConfigContextSchema records managed by this repository."""
+    if "extras.configcontextschema" in repository_record.provided_contents and not delete:
+        update_git_config_context_schemas(repository_record, job_result)
+    else:
+        delete_git_config_context_schemas(repository_record, job_result)
+
+
+def update_git_config_context_schemas(repository_record, job_result):
+    """Refresh any config context schemas provided by this Git repository."""
+    config_context_schema_path = os.path.join(repository_record.filesystem_path, "config_context_schemas")
+    if not os.path.isdir(config_context_schema_path):
+        return
+
+    managed_config_context_schemas = set()
+
+    for file_name in os.listdir(config_context_schema_path):
+        if not os.path.isfile(os.path.join(config_context_schema_path, file_name)):
+            continue
+        job_result.log(
+            f"Loading config context schema from `{file_name}`",
+            grouping="config context schemas",
+            logger=logger,
+        )
+        try:
+            with open(os.path.join(config_context_schema_path, file_name), "r") as fd:
+                # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
+                try:
+                    context_schema_data = yaml.safe_load(fd)
+                except Exception as exc:
+                    raise RuntimeError(f"Error in loading config context schema data from `{file_name}`: {exc}")
+
+            # A file can contain one config context dict or a list thereof
+            if isinstance(context_schema_data, dict):
+                context_name = import_config_context_schema(context_schema_data, repository_record, job_result, logger)
+                managed_config_context_schemas.add(context_name)
+            elif isinstance(context_schema_data, list):
+                for context_schema in context_schema_data:
+                    if isinstance(context_schema, dict):
+                        context_name = import_config_context_schema(
+                            context_schema, repository_record, job_result, logger
+                        )
+                        managed_config_context_schemas.add(context_name)
+                    else:
+                        raise RuntimeError(
+                            f"Error in loading config context schema data from `{file_name}`: data must be a dict or list of dicts"
+                        )
+            else:
+                raise RuntimeError(
+                    f"Error in loading config context schema data from `{file_name}`: data must be a dict or list of dicts"
+                )
+        except Exception as exc:
+            job_result.log(
+                str(exc),
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="config context schemas",
+                logger=logger,
+            )
+            job_result.save()
+
+    # Delete any prior contexts that are owned by this repository but were not created/updated above
+    delete_git_config_context_schemas(
+        repository_record,
+        job_result,
+        preserve=managed_config_context_schemas,
+    )
+
+
+def import_config_context_schema(context_schema_data, repository_record, job_result, logger):
+    """Using data from schema file, create schema record in Nautobot."""
+    git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
+
+    created = False
+    modified = False
+
+    schema_metadata = context_schema_data.setdefault("_metadata", {})
+
+    if not schema_metadata.get("name"):
+        raise RuntimeError("File has no name set.")
+
+    try:
+        schema_record = ConfigContextSchema.objects.get(
+            name=schema_metadata["name"],
+            owner_content_type=git_repository_content_type,
+            owner_object_id=repository_record.pk,
+        )
+    except ConfigContextSchema.DoesNotExist:
+        schema_record = ConfigContextSchema(
+            name=schema_metadata["name"],
+            slug=slugify(schema_metadata["name"]),
+            owner_content_type=git_repository_content_type,
+            owner_object_id=repository_record.pk,
+            data_schema=context_schema_data["data_schema"],
+        )
+        created = True
+
+    if schema_record.description != schema_metadata.get("description", ""):
+        schema_record.description = schema_metadata.get("description", "")
+        modified = True
+
+    if schema_record.data_schema != context_schema_data["data_schema"]:
+        schema_record.data_schema = context_schema_data["data_schema"]
+        modified = True
+
+    if created:
+        schema_record.validated_save()
+        job_result.log(
+            "Successfully created config context schema",
+            obj=schema_record,
+            level_choice=LogLevelChoices.LOG_SUCCESS,
+            grouping="config context schemas",
+            logger=logger,
+        )
+    elif modified:
+        schema_record.validated_save()
+        job_result.log(
+            "Successfully refreshed config context schema",
+            obj=schema_record,
+            level_choice=LogLevelChoices.LOG_SUCCESS,
+            grouping="config context schemas",
+            logger=logger,
+        )
+    else:
+        job_result.log(
+            "No change to config context schema",
+            obj=schema_record,
+            level_choice=LogLevelChoices.LOG_INFO,
+            grouping="config context schemas",
+            logger=logger,
+        )
+
+    return schema_record.name if schema_record else None
+
+
+def delete_git_config_context_schemas(repository_record, job_result, preserve=()):
+    """Delete config context schemas owned by this Git repository that are not in the preserve list (if any)."""
+    git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
+    for schema_record in ConfigContextSchema.objects.filter(
+        owner_content_type=git_repository_content_type,
+        owner_object_id=repository_record.pk,
+    ):
+        if schema_record.name not in preserve:
+            schema_record.delete()
+            job_result.log(
+                f"Deleted config context schema {schema_record}",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                grouping="config context schemas",
+                logger=logger,
+            )
 
 
 #
@@ -716,9 +932,20 @@ register_datasource_contents(
         (
             "extras.gitrepository",
             DatasourceContent(
+                name="config context schemas",
+                content_identifier="extras.configcontextschema",
+                icon="mdi-floor-plan",
+                weight=100,
+                callback=refresh_git_config_context_schemas,
+            ),
+        ),
+        (
+            "extras.gitrepository",
+            DatasourceContent(
                 name="config contexts",
                 content_identifier="extras.configcontext",
                 icon="mdi-code-json",
+                weight=200,
                 callback=refresh_git_config_contexts,
             ),
         ),
@@ -728,6 +955,7 @@ register_datasource_contents(
                 name="jobs",
                 content_identifier="extras.job",
                 icon="mdi-script-text",
+                weight=300,
                 callback=refresh_git_jobs,
             ),
         ),
@@ -737,6 +965,7 @@ register_datasource_contents(
                 name="export templates",
                 content_identifier="extras.exporttemplate",
                 icon="mdi-database-export",
+                weight=400,
                 callback=refresh_git_export_templates,
             ),
         ),

@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.db.models.fields import TextField
+from django.forms import inlineformset_factory
 from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
@@ -10,6 +12,7 @@ from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
+    APISelect,
     APISelectMultiple,
     BootstrapMixin,
     BulkEditForm,
@@ -17,6 +20,7 @@ from nautobot.utilities.forms import (
     ColorSelect,
     CSVModelChoiceField,
     CSVModelForm,
+    CSVMultipleChoiceField,
     CSVMultipleContentTypeField,
     DateTimePicker,
     DynamicModelChoiceField,
@@ -26,16 +30,25 @@ from nautobot.utilities.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
-    BOOLEAN_WITH_BLANK_CHOICES,
+    TagFilterField,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import *
+from .choices import (
+    CustomFieldFilterLogicChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -45,176 +58,21 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
 )
+from .registry import registry
 from .utils import FeatureQuery
 
 
 #
-# Custom fields
+# Form mixins
 #
-
-
-class CustomFieldModelForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-
-        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
-        self.custom_fields = []
-
-        super().__init__(*args, **kwargs)
-
-        self._append_customfield_fields()
-
-    def _append_customfield_fields(self):
-        """
-        Append form fields for all CustomFields assigned to this model.
-        """
-        # Append form fields; assign initial values if modifying and existing object
-        for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = "cf_{}".format(cf.name)
-            if self.instance.present_in_database:
-                self.fields[field_name] = cf.to_form_field(set_initial=False)
-                self.fields[field_name].initial = self.instance.cf.get(cf.name)
-            else:
-                self.fields[field_name] = cf.to_form_field()
-
-            # Annotate the field in the list of CustomField form fields
-            self.custom_fields.append(field_name)
-
-    def clean(self):
-
-        # Save custom field data on instance
-        for cf_name in self.custom_fields:
-            self.instance.cf[cf_name[3:]] = self.cleaned_data.get(cf_name)
-
-        return super().clean()
-
-
-class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
-    def _append_customfield_fields(self):
-
-        # Append form fields
-        for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = "cf_{}".format(cf.name)
-            self.fields[field_name] = cf.to_form_field(for_csv_import=True)
-
-            # Annotate the field in the list of CustomField form fields
-            self.custom_fields.append(field_name)
-
-
-class CustomFieldBulkEditForm(BulkEditForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.custom_fields = []
-        self.obj_type = ContentType.objects.get_for_model(self.model)
-
-        # Add all applicable CustomFields to the form
-        custom_fields = CustomField.objects.filter(content_types=self.obj_type)
-        for cf in custom_fields:
-            name = self._get_field_name(cf.name)
-            # Annotate non-required custom fields as nullable
-            if not cf.required:
-                self.nullable_fields.append(name)
-            self.fields[name] = cf.to_form_field(set_initial=False, enforce_required=False)
-            # Annotate this as a custom field
-            self.custom_fields.append(name)
-
-    @staticmethod
-    def _get_field_name(name):
-        # Return the desired field name
-        return name
-
-
-class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
-    """
-    Adaptation of CustomFieldBulkEditForm which uses prefixed field names
-    """
-
-    @staticmethod
-    def _get_field_name(name):
-        # Return a prefixed version of the name
-        return "cf_{}".format(name)
-
-
-class CustomFieldFilterForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-
-        self.obj_type = ContentType.objects.get_for_model(self.model)
-
-        super().__init__(*args, **kwargs)
-
-        # Add all applicable CustomFields to the form
-        custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
-            filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
-        )
-        for cf in custom_fields:
-            field_name = "cf_{}".format(cf.name)
-            self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
-
-
-#
-# Relationship
-#
-
-
-class RelationshipForm(BootstrapMixin, forms.ModelForm):
-
-    slug = SlugField()
-    source_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
-    )
-    source_filter = JSONField(
-        required=False,
-        help_text='Enter any filters for the source object in <a href="https://json.org/">JSON</a> format.',
-    )
-    destination_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
-    )
-    destination_filter = JSONField(
-        required=False,
-        help_text='Enter any filters for the destination object in <a href="https://json.org/">JSON</a> format.',
-    )
-
-    class Meta:
-        model = Relationship
-        fields = [
-            "name",
-            "slug",
-            "description",
-            "type",
-            "source_type",
-            "source_label",
-            "source_hidden",
-            "source_filter",
-            "destination_type",
-            "destination_label",
-            "destination_hidden",
-            "destination_filter",
-        ]
-
-    def save(self, commit=True):
-
-        # TODO add support for owner when a CR is created in the UI
-        obj = super().save(commit)
-
-        return obj
-
-
-class RelationshipFilterForm(BootstrapMixin, forms.Form):
-    model = Relationship
-
-    type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
-
-    source_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
-    )
-
-    destination_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
-    )
 
 
 class RelationshipModelForm(forms.ModelForm):
@@ -236,20 +94,21 @@ class RelationshipModelForm(forms.ModelForm):
             for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # If this model is on the "source" side of the relationship, then the field will be named
-                # cr_relationship-slug__destination since it's used to pick the destination object(s).
-                # Conversely if we're on the "destination" side, the field will be cr_relationship-slug__source.
+                # cr_<relationship-slug>__destination since it's used to pick the destination object(s).
+                # If we're on the "destination" side, the field will be cr_<relationship-slug>__source.
+                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship-slug>__peer
                 field_name = f"cr_{relationship.slug}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
                     if relationship.has_many(peer_side):
-                        initial = [getattr(association, peer_side) for association in queryset.all()]
+                        initial = [association.get_peer(self.instance) for association in queryset.all()]
                         self.fields[field_name].initial = initial
                     else:
                         association = queryset.first()
                         if association:
-                            self.fields[field_name].initial = getattr(association, peer_side)
+                            self.fields[field_name].initial = association.get_peer(self.instance)
 
                 # Annotate the field in the list of Relationship form fields
                 self.relationships.append(field_name)
@@ -267,11 +126,6 @@ class RelationshipModelForm(forms.ModelForm):
         """
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
-                # If this side of the relationship is a "MANY" relation,
-                # we can coexist with other existing RelationshipAssociations and there's nothing to check now.
-                if relationship.has_many(side):
-                    continue
-
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 field_name = f"cr_{relationship.slug}__{peer_side}"
@@ -286,13 +140,33 @@ class RelationshipModelForm(forms.ModelForm):
                     target_peers = [item for item in self.cleaned_data[field_name]]
                 else:
                     target_peers = [self.cleaned_data[field_name]]
+
                 for target_peer in target_peers:
-                    existing_peer_associations = RelationshipAssociation.objects.filter(
-                        relationship=relationship,
-                        **{
-                            f"{peer_side}_id": target_peer.pk,
-                        },
-                    ).exclude(**{f"{side}_id": self.instance.pk})
+                    if target_peer.pk == self.instance.pk:
+                        raise ValidationError(
+                            {field_name: f"Object {self.instance} cannot form a relationship to itself!"}
+                        )
+
+                    if relationship.has_many(side):
+                        # No need to check for existing RelationshipAssociations since this is a "many" relationship
+                        continue
+
+                    if not relationship.symmetric:
+                        existing_peer_associations = RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            **{
+                                f"{peer_side}_id": target_peer.pk,
+                            },
+                        ).exclude(**{f"{side}_id": self.instance.pk})
+                    else:
+                        existing_peer_associations = RelationshipAssociation.objects.filter(
+                            (
+                                (Q(source_id=target_peer.pk) & ~Q(destination_id=self.instance.pk))
+                                | (Q(destination_id=target_peer.pk) & ~Q(source_id=self.instance.pk))
+                            ),
+                            relationship=relationship,
+                        )
+
                     if existing_peer_associations.exists():
                         raise ValidationError(
                             {field_name: f"{target_peer} is already involved in a {relationship} relationship"}
@@ -311,10 +185,18 @@ class RelationshipModelForm(forms.ModelForm):
             side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
                 "relationship": self.fields[field_name].model,
-                f"{side}_type": self.obj_type,
-                f"{side}_id": self.instance.pk,
             }
-            existing_associations = RelationshipAssociation.objects.filter(**filters)
+            if side != RelationshipSideChoices.SIDE_PEER:
+                filters.update({f"{side}_type": self.obj_type, f"{side}_id": self.instance.pk})
+                existing_associations = RelationshipAssociation.objects.filter(**filters)
+            else:
+                existing_associations = RelationshipAssociation.objects.filter(
+                    (
+                        Q(source_type=self.obj_type, source_id=self.instance.pk)
+                        | Q(destination_type=self.obj_type, destination_id=self.instance.pk)
+                    ),
+                    **filters,
+                )
 
             # Get the list of target peer ids (PKs) that are specified in the form
             target_peer_ids = []
@@ -335,10 +217,16 @@ class RelationshipModelForm(forms.ModelForm):
             # Conversely, if it's *not* in target_peer_ids, we should delete it.
             for association in existing_associations:
                 for peer_id in target_peer_ids:
-                    if peer_id == getattr(association, f"{peer_side}_id"):
-                        # This association already exists, so we can ignore it
-                        target_peer_ids.remove(peer_id)
-                        break
+                    if peer_side != RelationshipSideChoices.SIDE_PEER:
+                        if peer_id == getattr(association, f"{peer_side}_id"):
+                            # This association already exists, so we can ignore it
+                            target_peer_ids.remove(peer_id)
+                            break
+                    else:
+                        if peer_id == association.source_id or peer_id == association.destination_id:
+                            # This association already exists, so we can ignore it
+                            target_peer_ids.remove(peer_id)
+                            break
                 else:
                     # This association is not in target_peer_ids, so delete it
                     association.delete()
@@ -346,15 +234,25 @@ class RelationshipModelForm(forms.ModelForm):
             # Anything remaining in target_peer_ids now does not exist yet and needs to be created.
             for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
-                association = RelationshipAssociation(
-                    relationship=relationship,
-                    **{
-                        f"{side}_type": self.obj_type,
-                        f"{side}_id": self.instance.pk,
-                        f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
-                        f"{peer_side}_id": peer_id,
-                    },
-                )
+                if not relationship.symmetric:
+                    association = RelationshipAssociation(
+                        relationship=relationship,
+                        **{
+                            f"{side}_type": self.obj_type,
+                            f"{side}_id": self.instance.pk,
+                            f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
+                            f"{peer_side}_id": peer_id,
+                        },
+                    )
+                else:
+                    # Symmetric association - source/destination are interchangeable
+                    association = RelationshipAssociation(
+                        relationship=relationship,
+                        source_type=self.obj_type,
+                        source_id=self.instance.pk,
+                        destination_type=self.obj_type,  # since this is a symmetric relationship this is OK
+                        destination_id=peer_id,
+                    )
 
                 association.clean()
                 association.save()
@@ -368,69 +266,41 @@ class RelationshipModelForm(forms.ModelForm):
         return obj
 
 
-class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
-    model = RelationshipAssociation
-
-    relationship = DynamicModelMultipleChoiceField(
-        queryset=Relationship.objects.all(),
-        to_field_name="slug",
-        required=False,
-    )
-
-    source_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
-    )
-
-    destination_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
-    )
-
-
 #
-# Tags
+# Computed Fields
 #
 
 
-class TagForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
-    slug = SlugField()
+class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=True,
+        label="Content Type",
+    )
+    slug = SlugField(slug_source="label")
 
     class Meta:
-        model = Tag
-        fields = ["name", "slug", "color", "description"]
+        model = ComputedField
+        fields = (
+            "content_type",
+            "label",
+            "slug",
+            "description",
+            "template",
+            "fallback_value",
+            "weight",
+        )
 
 
-class TagCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
-    class Meta:
-        model = Tag
-        fields = Tag.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
-
-
-class AddRemoveTagsForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Add add/remove tags fields
-        self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
-
-class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
-    model = Tag
+class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
+    model = ComputedField
     q = forms.CharField(required=False, label="Search")
-
-
-class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), widget=forms.MultipleHiddenInput)
-    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    description = forms.CharField(max_length=200, required=False)
-
-    class Meta:
-        nullable_fields = ["description"]
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
 
 
 #
@@ -578,6 +448,228 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 
 
 #
+# Custom fields
+#
+
+
+# CustomFieldChoice inline formset for use with providing dynamic rows when creating/editing choices
+# for `CustomField` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+CustomFieldChoiceFormSet = inlineformset_factory(
+    parent_model=CustomField,
+    model=CustomFieldChoice,
+    exclude=(),
+    extra=5,
+    widgets={
+        "value": forms.TextInput(attrs={"class": "form-control"}),
+        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+    },
+)
+
+
+class CustomFieldForm(BootstrapMixin, forms.ModelForm):
+    # TODO: Migrate custom field model from name to slug #464
+    # Once that's done we can set "name" as a proper (Auto)SlugField,
+    # but for the moment, that field only works with fields specifically named "slug"
+    description = forms.CharField(
+        required=False,
+        help_text="Also used as the help text when editing models using this custom field.<br>"
+        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
+        "Markdown</a> syntax is supported.",
+    )
+    content_types = MultipleContentTypeField(
+        feature="custom_fields", help_text="The object(s) to which this field applies."
+    )
+
+    class Meta:
+        model = CustomField
+        fields = (
+            "content_types",
+            "type",
+            "label",
+            "name",
+            "description",
+            "required",
+            "filter_logic",
+            "default",
+            "weight",
+            "validation_minimum",
+            "validation_maximum",
+            "validation_regex",
+        )
+
+
+class CustomFieldModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        self.custom_fields = []
+
+        super().__init__(*args, **kwargs)
+
+        self._append_customfield_fields()
+
+    def _append_customfield_fields(self):
+        """
+        Append form fields for all CustomFields assigned to this model.
+        """
+        # Append form fields; assign initial values if modifying and existing object
+        for cf in CustomField.objects.filter(content_types=self.obj_type):
+            field_name = "cf_{}".format(cf.name)
+            if self.instance.present_in_database:
+                self.fields[field_name] = cf.to_form_field(set_initial=False)
+                self.fields[field_name].initial = self.instance.cf.get(cf.name)
+            else:
+                self.fields[field_name] = cf.to_form_field()
+
+            # Annotate the field in the list of CustomField form fields
+            self.custom_fields.append(field_name)
+
+    def clean(self):
+
+        # Save custom field data on instance
+        for cf_name in self.custom_fields:
+            self.instance.cf[cf_name[3:]] = self.cleaned_data.get(cf_name)
+
+        return super().clean()
+
+
+class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
+    def _append_customfield_fields(self):
+
+        # Append form fields
+        for cf in CustomField.objects.filter(content_types=self.obj_type):
+            field_name = "cf_{}".format(cf.name)
+            self.fields[field_name] = cf.to_form_field(for_csv_import=True)
+
+            # Annotate the field in the list of CustomField form fields
+            self.custom_fields.append(field_name)
+
+
+class CustomFieldBulkEditForm(BulkEditForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.custom_fields = []
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+
+        # Add all applicable CustomFields to the form
+        custom_fields = CustomField.objects.filter(content_types=self.obj_type)
+        for cf in custom_fields:
+            name = self._get_field_name(cf.name)
+            # Annotate non-required custom fields as nullable
+            if not cf.required:
+                self.nullable_fields.append(name)
+            self.fields[name] = cf.to_form_field(set_initial=False, enforce_required=False)
+            # Annotate this as a custom field
+            self.custom_fields.append(name)
+
+    @staticmethod
+    def _get_field_name(name):
+        # Return the desired field name
+        return name
+
+
+class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
+    """
+    Adaptation of CustomFieldBulkEditForm which uses prefixed field names
+    """
+
+    @staticmethod
+    def _get_field_name(name):
+        # Return a prefixed version of the name
+        return "cf_{}".format(name)
+
+
+class CustomFieldFilterForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+
+        super().__init__(*args, **kwargs)
+
+        # Add all applicable CustomFields to the form
+        custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
+            filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
+        )
+        for cf in custom_fields:
+            field_name = "cf_{}".format(cf.name)
+            self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
+
+
+#
+# Custom Links
+#
+
+
+class CustomLinkForm(BootstrapMixin, forms.ModelForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
+        label="Content Type",
+    )
+
+    class Meta:
+        model = CustomLink
+        fields = (
+            "content_type",
+            "name",
+            "text",
+            "target_url",
+            "weight",
+            "group_name",
+            "button_class",
+            "new_window",
+        )
+
+
+class CustomLinkFilterForm(BootstrapMixin, forms.Form):
+    model = CustomLink
+    q = forms.CharField(required=False, label="Search")
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
+
+
+#
+# Export Templates
+#
+
+
+class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ExportTemplate
+        fields = (
+            "content_type",
+            "name",
+            "description",
+            "template_code",
+            "mime_type",
+            "file_extension",
+        )
+
+
+class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
+    model = ExportTemplate
+    q = forms.CharField(required=False, label="Search")
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+        label="Content Type",
+    )
+
+
+#
 # Git repositories and other data sources
 #
 
@@ -615,9 +707,16 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
 
-    username = forms.CharField(required=False, label="Username", help_text="Username for token authentication.")
+    username = forms.CharField(
+        required=False,
+        label="Username",
+        help_text="Username for token authentication.<br><em>Deprecated</em> - use a secrets group instead",
+    )
+
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     provided_contents = forms.MultipleChoiceField(
         required=False,
@@ -634,17 +733,36 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "slug",
             "remote_url",
             "branch",
-            "_token",
             "username",
+            "_token",
+            "secrets_group",
             "provided_contents",
             "tags",
         ]
 
 
 class GitRepositoryCSVForm(CSVModelForm):
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        help_text="Secrets group for repository access (if any)",
+    )
+
     class Meta:
         model = GitRepository
         fields = GitRepository.csv_headers
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["provided_contents"] = CSVMultipleChoiceField(
+            choices=get_git_datasource_content_choices(),
+            required=False,
+            help_text=mark_safe(
+                "The data types this repository provides. Multiple values must be comma-separated and wrapped in "
+                'double quotes (e.g. <code>"extras.job,extras.configcontext"</code>).'
+            ),
+        )
 
 
 class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
@@ -663,14 +781,45 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
     username = forms.CharField(
         required=False,
         label="Username",
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
+
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
         model = GitRepository
+        nullable_fields = ["secrets_group"]
+
+
+#
+# GraphQL saved queries
+#
+
+
+class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
+    slug = SlugField()
+    query = TextField()
+
+    class Meta:
+        model = GraphQLQuery
+        fields = (
+            "name",
+            "slug",
+            "query",
+        )
+
+    def get_action_url(self):
+        return reverse("extras:graphqlquery_add")
+
+
+class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):
+    model = GraphQLQuery
+    q = forms.CharField(required=False, label="Search")
 
 
 #
@@ -685,6 +834,111 @@ class ImageAttachmentForm(BootstrapMixin, forms.ModelForm):
             "name",
             "image",
         ]
+
+
+#
+# Jobs
+#
+
+
+class JobForm(BootstrapMixin, forms.Form):
+    """
+    This form is used to render the user input fields for a Job class. Its fields are dynamically
+    controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
+    """
+
+    _commit = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Commit changes",
+        help_text="Commit changes to the database (uncheck for a dry-run)",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Move _commit to the end of the form
+        commit = self.fields.pop("_commit")
+        self.fields["_commit"] = commit
+
+    @property
+    def requires_input(self):
+        """
+        A boolean indicating whether the form requires user input (ignore the _commit field).
+        """
+        return bool(len(self.fields) > 1)
+
+
+class JobScheduleForm(BootstrapMixin, forms.Form):
+    """
+    This form is rendered alongside the JobForm but deals specifically with the fields needed to either
+    execute the job immediately, or schedule it for later. Each field name is prefixed with an underscore
+    because in the POST body, they share a namespace with the JobForm which includes fields defined by the
+    job author, so the underscore prefix helps to avoid name collisions.
+    """
+
+    _schedule_type = forms.ChoiceField(
+        choices=JobExecutionType,
+        help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
+        label="Type",
+    )
+    _schedule_name = forms.CharField(
+        required=False,
+        label="Schedule name",
+        help_text="Name for the job schedule.",
+    )
+    _schedule_start_time = forms.DateTimeField(
+        required=False,
+        label="Starting date and time",
+        widget=DateTimePicker(),
+    )
+
+    def clean(self):
+        """
+        Validate all required information is present if the job needs to be scheduled
+        """
+        cleaned_data = super().clean()
+
+        if cleaned_data["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
+            if not cleaned_data["_schedule_name"]:
+                raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
+
+            if (
+                not cleaned_data["_schedule_start_time"]
+                or cleaned_data["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
+            ):
+                raise ValidationError(
+                    {
+                        "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+
+class JobResultFilterForm(BootstrapMixin, forms.Form):
+    model = JobResult
+    q = forms.CharField(required=False, label="Search")
+    # FIXME(glenn) Filtering by obj_type?
+    name = forms.CharField(required=False)
+    user = DynamicModelMultipleChoiceField(
+        queryset=get_user_model().objects.all(),
+        required=False,
+        label="User",
+        widget=APISelectMultiple(
+            api_url="/api/users/users/",
+        ),
+    )
+    status = forms.ChoiceField(
+        choices=add_blank_choice(JobResultStatusChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+
+
+class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
+    model = ScheduledJob
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    total_run_count = forms.IntegerField(required=False)
 
 
 #
@@ -721,150 +975,171 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 #
-# Jobs
+# Relationship
 #
 
 
-class JobForm(BootstrapMixin, forms.Form):
-    _commit = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Commit changes",
-        help_text="Commit changes to the database (uncheck for a dry-run)",
+class RelationshipForm(BootstrapMixin, forms.ModelForm):
+
+    slug = SlugField()
+    source_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The source object type to which this relationship applies.",
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Move _commit to the end of the form
-        commit = self.fields.pop("_commit")
-        self.fields["_commit"] = commit
-
-    @property
-    def requires_input(self):
-        """
-        A boolean indicating whether the form requires user input (ignore the _commit field).
-        """
-        return bool(len(self.fields) > 1)
-
-
-class JobResultFilterForm(BootstrapMixin, forms.Form):
-    model = JobResult
-    q = forms.CharField(required=False, label="Search")
-    # FIXME(glenn) Filtering by obj_type?
-    name = forms.CharField(required=False)
-    user = DynamicModelMultipleChoiceField(
-        queryset=get_user_model().objects.all(),
+    source_filter = JSONField(
         required=False,
-        label="User",
-        widget=APISelectMultiple(
-            api_url="/api/users/users/",
-        ),
+        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(JobResultStatusChoices),
-        required=False,
-        widget=StaticSelect2(),
+    destination_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The destination object type to which this relationship applies.",
     )
-
-
-class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
-            "app_label", "model"
-        ),
+    destination_filter = JSONField(
         required=False,
-        label="Content Types",
+        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 
     class Meta:
-        model = ExportTemplate
-        fields = (
-            "content_type",
+        model = Relationship
+        fields = [
             "name",
+            "slug",
             "description",
-            "template_code",
-            "mime_type",
-            "file_extension",
-        )
+            "type",
+            "source_type",
+            "source_label",
+            "source_hidden",
+            "source_filter",
+            "destination_type",
+            "destination_label",
+            "destination_hidden",
+            "destination_filter",
+        ]
+
+    def save(self, commit=True):
+
+        # TODO add support for owner when a CR is created in the UI
+        obj = super().save(commit)
+
+        return obj
 
 
-class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
-    model = ExportTemplate
-    q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
-            "app_label", "model"
-        ),
-        required=False,
-        label="Content Types",
+class RelationshipFilterForm(BootstrapMixin, forms.Form):
+    model = Relationship
+
+    type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
+
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
+    )
+
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
 
-class CustomLinkForm(BootstrapMixin, forms.ModelForm):
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
+class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
+    model = RelationshipAssociation
+
+    relationship = DynamicModelMultipleChoiceField(
+        queryset=Relationship.objects.all(),
+        to_field_name="slug",
         required=False,
-        label="Content Types",
     )
+
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
+    )
+
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
+    )
+
+
+#
+# Secrets
+#
+
+
+def provider_choices():
+    return sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()])
+
+
+class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `Secret` objects."""
+
+    slug = SlugField()
+
+    provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
+
+    parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
+
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
-        model = CustomLink
-        fields = (
-            "content_type",
+        model = Secret
+        fields = [
             "name",
-            "text",
-            "target_url",
-            "weight",
-            "group_name",
-            "button_class",
-            "new_window",
-        )
+            "slug",
+            "description",
+            "provider",
+            "parameters",
+            "tags",
+        ]
 
 
-class CustomLinkFilterForm(BootstrapMixin, forms.Form):
-    model = CustomLink
+class SecretCSVForm(CustomFieldModelCSVForm):
+    class Meta:
+        model = Secret
+        fields = Secret.csv_headers
+
+
+def provider_choices_with_blank():
+    return add_blank_choice(sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()]))
+
+
+class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = Secret
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
+    provider = forms.MultipleChoiceField(
+        choices=provider_choices_with_blank, widget=StaticSelect2Multiple(), required=False
     )
+    tag = TagFilterField(model)
 
 
-class WebhookForm(BootstrapMixin, forms.ModelForm):
-    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
+# Inline formset for use with providing dynamic rows when creating/editing assignments of Secrets to SecretsGroups.
+SecretsGroupAssociationFormSet = inlineformset_factory(
+    parent_model=SecretsGroup,
+    model=SecretsGroupAssociation,
+    fields=("access_type", "secret_type", "secret"),
+    extra=5,
+    widgets={
+        "access_type": StaticSelect2,
+        "secret_type": StaticSelect2,
+        "secret": APISelect(api_url="/api/extras/secrets/"),
+    },
+)
+
+
+class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `SecretsGroup` objects."""
+
+    slug = SlugField()
 
     class Meta:
-        model = Webhook
-        fields = (
+        model = SecretsGroup
+        fields = [
             "name",
-            "content_types",
-            "enabled",
-            "type_create",
-            "type_update",
-            "type_delete",
-            "payload_url",
-            "http_method",
-            "http_content_type",
-            "additional_headers",
-            "body_template",
-            "secret",
-            "ssl_verification",
-            "ca_file_path",
-        )
+            "slug",
+            "description",
+        ]
 
 
-class WebhookFilterForm(BootstrapMixin, forms.Form):
-    model = Webhook
+class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = SecretsGroup
     q = forms.CharField(required=False, label="Search")
-    content_types = MultipleContentTypeField(
-        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
-    )
-    type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
 #
@@ -887,7 +1162,6 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 class StatusCSVForm(CustomFieldModelCSVForm):
     """Generic CSV bulk import form for `Status` objects."""
 
-    slug = SlugField()
     content_types = CSVMultipleContentTypeField(
         feature="statuses",
         choices_as_strings=True,
@@ -968,56 +1242,88 @@ class StatusModelCSVFormMixin(CSVModelForm):
     )
 
 
-class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
+#
+# Tags
+#
+
+
+class TagForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
-    query = TextField()
 
     class Meta:
-        model = GraphQLQuery
+        model = Tag
+        fields = ["name", "slug", "color", "description"]
+
+
+class TagCSVForm(CustomFieldModelCSVForm):
+    slug = SlugField()
+
+    class Meta:
+        model = Tag
+        fields = Tag.csv_headers
+        help_texts = {
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+        }
+
+
+class AddRemoveTagsForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Add add/remove tags fields
+        self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+
+class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = Tag
+    q = forms.CharField(required=False, label="Search")
+
+
+class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), widget=forms.MultipleHiddenInput)
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+    description = forms.CharField(max_length=200, required=False)
+
+    class Meta:
+        nullable_fields = ["description"]
+
+
+#
+# Webhooks
+#
+
+
+class WebhookForm(BootstrapMixin, forms.ModelForm):
+    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
+
+    class Meta:
+        model = Webhook
         fields = (
             "name",
-            "slug",
-            "query",
-        )
-
-    def get_action_url(self):
-        return reverse("extras:graphqlquery_add")
-
-
-class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):
-    model = GraphQLQuery
-    q = forms.CharField(required=False, label="Search")
-
-
-# Computed Fields
-
-
-class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
-
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
-        required=True,
-        label="Content Types",
-    )
-
-    class Meta:
-        model = ComputedField
-        fields = (
-            "content_type",
-            "slug",
-            "label",
-            "description",
-            "template",
-            "fallback_value",
-            "weight",
+            "content_types",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "payload_url",
+            "http_method",
+            "http_content_type",
+            "additional_headers",
+            "body_template",
+            "secret",
+            "ssl_verification",
+            "ca_file_path",
         )
 
 
-class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
-    model = ComputedField
+class WebhookFilterForm(BootstrapMixin, forms.Form):
+    model = Webhook
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
+    content_types = MultipleContentTypeField(
+        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
     )
+    type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))

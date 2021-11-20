@@ -80,6 +80,10 @@ This is the human-friendly name of your job, as will be displayed in the Nautobo
 
 A human-friendly description of what this job does.
 
+#### `approval_required`
+
+A boolean that will mark this job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+
 #### `commit_default`
 
 The checkbox to commit database changes when executing a job is checked by default in the Nautobot UI. You can set `commit_default` to `False` under the `Meta` class if you want this option to instead be unchecked by default.
@@ -298,11 +302,15 @@ The following instance methods are available to log results from an executing jo
 * `self.log_warning(obj=None, message=None)`
 * `self.log_failure(obj=None, message=None)`
 
-The recording of one or more failure messages will automatically flag the overall job as failed. It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
-
 Messages recorded with `log()` or `log_debug()` will appear in a job's results but are never associated with a particular object; the other `log_*` functions may be invoked with or without a provided object to associate the message with.
 
+It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
+
 Markdown rendering is supported for log messages.
+
+!!! note
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job. To end a job early, you can use a Python `raise` or `return` as appropriate.
+
 
 ### Accessing Request Data
 
@@ -333,6 +341,18 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
     ![Adding the run action to a permission](../../media/admin_ui_run_permission.png)
 
+### Jobs and `class_path`
+
+It is a key concept to understand the 3 `class_path` elements:
+
+- `grouping_name`: which can be one of `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `module_name`: which is the Python path to the job definition file, for a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename` or `nautobot_golden_config.jobs` and is the importable Python path name (which would not include the `.py` extension, as per Python syntax standards).
+- `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
+The `class_path` is often represented as a string in the format of `<grouping_name>/<module_name>/<JobClassName>`, such as
+`local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the definitions of these
+elements will be important in running jobs programmatically.
+
 ### Via the Web UI
 
 Jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Job" button.
@@ -341,7 +361,12 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint, with the option of specifying any required user input data and/or the `commit` flag.
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<class_path>/run`. You can ooptionally provide JSON data to set the `commit` flag, specify any required user input `data`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+
+!!! note
+    [See above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
+
+For example, to run a job with no user inputs and without committing any anything to the database:
 
 ```no-highlight
 curl -X POST \
@@ -351,32 +376,46 @@ curl -X POST \
 http://nautobot/api/extras/jobs/local/example/MyJobWithNoVars/run/
 ```
 
+Or to run a job that expects user inputs, and commit changes to the database:
+
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \
 http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
---data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
+--data '{"data": {"string_variable": "somevalue", "integer_variable": 123}, "commit": true}'
 ```
 
-The URL contains the `class_path` element that is composed of 3 elements, from the above example:
+When providing input data, it is possible to specify complex values contained in `ObjectVar`s, `MultiObjectVar`s, and `IPAddressVar`s.
 
-- `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
-- `example` - path to the job definition file; in this example, a locally installed `example.py` file. For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename`.
-- `MyJobWithVars` - name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+* `ObjectVar`s can be specified by either using their primary key directly as the value, or as a dictionary containing a more complicated query that gets passed into the Django ORM as keyword arguments.
+* `MultiObjectVar`s can be specified as a list of primary keys.
+* `IPAddressVar`s can be provided as strings in CIDR notation.
 
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob local/<module>/<JobName> [--commit]
+nautobot-server runjob [--username <username>] [--commit] <class_path>
 ```
 
-where ``<module>`` is the name of the python file (minus the ``.py`` extension) and ``<JobName>`` is the Python class name within that module.
+!!! note
+    [See above](#jobs-and-class_path) for `class_path` definitions.
 
-Provision of user inputs via the CLI is not supported at this time.
+Using the same example shown in the API:
+
+```no-highlight
+nautobot-server runjob --username myusername local/example/MyJobWithNoVars
+```
+
+Provision of user input (`data` values) via the CLI is not supported at this time.
+
+!!! warning
+    The `--username <username>` parameter can be used to specify the user that will be identified as the requester of the job. It is optional if the job will not be modifying the database, but is mandatory if you are running with `--commit`, as the specified user will own any resulting database changes.
+
+    Note that `nautobot-server` commands, like all management commands and other direct interactions with the Django database, are not gated by the usual Nautobot user authentication flow. It is possible to specify any existing `--username` with the `nautobot-server runjob` command in order to impersonate any defined user in Nautobot. Use this power wisely and be cautious who you allow to access it.
 
 ## Example Jobs
 

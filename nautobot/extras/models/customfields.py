@@ -4,20 +4,20 @@ from collections import OrderedDict
 from datetime import datetime, date
 
 from django import forms
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from jinja2 import TemplateError
 
-from nautobot.extras.choices import *
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
-from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
@@ -28,6 +28,7 @@ from nautobot.utilities.forms import (
     add_blank_choice,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.utilities.templatetags.helpers import render_markdown
 from nautobot.utilities.utils import render_jinja2
 from nautobot.utilities.validators import validate_regex
 
@@ -57,16 +58,20 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
     )
-    slug = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
+    slug = AutoSlugField(populate_from="label", help_text="Internal field name")
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
     fallback_value = models.CharField(
-        max_length=500, help_text="Fallback value to be used for the field in the case of a template rendering error."
+        max_length=500,
+        blank=True,
+        help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
 
     objects = ComputedFieldManager()
+
+    clone_fields = ["content_type", "description", "template", "fallback_value", "weight"]
 
     class Meta:
         ordering = ["weight", "slug"]
@@ -80,9 +85,16 @@ class ComputedField(BaseModel, ChangeLoggedModel):
 
     def render(self, context):
         try:
-            return render_jinja2(self.template, context)
-        except TemplateError as e:
-            logger.warning("Failed to render computed field %s: %s", self.slug, e)
+            rendered = render_jinja2(self.template, context)
+            # If there is an undefined variable within a template, it returns nothing
+            # Doesn't raise an exception either most likely due to using Undefined rather
+            # than StrictUndefined, but return fallback_value if None is returned
+            if rendered is None:
+                logger.warning("Failed to render computed field %s", self.slug)
+                return self.fallback_value
+            return rendered
+        except Exception as exc:
+            logger.warning("Failed to render computed field %s: %s", self.slug, exc)
             return self.fallback_value
 
 
@@ -184,6 +196,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
         return self.get_queryset().filter(content_types=content_type)
 
 
+@extras_features("webhooks")
 class CustomField(BaseModel):
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -196,30 +209,34 @@ class CustomField(BaseModel):
         max_length=50,
         choices=CustomFieldTypeChoices,
         default=CustomFieldTypeChoices.TYPE_TEXT,
+        help_text="The type of value(s) allowed for this field.",
     )
-    name = models.CharField(max_length=50, unique=True, help_text="Internal field name")
+    # TODO: Migrate custom field model from name to slug #464
+    name = models.CharField(max_length=50, unique=True, verbose_name="Slug", help_text="URL-friendly unique shorthand.")
     label = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Name of the field as displayed to users (if not provided, " "the field's name will be used)",
+        help_text="Name of the field as displayed to users (if not provided, the field's slug will be used.)",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
     required = models.BooleanField(
         default=False,
-        help_text="If true, this field is required when creating new objects " "or editing an existing object.",
+        help_text="If true, this field is required when creating new objects or editing an existing object.",
     )
     filter_logic = models.CharField(
         max_length=50,
         choices=CustomFieldFilterLogicChoices,
         default=CustomFieldFilterLogicChoices.FILTER_LOOSE,
-        help_text="Loose matches any instance of a given string; exact " "matches the entire field.",
+        help_text="Loose matches any instance of a given string; Exact matches the entire field.",
     )
     default = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Default value for the field (must be a JSON value). Encapsulate "
-        'strings with double quotes (e.g. "Foo").',
+        help_text=(
+            "Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "
+            '"Foo").'
+        ),
     )
     weight = models.PositiveSmallIntegerField(
         default=100, help_text="Fields with higher weights appear lower in a form."
@@ -228,21 +245,23 @@ class CustomField(BaseModel):
         blank=True,
         null=True,
         verbose_name="Minimum value",
-        help_text="Minimum allowed value (for numeric fields)",
+        help_text="Minimum allowed value (for numeric fields).",
     )
     validation_maximum = models.BigIntegerField(
         blank=True,
         null=True,
         verbose_name="Maximum value",
-        help_text="Maximum allowed value (for numeric fields)",
+        help_text="Maximum allowed value (for numeric fields).",
     )
     validation_regex = models.CharField(
         blank=True,
         validators=[validate_regex],
         max_length=500,
         verbose_name="Validation regex",
-        help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
-        "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters.",
+        help_text=(
+            "Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. For "
+            "example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters."
+        ),
     )
 
     objects = CustomFieldManager()
@@ -252,6 +271,11 @@ class CustomField(BaseModel):
 
     def __str__(self):
         return self.label or self.name.replace("_", " ").capitalize()
+
+    # TODO: Migrate property to actual model attribute #464
+    @property
+    def slug(self):
+        return self.name
 
     def clean(self):
         super().clean()
@@ -384,8 +408,10 @@ class CustomField(BaseModel):
 
         field.model = self
         field.label = str(self)
+
         if self.description:
-            field.help_text = self.description
+            # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input
+            field.help_text = render_markdown(self.description)
 
         return field
 
@@ -454,7 +480,14 @@ class CustomField(BaseModel):
 
         delete_custom_field_data.delay(self.name, content_types)
 
+    def get_absolute_url(self):
+        return reverse("extras:customfield", args=[self.name])
 
+
+@extras_features(
+    "graphql",
+    "webhooks",
+)
 class CustomFieldChoice(BaseModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field
@@ -494,7 +527,9 @@ class CustomFieldChoice(BaseModel):
         super().save(*args, **kwargs)
 
         if self.value != database_object.value:
-            update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+            transaction.on_commit(
+                lambda: update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+            )
 
     def delete(self, *args, **kwargs):
         """

@@ -193,6 +193,10 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
+#### MySQL Unicode Settings
+
+If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for more information.
+
 ## Optional Settings
 
 All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.
@@ -205,7 +209,7 @@ We will cover two examples of common optional settings below.
 
 ### Configuring NAPALM
 
-Nautobot provides built-in support for the [NAPALM automation](https://napalm-automation.net/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
+Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
 To use NAPALM, add `napalm` to your `local_requirements.txt` so that it can be installed and kept up to date:
 

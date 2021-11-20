@@ -3,7 +3,7 @@
 # any override will need to include these volumes to use them.
 # see:  https://github.com/docker/compose/issues/3729
 ---
-version: "3"
+version: "3.4"
 services:
   nautobot:
     env_file:
@@ -18,6 +18,10 @@ services:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
       - ../:/source
   celery_worker:
+    volumes:
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source
+  celery_beat:
     volumes:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
       - ../:/source

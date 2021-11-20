@@ -1,13 +1,14 @@
 import os
 import tempfile
+from unittest import mock
 import uuid
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase, TransactionTestCase
 
 from nautobot.dcim.models import (
     Device,
@@ -18,20 +19,28 @@ from nautobot.dcim.models import (
     Site,
     Region,
 )
+from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.jobs import get_job, Job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
     ExportTemplate,
+    FileAttachment,
+    FileProxy,
     GitRepository,
     JobResult,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
 )
+from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -40,12 +49,48 @@ from nautobot.virtualization.models import (
 )
 
 
-class TagTest(TestCase):
-    def test_create_tag_unicode(self):
-        tag = Tag(name="Testing Unicode: 台灣")
-        tag.save()
+class ComputedFieldTest(TestCase):
+    """
+    Tests for the `ComputedField` Model
+    """
 
-        self.assertEqual(tag.slug, "testing-unicode-台灣")
+    def setUp(self):
+        self.good_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="good_computed_field",
+            label="Good Computed Field",
+            template="{{ obj.name }} is awesome!",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ not_in_context | not_a_filter }} is horrible!",
+            fallback_value="An error occurred while rendering this template.",
+            weight=50,
+        )
+        self.blank_fallback_value = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="blank_fallback_value",
+            label="Blank Fallback Value",
+            template="{{ obj.location }}",
+            weight=50,
+        )
+        self.site1 = Site.objects.create(name="NYC")
+
+    def test_render_method(self):
+        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+
+    def test_render_method_undefined_error(self):
+        rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, "")
+
+    def test_render_method_bad_template(self):
+        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
 class ConfigContextTest(TestCase):
@@ -254,6 +299,251 @@ class ConfigContextTest(TestCase):
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
 
 
+class ConfigContextSchemaTestCase(TestCase):
+    """
+    Tests for the ConfigContextSchema model
+    """
+
+    def setUp(self):
+        context_data = {"a": 123, "b": "456", "c": "10.7.7.7"}
+
+        # Schemas
+        self.schema_validation_pass = ConfigContextSchema.objects.create(
+            name="schema-pass",
+            slug="schema-pass",
+            data_schema={
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "a": {"type": "integer"},
+                    "b": {"type": "string"},
+                    "c": {"type": "string", "format": "ipv4"},
+                },
+            },
+        )
+        self.schemas_validation_fail = (
+            ConfigContextSchema.objects.create(
+                name="schema fail (wrong properties)",
+                slug="schema-fail-wrong-properties",
+                data_schema={
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {"foo": {"type": "string"}},
+                },
+            ),
+            ConfigContextSchema.objects.create(
+                name="schema fail (wrong type)",
+                slug="schema-fail-wrong-type",
+                data_schema={"type": "object", "properties": {"b": {"type": "integer"}}},
+            ),
+            ConfigContextSchema.objects.create(
+                name="schema fail (wrong format)",
+                slug="schema-fail-wrong-format",
+                data_schema={"type": "object", "properties": {"b": {"type": "string", "format": "ipv4"}}},
+            ),
+        )
+
+        # ConfigContext
+        self.config_context = ConfigContext.objects.create(name="context 1", weight=101, data=context_data)
+
+        # Device
+        status = Status.objects.get(slug="active")
+        site = Site.objects.create(name="site", slug="site", status=status)
+        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
+        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
+        self.device = Device.objects.create(
+            name="device",
+            site=site,
+            device_type=device_type,
+            device_role=device_role,
+            status=status,
+            local_context_data=context_data,
+        )
+
+        # Virtual Machine
+        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
+        cluster = Cluster.objects.create(name="cluster", type=cluster_type)
+        self.virtual_machine = VirtualMachine.objects.create(
+            name="virtual_machine", cluster=cluster, status=status, local_context_data=context_data
+        )
+
+    def test_existing_config_context_valid_schema_applied(self):
+        """
+        Given an existing config context object
+        And a config context schema object with a json schema
+        And the config context context data is valid for the schema
+        Assert calling clean on the config context object DOES NOT raise a ValidationError
+        """
+        self.config_context.schema = self.schema_validation_pass
+
+        try:
+            self.config_context.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_config_context_invalid_schema_applied(self):
+        """
+        Given an existing config context object
+        And a config context schema object with a json schema
+        And the config context context data is NOT valid for the schema
+        Assert calling clean on the config context object DOES raise a ValidationError
+        """
+        for schema in self.schemas_validation_fail:
+            self.config_context.schema = schema
+
+            with self.assertRaises(ValidationError):
+                self.config_context.full_clean()
+
+    def test_existing_config_context_with_no_schema_applied(self):
+        """
+        Given an existing config context object
+        And no schema has been set on the config context object
+        Assert calling clean on the config context object DOES NOT raise a ValidationError
+        """
+        try:
+            self.config_context.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_device_valid_schema_applied(self):
+        """
+        Given an existing device object with local_context_data
+        And a config context schema object with a json schema
+        And the device local_context_data is valid for the schema
+        Assert calling clean on the device object DOES NOT raise a ValidationError
+        """
+        self.device.local_context_schema = self.schema_validation_pass
+
+        try:
+            self.device.full_clean()
+        except ValidationError:
+            self.fail("self.device.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_device_invalid_schema_applied(self):
+        """
+        Given an existing device object with local_context_data
+        And a config context schema object with a json schema
+        And the device local_context_data is NOT valid for the schema
+        Assert calling clean on the device object DOES raise a ValidationError
+        """
+        for schema in self.schemas_validation_fail:
+            self.device.local_context_schema = schema
+
+            with self.assertRaises(ValidationError):
+                self.device.full_clean()
+
+    def test_existing_device_with_no_schema_applied(self):
+        """
+        Given an existing device object
+        And no schema has been set on the device object
+        Assert calling clean on the device object DOES NOT raise a ValidationError
+        """
+        try:
+            self.device.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_virtual_machine_valid_schema_applied(self):
+        """
+        Given an existing virtual machine object with local_context_data
+        And a config context schema object with a json schema
+        And the virtual machine local_context_data is valid for the schema
+        Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
+        """
+        self.virtual_machine.local_context_schema = self.schema_validation_pass
+
+        try:
+            self.virtual_machine.full_clean()
+        except ValidationError:
+            self.fail("self.virtual_machine.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_virtual_machine_invalid_schema_applied(self):
+        """
+        Given an existing virtual machine object with local_context_data
+        And a config context schema object with a json schema
+        And the virtual machine local_context_data is NOT valid for the schema
+        Assert calling clean on the virtual machine object DOES raise a ValidationError
+        """
+        for schema in self.schemas_validation_fail:
+            self.virtual_machine.local_context_schema = schema
+
+            with self.assertRaises(ValidationError):
+                self.virtual_machine.full_clean()
+
+    def test_existing_virtual_machine_with_no_schema_applied(self):
+        """
+        Given an existing virtual machine object
+        And no schema has been set on the virtual machine object
+        Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
+        """
+        try:
+            self.virtual_machine.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_invalid_json_schema_is_not_allowed(self):
+        """
+        Given a config context schema object
+        With an invalid JSON schema
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_be_an_object(self):
+        """
+        Given a config context schema object
+        With a JSON schema of type object
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema=["not an object"])
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_type_set_to_object(self):
+        """
+        Given a config context schema object
+        With a JSON schema with type set to integer
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_type_present(self):
+        """
+        Given a config context schema object
+        With a JSON schema with type not present
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"properties": {"a": {"type": "string"}}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_properties_present(self):
+        """
+        Given a config context schema object
+        With a JSON schema with properties not present
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema={"type": "object"})
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+
 class ExportTemplateTest(TestCase):
     """
     Tests for the ExportTemplate model class.
@@ -284,6 +574,34 @@ class ExportTemplateTest(TestCase):
             content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
         )
         nonduplicate_template.validated_save()
+
+
+class FileProxyTest(TestCase):
+    def setUp(self):
+        self.dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
+
+    def test_create_file_proxy(self):
+        """Test creation of `FileProxy` object."""
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+
+        # Now refresh it and make sure it was saved and retrieved correctly.
+        fp.refresh_from_db()
+        self.dummy_file.seek(0)  # Reset cursor since it was previously read
+        self.assertEqual(fp.name, self.dummy_file.name)
+        self.assertEqual(fp.file.read(), self.dummy_file.read())
+
+    def test_delete_file_proxy(self):
+        """Test deletion of `FileProxy` object."""
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+
+        # Assert counts before delete
+        self.assertEqual(FileProxy.objects.count(), 1)
+        self.assertEqual(FileAttachment.objects.count(), 1)
+
+        # Assert counts after delete
+        fp.delete()
+        self.assertEqual(FileProxy.objects.count(), 0)
+        self.assertEqual(FileAttachment.objects.count(), 0)
 
 
 class GitRepositoryTest(TransactionTestCase):
@@ -408,6 +726,253 @@ class JobResultTest(TestCase):
         self.assertIsNone(job_result.related_object)
 
 
+class SecretTest(TestCase):
+    """
+    Tests for the `Secret` model class.
+    """
+
+    def setUp(self):
+        self.environment_secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            slug="env-var",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
+        )
+        self.environment_secret_templated = Secret.objects.create(
+            name="Environment Variable Templated Secret",
+            slug="env-var-templated",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_{{ obj.slug | upper }}"},
+        )
+        self.text_file_secret = Secret.objects.create(
+            name="Text File Secret",
+            slug="text",
+            provider="text-file",
+            parameters={"path": os.path.join(tempfile.gettempdir(), "secret-file.txt")},
+        )
+        self.text_file_secret_templated = Secret.objects.create(
+            name="Text File Templated Secret",
+            slug="text-templated",
+            provider="text-file",
+            parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
+        )
+
+        self.site = Site.objects.create(name="New York City", slug="nyc")
+
+    def test_environment_variable_value_not_found(self):
+        """Failure to retrieve an environment variable raises an exception."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret.get_value()
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret.get_value(obj=None)
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret.get_value(obj=self.site)
+
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value(obj=self.site)
+
+    def test_environment_variable_value_missing_parameters(self):
+        """A mis-defined environment variable secret raises an exception on access."""
+        self.environment_secret.parameters = {}
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret.get_value()
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret.get_value(obj=None)
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret.get_value(obj=self.site)
+
+    def test_environment_variable_templated_missing_object(self):
+        """A templated secret requires an object for context."""
+        # Since we're not using Jinja2's StrictUndefined, it just renders as an empty string if obj is omitted or None,
+        # For this secret it results in a rendered value of "", which is of course not a defined environment variable.
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value()
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value(obj=None)
+
+    def test_environment_variable_templated_bad_template(self):
+        """Error handling."""
+        # Malformed Jinja2
+        self.environment_secret_templated.parameters["variable"] = "{{ obj."
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret_templated.get_value(obj=self.site)
+        # Template references attribute not present on the provided obj
+        # Since we're not using Jinja2's StrictUndefined, this just renders as an empty string
+        self.environment_secret_templated.parameters["variable"] = "{{ obj.primary_ip4 }}"
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value(obj=self.site)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
+    def test_environment_variable_value_success(self):
+        """Successful retrieval of an environment variable secret."""
+        self.assertEqual(self.environment_secret.get_value(), "supersecretvalue")
+        # It's OK to pass a context obj even if the secret in question isn't templated
+        self.assertEqual(self.environment_secret.get_value(obj=self.site), "supersecretvalue")
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": ""})
+    def test_environment_variable_value_success_empty(self):
+        """Successful retrieval of an environment variable secret even if set to an empty string."""
+        self.assertEqual(self.environment_secret.get_value(), "")
+        # It's OK to pass a context obj even if the secret in question isn't templated
+        self.assertEqual(self.environment_secret.get_value(obj=self.site), "")
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_NYC": "lessthansecretvalue"})
+    def test_environment_variable_templated_success(self):
+        """Successful retrieval of a templated environment variable secret."""
+        self.assertEqual(self.environment_secret_templated.get_value(obj=self.site), "lessthansecretvalue")
+
+    def test_text_file_clean_validation(self):
+        secret = Secret.objects.create(
+            name="Path shenanigans",
+            slug="path-shenanigans",
+            provider="text-file",
+            parameters={"path": "relative/path/to/file"},
+        )
+        with self.assertRaises(ValidationError):
+            secret.clean()
+        secret.parameters = {"path": "/opt/nautobot/../../etc/passwd"}
+        with self.assertRaises(ValidationError):
+            secret.clean()
+
+    def test_text_file_value_not_found(self):
+        """Failure to retrieve a file raises an exception."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.text_file_secret.get_value()
+        with self.assertRaises(SecretValueNotFoundError):
+            self.text_file_secret.get_value(obj=None)
+        with self.assertRaises(SecretValueNotFoundError):
+            self.text_file_secret.get_value(obj=self.site)
+
+    def test_text_file_value_missing_parameters(self):
+        """A mis-defined text file secret raises an exception."""
+        self.text_file_secret.parameters = {}
+        with self.assertRaises(SecretParametersError):
+            self.text_file_secret.get_value()
+        with self.assertRaises(SecretParametersError):
+            self.text_file_secret.get_value(obj=None)
+        with self.assertRaises(SecretParametersError):
+            self.text_file_secret.get_value(obj=self.site)
+
+    def test_text_file_value_success(self):
+        """Successful retrieval of a text file secret."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
+            file_handle.write("Hello world!")
+        try:
+            self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
+            # It's OK to pass a context obj even if the secret in question isn't templated
+            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
+    def test_text_file_value_success_empty(self):
+        """Successful retrieval of a text file secret from an empty file."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8"):
+            pass
+        try:
+            self.assertEqual(self.text_file_secret.get_value(), "")
+            # It's OK to pass a context obj even if the secret in question isn't templated
+            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
+    def test_text_file_templated_value_success(self):
+        """Successful retrieval of a templated text file secret."""
+        path = self.text_file_secret_templated.rendered_parameters(obj=self.site)["path"]
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf8") as file_handle:
+            file_handle.write("Hello?")
+        try:
+            self.assertEqual(self.text_file_secret_templated.get_value(obj=self.site), "Hello?")
+        finally:
+            os.remove(path)
+            os.rmdir(os.path.dirname(path))
+
+    def test_unknown_provider(self):
+        """An unknown/unsupported provider raises an exception."""
+        self.environment_secret.provider = "it-is-a-mystery"
+        with self.assertRaises(ValidationError):
+            self.environment_secret.clean()
+        with self.assertRaises(SecretProviderError):
+            self.environment_secret.get_value()
+        with self.assertRaises(SecretProviderError):
+            self.environment_secret.get_value(obj=None)
+        with self.assertRaises(SecretProviderError):
+            self.environment_secret.get_value(obj=self.site)
+
+
+class SecretsGroupTest(TestCase):
+    """
+    Tests for the `SecretsGroup` model class.
+    """
+
+    def setUp(self):
+        self.secrets_group = SecretsGroup(name="Secrets Group 1", slug="secrets-group-1")
+        self.secrets_group.validated_save()
+
+        self.environment_secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            slug="env-var",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
+        )
+
+        SecretsGroupAssociation.objects.create(
+            group=self.secrets_group,
+            secret=self.environment_secret,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+
+    def test_get_secret_value_no_such_type(self):
+        """Looking up a secret type/access type not present in the group is an exception."""
+        with self.assertRaises(SecretsGroupAssociation.DoesNotExist):
+            # Access type matches but not secret type
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+            )
+        with self.assertRaises(SecretsGroupAssociation.DoesNotExist):
+            # Secret type matches but not access type
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_NETCONF,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+            )
+
+    def test_get_secret_value_secret_error(self):
+        """Looking up a secret may succeed but retrieving its value may fail."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+            )
+        with self.assertRaises(SecretValueNotFoundError):
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+                obj=self.environment_secret,
+            )
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
+    def test_get_secret_value_success(self):
+        """It's possible to successfully look up a secret and its value."""
+        self.assertEqual(
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+            ),
+            "supersecretvalue",
+        )
+        self.assertEqual(
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+                obj=self.environment_secret,
+            ),
+            "supersecretvalue",
+        )
+
+
 class StatusTest(TestCase):
     """
     Tests for the `Status` model class.
@@ -473,256 +1038,9 @@ class StatusTest(TestCase):
             self.assertEquals(str(self.status), test)
 
 
-class ConfigContextSchemaTestCase(TestCase):
-    """
-    Tests for the ConfigContextSchema model
-    """
+class TagTest(TestCase):
+    def test_create_tag_unicode(self):
+        tag = Tag(name="Testing Unicode: 台灣")
+        tag.save()
 
-    def setUp(self):
-        context_data = {"a": 123, "b": 456, "c": 777}
-
-        # Schemas
-        self.schema_validation_pass = ConfigContextSchema.objects.create(
-            name="schema-pass",
-            slug="schema-pass",
-            data_schema={
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}, "c": {"type": "integer"}},
-            },
-        )
-        self.schema_validation_fail = ConfigContextSchema.objects.create(
-            name="schema-fail",
-            slug="schema-fail",
-            data_schema={"type": "object", "additionalProperties": False, "properties": {"foo": {"type": "string"}}},
-        )
-
-        # ConfigContext
-        self.config_context = ConfigContext.objects.create(name="context 1", weight=101, data=context_data)
-
-        # Device
-        status = Status.objects.get(slug="active")
-        site = Site.objects.create(name="site", slug="site", status=status)
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
-        device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
-        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
-        self.device = Device.objects.create(
-            name="device",
-            site=site,
-            device_type=device_type,
-            device_role=device_role,
-            status=status,
-            local_context_data=context_data,
-        )
-
-        # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
-        cluster = Cluster.objects.create(name="cluster", type=cluster_type)
-        self.virtual_machine = VirtualMachine.objects.create(
-            name="virtual_machine", cluster=cluster, status=status, local_context_data=context_data
-        )
-
-    def test_existing_config_context_valid_schema_applied(self):
-        """
-        Given an existing config context object
-        And a config context schema object with a json schema
-        And the config context context data is valid for the schema
-        Assert calling clean on the config context object DOES NOT raise a ValidationError
-        """
-        self.config_context.schema = self.schema_validation_pass
-
-        try:
-            self.config_context.full_clean()
-        except ValidationError:
-            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
-
-    def test_existing_config_context_invalid_schema_applied(self):
-        """
-        Given an existing config context object
-        And a config context schema object with a json schema
-        And the config context context data is NOT valid for the schema
-        Assert calling clean on the config context object DOES raise a ValidationError
-        """
-        self.config_context.schema = self.schema_validation_fail
-
-        with self.assertRaises(ValidationError):
-            self.config_context.full_clean()
-
-    def test_existing_config_context_with_no_schema_applied(self):
-        """
-        Given an existing config context object
-        And no schema has been set on the config context object
-        Assert calling clean on the config context object DOES NOT raise a ValidationError
-        """
-        try:
-            self.config_context.full_clean()
-        except ValidationError:
-            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
-
-    def test_existing_device_valid_schema_applied(self):
-        """
-        Given an existing device object with local_context_data
-        And a config context schema object with a json schema
-        And the device local_context_data is valid for the schema
-        Assert calling clean on the device object DOES NOT raise a ValidationError
-        """
-        self.device.local_context_schema = self.schema_validation_pass
-
-        try:
-            self.device.full_clean()
-        except ValidationError:
-            self.fail("self.device.full_clean() raised ValidationError unexpectedly!")
-
-    def test_existing_device_invalid_schema_applied(self):
-        """
-        Given an existing device object with local_context_data
-        And a config context schema object with a json schema
-        And the device local_context_data is NOT valid for the schema
-        Assert calling clean on the device object DOES raise a ValidationError
-        """
-        self.device.local_context_schema = self.schema_validation_fail
-
-        with self.assertRaises(ValidationError):
-            self.device.full_clean()
-
-    def test_existing_device_with_no_schema_applied(self):
-        """
-        Given an existing device object
-        And no schema has been set on the device object
-        Assert calling clean on the device object DOES NOT raise a ValidationError
-        """
-        try:
-            self.device.full_clean()
-        except ValidationError:
-            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
-
-    def test_existing_virtual_machine_valid_schema_applied(self):
-        """
-        Given an existing virtual machine object with local_context_data
-        And a config context schema object with a json schema
-        And the virtual machine local_context_data is valid for the schema
-        Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
-        """
-        self.virtual_machine.local_context_schema = self.schema_validation_pass
-
-        try:
-            self.virtual_machine.full_clean()
-        except ValidationError:
-            self.fail("self.virtual_machine.full_clean() raised ValidationError unexpectedly!")
-
-    def test_existing_virtual_machine_invalid_schema_applied(self):
-        """
-        Given an existing virtual machine object with local_context_data
-        And a config context schema object with a json schema
-        And the virtual machine local_context_data is NOT valid for the schema
-        Assert calling clean on the virtual machine object DOES raise a ValidationError
-        """
-        self.virtual_machine.local_context_schema = self.schema_validation_fail
-
-        with self.assertRaises(ValidationError):
-            self.virtual_machine.full_clean()
-
-    def test_existing_virtual_machine_with_no_schema_applied(self):
-        """
-        Given an existing virtual machine object
-        And no schema has been set on the virtual machine object
-        Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
-        """
-        try:
-            self.virtual_machine.full_clean()
-        except ValidationError:
-            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
-
-    def test_invalid_json_schema_is_not_allowed(self):
-        """
-        Given a config context schema object
-        With an invalid JSON schema
-        Assert calling clean on the config context schema object raises a ValidationError
-        """
-        invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
-        )
-
-        with self.assertRaises(ValidationError):
-            invalid_schema.full_clean()
-
-    def test_json_schema_must_be_an_object(self):
-        """
-        Given a config context schema object
-        With a JSON schema of type object
-        Assert calling clean on the config context schema object raises a ValidationError
-        """
-        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema=["not an object"])
-
-        with self.assertRaises(ValidationError):
-            invalid_schema.full_clean()
-
-    def test_json_schema_must_have_type_set_to_object(self):
-        """
-        Given a config context schema object
-        With a JSON schema with type set to integer
-        Assert calling clean on the config context schema object raises a ValidationError
-        """
-        invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
-        )
-
-        with self.assertRaises(ValidationError):
-            invalid_schema.full_clean()
-
-    def test_json_schema_must_have_type_present(self):
-        """
-        Given a config context schema object
-        With a JSON schema with type not present
-        Assert calling clean on the config context schema object raises a ValidationError
-        """
-        invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"properties": {"a": {"type": "string"}}}
-        )
-
-        with self.assertRaises(ValidationError):
-            invalid_schema.full_clean()
-
-    def test_json_schema_must_have_properties_present(self):
-        """
-        Given a config context schema object
-        With a JSON schema with properties not present
-        Assert calling clean on the config context schema object raises a ValidationError
-        """
-        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema={"type": "object"})
-
-        with self.assertRaises(ValidationError):
-            invalid_schema.full_clean()
-
-
-class ComputedFieldTest(TestCase):
-    """
-    Tests for the `ComputedField` Model
-    """
-
-    def setUp(self):
-        self.good_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
-            slug="good_computed_field",
-            label="Good Computed Field",
-            template="{{ obj.name }} is awesome!",
-            fallback_value="This template has errored",
-            weight=100,
-        )
-        self.bad_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
-            slug="bad_computed_field",
-            label="Bad Computed Field",
-            template="{{ not_in_context | not_a_filter }} is horrible!",
-            fallback_value="An error occurred while rendering this template.",
-            weight=50,
-        )
-        self.site1 = Site.objects.create(name="NYC")
-
-    def test_render_method(self):
-        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
-
-    def test_render_method_bad_template(self):
-        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+        self.assertEqual(tag.slug, "testing-unicode-台灣")

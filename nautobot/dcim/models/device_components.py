@@ -8,8 +8,25 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from taggit.managers import TaggableManager
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+
+from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+)
+from nautobot.dcim.constants import (
+    NONCONNECTABLE_IFACE_TYPES,
+    REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
+    VIRTUAL_IFACE_TYPES,
+    WIRELESS_IFACE_TYPES,
+)
+
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
     CustomFieldModel,
@@ -23,7 +40,7 @@ from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import UtilizationData, serialize_object
 
 
 __all__ = (
@@ -342,15 +359,22 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
                 maximum_draw_total=Sum("maximum_draw"),
                 allocated_draw_total=Sum("allocated_draw"),
             )
+            numerator = utilization["allocated_draw_total"] or 0
+            denominator = utilization["maximum_draw_total"] or 0
             ret = {
                 "allocated": utilization["allocated_draw_total"] or 0,
                 "maximum": utilization["maximum_draw_total"] or 0,
                 "outlet_count": len(outlet_ids),
                 "legs": [],
+                "utilization_data": UtilizationData(
+                    numerator=numerator,
+                    denominator=denominator,
+                ),
             }
 
             # Calculate per-leg aggregates for three-phase feeds
             if getattr(self._cable_peer, "phase", None) == PowerFeedPhaseChoices.PHASE_3PHASE:
+                # Setup numerator and denominator for later display.
                 for leg, leg_name in PowerOutletFeedLegChoices:
                     outlet_ids = PowerOutlet.objects.filter(power_port=self, feed_leg=leg).values_list("pk", flat=True)
                     utilization = PowerPort.objects.filter(
@@ -370,12 +394,18 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 
             return ret
 
+        if self.connected_endpoint and hasattr(self.connected_endpoint, "available_power"):
+            denominator = self.connected_endpoint.available_power or 0
+        else:
+            denominator = 0
+
         # Default to administratively defined values
         return {
             "allocated": self.allocated_draw or 0,
             "maximum": self.maximum_draw or 0,
             "outlet_count": PowerOutlet.objects.filter(power_port=self).count(),
             "legs": [],
+            "utilization_data": UtilizationData(numerator=self.allocated_draw or 0, denominator=denominator),
         }
 
 

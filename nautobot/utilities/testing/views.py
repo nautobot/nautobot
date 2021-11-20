@@ -13,8 +13,8 @@ from django.utils.text import slugify
 from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.models import Tag
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
+from nautobot.extras.models import ChangeLoggedModel, ObjectChange, Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
@@ -225,6 +225,13 @@ class ModelViewTestCase(ModelTestCase):
     Base TestCase for model views. Subclass to test individual views.
     """
 
+    reverse_url_attribute = None
+    """
+    Name of instance field to pass as a kwarg when looking up action URLs for creating/editing/deleting a model instance.
+
+    If unspecified, "slug" and "pk" will be tried, in that order.
+    """
+
     def _get_base_url(self):
         """
         Return the base format for a URL for the test's model. Override this to test for a model which belongs
@@ -243,6 +250,12 @@ class ModelViewTestCase(ModelTestCase):
         # If no instance was provided, assume we don't need a unique identifier
         if instance is None:
             return reverse(url_format.format(action))
+
+        if self.reverse_url_attribute:
+            return reverse(
+                url_format.format(action),
+                kwargs={self.reverse_url_attribute: getattr(instance, self.reverse_url_attribute)},
+            )
 
         # Attempt to resolve using slug as the unique identifier if one exists
         if hasattr(self.model, "slug"):
@@ -272,6 +285,11 @@ class ViewTestCases:
             self.client.logout()
             response = self.client.get(self._get_queryset().first().get_absolute_url())
             self.assertHttpStatus(response, 200)
+
+            # The "Change Log" tab should appear in the response since we have all exempt permissions
+            if issubclass(self.model, ChangeLoggedModel):
+                response_body = extract_page_body(response.content.decode(response.charset))
+                self.assertIn("Change Log", response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_without_permission(self):
@@ -335,7 +353,9 @@ class ViewTestCases:
             obj_perm = ObjectPermission(
                 name="Test permission",
                 constraints={"pk": instance1.pk},
-                actions=["view"],
+                # To get a different rendering flow than the `test_get_object_with_permission` test above,
+                # enable additional permissions for this object so that add/edit/delete buttons are rendered.
+                actions=["view", "add", "change", "delete"],
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
@@ -366,6 +386,8 @@ class ViewTestCases:
         """
 
         form_data = {}
+        slug_source = None
+        slug_test_object = ""
 
         def test_create_object_without_permission(self):
 
@@ -403,9 +425,20 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
             if hasattr(self.model, "last_updated"):
-                self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
+                instance = self._get_queryset().order_by("last_updated").last()
+                self.assertInstanceEqual(instance, self.form_data)
             else:
-                self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+                instance = self._get_queryset().last()
+                self.assertInstanceEqual(instance, self.form_data)
+
+            if hasattr(self.model, "to_objectchange"):
+                # Verify ObjectChange creation
+                objectchanges = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(instance),
+                    changed_object_id=instance.pk,
+                )
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -447,6 +480,28 @@ class ViewTestCases:
                 self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
             else:
                 self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+
+        def test_slug_autocreation(self):
+            """Test that slug is autocreated through ORM."""
+            # This really should go on a models test page, but we don't have test structures for models.
+            if self.slug_source is not None:
+                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
+                expected_slug = slugify(getattr(object, self.slug_source))
+                self.assertEqual(object.slug, expected_slug)
+
+        def test_slug_not_modified(self):
+            """Ensure save method does not modify slug that is passed in."""
+            # This really should go on a models test page, but we don't have test structures for models.
+            if self.slug_source is not None:
+                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
+                expected_slug = slugify(getattr(object, self.slug_source))
+                # Update slug source field str
+                filter = self.slug_source + "__contains"
+                self.model.objects.filter(**{filter: self.slug_test_object}).update(**{self.slug_source: "Test"})
+
+                object.refresh_from_db()
+                self.assertEqual(getattr(object, self.slug_source), "Test")
+                self.assertEqual(object.slug, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
         """
@@ -492,6 +547,15 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), self.form_data)
+
+            if hasattr(self.model, "to_objectchange"):
+                # Verify ObjectChange creation
+                objectchanges = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(instance),
+                    changed_object_id=instance.pk,
+                )
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):
@@ -569,6 +633,15 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 302)
             with self.assertRaises(ObjectDoesNotExist):
                 self._get_queryset().get(pk=instance.pk)
+
+            if hasattr(self.model, "to_objectchange"):
+                # Verify ObjectChange creation
+                objectchanges = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(instance),
+                    changed_object_id=instance.pk,
+                )
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_constrained_permission(self):
@@ -775,7 +848,7 @@ class ViewTestCases:
 
         def test_bulk_import_objects_without_permission(self):
             data = {
-                "csv": self._get_csv_data(),
+                "csv_data": self._get_csv_data(),
             }
 
             # Test GET without permission
@@ -791,7 +864,7 @@ class ViewTestCases:
         def test_bulk_import_objects_with_permission(self):
             initial_count = self._get_queryset().count()
             data = {
-                "csv": self._get_csv_data(),
+                "csv_data": self._get_csv_data(),
             }
 
             # Assign model-level permission
@@ -811,7 +884,7 @@ class ViewTestCases:
         def test_bulk_import_objects_with_constrained_permission(self):
             initial_count = self._get_queryset().count()
             data = {
-                "csv": self._get_csv_data(),
+                "csv_data": self._get_csv_data(),
             }
 
             # Assign constrained permission

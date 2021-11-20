@@ -9,7 +9,7 @@ from rest_framework import status
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.choices import *
+from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
@@ -112,10 +112,15 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
             "name": "RIR 6",
             "slug": "rir-6",
         },
+        {
+            "name": "RIR 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -180,10 +185,14 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
             "name": "Role 6",
             "slug": "role-6",
         },
+        {
+            "name": "Role 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -515,10 +524,14 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "name": "VLAN Group 6",
             "slug": "vlan-group-6",
         },
+        {
+            "name": "VLAN Group 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):

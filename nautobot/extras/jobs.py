@@ -1,4 +1,5 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
+from collections import OrderedDict
 import inspect
 import json
 import logging
@@ -7,24 +8,31 @@ import pkgutil
 import shutil
 import traceback
 import warnings
-from collections import OrderedDict
 
-import yaml
-
-from django import forms
-from django.conf import settings
-from django.core.validators import RegexValidator
-from django.db import transaction
-from django.utils import timezone
-from django.utils.functional import classproperty
 
 from cacheops import cached
+from db_file_storage.form_widgets import DBClearableFileInput
+from django import forms
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.validators import RegexValidator
+from django.db import transaction
+from django.db.models import Model
+from django.db.models.query import QuerySet
+from django.forms import ValidationError
+from django.utils import timezone
+from django.utils.functional import classproperty
+import netaddr
+import yaml
+
 
 from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import GitRepository
+from .models import FileProxy, GitRepository, ScheduledJob
 from .registry import registry
 
 from nautobot.core.celery import nautobot_task
@@ -39,6 +47,9 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+
+
+User = get_user_model()
 
 
 __all__ = [
@@ -82,6 +93,7 @@ class BaseJob:
         - commit_default (bool)
         - field_order (list)
         - read_only (bool)
+        - approval_required (bool)
         """
 
         pass
@@ -180,6 +192,10 @@ class BaseJob:
     def read_only(cls):
         return getattr(cls.Meta, "read_only", False)
 
+    @classproperty
+    def approval_required(cls):
+        return getattr(cls.Meta, "approval_required", False)
+
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
@@ -188,6 +204,17 @@ class BaseJob:
                 vars[name] = attr
 
         return vars
+
+    @classmethod
+    def _get_file_vars(cls):
+        """Return an ordered dict of FileVar fields."""
+        vars = cls._get_vars()
+        file_vars = OrderedDict()
+        for name, attr in vars.items():
+            if isinstance(attr, FileVar):
+                file_vars[name] = attr
+
+        return file_vars
 
     @property
     def job_result(self):
@@ -259,9 +286,12 @@ class BaseJob:
         """
         return self.job_result.data if self.job_result else None
 
-    def as_form(self, data=None, files=None, initial=None):
+    def as_form(self, data=None, files=None, initial=None, approval_view=False):
         """
         Return a Django form suitable for populating the context data required to run this Job.
+
+        `approval_view` will disable all fields from modification and is used to display the form
+        during a approval review workflow.
         """
         fields = {name: var.as_field() for name, var in self._get_vars().items()}
         FormClass = type("JobForm", (JobForm,), fields)
@@ -281,7 +311,160 @@ class BaseJob:
         if field_order:
             form.order_fields(field_order)
 
+        if approval_view:
+            # Set `disabled=True` on all fields
+            for _, field in form.fields.items():
+                field.disabled = True
+
+            # Alter the commit help text to avoid confusion concerning approval dry-runs
+            form.fields["_commit"].help_text = "Commit changes to the database"
+
         return form
+
+    @staticmethod
+    def serialize_data(data):
+        """
+        This method parses input data (from JobForm usually) and returns a dict which is safe to serialize
+
+        Here we convert the QuerySet of a MultiObjectVar to a list of the pk's and the model instance
+        of an ObjectVar into the pk value.
+
+        These are converted back during job execution.
+        """
+
+        return_data = {}
+        for field_name, value in data.items():
+            # MultiObjectVar
+            if isinstance(value, QuerySet):
+                return_data[field_name] = list(value.values_list("pk", flat=True))
+            # ObjectVar
+            elif isinstance(value, Model):
+                return_data[field_name] = value.pk
+            # FileVar (Save each FileVar as a FileProxy)
+            elif isinstance(value, InMemoryUploadedFile):
+                return_data[field_name] = BaseJob.save_file(value)
+            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
+            elif isinstance(value, netaddr.ip.BaseIP):
+                return_data[field_name] = str(value)
+            # Everything else...
+            else:
+                return_data[field_name] = value
+
+        return return_data
+
+    @classmethod
+    def deserialize_data(cls, data):
+        """
+        Given data input for a job execution, deserialize it by resolving object references using defined variables.
+
+        This converts a list of pk's back into a QuerySet for MultiObjectVar instances and single pk values into
+        model instances for ObjectVar.
+
+        Note that when resolving querysets or model instances by their PK, we do not catch DoesNotExist
+        exceptions here, we leave it up the caller to handle those cases. The normal job execution code
+        path would consider this a failure of the job execution, as described in `nautobot.extras.jobs.run_job`.
+        """
+        vars = cls._get_vars()
+        return_data = {}
+
+        if not isinstance(data, dict):
+            raise TypeError("Data should be a dictionary.")
+
+        for field_name, value in data.items():
+            # If a field isn't a var, skip it (e.g. `_commit`).
+            try:
+                var = vars[field_name]
+            except KeyError:
+                continue
+
+            if isinstance(var, MultiObjectVar):
+                queryset = var.field_attrs["queryset"].filter(pk__in=value)
+                if queryset.count() < len(value):
+                    # Not all objects found
+                    not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
+                    raise queryset.model.DoesNotExist(
+                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
+                    )
+                return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
+
+            elif isinstance(var, ObjectVar):
+                if isinstance(value, dict):
+                    return_data[field_name] = var.field_attrs["queryset"].get(**value)
+                else:
+                    return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
+            elif isinstance(var, FileVar):
+                return_data[field_name] = cls.load_file(value)
+            # IPAddressVar is a netaddr.IPAddress object
+            elif isinstance(var, IPAddressVar):
+                return_data[field_name] = netaddr.IPAddress(value)
+            # IPAddressWithMaskVar, IPNetworkVar are netaddr.IPNetwork objects
+            elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
+                return_data[field_name] = netaddr.IPNetwork(value)
+            else:
+                return_data[field_name] = value
+
+        return return_data
+
+    def validate_data(self, data):
+        vars = self._get_vars()
+
+        if not isinstance(data, dict):
+            raise ValidationError("Job data needs to be a dict")
+
+        for k, v in data.items():
+            if k not in vars:
+                raise ValidationError({k: "Job data contained an unknown property"})
+
+        # defer validation to the form object
+        f = self.as_form(data=data)
+        if not f.is_valid():
+            raise ValidationError(f.errors)
+
+    @staticmethod
+    def load_file(pk):
+        """Load a file proxy stored in the database by primary key.
+
+        Args:
+            pk (uuid): Primary key of the `FileProxy` to retrieve
+
+        Returns:
+            File-like object
+        """
+        fp = FileProxy.objects.get(pk=pk)
+        return fp.file
+
+    @staticmethod
+    def save_file(uploaded_file):
+        """
+        Save an uploaded file to the database as a file proxy and return the
+        primary key.
+
+        Args:
+            uploaded_file (file): File handle of file to save to database
+
+        Returns:
+            uuid
+        """
+        fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
+        return fp.pk
+
+    @staticmethod
+    def delete_files(*files_to_delete):
+        """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
+
+        Args:
+            files_to_delete (*args): List of primary keys to delete
+
+        Returns:
+            int (number of objects deleted)
+        """
+        files = FileProxy.objects.filter(pk__in=files_to_delete)
+        num = 0
+        for fp in files:
+            fp.delete()  # Call delete() on each, so `FileAttachment` is reaped
+            num += 1
+        logger.debug(f"Deleted {num} file proxies")
+        return num
 
     def run(self, data, commit):
         """
@@ -567,12 +750,18 @@ class MultiObjectVar(ObjectVar):
     form_field = DynamicModelMultipleChoiceField
 
 
+class DatabaseFileField(forms.FileField):
+    """Specialized `FileField` for use with `DatabaseFileStorage` storage backend."""
+
+    widget = DBClearableFileInput
+
+
 class FileVar(ScriptVariable):
     """
     An uploaded file.
     """
 
-    form_field = forms.FileField
+    form_field = DatabaseFileField
 
 
 class IPAddressVar(ScriptVariable):
@@ -799,7 +988,14 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
     from nautobot.extras.models import JobResult  # avoid circular import
 
-    job_result = JobResult.objects.get(pk=job_result_pk)
+    # Getting the correct job result can fail if the stored data cannot be serialized.
+    # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
+    try:
+        job_result = JobResult.objects.get(pk=job_result_pk)
+    except TypeError as e:
+        logger.error(f"Unable to serialize data for job {job_result_pk}")
+        logger.error(e)
+        return False
 
     job_class = get_job(job_result.name)
     if not job_class:
@@ -813,8 +1009,47 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         return False
-    job = job_class()
-    job.job_result = job_result
+
+    try:
+        job = job_class()
+        job.active_test = "initialization"
+        job.job_result = job_result
+    except Exception as error:
+        logger.error("Error initializing job object.")
+        logger.error(error)
+        stacktrace = traceback.format_exc()
+        job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
+        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.completed = timezone.now()
+        job_result.save()
+        return False
+
+    try:
+        # Capture the file IDs for any FileProxy objects created so we can cleanup later.
+        file_ids = None
+        file_fields = list(job._get_file_vars())
+        file_ids = [data[f] for f in file_fields]
+
+        # Attempt to resolve serialized data back into original form by creating querysets or model instances
+        # If we fail to find any objects, we consider this a job execution error, and fail.
+        # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
+        # or it might be bad input from an API request, or manual execution.
+
+        data = job_class.deserialize_data(data)
+    except Exception:
+        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        stacktrace = traceback.format_exc()
+        job_result.log(
+            f"Error initializing job:\n```\n{stacktrace}\n```",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="initialization",
+            logger=logger,
+        )
+        job_result.completed = timezone.now()
+        job_result.save()
+        if file_ids:
+            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+        return False
 
     if job.read_only:
         # Force commit to false for read only jobs.
@@ -824,14 +1059,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     job.logger.info(f"Running job (commit={commit})")
 
-    job_result.status = JobResultStatusChoices.STATUS_RUNNING
+    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
-
-    # Add any files to the form data
-    if request:
-        files = request.FILES
-        for field_name, fileobj in files.items():
-            data[field_name] = fileobj
 
     # Add the current request as a property of the job
     job.request = request
@@ -846,6 +1075,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         If the job is marked as read_only == True, then commit is forced to False and no log messages will be
         emitted related to reverting database changes.
         """
+        started = timezone.now()
         job.results["output"] = ""
         try:
             with transaction.atomic():
@@ -885,6 +1115,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         finally:
             job_result.save()
+            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+
+        # record data about this jobrun in the schedule
+        if job_result.schedule:
+            job_result.schedule.total_run_count += 1
+            job_result.schedule.last_run_at = started
+            job_result.schedule.save()
 
         # Perform any post-run tasks
         job.active_test = "post_run"
@@ -904,3 +1141,23 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             _run_job()
     else:
         _run_job()
+
+
+@nautobot_task
+def scheduled_job_handler(*args, **kwargs):
+    """
+    A thin wrapper around JobResult.enqueue_job() that allows for it to be called as an async task
+    for the purposes of enqueuing scheduled jobs at their recurring intervals. Thus, JobResult.enqueue_job()
+    is responsible for enqueuing the actual job for execution and this method is the task executed
+    by the scheduler to kick off the job execution on a recurring interval.
+    """
+    from nautobot.extras.models import JobResult  # avoid circular import
+
+    user_pk = kwargs.pop("user")
+    user = User.objects.get(pk=user_pk)
+    name = kwargs.pop("name")
+    scheduled_job_pk = kwargs.pop("scheduled_job_pk")
+    schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
+
+    job_content_type = ContentType.objects.get(app_label="extras", model="job")
+    JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)

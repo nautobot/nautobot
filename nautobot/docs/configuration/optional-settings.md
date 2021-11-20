@@ -1,5 +1,23 @@
 # Optional Configuration Settings
 
+## Administratively Configurable Settings
+
+As of Nautobot 1.2.0, it is now possible to configure a number of settings via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
+
+- [BANNER_BOTTOM](#banner_bottom)
+- [BANNER_LOGIN](#banner_login)
+- [BANNER_TOP](#banner_top)
+- [CHANGELOG_RETENTION](#changelog_retention)
+- [HIDE_RESTRICTED_UI](#hide_restricted_ui)
+- [MAX_PAGE_SIZE](#max_page_size)
+- [PAGINATE_COUNT](#paginate_count)
+- PER_PAGE_DEFAULTS
+- [PREFER_IPV4](#prefer_ipv4)
+- [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
+- [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
+- [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
+- [RELEASE_CHECK_URL](#release_check_url)
+
 ## Extra Applications
 
 A need may arise to allow the user to register additional settings. These will automatically apply
@@ -16,7 +34,7 @@ EXTRA_INSTALLED_APPS = [
 ```
 
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
-can specify additional apps with ease.
+can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
 ## ADMINS
 
@@ -49,8 +67,6 @@ A list of permitted URL schemes referenced when rendering links within Nautobot.
 
 Default: `""` (Empty string)
 
-Environment Variables: `NAUTOBOT_BANNER_TOP` and `NAUTOBOT_BANNER_BOTTOM`
-
 Setting these variables will display custom content in a banner at the top and/or bottom of the page, respectively. HTML is allowed. To replicate the content of the top banner in the bottom banner, set:
 
 ```python
@@ -58,15 +74,85 @@ BANNER_TOP = 'Your banner text'
 BANNER_BOTTOM = BANNER_TOP
 ```
 
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
+
 ---
 
 ## BANNER_LOGIN
 
 Default: `""` (Empty string)
 
-Environment Variable: `NAUTOBOT_BANNER_LOGIN`
-
 This defines custom content to be displayed on the login page above the login form. HTML is allowed.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## BRANDING_FILEPATHS
+
+Default:
+
+```python
+{
+    "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
+    "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
+    "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
+    "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
+    "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
+    "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+}
+```
+
+A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset. This allows for instance, providing your own navbar logo and favicon.
+
+These environment variables may be used to specify the values:
+
+* `NAUTOBOT_BRANDING_FILEPATHS_LOGO`
+* `NAUTOBOT_BRANDING_FILEPATHS_FAVICON`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_16`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_32`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+
+If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+
+---
+
+## BRANDING_TITLE
+
+Default: `"Nautobot"`
+
+Environment Variable: `NAUTOBOT_BRANDING_TITLE`
+
+The defines the custom branding title that should be used in place of "Nautobot" within user facing areas of the application like the HTML title of web pages.
+
+---
+
+## BRANDING_URLS
+
+Default:
+
+```python
+{
+    "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),  # Code link in the footer
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),  # Docs link in the footer
+    "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),  # Help link in the footer
+}
+```
+
+A set of URLs that correspond to helpful links in the right of the footer on every web page.
+
+These environment variables may be used to specify the values:
+
+* `NAUTOBOT_BRANDING_URLS_CODE`
+* `NAUTOBOT_BRANDING_URLS_DOCS`
+* `NAUTOBOT_BRANDING_URLS_HELP`
+
+If a custom URL is not provided for any of the links, the default link within the Nautobot community is used.
 
 ---
 
@@ -105,13 +191,43 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_BROKER_URL
+
+Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_RESULT_BACKEND
+
+Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery result backend used to tell workers where to store task results (tombstones).
+
+---
+
+## CELERY_TASK_SOFT_TIME_LIMIT
+
+Default: `300` (5 minutes)
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT`
+
+The global Celery task soft timeout (in seconds). Any background task that exceeds this duration will receive a `SoftTimeLimitExceeded` exception and is responsible for handling this exception and performing any necessary cleanup or final operations before ending. See also `CELERY_TASK_TIME_LIMIT` below.
+
+---
+
 ## CELERY_TASK_TIME_LIMIT
 
-Default: `1800`
+Default: `600` (10 minutes)
 
 Environment Variable: `NAUTOBOT_CELERY_TASK_TIME_LIMIT`
 
-The global Celery task timeout (in seconds)
+The global Celery task hard timeout (in seconds). Any background task that exceeds this duration will be forcibly killed with a `SIGKILL` signal.
 
 ---
 
@@ -119,12 +235,13 @@ The global Celery task timeout (in seconds)
 
 Default: `90`
 
-Environment Variable: `NAUTOBOT_CHANGELOG_RETENTION`
-
 The number of days to retain logged changes (object creations, updates, and deletions). Set this to `0` to retain changes in the database indefinitely.
 
 !!! warning
     If enabling indefinite changelog retention, it is recommended to periodically delete old entries. Otherwise, the database may eventually exceed capacity.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -313,7 +430,6 @@ Please see [the object permissions page](../administration/permissions.md) for m
 
 ---
 
-
 ## FORCE_SCRIPT_NAME
 
 Default: `None`
@@ -337,6 +453,18 @@ The value of this variable can also be customized by setting the environment var
 
 ---
 
+## GIT_SSL_NO_VERIFY
+
+Default: Unset
+
+If you are using a self-signed git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
+in order for the repository to sync.
+
+!!! warning
+    This *must* be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
+
+---
+
 ## GRAPHQL_CUSTOM_FIELD_PREFIX
 
 Default: `cf`
@@ -350,6 +478,9 @@ By default, all custom fields in GraphQL will be prefixed with `cf`. A custom fi
 Default: `False`
 
 When set to `True`, users with limited permissions will only be able to see items in the UI they have access too.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -398,7 +529,7 @@ Default: `{}` (Empty dictionary)
 
 By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
 
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself and from the RQ worker process to the console with added verbosity and colorization:
+The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
 
 ```python
 LOGGING = {
@@ -416,16 +547,17 @@ LOGGING = {
     },
     'handlers': {
         'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'verbose'},
+        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
+        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
     },
     'loggers': {
         'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
         'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
-        'rq.worker': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
     },
 }
 ```
+
+Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
 
 ### Available Loggers
 
@@ -449,15 +581,25 @@ Environment Variable: `NAUTOBOT_MAINTENANCE_MODE`
 
 Setting this to `True` will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
 
+!!! note
+    The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
+
+!!! note
+    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../docker/#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
+
+!!! note
+    If you are using `django-auth-ldap` for LDAP authentication, `django-auth-ldap` by default will try to update a user object on every log in.  If the database is in a read-only state `django-auth-ldap` will fail.  You will also need to set `AUTH_LDAP_ALWAYS_UPDATE_USER=False` and `AUTH_LDAP_NO_NEW_USERS=True` to avoid this, please see the [`django-auth-ldap` documentation](https://django-auth-ldap.readthedocs.io/en/stable/reference.html) for more information.
+
 ---
 
 ## MAX_PAGE_SIZE
 
 Default: `1000`
 
-Environment Variable: `NAUTOBOT_MAX_PAGE_SIZE`
-
 A web user or API consumer can request an arbitrary number of objects by appending the "limit" parameter to the URL (e.g. `?limit=1000`). This parameter defines the maximum acceptable limit. Setting this to `0` or `None` will allow a client to retrieve _all_ matching objects at once with no limit by specifying `?limit=0`.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -489,10 +631,13 @@ Default: `""` (Empty string)
 
 Environment Variables: `NAUTOBOT_NAPALM_USERNAME` and `NAUTOBOT_NAPALM_PASSWORD`
 
-Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm-automation.net/), if installed. Both parameters are optional.
+Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm.readthedocs.io), if installed. Both parameters are optional.
 
 !!! note
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
+
+!!! note
+    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, the [secrets](../../models/extras/secret/) defined in that group will take precedence over these default values.
 
 ---
 
@@ -519,6 +664,9 @@ NAPALM_ARGS = {
     # Include any additional args here
 }
 ```
+
+!!! note
+    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, a [secret](../../models/extras/secret/) defined in that group can override the `NAPALM_ARGS["secret"]` default value defined here.
 
 ---
 
@@ -549,9 +697,10 @@ This setting is used internally in the core settings to provide default location
 
 Default: `50`
 
-Environment Variable: `NAUTOBOT_PAGINATE_COUNT`
-
 The default maximum number of objects to display per page within each list of objects.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -592,9 +741,10 @@ Note that a plugin must be listed in `PLUGINS` for its configuration to take eff
 
 Default: `False`
 
-Environment Variable: `NAUTOBOT_PREFER_IPV4`
-
 When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to prefer IPv4 instead.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -602,9 +752,10 @@ When determining the primary IP address for a device, IPv6 is preferred over IPv
 
 Default: `22`
 
-Environment Variable: `NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT`
-
 Default height (in pixels) of a unit within a rack elevation. For best results, this should be approximately one tenth of `RACK_ELEVATION_DEFAULT_UNIT_WIDTH`.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -612,9 +763,10 @@ Default height (in pixels) of a unit within a rack elevation. For best results, 
 
 Default: `220`
 
-Environment Variable: `NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH`
-
 Default width (in pixels) of a unit within a rack elevation.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -622,12 +774,13 @@ Default width (in pixels) of a unit within a rack elevation.
 
 Default: `86400` (24 hours)
 
-Environment Variable: `NAUTOBOT_RELEASE_CHECK_TIMEOUT`
-
 The number of seconds to retain the latest version that is fetched from the GitHub API before automatically invalidating it and fetching it from the API again.
 
 !!! warning
     This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -635,12 +788,13 @@ The number of seconds to retain the latest version that is fetched from the GitH
 
 Default: `None` (disabled)
 
-Environment Variable: `NAUTOBOT_RELEASE_CHECK_URL`
-
 This parameter defines the URL of the repository that will be checked periodically for new Nautobot releases. When a new release is detected, a message will be displayed to administrative users on the home page. This can be set to the official repository (`'https://api.github.com/repos/nautobot/nautobot/releases'`) or a custom fork. Set this to `None` to disable automatic update checks.
 
 !!! note
     The URL provided **must** be compatible with the [GitHub REST API](https://docs.github.com/en/rest).
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 ## SESSION_COOKIE_AGE
@@ -659,6 +813,7 @@ Default: `'django.contrib.sessions.backends.db'`
 
 Controls where Nautobot stores session data.
 
+To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
 To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
 
 See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.

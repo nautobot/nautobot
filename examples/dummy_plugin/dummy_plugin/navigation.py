@@ -7,24 +7,32 @@ menu_items = (
     PluginMenuItem(
         link="plugins:dummy_plugin:dummymodel_list",
         link_text="Models",
+        permissions=["dummy_plugin.view_dummymodel"],
         buttons=(
             PluginMenuButton(
                 link="plugins:dummy_plugin:dummymodel_add",
                 title="Add a new dummy model",
                 icon_class="mdi mdi-plus-thick",
                 color=ButtonColorChoices.GREEN,
+                permissions=[
+                    "dummy_plugin.add_dummymodel",
+                ],
             ),
             PluginMenuButton(
                 link="plugins:dummy_plugin:dummymodel_import",
                 title="Import dummy models",
                 icon_class="mdi mdi-database-import-outline",
                 color=ButtonColorChoices.DEFAULT,
+                permissions=[
+                    "dummy_plugin.add_dummymodel",
+                ],
             ),
         ),
     ),
     PluginMenuItem(
         link="plugins:dummy_plugin:dummymodel_add",
         link_text="Other Models",
+        permissions=["dummy_plugin.view_dummymodel"],
     ),
     NavMenuTab(
         name="Dummy Tab",

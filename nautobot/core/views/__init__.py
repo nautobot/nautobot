@@ -1,11 +1,11 @@
+import os
 import platform
 import sys
 
 from django.conf import settings
-from django.db.models import F
 from django.http import HttpResponseServerError
 from django.shortcuts import render
-from django.template import loader
+from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
@@ -14,93 +14,39 @@ from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
 
-from nautobot.circuits.models import Circuit, Provider
-from nautobot.dcim.models import (
-    Cable,
-    ConsolePort,
-    Device,
-    DeviceType,
-    Interface,
-    PowerPanel,
-    PowerFeed,
-    PowerPort,
-    Rack,
-    Site,
-    VirtualChassis,
-)
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import GitRepository, GraphQLQuery, ObjectChange, JobResult
+from nautobot.extras.models import GraphQLQuery
+from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
-from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, VirtualMachine
 
 
 class HomeView(TemplateView):
     template_name = "home.html"
 
+    def render_additional_content(self, request, context, details):
+        # Collect all custom data using callback functions.
+        for key, data in details.get("custom_data", {}).items():
+            if callable(data):
+                context[key] = data(request)
+            else:
+                context[key] = data
+
+        # Create standalone template
+        path = f'{details["template_path"]}{details["custom_template"]}'
+        if os.path.isfile(path):
+            with open(path, "r") as f:
+                html = f.read()
+        else:
+            raise TemplateDoesNotExist(path)
+
+        template = Template(html)
+
+        additional_context = RequestContext(request, context)
+        return template.render(additional_context)
+
     def get(self, request):
-
-        connected_consoleports = (
-            ConsolePort.objects.restrict(request.user, "view")
-            .prefetch_related("_path")
-            .filter(_path__destination_id__isnull=False)
-        )
-        connected_powerports = (
-            PowerPort.objects.restrict(request.user, "view")
-            .prefetch_related("_path")
-            .filter(_path__destination_id__isnull=False)
-        )
-        connected_interfaces = (
-            Interface.objects.restrict(request.user, "view")
-            .prefetch_related("_path")
-            .filter(_path__destination_id__isnull=False, pk__lt=F("_path__destination_id"))
-        )
-
-        # Job history
-        # Only get JobResults that have reached a terminal state
-        job_results = (
-            JobResult.objects.filter(status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES)
-            .defer("data")
-            .order_by("-completed")
-        )
-
-        stats = {
-            # Organization
-            "site_count": Site.objects.restrict(request.user, "view").count(),
-            "tenant_count": Tenant.objects.restrict(request.user, "view").count(),
-            # DCIM
-            "rack_count": Rack.objects.restrict(request.user, "view").count(),
-            "devicetype_count": DeviceType.objects.restrict(request.user, "view").count(),
-            "device_count": Device.objects.restrict(request.user, "view").count(),
-            "interface_connections_count": connected_interfaces.count(),
-            "cable_count": Cable.objects.restrict(request.user, "view").count(),
-            "console_connections_count": connected_consoleports.count(),
-            "power_connections_count": connected_powerports.count(),
-            "powerpanel_count": PowerPanel.objects.restrict(request.user, "view").count(),
-            "powerfeed_count": PowerFeed.objects.restrict(request.user, "view").count(),
-            "virtualchassis_count": VirtualChassis.objects.restrict(request.user, "view").count(),
-            # IPAM
-            "vrf_count": VRF.objects.restrict(request.user, "view").count(),
-            "aggregate_count": Aggregate.objects.restrict(request.user, "view").count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view").count(),
-            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").count(),
-            # Circuits
-            "provider_count": Provider.objects.restrict(request.user, "view").count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view").count(),
-            # Virtualization
-            "cluster_count": Cluster.objects.restrict(request.user, "view").count(),
-            "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view").count(),
-            # Extras
-            "gitrepository_count": GitRepository.objects.restrict(request.user, "view").count(),
-        }
-
-        changelog = ObjectChange.objects.restrict(request.user, "view").prefetch_related("user", "changed_object_type")
-
         # Check whether a new release is available. (Only for staff/superusers.)
         new_release = None
         if request.user.is_staff or request.user.is_superuser:
@@ -117,12 +63,30 @@ class HomeView(TemplateView):
         context.update(
             {
                 "search_form": SearchForm(),
-                "stats": stats,
-                "job_results": job_results[:10],
-                "changelog": changelog[:15],
                 "new_release": new_release,
             }
         )
+
+        # Loop over homepage layout to collect all additional data and create custom panels.
+        for panel_details in registry["homepage_layout"]["panels"].values():
+            if panel_details.get("custom_template"):
+                panel_details["rendered_html"] = self.render_additional_content(request, context, panel_details)
+
+            else:
+                for item_details in panel_details["items"].values():
+                    if item_details.get("custom_template"):
+                        item_details["rendered_html"] = self.render_additional_content(request, context, item_details)
+
+                    elif item_details.get("model"):
+                        # If there is a model attached collect object count.
+                        item_details["count"] = item_details["model"].objects.restrict(request.user, "view").count()
+
+                    elif item_details.get("items"):
+                        # Collect count for grouped objects.
+                        for group_item_details in item_details["items"].values():
+                            group_item_details["count"] = (
+                                group_item_details["model"].objects.restrict(request.user, "view").count()
+                            )
 
         return self.render_to_response(context)
 
@@ -221,7 +185,6 @@ class CustomGraphQLView(GraphQLView):
         if query_slug:
             data["obj"] = GraphQLQuery.objects.get(slug=query_slug)
             data["editing"] = True
-        data["graphiql"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
         return render(request, self.graphiql_template, data)

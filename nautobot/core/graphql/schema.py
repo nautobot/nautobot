@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields.reverse_related import ManyToOneRel
 
 import graphene
 from graphene.types import generic
@@ -14,9 +15,12 @@ from nautobot.core.graphql.generators import (
     generate_attrs_for_schema_type,
     generate_computed_field_resolver,
     generate_custom_field_resolver,
+    generate_filter_resolver,
+    generate_list_search_parameters,
     generate_relationship_resolver,
     generate_restricted_queryset,
     generate_schema_type,
+    generate_null_choices_resolver,
 )
 from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
@@ -114,6 +118,79 @@ def extend_schema_type(schema_type):
     #
     schema_type = extend_schema_type_computed_field(schema_type, model)
 
+    #
+    # Add resolve_{field.name} that has null=False, blank=True, and choices defined to return null
+    #
+    schema_type = extend_schema_type_null_field_choice(schema_type, model)
+
+    #
+    # Add multiple layers of filtering
+    #
+    schema_type = extend_schema_type_filter(schema_type, model)
+
+    return schema_type
+
+
+def extend_schema_type_null_field_choice(schema_type, model):
+    """Extends the schema fields to add fields that can be null, blank=True, and choices are defined.
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+    # This is a workaround implemented for https://github.com/nautobot/nautobot/issues/466#issuecomment-877991184
+    # We want to iterate over fields and see if they meet the criteria: null=False, blank=True, and choices defined
+    for field in model._meta.fields:
+        # Continue onto the next field if it doesn't match the criteria
+        if not all((not field.null, field.blank, field.choices)):
+            continue
+
+        field_name = f"{str_to_var_name(field.name)}"
+        resolver_name = f"resolve_{field_name}"
+
+        if hasattr(schema_type, resolver_name):
+            logger.warning(
+                f"Unable to add {field.name} to {schema_type._meta.name} "
+                f"because there is already an attribute with the same name ({field_name})"
+            )
+            continue
+
+        setattr(
+            schema_type,
+            resolver_name,
+            generate_null_choices_resolver(field.name, resolver_name),
+        )
+
+    return schema_type
+
+
+def extend_schema_type_filter(schema_type, model):
+    """Extend schema_type object to be able to filter on multiple levels of a query
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+    for field in model._meta.get_fields():
+        # Check attribute is a ManyToOne field
+        if not isinstance(field, ManyToOneRel):
+            continue
+        child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
+        if child_schema_type:
+            resolver_name = f"resolve_{field.name}"
+            search_params = generate_list_search_parameters(child_schema_type)
+            # Add OneToMany field to schema_type
+            schema_type._meta.fields[field.name] = graphene.Field.mounted(
+                graphene.List(child_schema_type, **search_params)
+            )
+            # Add resolve function to schema_type
+            setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field.name))
     return schema_type
 
 
@@ -138,7 +215,7 @@ def extend_schema_type_custom_field(schema_type, model):
         field_name = f"{prefix}{str_to_var_name(field.name)}"
         resolver_name = f"resolve_{field_name}"
 
-        if hasattr(schema_type, field_name):
+        if hasattr(schema_type, resolver_name):
             logger.warning(
                 f"Unable to add the custom field {field.name} to {schema_type._meta.name} "
                 f"because there is already an attribute with the same name ({field_name})"
@@ -180,7 +257,7 @@ def extend_schema_type_computed_field(schema_type, model):
         field_name = f"{prefix}{str_to_var_name(field.slug)}"
         resolver_name = f"resolve_{field_name}"
 
-        if hasattr(schema_type, field_name):
+        if hasattr(schema_type, resolver_name):
             logger.warning(
                 "Unable to add the computed field %s to %s because there is already an attribute with the same name (%s)",
                 field.slug,
@@ -268,20 +345,30 @@ def extend_schema_type_relationships(schema_type, model):
             # Generate the name of the attribute and the name of the resolver based on the slug of the relationship
             # and based on the prefix
             rel_name = f"{prefix}{str_to_var_name(relationship.slug)}"
+            # Handle non-symmetric relationships where the model can be either source or destination
+            if not relationship.symmetric and relationship.source_type == relationship.destination_type:
+                rel_name = f"{rel_name}_{peer_side}"
             resolver_name = f"resolve_{rel_name}"
 
-            if hasattr(schema_type, rel_name):
-                logger.warning(
-                    f"Unable to add the custom relationship {relationship.slug} to {schema_type._meta.name} "
-                    f"because there is already an attribute with the same name ({rel_name})"
-                )
+            if hasattr(schema_type, resolver_name):
+                # If a symmetric relationship, and this is destination side, we already added source side, expected
+                # Otherwise something is wrong and we should warn
+                if side != "destination" or not relationship.symmetric:
+                    logger.warning(
+                        f"Unable to add the custom relationship {relationship.slug} to {schema_type._meta.name} "
+                        f"because there is already an attribute with the same name ({rel_name})"
+                    )
                 continue
 
             # Identify which object needs to be on the other side of this relationship
             # and check the registry to see if it is available,
-            # the schema_type object are organized by identifier in the registry `dcim.device`
             peer_type = getattr(relationship, f"{peer_side}_type")
             peer_model = peer_type.model_class()
+            if not peer_model:
+                # Could happen if, for example, we have a leftover relationship defined for a model from a plugin
+                # that is no longer installed/enabled
+                logger.warning(f"Unable to find peer model {peer_type} to create GraphQL relationship")
+                continue
             type_identifier = f"{peer_model._meta.app_label}.{peer_model._meta.model_name}"
             rel_schema_type = registry["graphql_types"].get(type_identifier)
 
@@ -307,6 +394,8 @@ def extend_schema_type_relationships(schema_type, model):
 def generate_query_mixin():
     """Generates and returns a class definition representing a GraphQL schema."""
 
+    logger.info("Beginning generation of Nautobot GraphQL schema")
+
     class_attrs = {}
 
     def already_present(model):
@@ -317,19 +406,21 @@ def generate_query_mixin():
 
         if single_item_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema type '{single_item_name}' in GraphQL from '{app_name}':'{model_name}',"
-                "there is already another type registered under this name"
+                f"Unable to register the schema single type '{single_item_name}' in GraphQL, "
+                f"there is already another type {class_attrs[single_item_name]._type} registered under this name"
             )
             return True
 
         if list_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema type '{list_name}' in GraphQL from '{app_name}':'{model_name}',"
-                "there is already another type registered under this name"
+                f"Unable to register the schema list type '{list_name}' in GraphQL, "
+                f"there is already another type {class_attrs[list_name]._type} registered under this name"
             )
             return True
 
-    # Generate SchemaType Dynamically for all Models registered in the model_features registry
+        return False
+
+    logger.debug("Generating dynamic schemas for all models in the models_features graphql registry")
     #  - Ensure an attribute/schematype with the same name doesn't already exist
     registered_models = registry.get("model_features", {}).get("graphql", {})
     for app_name, models in registered_models.items():
@@ -355,7 +446,7 @@ def generate_query_mixin():
             schema_type = generate_schema_type(app_name=app_name, model=model)
             registry["graphql_types"][type_identifier] = schema_type
 
-    # Add all objects in the plugin registry to the main registry
+    logger.debug("Adding plugins' statically defined graphql schema types")
     # After checking for conflict
     for schema_type in registry["plugin_graphql_types"]:
         model = schema_type._meta.model
@@ -371,7 +462,7 @@ def generate_query_mixin():
         else:
             registry["graphql_types"][type_identifier] = schema_type
 
-    # Extend schema_type with dynamic attributes for all object defined in the registry
+    logger.debug("Extending all registered schema types with dynamic attributes")
     for schema_type in registry["graphql_types"].values():
 
         if already_present(schema_type._meta.model):
@@ -381,4 +472,5 @@ def generate_query_mixin():
         class_attrs.update(generate_attrs_for_schema_type(schema_type))
 
     QueryMixin = type("QueryMixin", (object,), class_attrs)
+    logger.info("Generation of Nautobot GraphQL schema complete")
     return QueryMixin

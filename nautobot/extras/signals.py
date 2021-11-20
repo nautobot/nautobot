@@ -6,8 +6,8 @@ import logging
 from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.db.models.signals import m2m_changed, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
@@ -15,6 +15,7 @@ from django_prometheus.models import model_deletes, model_inserts, model_updates
 from prometheus_client import Counter
 
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
+from nautobot.utilities.config import get_settings_or_config
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
@@ -44,23 +45,33 @@ def _handle_changed_object(request, sender, instance, **kwargs):
     """
     Fires when an object is created or updated.
     """
-    # Queue the object for processing once the request completes
+    m2m_changed = False
+
+    # Determine the type of change being made
     if kwargs.get("created"):
         action = ObjectChangeActionChoices.ACTION_CREATE
     elif "created" in kwargs:
         action = ObjectChangeActionChoices.ACTION_UPDATE
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
+        m2m_changed = True
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        objectchange = instance.to_objectchange(action)
-        objectchange.user = _get_user_if_authenticated(request, objectchange)
-        objectchange.request_id = request.id
-        objectchange.save()
+        if m2m_changed:
+            ObjectChange.objects.filter(
+                changed_object_type=ContentType.objects.get_for_model(instance),
+                changed_object_id=instance.pk,
+                request_id=request.id,
+            ).update(object_data=instance.to_objectchange(action).object_data)
+        else:
+            objectchange = instance.to_objectchange(action)
+            objectchange.user = _get_user_if_authenticated(request, objectchange)
+            objectchange.request_id = request.id
+            objectchange.save()
 
     # Enqueue webhooks
     enqueue_webhooks(instance, request.user, request.id, action)
@@ -72,8 +83,9 @@ def _handle_changed_object(request, sender, instance, **kwargs):
         model_updates.labels(instance._meta.model_name).inc()
 
     # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
-    if settings.CHANGELOG_RETENTION and random.randint(1, 1000) == 1:
-        cutoff = timezone.now() - timedelta(days=settings.CHANGELOG_RETENTION)
+    changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
+    if changelog_retention and random.randint(1, 1000) == 1:
+        cutoff = timezone.now() - timedelta(days=changelog_retention)
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 
@@ -106,11 +118,11 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        delete_custom_field_data.delay(instance.name, pk_set)
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.name, pk_set))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
-        provision_field.delay(instance.pk, pk_set)
+        transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set))
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)

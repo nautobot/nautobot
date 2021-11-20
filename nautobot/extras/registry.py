@@ -1,4 +1,4 @@
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
 
 class Registry(dict):
@@ -22,22 +22,33 @@ class Registry(dict):
         raise TypeError("Cannot delete stores from registry")
 
 
-registry = Registry()
+registry = Registry(
+    datasource_contents=defaultdict(list),
+    secrets_providers={},
+)
 
 
-DatasourceContent = namedtuple("DatasourceContent", ["name", "content_identifier", "icon", "callback"])
-"""
-name (str): Human-readable name for this content type, such as "config contexts"
-content_identifier (str): Brief unique identifier of this content type; by convention a string such as "extras.configcontext"
-icon (str): Material Design Icons icon name, such as "mdi-code-json" or "mdi-script-text"
-callback (callable): Callback function to invoke whenever a given datasource is created, updated, or deleted.
-    This callback should take three arguments (record, job_result, delete) where "record" is the GitRepository, etc.
-    that is being refreshed, "job_result" is an extras.JobResult record for logging purposes, and
-    "delete" is a boolean flag to distinguish between the "create/update" and "delete" cases.
-"""
+class DatasourceContent:
+    """
+    name (str): Human-readable name for this content type, such as "config contexts"
+    content_identifier (str): Brief unique identifier of this content type; by convention a string such as "extras.configcontext"
+    icon (str): Material Design Icons icon name, such as "mdi-code-json" or "mdi-script-text"
+    callback (callable): Callback function to invoke whenever a given datasource is created, updated, or deleted.
+        This callback should take three arguments (record, job_result, delete) where "record" is the GitRepository, etc.
+        that is being refreshed, "job_result" is an extras.JobResult record for logging purposes, and
+        "delete" is a boolean flag to distinguish between the "create/update" and "delete" cases.
+    weight (int): Defines the order in which datasources will be loaded.
+    """
 
+    __slots__ = ["name", "content_identifier", "icon", "callback", "weight"]
 
-registry["datasource_contents"] = defaultdict(list)
+    def __init__(self, name, content_identifier, icon, callback, weight=1000):
+        """Ensure datasource properties."""
+        self.name = name
+        self.content_identifier = content_identifier
+        self.icon = icon
+        self.callback = callback
+        self.weight = weight
 
 
 def register_datasource_contents(datasource_contents_list):

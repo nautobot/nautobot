@@ -2,10 +2,20 @@
 import os
 import sys
 
-from nautobot.core.settings import *
+from nautobot.core.settings import *  # noqa: F403
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
+
+#
+# Misc. settings
+#
+
 ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
+
+#
+# Databases
+#
 
 DATABASES = {
     "default": {
@@ -19,7 +29,27 @@ DATABASES = {
     }
 }
 
-DEBUG = True
+# Ensure proper Unicode handling for MySQL
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+
+#
+# Debug
+#
+
+DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", True))
+
+# Django Debug Toolbar
+DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
+
+if "debug_toolbar" not in INSTALLED_APPS:  # noqa: F405
+    INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:  # noqa: F405
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
+
+#
+# Logging
+#
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
@@ -43,12 +73,12 @@ if not TESTING:
         "handlers": {
             "normal_console": {
                 "level": "INFO",
-                "class": "rq.utils.ColorizingStreamHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "normal",
             },
             "verbose_console": {
                 "level": "DEBUG",
-                "class": "rq.utils.ColorizingStreamHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "verbose",
             },
         },
@@ -65,8 +95,9 @@ if not TESTING:
         },
     }
 
-
-# Redis variables
+#
+# Redis
+#
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
@@ -87,32 +118,10 @@ CACHES = {
 # RQ_QUEUES is not set here because it just uses the default that gets imported
 # up top via `from nautobot.core.settings import *`.
 
-# REDIS CACHEOPS
+# Redis Cacheops
 CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 
-HIDE_RESTRICTED_UI = is_truthy(os.environ.get("HIDE_RESTRICTED_UI", False))
-
-SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
-
-# Django Debug Toolbar
-DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
-
-if "debug_toolbar" not in INSTALLED_APPS:
-    INSTALLED_APPS.append("debug_toolbar")
-if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
-    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
-
-
 #
-# Napalm
+# Celery settings are not defined here because they can be overloaded with
+# environment variables. By default they use `CACHES["default"]["LOCATION"]`.
 #
-
-NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
-NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
-NAPALM_ARGS = {'secret': NAPALM_PASSWORD}
-
-#
-# Celery
-#
-
-CELERY_TASK_TIME_LIMIT = int(os.environ.get("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))

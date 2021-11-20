@@ -23,10 +23,10 @@ class OptInFieldsMixin:
     def fields(self):
         """
         Removes all serializer fields specified in a serializers `opt_in_fields` list that aren't specified in the
-        `opt_in_fields` query parameter.
+        `include` query parameter.
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
-        but `computed_fields` is not specified in the `?opt_in_fields` query parameter, `computed_fields` will be popped
+        but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
         from the list of fields.
         """
         fields = super().fields
@@ -51,7 +51,7 @@ class OptInFieldsMixin:
         params = getattr(request, "query_params", getattr(request, "GET", None))
 
         try:
-            user_opt_in_fields = params.get("opt_in_fields", None).split(",")
+            user_opt_in_fields = params.get("include", None).split(",")
         except AttributeError:
             user_opt_in_fields = []
 

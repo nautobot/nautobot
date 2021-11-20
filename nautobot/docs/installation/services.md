@@ -27,7 +27,7 @@ $ nautobot-server celery --help
 ```
 
 !!! important
-    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
 
 ## Configuration
 
@@ -65,6 +65,9 @@ disable-logging = true
 ; Assert that critical 4xx and 5xx errors are still logged
 log-4xx = true
 log-5xx = true
+
+; Enable HTTP 1.1 keepalive support
+http-keepalive = 1
 
 ;
 ; Advanced settings (disabled by default)
@@ -104,7 +107,7 @@ We'll use `systemd` to control both uWSGI and Nautobot's background worker proce
 
 First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
 
-```
+```ini
 [Unit]
 Description=Nautobot WSGI Service
 Documentation=https://nautobot.readthedocs.io/en/stable/
@@ -132,14 +135,22 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-### Nautobot Worker Service
+### Nautobot Background Services
 
 !!! note
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
-Next, we will setup the `systemd` unit for the Celery worker. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+Next, we will setup the `systemd` units for the Celery worker and Celery Beat scheduler.
 
-```
+#### Celery Worker
+
+The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
+Nautobot features including [Jobs](../additional-features/jobs.md), [Custom
+Fields](../additional-features/custom-fields.md), and [Git Repositories](../models/extras/gitrepository.md), among others.
+
+To establish the `systemd` unit file for the Celery worker, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+
+```ini
 [Unit]
 Description=Nautobot Celery Worker
 Documentation=https://nautobot.readthedocs.io/en/stable/
@@ -165,9 +176,47 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
+#### Celery Beat Scheduler
+
+The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
+advantage of the [job scheduling and approval](../additional-features/job-scheduling-and-approvals.md) features.
+
+To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into `/etc/systemd/system/nautobot-scheduler.service`:
+
+```ini
+[Unit]
+Description=Nautobot Celery Beat Scheduler
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
+
+User=nautobot
+Group=nautobot
+PIDFile=/var/tmp/nautobot-scheduler.pid
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/bin/nautobot-server celery beat --loglevel INFO --pidfile /var/tmp/nautobot-scheduler.pid
+
+Restart=always
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
 #### Migrating to Celery from RQ
 
-If you're upgrading from Nautobot version 1.0.x, all you really need to do are two things.
+Prior to migrating, you need to determine whether you have any plugins installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
+
+* Ask your developer or administrator if there are any plugins running background tasks still using the RQ worker
+* If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job` 
+
+If you're upgrading from Nautobot version 1.0.x and are NOT running plugins that use the RQ worker, all you really need to do are two things.
 
 First, you must replace the contents of `/etc/systemd/system/nautobot-worker.service` with the `systemd` unit file provided just above.
 
@@ -197,6 +246,42 @@ index f84073fb5..52baf6096 100644
 (END)
 ```
 
+If you are using plugins that use custom background tasks but have not yet made the change described above, you must run the [RQ worker concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers) until the plugin can be updated.
+
+!!! warning
+    Failure to account for the Celery-to-RQ migration may break your custom background tasks
+
+#### Concurrent Celery and RQ Nautobot Workers
+
+If you must run the Celery and RQ workers concurrently, you must also configure the (deprecated) RQ worker.
+
+Copy and paste the following into `/etc/systemd/system/nautobot-rq-worker.service`:
+
+```ini
+[Unit]
+Description=Nautobot Request Queue Worker
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
+
+User=nautobot
+Group=nautobot
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/bin/nautobot-server rqworker
+
+Restart=on-failure
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ### Configure systemd
 
 Because we just added new service files, you'll need to reload the systemd daemon:
@@ -205,11 +290,20 @@ Because we just added new service files, you'll need to reload the systemd daemo
 $ sudo systemctl daemon-reload
 ```
 
-Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
+Then, start the `nautobot`, `nautobot-worker`, and `nautobot-scheduler` services and enable them to initiate at boot time:
 
 ```no-highlight
-$ sudo systemctl enable --now nautobot nautobot-worker
+$ sudo systemctl enable --now nautobot nautobot-worker nautobot-scheduler
 ```
+
+If you are also running the RQ worker, repeat the above command for the RQ service:
+
+```no-highlight
+sudo systemctl enable --now nautobot-rq-worker
+```
+
+!!! tip
+    If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in addition to the `nautobot-worker` process. 
 
 ### Verify the service
 You can use the command `systemctl status nautobot.service` to verify that the WSGI service is running:
@@ -263,17 +357,16 @@ Please see [SSL error: decryption failed or bad record mac & SSL SYSCALL error: 
 
 When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
 
-- Create an entry in `DATABASES` -> `default` -> `OPTIONS` with the value `{"charset": "utf8mb4"}` in your `nautobot_config.py` and restart all Nautobot services. This will tell MySQL to always use `utf8mb4` character set for encoding.
-
-For example:
-
-```python
-DATABASES = {
-    "default": {
-        # Other setttings...
-        "OPTIONS": {"charset": "utf8mb4"},  # Add this line
-    }
-}
-```
+Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for instructions on how to address this.
 
 Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.
+
+### SVG images not rendered
+
+When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)).  To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to /opt/nautobot/mime.types.  Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
+
+```no-highlight
+mime-file = /opt/nautobot/mime.types
+```
+
+Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](../http-server).

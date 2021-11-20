@@ -15,11 +15,9 @@ limitations under the License.
 from distutils.util import strtobool
 import os
 import re
-from time import sleep
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
-import requests
 
 
 def is_truthy(arg):
@@ -49,17 +47,24 @@ namespace.configure(
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_files": [
                 "docker-compose.yml",
+                "docker-compose.postgres.yml",
                 "docker-compose.dev.yml",
             ],
+            # Image names to use when building from "main" branch
             "docker_image_names_main": [
+                # Production containers - not containing development tools
                 "networktocode/nautobot",
                 "ghcr.io/nautobot/nautobot",
+                # Development containers - include development tools like linters
                 "networktocode/nautobot-dev",
                 "ghcr.io/nautobot/nautobot-dev",
             ],
+            # Image names to use when building from "develop" branch
             "docker_image_names_develop": [
+                # Production containers - not containing development tools
                 "networktocode/nautobot",
                 "ghcr.io/nautobot/nautobot",
+                # Development containers - include development tools like linters
                 "networktocode/nautobot-dev",
                 "ghcr.io/nautobot/nautobot-dev",
             ],
@@ -115,7 +120,7 @@ def docker_compose(context, command, **kwargs):
 def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
-        context.run(command, **kwargs)
+        context.run(command, pty=True, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
@@ -222,8 +227,10 @@ def docker_push(context, branch, commit="", datestamp=""):
     for image_name in docker_image_names:
         for image_tag in docker_image_tags:
             if image_name.endswith("-dev"):
+                # Use the development image as the basis for this tag and push
                 local_image = f"networktocode/nautobot-dev-py{context.nautobot.python_ver}:local"
             else:
+                # Use the production image as the basis for this tag and push
                 local_image = f"networktocode/nautobot-py{context.nautobot.python_ver}:local"
             new_image = f"{image_name}:{image_tag}"
             tag_command = f"docker tag {local_image} {new_image}"
@@ -264,11 +271,14 @@ def restart(context, service=None):
     docker_compose(context, "restart", service=service)
 
 
-@task
-def stop(context):
+@task(help={"service": "If specified, only affect this service."})
+def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
-    docker_compose(context, "down")
+    if not service:
+        docker_compose(context, "down")
+    else:
+        docker_compose(context, "stop", service=service)
 
 
 @task
@@ -283,7 +293,7 @@ def vscode(context):
     """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
     command = "code nautobot.code-workspace"
 
-    context.run(command)
+    context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 
 # ------------------------------------------------------------------------------

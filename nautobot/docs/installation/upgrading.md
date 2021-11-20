@@ -7,6 +7,9 @@ have been published since your current version was released. Although the upgrad
 additional work, certain releases may introduce breaking or backward-incompatible changes. These are called out in the
 release notes under the release in which the change went into effect.
 
+!!! note
+    As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facilitate this, a new service called `celery-scheduler` is now required. Please review the [service installation documentation](./services.md) to find out how to set it up.
+
 ## Update Prerequisites to Required Versions
 
 Nautobot v1.0.0 and later requires the following:
@@ -24,6 +27,9 @@ Nautobot v1.1.0 and later can optionally support the following:
 | Dependency | Minimum Version |
 |------------|-----------------|
 | MySQL      | 8.0             |
+
+!!! tip
+    If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](./migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.
 
 ## Install the Latest Release
 
@@ -70,8 +76,8 @@ This command performs the following actions:
 
 ## Restart the Nautobot Services
 
-Finally, with root permissions, restart the WSGI and RQ services:
+Finally, with root permissions, restart the web and background services:
 
 ```no-highlight
-$ sudo systemctl restart nautobot nautobot-worker
+$ sudo systemctl restart nautobot nautobot-worker nautobot-scheduler
 ```

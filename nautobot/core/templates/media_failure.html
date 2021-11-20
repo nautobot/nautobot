@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Static Media Failure - Nautobot</title>
+    <title>Static Media Failure - {{ settings.BRANDING_TITLE }}</title>
     <meta charset="UTF-8">
     <style type="text/css">
         body {
@@ -42,7 +42,7 @@
                 The file <code>{{ filename }}</code> exists in the static root directory and is readable by the HTTP process.
             </li>
         </ul>
-        <p>Click <a href="/">here</a> to attempt loading Nautobot again.</p>
+        <p>Click <a href="/">here</a> to attempt loading {{ settings.BRANDING_TITLE }} again.</p>
     </div>
 </body>
 </html>

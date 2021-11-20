@@ -15,8 +15,8 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 | Branch      | Status |
 |-------------|------------|
-| **main** | [![Build Status](https://travis-ci.com/nautobot/nautobot.svg?branch=main)](https://travis-ci.com/nautobot/nautobot) |
-| **develop** | [![Build Status](https://travis-ci.com/nautobot/nautobot.svg?branch=develop)](https://travis-ci.com/nautobot/nautobot) |
+| **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
+| **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
 
 ### Screenshots
 
@@ -33,6 +33,12 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 ## Installation
 
 Please see [the documentation](https://nautobot.readthedocs.io/en/stable/installation/) for instructions on installing Nautobot.
+
+## Application Stack
+
+Below is a simplified overview of the Nautobot application stack for reference:
+
+![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
 
 ## Providing Feedback
 
