@@ -125,8 +125,12 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ## v1.2.0b2 (2021-??-??)
 
 ### Added
+
 ### Changed
+
 ### Fixed
+
+- [#1078](https://github.com/nautobot/nautobot/issues/1078) - Fixed missing support for filtering several models by their custom fields and/or created/updated stamps.
 
 ## v1.2.0b1 (2021-11-19)
 
