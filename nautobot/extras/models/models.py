@@ -53,7 +53,7 @@ from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
-# The JOB_LOGS variable is used to tell the JobLogEntry model the databae to store to.
+# The JOB_LOGS variable is used to tell the JobLogEntry model the database to store to.
 # We default this to job_logs, and creating at the Global level allows easy override
 # during testing. This needs to point to the same physical database so that the
 # foreign key relationship works, but needs its own connection to avoid JobLogEntry
