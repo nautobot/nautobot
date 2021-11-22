@@ -42,7 +42,6 @@ class JobTest(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
@@ -342,8 +341,8 @@ class JobFileUploadTest(TestCase):
         cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
     def setUp(self):
+        super().setUp()
         self.dummy_file.seek(0)  # Reset cursor so we can read it again.
-        self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")

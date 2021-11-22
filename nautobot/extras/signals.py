@@ -177,7 +177,7 @@ def git_repository_pre_delete(instance, **kwargs):
     )
 
     # Use the default DB for storing job log entries since this occurs outside of an atomic transaction.
-    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True, use_default=True)
+    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True, use_default_db=True)
 
     if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)

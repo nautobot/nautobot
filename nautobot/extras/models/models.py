@@ -845,7 +845,7 @@ class JobResult(BaseModel, CustomFieldModel):
         level_choice=LogLevelChoices.LOG_DEFAULT,
         grouping="main",
         logger=None,
-        use_default=False,
+        use_default_db=False,
     ):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
@@ -855,7 +855,7 @@ class JobResult(BaseModel, CustomFieldModel):
         level_choice (LogLevelChoices): Message severity level
         grouping (str): Grouping to store the log message under
         logger (logging.logger): Optional logger to also output the message to
-        use_default (bool): Use default database or JOB_LOGS
+        use_default_db (bool): Use default database or JOB_LOGS
         """
         if level_choice not in LogLevelChoices.as_dict():
             raise Exception(f"Unknown logging level: {level_choice}")
@@ -874,7 +874,7 @@ class JobResult(BaseModel, CustomFieldModel):
         # Otherwise we want to use a separate database here so that the logs are created immediately
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
         # are running, and allow us to rollback the database without losing the log entries.
-        if use_default or not JOB_LOGS:
+        if use_default_db or not JOB_LOGS:
             log.save()
         else:
             log.save(using=JOB_LOGS)
