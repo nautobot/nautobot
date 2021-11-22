@@ -1,66 +1,14 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
 {% load render_table from django_tables2 %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'ipam:ipaddress_list' %}">IP Addresses</a></li>
+{% block extra_breadcrumbs %}
                 {% if object.vrf %}
                     <li><a href="{% url 'ipam:vrf' pk=object.vrf.pk %}">{{ object.vrf }}</a></li>
                 {% endif %}
-                <li>{{ object }}</li>
-            </ol>
-        </div>
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url 'ipam:ipaddress_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search IPs" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.ipam.add_ipaddress %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.ipam.change_ipaddress %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.ipam.delete_ipaddress %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">IP Address</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'ipam:ipaddress_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-{% endblock %}
+{% endblock extra_breadcrumbs %}
 
-{% block content %}
-<div class="row">
-	<div class="col-md-4">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>IP Address</strong>
@@ -69,29 +17,6 @@
                 <tr>
                     <td>Family</td>
                     <td>IPv{{ object.family }}</td>
-                </tr>
-                <tr>
-                    <td>VRF</td>
-                    <td>
-                        {% if object.vrf %}
-                            <a href="{% url 'ipam:vrf' pk=object.vrf.pk %}">{{ object.vrf }}</a>
-                        {% else %}
-                            <span>Global</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td>Tenant</td>
-                    <td>
-                        {% if object.tenant %}
-                            {% if object.tenant.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
                 </tr>
                 <tr>
                     <td>Status</td>
@@ -110,12 +35,45 @@
                     </td>
                 </tr>
                 <tr>
+                    <td>VRF</td>
+                    <td>
+                        {% if object.vrf %}
+                            <a href="{% url 'ipam:vrf' pk=object.vrf.pk %}">{{ object.vrf }}</a>
+                        {% else %}
+                            <span>Global</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
                     <td>DNS Name</td>
                     <td>{{ object.dns_name|placeholder }}</td>
                 </tr>
                 <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Operational Details</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Tenant</td>
+                    <td>
+                        {% if object.tenant %}
+                            {% if object.tenant.group %}
+                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
+                            {% endif %}
+                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 <tr>
                     <td>Assignment</td>
@@ -152,13 +110,10 @@
                 </tr>
             </table>
         </div>
-        {% include 'inc/custom_fields_panel.html' %}
-        {% include 'inc/relationships_panel.html' %}
-        {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='ipam:ipaddress_list' %}
-        {% plugin_left_page object %}
-	</div>
-	<div class="col-md-8">
         {% include 'panel_table.html' with table=parent_prefixes_table heading='Parent Prefixes' %}
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
         {% if duplicate_ips_table.rows %}
             {# Custom version of panel_table.html #}
             <div class="panel panel-danger">
@@ -180,12 +135,4 @@
             </div>
         {% endif %}
         {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default noprint' %}
-        {% plugin_right_page object %}
-	</div>
-</div>
-<div class="row">
-    <div class="col-md-12">
-        {% plugin_full_width_page object %}
-    </div>
-</div>
-{% endblock %}
+{% endblock content_full_width_page %}

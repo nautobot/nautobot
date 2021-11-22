@@ -5,11 +5,13 @@ import re
 import yaml
 from django import template
 from django.conf import settings
+from django.templatetags.static import StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
 from markdown import markdown
 
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.utils import foreground_color
 
@@ -238,6 +240,16 @@ def meters_to_feet(n):
     return float(n) * 3.28084
 
 
+@register.filter
+def get_item(d, key):
+    return d.get(key)
+
+
+@register.filter
+def settings_or_config(key):
+    return get_settings_or_config(key)
+
+
 #
 # Tags
 #
@@ -375,3 +387,14 @@ def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type
         "obj": obj,
         "obj_type": obj_type,
     }
+
+
+@register.simple_tag
+def custom_branding_or_static(branding_asset, static_asset):
+    """
+    This tag attempts to return custom branding assets relative to the MEDIA_ROOT and MEDIA_URL, if such
+    branding has been configured in settings, else it returns stock branding via static.
+    """
+    if settings.BRANDING_FILEPATHS.get(branding_asset):
+        return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+    return StaticNode.handle_simple(static_asset)

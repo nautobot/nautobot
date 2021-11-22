@@ -4,7 +4,7 @@ from netaddr import IPNetwork
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.choices import *
+from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
@@ -108,6 +108,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 RIR(name="RIR 1", slug="rir-1"),
                 RIR(name="RIR 2", slug="rir-2"),
                 RIR(name="RIR 3", slug="rir-3"),
+                RIR(name="RIR 8"),
             ]
         )
 
@@ -123,7 +124,10 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "RIR 4,rir-4,Fourth RIR",
             "RIR 5,rir-5,Fifth RIR",
             "RIR 6,rir-6,Sixth RIR",
+            "RIR 7,,Seventh RIR",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "RIR 8"
 
 
 class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -176,6 +180,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 Role(name="Role 1", slug="role-1"),
                 Role(name="Role 2", slug="role-2"),
                 Role(name="Role 3", slug="role-3"),
+                Role(name="Role 8"),
             ]
         )
 
@@ -191,7 +196,10 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Role 4,role-4,1000",
             "Role 5,role-5,1000",
             "Role 6,role-6,1000",
+            "Role 7,,1000",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "Role 8"
 
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -335,6 +343,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 VLANGroup(name="VLAN Group 1", slug="vlan-group-1", site=site),
                 VLANGroup(name="VLAN Group 2", slug="vlan-group-2", site=site),
                 VLANGroup(name="VLAN Group 3", slug="vlan-group-3", site=site),
+                VLANGroup(name="VLAN Group 8", site=site),
             ]
         )
 
@@ -350,7 +359,10 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "VLAN Group 4,vlan-group-4,Fourth VLAN group",
             "VLAN Group 5,vlan-group-5,Fifth VLAN group",
             "VLAN Group 6,vlan-group-6,Sixth VLAN group",
+            "VLAN Group 7,,Seventh VLAN group",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "VLAN Group 8"
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):

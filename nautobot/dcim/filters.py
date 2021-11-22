@@ -1,5 +1,6 @@
 import django_filters
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
@@ -7,6 +8,7 @@ from nautobot.extras.filters import (
     CreatedUpdatedFilterSet,
     StatusModelFilterSetMixin,
 )
+from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
@@ -14,14 +16,21 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
-    MultiValueNumberFilter,
     NameSlugSearchFilterSet,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.virtualization.models import Cluster
-from .choices import *
-from .constants import *
+from .choices import (
+    CableTypeChoices,
+    ConsolePortTypeChoices,
+    InterfaceTypeChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+)
+from .constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES
 from .models import (
     Cable,
     ConsolePort,
@@ -681,6 +690,17 @@ class DeviceFilterSet(
     has_primary_ip = django_filters.BooleanFilter(
         method="_has_primary_ip",
         label="Has a primary IP",
+    )
+    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets group (ID)",
+    )
+    secrets_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group__slug",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group (slug)",
     )
     virtual_chassis_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_chassis",

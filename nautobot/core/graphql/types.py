@@ -1,9 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 
-from graphene_django import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
 
 
-class ContentTypeType(DjangoObjectType):
+class ContentTypeType(gql_optimizer.OptimizedDjangoObjectType):
     """
     Graphene-Django object type for ContentType records.
 
