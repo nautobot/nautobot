@@ -25,10 +25,10 @@ from nautobot.utilities.testing import CeleryTestCase, TestCase
 User = get_user_model()
 
 
-# Override the job_db to None so that the Log Objects are created in the default database.
-# This change is required as job_db is a `fake` database pointed at the default. The django
+# Override the JOB_LOGS to None so that the Log Objects are created in the default database.
+# This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
 # database cleanup will fail and cause tests to fail as this is not a real database.
-@mock.patch("nautobot.extras.models.models.job_db", None)
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class JobTest(TestCase):
     """
     Test basic jobs to ensure importing works.
@@ -183,6 +183,12 @@ class JobTest(TestCase):
             job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
             self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
+            # Also ensure the standard log message about aborting the transaction is *not* present
+            run_log = JobLogEntry.objects.filter(grouping="run")
+            for log in run_log:
+                self.assertNotEqual(
+                    log.message, "Database changes have been reverted due to error."
+                )
 
     def test_read_only_no_commit_field(self):
         """
@@ -321,16 +327,14 @@ class JobTest(TestCase):
 
             # Assert stuff
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+            log_failure = JobLogEntry.objects.filter(grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE).first()
             self.assertIn(
                 "Data should be a dictionary",
-                next(
-                    log[-1]  # actual log message in the logging tuple
-                    for log in job_result.data["initialization"]["log"]
-                ),
+                log_failure.message
             )
 
 
-@mock.patch("nautobot.extras.models.models.job_db", None)
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class JobFileUploadTest(TestCase):
     """Test a job that uploads/deletes files."""
 
@@ -423,7 +427,7 @@ class JobFileUploadTest(TestCase):
             self.assertEqual(FileProxy.objects.count(), 0)
 
 
-@mock.patch("nautobot.extras.models.models.job_db", None)
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class RunJobManagementCommandTest(CeleryTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
 
@@ -468,6 +472,9 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
         with self.assertRaises(ObjectDoesNotExist):
             Status.objects.get(slug="test-status")
+
+        info_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_INFO).first()
+        self.assertEqual("Database changes have been reverted automatically.", info_log.message)
 
     def test_runjob_db_change_commit_no_username(self):
         """A job that changes the DB, when run with commit=True but no username, is rejected."""

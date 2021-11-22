@@ -53,12 +53,14 @@ from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
-# The job_db variable is used to tell the JobLogEntry model the databae to store to.
+# The JOB_LOGS variable is used to tell the JobLogEntry model the databae to store to.
 # We default this to job_logs, and creating at the Global level allows easy override
 # during testing. This needs to point to the same physical database so that the
 # foreign key relationship works, but needs its own connection to avoid JobLogEntry
 # objects being created within transaction.atomic().
-job_db = "job_logs"
+JOB_LOGS = "job_logs"
+
+
 #
 # Config contexts
 #
@@ -671,15 +673,15 @@ class JobLogEntry(BaseModel):
 
     job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE)
     log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT)
-    grouping = models.CharField(max_length=100, default="main")
+    grouping = models.CharField(max_length=MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
     created = models.DateTimeField(default=timezone.now)
     # Storing both of the below as strings instead of using GenericForeignKey to support
     # compatibility with existing JobResult logs. GFK would pose a problem with dangling foreign-key
     # references, whereas this allows us to retain all records for as long as the entry exists.
     # This also simplifies migration from the JobResult Data field as these were stored as strings.
-    log_object = models.CharField(max_length=200, null=True, blank=True)
-    absolute_url = models.CharField(max_length=255, null=True, blank=True)
+    log_object = models.CharField(max_length=MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
+    absolute_url = models.CharField(max_length=MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
 
     def __str__(self):
         return self.message
@@ -724,7 +726,7 @@ class JobResult(BaseModel, CustomFieldModel):
 
     This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
 
-    Log Messages now go to their one object, the JobLogEntry.
+    Log Messages now go to their own object, the JobLogEntry.
 
     data = {
         "output": <optional string, such as captured stdout/stderr>,
@@ -853,7 +855,7 @@ class JobResult(BaseModel, CustomFieldModel):
         level_choice (LogLevelChoices): Message severity level
         grouping (str): Grouping to store the log message under
         logger (logging.logger): Optional logger to also output the message to
-        use_default (bool): Use default database or job_db
+        use_default (bool): Use default database or JOB_LOGS
         """
         if level_choice not in LogLevelChoices.as_dict():
             raise Exception(f"Unknown logging level: {level_choice}")
@@ -872,10 +874,10 @@ class JobResult(BaseModel, CustomFieldModel):
         # Otherwise we want to use a separate database here so that the logs are created immediately
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
         # are running, and allow us to rollback the database without loosing the log entries.
-        if use_default or not job_db:
+        if use_default or not JOB_LOGS:
             log.save()
         else:
-            log.save(using=job_db)
+            log.save(using=JOB_LOGS)
 
         if logger:
             if level_choice == LogLevelChoices.LOG_FAILURE:

@@ -37,11 +37,11 @@ from nautobot.extras.models import (
 User = get_user_model()
 
 
-# Override the job_db to None so that the Log Objects are created in the default database.
-# This change is required as job_db is a `fake` database pointed at the default. The django
+# Override the JOB_LOGS to None so that the Log Objects are created in the default database.
+# This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
 # database cleanup will fail and cause tests to fail as this is not a real database.
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
-@mock.patch("nautobot.extras.models.models.job_db", None)
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class GitTest(TestCase):
 
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"

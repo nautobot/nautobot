@@ -75,7 +75,7 @@ class Command(BaseCommand):
 
         # Report on success/failure
         groups = set(JobLogEntry.objects.filter(job_result=job_result).values_list("grouping", flat=True))
-        for group in groups:
+        for group in sorted(groups):
             logs = JobLogEntry.objects.filter(job_result__pk=job_result.pk, grouping=group)
             success_count = logs.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
             info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).count()
