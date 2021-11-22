@@ -873,7 +873,7 @@ class JobResult(BaseModel, CustomFieldModel):
         # If the override is provided, we want to use the default database(pass no using argument)
         # Otherwise we want to use a separate database here so that the logs are created immediately
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
-        # are running, and allow us to rollback the database without loosing the log entries.
+        # are running, and allow us to rollback the database without losing the log entries.
         if use_default or not JOB_LOGS:
             log.save()
         else:
