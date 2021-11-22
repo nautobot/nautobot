@@ -186,9 +186,7 @@ class JobTest(TestCase):
             # Also ensure the standard log message about aborting the transaction is *not* present
             run_log = JobLogEntry.objects.filter(grouping="run")
             for log in run_log:
-                self.assertNotEqual(
-                    log.message, "Database changes have been reverted due to error."
-                )
+                self.assertNotEqual(log.message, "Database changes have been reverted due to error.")
 
     def test_read_only_no_commit_field(self):
         """
@@ -327,11 +325,10 @@ class JobTest(TestCase):
 
             # Assert stuff
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
-            log_failure = JobLogEntry.objects.filter(grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE).first()
-            self.assertIn(
-                "Data should be a dictionary",
-                log_failure.message
-            )
+            log_failure = JobLogEntry.objects.filter(
+                grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
+            ).first()
+            self.assertIn("Data should be a dictionary", log_failure.message)
 
 
 @mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
