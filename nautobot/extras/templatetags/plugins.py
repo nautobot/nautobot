@@ -1,11 +1,16 @@
+import logging
+
 from django import template as template_
 from django.conf import settings
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.plugins import PluginTemplateExtension
+from nautobot.extras.plugins import PluginBanner, PluginTemplateExtension
 from nautobot.extras.registry import registry
 
 register = template_.Library()
+
+
+logger = logging.getLogger("nautobot.plugins")
 
 
 def _get_registered_content(obj, method, template_context):
@@ -73,3 +78,29 @@ def plugin_full_width_page(context, obj):
     Render all full width page content registered by plugins
     """
     return _get_registered_content(obj, "full_width_page", context)
+
+
+@register.inclusion_tag("extras/templatetags/plugin_banners.html", takes_context=True)
+def plugin_banners(context):
+    """
+    Render all banners registered by plugins.
+    """
+    banners = []
+    for banner_function in registry["plugin_banners"]:
+        try:
+            banner = banner_function(context)
+        except Exception as exc:
+            logger.error("Plugin banner function %s raised an exception: %s", banner_function, exc)
+            continue
+
+        if banner:
+            if isinstance(banner, PluginBanner):
+                banners.append(banner)
+            else:
+                logger.error(
+                    "Plugin banner function %s should return a PluginBanner, but instead returned %s",
+                    banner_function,
+                    banner,
+                )
+
+    return {"banners": banners}

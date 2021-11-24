@@ -5,8 +5,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.utils.safestring import mark_safe
-import netaddr
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
@@ -27,8 +27,8 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import ConfigContextSchema, Tag
-from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN, IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
+from nautobot.extras.models import SecretsGroup, Tag
+from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -47,7 +47,6 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
-    JSONField,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -55,11 +54,36 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import *
-from .constants import *
+from .choices import (
+    CableLengthUnitChoices,
+    CableTypeChoices,
+    ConsolePortTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    RackDimensionUnitChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+    SubdeviceRoleChoices,
+)
+from .constants import (
+    CABLE_TERMINATION_MODELS,
+    INTERFACE_MTU_MAX,
+    INTERFACE_MTU_MIN,
+    REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
+)
+
 from .models import (
     Cable,
     DeviceBay,
@@ -450,8 +474,6 @@ class RackRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RackRoleCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = RackRole
         fields = RackRole.csv_headers
@@ -1572,8 +1594,6 @@ class DeviceRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm
 
 
 class DeviceRoleCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = DeviceRole
         fields = DeviceRole.csv_headers
@@ -1607,7 +1627,6 @@ class PlatformForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class PlatformCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
     manufacturer = CSVModelChoiceField(
         queryset=Manufacturer.objects.all(),
         required=False,
@@ -1668,6 +1687,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         required=False,
         query_params={"manufacturer_id": ["$manufacturer", "null"]},
     )
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -1698,6 +1718,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
             "platform",
             "primary_ip4",
             "primary_ip6",
+            "secrets_group",
             "cluster_group",
             "cluster",
             "tenant_group",
@@ -1821,6 +1842,12 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         to_field_name="name",
         required=False,
         help_text="Virtualization cluster",
+    )
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Secrets group",
     )
 
     class Meta:
@@ -1956,6 +1983,7 @@ class DeviceBulkEditForm(
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=50, required=False, label="Serial Number")
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
@@ -1964,6 +1992,7 @@ class DeviceBulkEditForm(
             "serial",
             "rack",
             "rack_group",
+            "secrets_group",
         ]
 
 

@@ -1,64 +1,7 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
 
-{% block header %}
-    <div class="row">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:status_list' %}">Statuses</a></li>
-                <li>{{ object }}</li>
-            </ol>
-        </div>
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url 'extras:status_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div class="pull-right">
-        <div class="pull-right noprint">
-            {% plugin_buttons object %}
-            {% if perms.extras.add_status %}
-                {% clone_button object %}
-            {% endif %}
-            {% if perms.extras.change_status %}
-                {% edit_button object %}
-            {% endif %}
-            {% if perms.extras.delete_status %}
-                {% delete_button object %}
-            {% endif %}
-        </div>
-    </div>
-    <h1>{% block title %}Status: {{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Status</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:status_changelog' slug=object.slug %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-{% endblock %}
-
-{% block content %}
-    <div class="row">
-        <div class="col-md-6">
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Status</strong>
@@ -77,7 +20,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Content type(s)</td>
+                        <td>Content Type(s)</td>
                         <td>
                             {% for ct in content_types %}
                                 {{ ct }}<br>
@@ -98,19 +41,4 @@
                     </tr>
                 </table>
             </div>
-            {% include 'inc/custom_fields_panel.html' %}
-            {% include 'inc/relationships_panel.html' %}
-            {% plugin_left_page object %}
-        </div>
-        <div class="col-md-6">
-            {% include 'panel_table.html' with table=items_table heading='Tagged Objects' %}
-            {% include 'inc/paginator.html' with paginator=items_table.paginator page=items_table.page %}
-            {% plugin_right_page object %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% plugin_full_width_page object %}
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_left_page %}

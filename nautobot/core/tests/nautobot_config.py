@@ -6,7 +6,7 @@
 import os
 
 from nautobot.core.settings import *  # noqa: F401,F403
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
+from nautobot.core.settings_funcs import parse_redis_connection
 
 
 ALLOWED_HOSTS = ["*"]

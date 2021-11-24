@@ -1,8 +1,57 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.filters import *
+from nautobot.dcim.choices import (
+    CableLengthUnitChoices,
+    CableTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    RackDimensionUnitChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+    SubdeviceRoleChoices,
+)
+from nautobot.dcim.filters import (
+    RegionFilterSet,
+    SiteFilterSet,
+    RackGroupFilterSet,
+    RackRoleFilterSet,
+    RackFilterSet,
+    RackReservationFilterSet,
+    ManufacturerFilterSet,
+    DeviceTypeFilterSet,
+    ConsolePortTemplateFilterSet,
+    ConsoleServerPortTemplateFilterSet,
+    PowerPortTemplateFilterSet,
+    PowerOutletTemplateFilterSet,
+    InterfaceTemplateFilterSet,
+    FrontPortTemplateFilterSet,
+    RearPortTemplateFilterSet,
+    DeviceBayTemplateFilterSet,
+    DeviceRoleFilterSet,
+    PlatformFilterSet,
+    DeviceFilterSet,
+    ConsolePortFilterSet,
+    ConsoleServerPortFilterSet,
+    PowerPortFilterSet,
+    PowerOutletFilterSet,
+    InterfaceFilterSet,
+    FrontPortFilterSet,
+    RearPortFilterSet,
+    DeviceBayFilterSet,
+    InventoryItemFilterSet,
+    VirtualChassisFilterSet,
+    CableFilterSet,
+    PowerPanelFilterSet,
+    PowerFeedFilterSet,
+)
+
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -37,7 +86,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -1398,6 +1447,12 @@ class DeviceTestCase(TestCase):
             Cluster.objects.create(name="Cluster 3", type=cluster_type),
         )
 
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets group 3", slug="secrets-group-3"),
+        )
+
         tenant_groups = (
             TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
             TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
@@ -1425,6 +1480,7 @@ class DeviceTestCase(TestCase):
                 face=DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["active"],
                 cluster=clusters[0],
+                secrets_group=secrets_groups[0],
                 local_context_data={"foo": 123},
             ),
             Device.objects.create(
@@ -1441,6 +1497,7 @@ class DeviceTestCase(TestCase):
                 face=DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["staged"],
                 cluster=clusters[1],
+                secrets_group=secrets_groups[1],
             ),
             Device.objects.create(
                 name="Device 3",
@@ -1456,6 +1513,7 @@ class DeviceTestCase(TestCase):
                 face=DeviceFaceChoices.FACE_REAR,
                 status=device_status_map["failed"],
                 cluster=clusters[2],
+                secrets_group=secrets_groups[2],
             ),
         )
 
@@ -1572,6 +1630,13 @@ class DeviceTestCase(TestCase):
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [regions[0].slug, regions[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_secrets_group(self):
+        secrets_groups = SecretsGroup.objects.all()[:2]
+        params = {"secrets_group_id": [secrets_groups[0].pk, secrets_groups[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"secrets_group": [secrets_groups[0].slug, secrets_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):

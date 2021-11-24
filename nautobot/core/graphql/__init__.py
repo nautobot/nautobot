@@ -1,6 +1,5 @@
 from django.test.client import RequestFactory
 
-from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import GraphQLQuery
 
 from graphene.types import Scalar

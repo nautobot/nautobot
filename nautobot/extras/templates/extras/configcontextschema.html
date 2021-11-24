@@ -1,10 +1,21 @@
-{% extends 'extras/configcontextschema/base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
 
-{% block content %}
-    <div class="row">
-        <div class="col-md-5">
+{% block nav_tabs %}
+        <li role="presentation"{% if active_tab == 'configcontextschema' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Config Context Schema</a>
+        </li>
+        <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
+            <a href="{% url 'extras:configcontextschema_object_validation' slug=object.slug %}">Validation</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:configcontextschema_changelog' slug=object.slug %}">Change Log</a>
+            </li>
+        {% endif %}
+{% endblock nav_tabs %}
+
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Config Context Schema</strong>
@@ -30,11 +41,9 @@
                     </tr>
                 </table>
             </div>
-            {% include 'inc/custom_fields_panel.html' %}
-            {% include 'inc/relationships_panel.html' %}
-            {% plugin_left_page object %}
-        </div>
-        <div class="col-md-7">
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Data Schema</strong>
@@ -44,12 +53,4 @@
                     {% include 'extras/inc/json_data.html' with data=object.data_schema format=format %}
                 </div>
             </div>
-            {% plugin_right_page object %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% plugin_full_width_page object %}
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_right_page %}

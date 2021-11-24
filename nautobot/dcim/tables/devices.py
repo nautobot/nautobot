@@ -187,6 +187,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
+    secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
     class Meta(BaseTable.Meta):
@@ -212,6 +213,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "virtual_chassis",
             "vc_position",
             "vc_priority",
+            "secrets_group",
             "tags",
         )
         default_columns = (

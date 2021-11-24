@@ -107,7 +107,7 @@ We'll use `systemd` to control both uWSGI and Nautobot's background worker proce
 
 First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
 
-```
+```ini
 [Unit]
 Description=Nautobot WSGI Service
 Documentation=https://nautobot.readthedocs.io/en/stable/
@@ -135,14 +135,22 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-### Nautobot Worker Service
+### Nautobot Background Services
 
 !!! note
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
-Next, we will setup the `systemd` unit for the Celery worker. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+Next, we will setup the `systemd` units for the Celery worker and Celery Beat scheduler.
 
-```
+#### Celery Worker
+
+The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
+Nautobot features including [Jobs](../additional-features/jobs.md), [Custom
+Fields](../additional-features/custom-fields.md), and [Git Repositories](../models/extras/gitrepository.md), among others.
+
+To establish the `systemd` unit file for the Celery worker, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+
+```ini
 [Unit]
 Description=Nautobot Celery Worker
 Documentation=https://nautobot.readthedocs.io/en/stable/
@@ -168,6 +176,38 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
+#### Celery Beat Scheduler
+
+The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
+advantage of the [job scheduling and approval](../additional-features/job-scheduling-and-approvals.md) features.
+
+To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into `/etc/systemd/system/nautobot-scheduler.service`:
+
+```ini
+[Unit]
+Description=Nautobot Celery Beat Scheduler
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
+
+User=nautobot
+Group=nautobot
+PIDFile=/var/tmp/nautobot-scheduler.pid
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/bin/nautobot-server celery beat --loglevel INFO --pidfile /var/tmp/nautobot-scheduler.pid
+
+Restart=always
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
 
 #### Migrating to Celery from RQ
 
@@ -217,7 +257,7 @@ If you must run the Celery and RQ workers concurrently, you must also configure 
 
 Copy and paste the following into `/etc/systemd/system/nautobot-rq-worker.service`:
 
-```
+```ini
 [Unit]
 Description=Nautobot Request Queue Worker
 Documentation=https://nautobot.readthedocs.io/en/stable/
@@ -250,10 +290,10 @@ Because we just added new service files, you'll need to reload the systemd daemo
 $ sudo systemctl daemon-reload
 ```
 
-Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
+Then, start the `nautobot`, `nautobot-worker`, and `nautobot-scheduler` services and enable them to initiate at boot time:
 
 ```no-highlight
-$ sudo systemctl enable --now nautobot nautobot-worker
+$ sudo systemctl enable --now nautobot nautobot-worker nautobot-scheduler
 ```
 
 If you are also running the RQ worker, repeat the above command for the RQ service:
