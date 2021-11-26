@@ -1,5 +1,6 @@
 import os
 import tempfile
+from unittest import mock
 import uuid
 
 from django.conf import settings
@@ -18,6 +19,7 @@ from nautobot.dcim.models import (
     Site,
     Region,
 )
+from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.jobs import get_job, Job
 from nautobot.extras.models import (
     ComputedField,
@@ -28,9 +30,13 @@ from nautobot.extras.models import (
     FileProxy,
     GitRepository,
     JobResult,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
 )
+from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
@@ -718,6 +724,253 @@ class JobResultTest(TestCase):
 
         job_result.job_id = uuid.uuid4()
         self.assertIsNone(job_result.related_object)
+
+
+class SecretTest(TestCase):
+    """
+    Tests for the `Secret` model class.
+    """
+
+    def setUp(self):
+        self.environment_secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            slug="env-var",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
+        )
+        self.environment_secret_templated = Secret.objects.create(
+            name="Environment Variable Templated Secret",
+            slug="env-var-templated",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_{{ obj.slug | upper }}"},
+        )
+        self.text_file_secret = Secret.objects.create(
+            name="Text File Secret",
+            slug="text",
+            provider="text-file",
+            parameters={"path": os.path.join(tempfile.gettempdir(), "secret-file.txt")},
+        )
+        self.text_file_secret_templated = Secret.objects.create(
+            name="Text File Templated Secret",
+            slug="text-templated",
+            provider="text-file",
+            parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
+        )
+
+        self.site = Site.objects.create(name="New York City", slug="nyc")
+
+    def test_environment_variable_value_not_found(self):
+        """Failure to retrieve an environment variable raises an exception."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret.get_value()
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret.get_value(obj=None)
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret.get_value(obj=self.site)
+
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value(obj=self.site)
+
+    def test_environment_variable_value_missing_parameters(self):
+        """A mis-defined environment variable secret raises an exception on access."""
+        self.environment_secret.parameters = {}
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret.get_value()
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret.get_value(obj=None)
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret.get_value(obj=self.site)
+
+    def test_environment_variable_templated_missing_object(self):
+        """A templated secret requires an object for context."""
+        # Since we're not using Jinja2's StrictUndefined, it just renders as an empty string if obj is omitted or None,
+        # For this secret it results in a rendered value of "", which is of course not a defined environment variable.
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value()
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value(obj=None)
+
+    def test_environment_variable_templated_bad_template(self):
+        """Error handling."""
+        # Malformed Jinja2
+        self.environment_secret_templated.parameters["variable"] = "{{ obj."
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret_templated.get_value(obj=self.site)
+        # Template references attribute not present on the provided obj
+        # Since we're not using Jinja2's StrictUndefined, this just renders as an empty string
+        self.environment_secret_templated.parameters["variable"] = "{{ obj.primary_ip4 }}"
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret_templated.get_value(obj=self.site)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
+    def test_environment_variable_value_success(self):
+        """Successful retrieval of an environment variable secret."""
+        self.assertEqual(self.environment_secret.get_value(), "supersecretvalue")
+        # It's OK to pass a context obj even if the secret in question isn't templated
+        self.assertEqual(self.environment_secret.get_value(obj=self.site), "supersecretvalue")
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": ""})
+    def test_environment_variable_value_success_empty(self):
+        """Successful retrieval of an environment variable secret even if set to an empty string."""
+        self.assertEqual(self.environment_secret.get_value(), "")
+        # It's OK to pass a context obj even if the secret in question isn't templated
+        self.assertEqual(self.environment_secret.get_value(obj=self.site), "")
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_NYC": "lessthansecretvalue"})
+    def test_environment_variable_templated_success(self):
+        """Successful retrieval of a templated environment variable secret."""
+        self.assertEqual(self.environment_secret_templated.get_value(obj=self.site), "lessthansecretvalue")
+
+    def test_text_file_clean_validation(self):
+        secret = Secret.objects.create(
+            name="Path shenanigans",
+            slug="path-shenanigans",
+            provider="text-file",
+            parameters={"path": "relative/path/to/file"},
+        )
+        with self.assertRaises(ValidationError):
+            secret.clean()
+        secret.parameters = {"path": "/opt/nautobot/../../etc/passwd"}
+        with self.assertRaises(ValidationError):
+            secret.clean()
+
+    def test_text_file_value_not_found(self):
+        """Failure to retrieve a file raises an exception."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.text_file_secret.get_value()
+        with self.assertRaises(SecretValueNotFoundError):
+            self.text_file_secret.get_value(obj=None)
+        with self.assertRaises(SecretValueNotFoundError):
+            self.text_file_secret.get_value(obj=self.site)
+
+    def test_text_file_value_missing_parameters(self):
+        """A mis-defined text file secret raises an exception."""
+        self.text_file_secret.parameters = {}
+        with self.assertRaises(SecretParametersError):
+            self.text_file_secret.get_value()
+        with self.assertRaises(SecretParametersError):
+            self.text_file_secret.get_value(obj=None)
+        with self.assertRaises(SecretParametersError):
+            self.text_file_secret.get_value(obj=self.site)
+
+    def test_text_file_value_success(self):
+        """Successful retrieval of a text file secret."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
+            file_handle.write("Hello world!")
+        try:
+            self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
+            # It's OK to pass a context obj even if the secret in question isn't templated
+            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
+    def test_text_file_value_success_empty(self):
+        """Successful retrieval of a text file secret from an empty file."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8"):
+            pass
+        try:
+            self.assertEqual(self.text_file_secret.get_value(), "")
+            # It's OK to pass a context obj even if the secret in question isn't templated
+            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
+    def test_text_file_templated_value_success(self):
+        """Successful retrieval of a templated text file secret."""
+        path = self.text_file_secret_templated.rendered_parameters(obj=self.site)["path"]
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf8") as file_handle:
+            file_handle.write("Hello?")
+        try:
+            self.assertEqual(self.text_file_secret_templated.get_value(obj=self.site), "Hello?")
+        finally:
+            os.remove(path)
+            os.rmdir(os.path.dirname(path))
+
+    def test_unknown_provider(self):
+        """An unknown/unsupported provider raises an exception."""
+        self.environment_secret.provider = "it-is-a-mystery"
+        with self.assertRaises(ValidationError):
+            self.environment_secret.clean()
+        with self.assertRaises(SecretProviderError):
+            self.environment_secret.get_value()
+        with self.assertRaises(SecretProviderError):
+            self.environment_secret.get_value(obj=None)
+        with self.assertRaises(SecretProviderError):
+            self.environment_secret.get_value(obj=self.site)
+
+
+class SecretsGroupTest(TestCase):
+    """
+    Tests for the `SecretsGroup` model class.
+    """
+
+    def setUp(self):
+        self.secrets_group = SecretsGroup(name="Secrets Group 1", slug="secrets-group-1")
+        self.secrets_group.validated_save()
+
+        self.environment_secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            slug="env-var",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
+        )
+
+        SecretsGroupAssociation.objects.create(
+            group=self.secrets_group,
+            secret=self.environment_secret,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+
+    def test_get_secret_value_no_such_type(self):
+        """Looking up a secret type/access type not present in the group is an exception."""
+        with self.assertRaises(SecretsGroupAssociation.DoesNotExist):
+            # Access type matches but not secret type
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+            )
+        with self.assertRaises(SecretsGroupAssociation.DoesNotExist):
+            # Secret type matches but not access type
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_NETCONF,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+            )
+
+    def test_get_secret_value_secret_error(self):
+        """Looking up a secret may succeed but retrieving its value may fail."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+            )
+        with self.assertRaises(SecretValueNotFoundError):
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+                obj=self.environment_secret,
+            )
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
+    def test_get_secret_value_success(self):
+        """It's possible to successfully look up a secret and its value."""
+        self.assertEqual(
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+            ),
+            "supersecretvalue",
+        )
+        self.assertEqual(
+            self.secrets_group.get_secret_value(
+                access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+                obj=self.environment_secret,
+            ),
+            "supersecretvalue",
+        )
 
 
 class StatusTest(TestCase):

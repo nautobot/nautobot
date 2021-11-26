@@ -23,7 +23,7 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.api.views import JobViewSet
-from nautobot.extras.choices import JobExecutionType
+from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -38,6 +38,9 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -557,27 +560,6 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
     brief_fields = ["display", "id", "name", "url"]
-    create_data = [
-        {
-            "name": "New Git Repository 1",
-            "slug": "new-git-repository-1",
-            "remote_url": "https://example.com/newrepo1.git",
-        },
-        {
-            "name": "New Git Repository 2",
-            "slug": "new-git-repository-2",
-            "remote_url": "https://example.com/newrepo2.git",
-        },
-        {
-            "name": "New Git Repository 3",
-            "slug": "new-git-repository-3",
-            "remote_url": "https://example.com/newrepo3.git",
-        },
-        {
-            "name": "New Git Repository 4",
-            "remote_url": "https://example.com/newrepo3.git",
-        },
-    ]
     bulk_update_data = {
         "branch": "develop",
     }
@@ -586,13 +568,54 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        )
+
         cls.repos = (
-            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
+            GitRepository(
+                name="Repo 1",
+                slug="repo-1",
+                remote_url="https://example.com/repo1.git",
+                secrets_group=secrets_groups[0],
+            ),
+            GitRepository(
+                name="Repo 2",
+                slug="repo-2",
+                remote_url="https://example.com/repo2.git",
+                secrets_group=secrets_groups[0],
+            ),
             GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
         )
         for repo in cls.repos:
             repo.save(trigger_resync=False)
+
+        cls.create_data = [
+            {
+                "name": "New Git Repository 1",
+                "slug": "new-git-repository-1",
+                "remote_url": "https://example.com/newrepo1.git",
+                "secrets_group": secrets_groups[1].pk,
+            },
+            {
+                "name": "New Git Repository 2",
+                "slug": "new-git-repository-2",
+                "remote_url": "https://example.com/newrepo2.git",
+                "secrets_group": secrets_groups[1].pk,
+            },
+            {
+                "name": "New Git Repository 3",
+                "slug": "new-git-repository-3",
+                "remote_url": "https://example.com/newrepo3.git",
+                "secrets_group": secrets_groups[1].pk,
+            },
+            {
+                "name": "New Git Repository 4",
+                "remote_url": "https://example.com/newrepo3.git",
+                "secrets_group": secrets_groups[1].pk,
+            },
+        ]
 
     @skipIf(celery_worker_running, "Celery worker is running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -1450,6 +1473,183 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 "source_id": cls.sites[2].pk,
                 "destination_type": "dcim.device",
                 "destination_id": cls.devices[2].pk,
+            },
+        ]
+
+
+class SecretTest(APIViewTestCases.APIViewTestCase):
+    model = Secret
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    bulk_update_data = {}
+
+    create_data = [
+        {
+            "name": "NAPALM Username",
+            "provider": "environment-variable",
+            "description": "Username for all NAPALM devices",
+            "parameters": {
+                "variable": "NAPALM_USERNAME",
+            },
+        },
+        {
+            "name": "NAPALM Password",
+            "provider": "environment-variable",
+            "parameters": {
+                "variable": "NAPALM_PASSWORD",
+            },
+        },
+        {
+            "name": "GitHub Token for My Repository",
+            "slug": "github-token-my-repository",
+            "provider": "text-file",
+            "parameters": {
+                "path": "/github-tokens/user/myusername.txt",
+            },
+        },
+    ]
+    slug_source = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets = (
+            Secret(
+                name="api-test-1",
+                provider="environment-variable",
+                parameters={"variable": "API_TEST_1"},
+            ),
+            Secret(
+                name="api-test-2",
+                provider="environment-variable",
+                parameters={"variable": "API_TEST_2"},
+            ),
+            Secret(
+                name="api-test-3",
+                provider="environment-variable",
+                parameters={"variable": "API_TEST_3"},
+            ),
+        )
+
+        for secret in secrets:
+            secret.validated_save()
+
+
+class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
+    model = SecretsGroup
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    bulk_update_data = {}
+
+    slug_source = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets = (
+            Secret.objects.create(
+                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
+            ),
+        )
+
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Group A", slug="group-a"),
+            SecretsGroup.objects.create(name="Group B", slug="group-b"),
+            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[0],
+            group=secrets_groups[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[1],
+            group=secrets_groups[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+
+        cls.create_data = [
+            {
+                "name": "Secrets Group 1",
+                "slug": "secrets-group-1",
+                "description": "First Secrets Group",
+            },
+            {
+                "name": "Secrets Group 2",
+                "description": "Second Secrets Group",
+            },
+            {
+                "name": "Secrets Group 3",
+                "description": "Third Secrets Group",
+            },
+        ]
+
+
+class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = SecretsGroupAssociation
+    brief_fields = ["access_type", "display", "id", "secret", "secret_type", "url"]
+    bulk_update_data = {}
+    choices_fields = ["access_type", "secret_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets = (
+            Secret.objects.create(
+                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-3", provider="environment-variable", parameters={"variable": "YET_ANOTHER"}
+            ),
+        )
+
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Group A", slug="group-a"),
+            SecretsGroup.objects.create(name="Group B", slug="group-b"),
+            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[0],
+            group=secrets_groups[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[1],
+            group=secrets_groups[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[2],
+            group=secrets_groups[2],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+
+        cls.create_data = [
+            {
+                "group": secrets_groups[0].pk,
+                "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
+                "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                "secret": secrets[0].pk,
+            },
+            {
+                "group": secrets_groups[1].pk,
+                "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
+                "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                "secret": secrets[1].pk,
+            },
+            {
+                "group": secrets_groups[2].pk,
+                "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
+                "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                "secret": secrets[2].pk,
             },
         ]
 

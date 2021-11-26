@@ -1,5 +1,23 @@
 # Optional Configuration Settings
 
+## Administratively Configurable Settings
+
+As of Nautobot 1.2.0, it is now possible to configure a number of settings via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
+
+- [BANNER_BOTTOM](#banner_bottom)
+- [BANNER_LOGIN](#banner_login)
+- [BANNER_TOP](#banner_top)
+- [CHANGELOG_RETENTION](#changelog_retention)
+- [HIDE_RESTRICTED_UI](#hide_restricted_ui)
+- [MAX_PAGE_SIZE](#max_page_size)
+- [PAGINATE_COUNT](#paginate_count)
+- PER_PAGE_DEFAULTS
+- [PREFER_IPV4](#prefer_ipv4)
+- [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
+- [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
+- [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
+- [RELEASE_CHECK_URL](#release_check_url)
+
 ## Extra Applications
 
 A need may arise to allow the user to register additional settings. These will automatically apply
@@ -16,7 +34,7 @@ EXTRA_INSTALLED_APPS = [
 ```
 
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
-can specify additional apps with ease.
+can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
 ## ADMINS
 
@@ -49,8 +67,6 @@ A list of permitted URL schemes referenced when rendering links within Nautobot.
 
 Default: `""` (Empty string)
 
-Environment Variables: `NAUTOBOT_BANNER_TOP` and `NAUTOBOT_BANNER_BOTTOM`
-
 Setting these variables will display custom content in a banner at the top and/or bottom of the page, respectively. HTML is allowed. To replicate the content of the top banner in the bottom banner, set:
 
 ```python
@@ -58,15 +74,19 @@ BANNER_TOP = 'Your banner text'
 BANNER_BOTTOM = BANNER_TOP
 ```
 
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
+
 ---
 
 ## BANNER_LOGIN
 
 Default: `""` (Empty string)
 
-Environment Variable: `NAUTOBOT_BANNER_LOGIN`
-
 This defines custom content to be displayed on the login page above the login form. HTML is allowed.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -81,7 +101,7 @@ Default:
     "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
     "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
-    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon 
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
 }
 ```
@@ -215,12 +235,13 @@ The global Celery task hard timeout (in seconds). Any background task that excee
 
 Default: `90`
 
-Environment Variable: `NAUTOBOT_CHANGELOG_RETENTION`
-
 The number of days to retain logged changes (object creations, updates, and deletions). Set this to `0` to retain changes in the database indefinitely.
 
 !!! warning
     If enabling indefinite changelog retention, it is recommended to periodically delete old entries. Otherwise, the database may eventually exceed capacity.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -470,6 +491,9 @@ Default: `False`
 
 When set to `True`, users with limited permissions will only be able to see items in the UI they have access too.
 
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
 ---
 
 ## HTTP_PROXIES
@@ -584,9 +608,10 @@ Setting this to `True` will display a "maintenance mode" banner at the top of ev
 
 Default: `1000`
 
-Environment Variable: `NAUTOBOT_MAX_PAGE_SIZE`
-
 A web user or API consumer can request an arbitrary number of objects by appending the "limit" parameter to the URL (e.g. `?limit=1000`). This parameter defines the maximum acceptable limit. Setting this to `0` or `None` will allow a client to retrieve _all_ matching objects at once with no limit by specifying `?limit=0`.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -623,6 +648,9 @@ Nautobot will use these credentials when authenticating to remote devices via th
 !!! note
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
 
+!!! note
+    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, the [secrets](../../models/extras/secret/) defined in that group will take precedence over these default values.
+
 ---
 
 ## NAPALM_ARGS
@@ -648,6 +676,9 @@ NAPALM_ARGS = {
     # Include any additional args here
 }
 ```
+
+!!! note
+    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, a [secret](../../models/extras/secret/) defined in that group can override the `NAPALM_ARGS["secret"]` default value defined here.
 
 ---
 
@@ -678,9 +709,10 @@ This setting is used internally in the core settings to provide default location
 
 Default: `50`
 
-Environment Variable: `NAUTOBOT_PAGINATE_COUNT`
-
 The default maximum number of objects to display per page within each list of objects.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -721,9 +753,10 @@ Note that a plugin must be listed in `PLUGINS` for its configuration to take eff
 
 Default: `False`
 
-Environment Variable: `NAUTOBOT_PREFER_IPV4`
-
 When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to prefer IPv4 instead.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -731,9 +764,10 @@ When determining the primary IP address for a device, IPv6 is preferred over IPv
 
 Default: `22`
 
-Environment Variable: `NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT`
-
 Default height (in pixels) of a unit within a rack elevation. For best results, this should be approximately one tenth of `RACK_ELEVATION_DEFAULT_UNIT_WIDTH`.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -741,9 +775,10 @@ Default height (in pixels) of a unit within a rack elevation. For best results, 
 
 Default: `220`
 
-Environment Variable: `NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH`
-
 Default width (in pixels) of a unit within a rack elevation.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -751,12 +786,13 @@ Default width (in pixels) of a unit within a rack elevation.
 
 Default: `86400` (24 hours)
 
-Environment Variable: `NAUTOBOT_RELEASE_CHECK_TIMEOUT`
-
 The number of seconds to retain the latest version that is fetched from the GitHub API before automatically invalidating it and fetching it from the API again.
 
 !!! warning
     This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -764,12 +800,13 @@ The number of seconds to retain the latest version that is fetched from the GitH
 
 Default: `None` (disabled)
 
-Environment Variable: `NAUTOBOT_RELEASE_CHECK_URL`
-
 This parameter defines the URL of the repository that will be checked periodically for new Nautobot releases. When a new release is detected, a message will be displayed to administrative users on the home page. This can be set to the official repository (`'https://api.github.com/repos/nautobot/nautobot/releases'`) or a custom fork. Set this to `None` to disable automatic update checks.
 
 !!! note
     The URL provided **must** be compatible with the [GitHub REST API](https://docs.github.com/en/rest).
+
+!!! tip
+    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 ## SESSION_COOKIE_AGE

@@ -8,6 +8,7 @@ from nautobot.extras.filters import (
     CreatedUpdatedFilterSet,
     StatusModelFilterSetMixin,
 )
+from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
@@ -335,7 +336,7 @@ class RackFilterSet(
         )
 
 
-class RackReservationFilterSet(BaseFilterSet, TenancyFilterSet):
+class RackReservationFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -689,6 +690,17 @@ class DeviceFilterSet(
     has_primary_ip = django_filters.BooleanFilter(
         method="_has_primary_ip",
         label="Has a primary IP",
+    )
+    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets group (ID)",
+    )
+    secrets_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group__slug",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group (slug)",
     )
     virtual_chassis_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_chassis",
@@ -1076,7 +1088,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         return queryset.filter(qs_filter)
 
 
-class VirtualChassisFilterSet(BaseFilterSet):
+class VirtualChassisFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1139,7 +1151,7 @@ class VirtualChassisFilterSet(BaseFilterSet):
         return queryset.filter(qs_filter)
 
 
-class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet):
+class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1223,7 +1235,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = []
 
 
-class PowerPanelFilterSet(BaseFilterSet):
+class PowerPanelFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

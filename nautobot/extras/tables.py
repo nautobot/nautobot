@@ -17,8 +17,10 @@ from nautobot.utilities.tables import (
     ColorColumn,
     ColoredLabelColumn,
     ContentTypesColumn,
+    TagColumn,
     ToggleColumn,
 )
+from nautobot.utilities.templatetags.helpers import render_markdown
 from .jobs import Job
 from .models import (
     ComputedField,
@@ -34,12 +36,14 @@ from .models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
     Status,
     Tag,
     TaggedItem,
     Webhook,
 )
-from nautobot.utilities.templatetags.helpers import render_markdown
+from .registry import registry
 
 
 TAGGED_ITEM = """
@@ -284,7 +288,7 @@ class GitRepositoryTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     last_sync_time = tables.DateTimeColumn(
         empty_values=(), format=settings.SHORT_DATETIME_FORMAT, verbose_name="Sync Time"
     )
@@ -311,7 +315,7 @@ class GitRepositoryTable(BaseTable):
             "slug",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
             "last_sync_time",
             "last_sync_user",
@@ -344,7 +348,7 @@ class GitRepositoryBulkTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
 
     class Meta(BaseTable.Meta):
@@ -354,7 +358,7 @@ class GitRepositoryBulkTable(BaseTable):
             "name",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
         )
 
@@ -509,6 +513,59 @@ class RelationshipAssociationTable(BaseTable):
         model = RelationshipAssociation
         fields = ("pk", "relationship", "source_type", "source", "destination_type", "destination", "actions")
         default_columns = ("pk", "relationship", "source", "destination", "actions")
+
+
+#
+# Secrets
+#
+
+
+class SecretTable(BaseTable):
+    """Table for list view of `Secret` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    tags = TagColumn(url_name="extras:secret_list")
+
+    class Meta(BaseTable.Meta):
+        model = Secret
+        fields = (
+            "pk",
+            "name",
+            "provider",
+            "description",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "provider",
+            "description",
+            "tags",
+        )
+
+    def render_provider(self, value):
+        return registry["secrets_providers"][value].name if value in registry["secrets_providers"] else value
+
+
+class SecretsGroupTable(BaseTable):
+    """Table for list view of `SecretsGroup` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = SecretsGroup
+        fields = (
+            "pk",
+            "name",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "description",
+        )
 
 
 #

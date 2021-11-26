@@ -8,6 +8,12 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Admin Configuration UI ([#370](https://github.com/nautobot/nautobot/issues/370))
+
+The Nautobot Admin UI now includes a "Configuration" page that can be used to dynamically customize a number of [optional settings](../configuration/optional-settings.md#administratively-configurable-settings) as an alternative to editing `nautobot_config.py` and restarting the Nautobot processes.
+
+If upgrading from a previous Nautobot version where these settings were defined in your `nautobot_config.py`, you must remove those definitions in order to use this feature, as explicit configuration in `nautobot_config.py` takes precedence over values configured in the Admin UI.
+
 #### Common Base Template for Object Detail Views ([#479](https://github.com/nautobot/nautobot/issues/479), [#585](https://github.com/nautobot/nautobot/issues/585))
 
 All "object detail" views (pages displaying details of a single Nautobot record) now inherit from a common base template, providing improved UI consistency, reducing the amount of boilerplate code needed to create a new detail view, and fixing a number of bugs in various views. Plugin developers are encouraged to make use of this new template (`generic/object_detail.html`) to take advantage of these improvements.
@@ -94,6 +100,12 @@ The [Relationships](../models/extras/relationship.md) feature has been extended 
 
 For more details, refer to the [Relationships](../models/extras/relationship.md) documentation.
 
+#### Secrets Integration ([#541](https://github.com/nautobot/nautobot/issues/541))
+
+Nautobot can now read secret values (such as device or Git repository access credentials) on demand from a variety of external sources, including environment variables and text files, and extensible via plugins to support additional secrets providers such as Hashicorp Vault and AWS Secrets Manager. Both the [NAPALM device integration](../additional-features/napalm.md) and the [Git repository integration](../models/extras/gitrepository.md) can now make use of these secrets, and plugins and jobs can do so as well.
+
+For more details, please refer to the [Secrets](../core-functionality/secrets.md) documentation.
+
 #### Software-Defined Home Page ([#674](https://github.com/nautobot/nautobot/pull/674), [#716](https://github.com/nautobot/nautobot/pull/716))
 
 Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/homepage.md).
@@ -110,7 +122,17 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.0b1 (2021-??-??)
+## v1.2.0b2 (2021-??-??)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- [#1078](https://github.com/nautobot/nautobot/issues/1078) - Fixed missing support for filtering several models by their custom fields and/or created/updated stamps.
+
+## v1.2.0b1 (2021-11-19)
 
 ### Added
 
@@ -120,11 +142,13 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#171](https://github.com/nautobot/nautobot/issues/171) - GraphQL queries have been greatly optimized by integration with `graphene-django-optimizer`
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
 - [#248](https://github.com/nautobot/nautobot/issues/248) - Added support for filtering GraphQL queries at all levels
+- [#370](https://github.com/nautobot/nautobot/issues/370) - Added support for server configuration via the Admin UI.
 - [#374](https://github.com/nautobot/nautobot/issues/374) - Added ability to schedule Jobs for future and/or recurring execution
 - [#478](https://github.com/nautobot/nautobot/issues/478) - CustomFieldChoice model now supports GraphQL.
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
 - [#519](https://github.com/nautobot/nautobot/issues/519) - Added webhook support for `CustomField` and `CustomFieldChoice` models.
 - [#534](https://github.com/nautobot/nautobot/issues/534) - Added ability to inject a banner from a plugin
+- [#541](https://github.com/nautobot/nautobot/issues/541) - Added Secrets integration
 - [#580](https://github.com/nautobot/nautobot/issues/580) - Added ability for plugins to register "home" and "configuration" views.
 - [#585](https://github.com/nautobot/nautobot/issues/585) - Added "Advanced" tab to object detail views including UUID and slug information.
 - [#642](https://github.com/nautobot/nautobot/issues/642) - Added documentation of the `GIT_SSL_NO_VERIFY` environment variable for using self-signed Git repositories
@@ -153,6 +177,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#853](https://github.com/nautobot/nautobot/issues/853) - Fixed `AttributeError` on certain object detail views
 - [#891](https://github.com/nautobot/nautobot/issues/891) - Fixed custom field select/multiselect not handled by new UI and added integration tests
 - [#966](https://github.com/nautobot/nautobot/issues/966) - Fixed missing "Advanced" tab on Device detail views
+- [#1060](https://github.com/nautobot/nautobot/issues/1060) - Fixed documentation incorrectly indicating that the Admin UI was the only way to manage custom field definitions.
 
 ### Security
 

@@ -14,7 +14,13 @@ from nautobot.utilities.filters import (
     TagFilter,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices, JobResultStatusChoices
+from .choices import (
+    CustomFieldFilterLogicChoices,
+    CustomFieldTypeChoices,
+    JobResultStatusChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from .models import (
     ComputedField,
     ConfigContext,
@@ -31,6 +37,9 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -55,6 +64,9 @@ __all__ = (
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
     "ScheduledJobFilterSet",
+    "SecretFilterSet",
+    "SecretsGroupFilterSet",
+    "SecretsGroupAssociationFilterSet",
     "StatusFilter",
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
@@ -450,6 +462,17 @@ class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomField
         method="search",
         label="Search",
     )
+    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets group (ID)",
+    )
+    secrets_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group__slug",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group (slug)",
+    )
     tag = TagFilter()
 
     class Meta:
@@ -509,7 +532,7 @@ class ImageAttachmentFilterSet(BaseFilterSet):
 #
 
 
-class JobResultFilterSet(BaseFilterSet):
+class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -644,6 +667,82 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
     class Meta:
         model = RelationshipAssociation
         fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]
+
+
+#
+# Secrets
+#
+
+
+class SecretFilterSet(
+    BaseFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+):
+    """Filterset for the Secret model."""
+
+    q = django_filters.CharFilter(method="search", label="Search")
+    # TODO dynamic choices needed
+    # provider = django_filters.MultipleChoiceFilter(choices=..., null_value=None)
+
+    class Meta:
+        model = Secret
+        fields = ("id", "name", "slug", "provider", "created", "last_updated")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+
+
+class SecretsGroupFilterSet(
+    BaseFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+):
+    """Filterset for the SecretsGroup model."""
+
+    q = django_filters.CharFilter(method="search", label="Search")
+
+    class Meta:
+        model = SecretsGroup
+        fields = ("id", "name", "slug", "created", "last_updated")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+
+
+class SecretsGroupAssociationFilterSet(BaseFilterSet):
+    """Filterset for the SecretsGroupAssociation through model."""
+
+    group_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Group (ID)",
+    )
+    group = django_filters.ModelMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        field_name="group__slug",
+        to_field_name="slug",
+        label="Group (slug)",
+    )
+    secret_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        label="Secret (ID)",
+    )
+    secret = django_filters.ModelMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        field_name="secret__slug",
+        to_field_name="slug",
+        label="Secret (slug)",
+    )
+    access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
+    secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = ("id",)
 
 
 #

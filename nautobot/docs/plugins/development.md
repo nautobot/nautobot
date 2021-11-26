@@ -39,6 +39,7 @@ plugin_name/
       - 0001_initial.py     # Database Models
     - models.py             # Database Models
     - navigation.py         # Navigation Menu Items
+    - secrets.py            # Secret Providers
     - signals.py            # Signal Handler Functions
     - template_content.py   # Extending Core Templates
     - templates/
@@ -177,6 +178,7 @@ The following `PluginConfig` attributes can be configured to customize where Nau
 | `jinja_filters` | `"jinja_filters"` | Path to a module that contains [Jinja2 filters](#adding-jinja2-filters) to be registered |
 | `jobs` | `"jobs.jobs"` | Dotted path to a list of [Job classes](#including-jobs) |
 | `menu_items` | `"navigation.menu_items"` | Dotted path to a list of [navigation menu items](#adding-navigation-menu-items) provided by the plugin |
+| `secrets_providers` | `"secrets.secrets_providers"` | Dotted path to a list of [secrets providers](#implementing-secrets-providers) in the plugin |
 | `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](#extending-object-detail-views) |
 
 ### Install the Plugin for Development
@@ -544,6 +546,67 @@ config = AnimalSoundsConfig
 ```
 
 After writing this code, run `nautobot-server migrate` or `nautobot-server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.
+
+### Implementing Secrets Providers
+
+A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. By default, Nautobot looks for an iterable named `secrets_providers` within a `secrets.py` file. (This can be overridden by setting `secrets_providers` to a custom value on the plugin's `PluginConfig`.)
+
+To define a new `SecretsProvider` subclass, we must specify the following:
+
+- A unique `slug` string identifying this provider
+- A human-readable `name` string (optional; the `slug` will be used if this is not specified)
+- A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
+- An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
+
+For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
+
+!!! warning
+    This is an intentionally simplistic example and should not be used in practice! Sensitive secret data should never be stored directly in Nautobot's database itself.
+
+```python
+# secrets.py
+from nautobot.extras.secrets import SecretsProvider
+
+
+class ConstantValueSecretsProvider(SecretsProvider):
+    """
+    Example SecretsProvider - this one just returns a user-specified constant value.
+
+    Obviously this is insecure and not something you'd want to actually use!
+    """
+
+    slug = "constant-value"
+    name = "Constant Value"
+
+    class ParametersForm(BootstrapMixin, forms.Form):
+        """
+        User-friendly form for specifying the required parameters of this provider.
+        """
+        constant = forms.CharField(
+            required=True,
+            help_text="Constant secret value. <strong>DO NOT USE FOR REAL DATA</strong>"
+        )
+
+    @classmethod
+    def get_value_for_secret(cls, secret, obj=None, **kwargs):
+        """
+        Return the value defined in the Secret.parameters "constant" key.
+
+        A more realistic SecretsProvider would make calls to external APIs, etc.,
+        to retrieve a secret from another system as desired.
+
+        Args:
+            secret (nautobot.extras.models.Secret): The secret whose value should be retrieved.
+            obj (object): The object (Django model or similar) providing context for the secret's
+                parameters.
+        """
+        return secret.rendered_parameters(obj=obj).get("constant")
+
+
+secrets_providers = [ConstantValueSecretsProvider]
+```
+
+After installing and enabling your plugin, you should now be able to navigate to `Extensibility > Automation > Secrets` and create a new Secret, at which point `"constant-value"` should now be available as a new secrets provider to use.
 
 ## Adding Database Models
 
