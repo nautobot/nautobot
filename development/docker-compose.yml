@@ -17,6 +17,16 @@ services:
     env_file:
       - dev.env
     tty: true
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+      test:
+        - "CMD"
+        - "curl"
+        - "-f"
+        - "http://localhost:8080/health/"
   worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server rqworker"
@@ -39,7 +49,10 @@ services:
       timeout: 5s
       start_period: 5s
       retries: 3
-      test: ["CMD", "nautobot-server", "health_check"]
+      test: 
+        - "bash"
+        - "-c"
+        - "nautobot-server celery inspect ping --destination celery@$HOSTNAME"
     depends_on:
       - nautobot
       - redis
@@ -48,13 +61,13 @@ services:
     tty: true
   celery_beat:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
-    entrypoint: "nautobot-server celery beat -l INFO -s /tmp/celerybeat-schedule"
-    healthcheck:
-      interval: 5s
-      timeout: 5s
-      start_period: 5s
-      retries: 3
-      test: ["CMD", "nautobot-server", "health_check"]
+    entrypoint: "nautobot-server celery beat -l INFO"
+    # healthcheck:
+    #   interval: 5s
+    #   timeout: 5s
+    #   start_period: 5s
+    #   retries: 3
+    #   test: ["CMD", "nautobot-server", "health_check"]
     depends_on:
       - nautobot
       - redis
