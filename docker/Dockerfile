@@ -25,15 +25,17 @@ HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --
 FROM base as dev
 
 # Modify the PATH here because otherwise poetry fails 100% of the time. WAT??
-ENV PATH="${PATH}:/root/.poetry/bin"
+ENV PATH="${PATH}:/root/.local/bin"
 
 # Install development OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y openssl build-essential default-libmysqlclient-dev libldap-dev libsasl2-dev && \
+    apt-get install --no-install-recommends -y openssl build-essential libxmlsec1-dev libxmlsec1-openssl pkg-config default-libmysqlclient-dev libldap-dev libsasl2-dev && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
+
+    # RUN apt-get update && apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config default-libmysqlclient-dev libldap-dev libsasl2-dev
 
 # Install hadolint for linting Dockerfiles
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && \
@@ -42,17 +44,17 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 # Install Poetry manually from GitHub because otherwise it installs its own
 # dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/#osx-linux-bashonwindows-install-instructions
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -o /tmp/get-poetry.py && \
-    python /tmp/get-poetry.py && \
-    rm -f /tmp/get-poetry.py
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -o /tmp/install-poetry.py && \
+    python /tmp/install-poetry.py && \
+    rm -f /tmp/install-poetry.py
 
 # Poetry shouldn't create a venv as we want global install
 # Poetry 1.1.0 added parallel installation as an option;
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
 # For now we disable it.
-RUN /root/.poetry/bin/poetry config virtualenvs.create false && \
-    /root/.poetry/bin/poetry config installer.parallel false
+RUN poetry config virtualenvs.create false && \
+    poetry config installer.parallel false
 
 # Keep the project source code from NAUTOBOT_ROOT
 COPY pyproject.toml poetry.lock /source/

@@ -1725,17 +1725,16 @@ docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [extras]
-all = ["mysqlclient", "django-auth-ldap", "django-storages"]
+all = ["mysqlclient", "social-auth-core", "django-auth-ldap", "django-storages"]
 ldap = ["django-auth-ldap"]
 mysql = ["mysqlclient"]
-openid = []
 remote_storage = ["django-storages"]
-saml = []
+sso = ["social-auth-core"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.2"
-content-hash = "2ae5f1506ad9da719fd6812c41783abac905af29b56549e8987961d5d7e9b5ff"
+content-hash = "9d5ccbd4b250a345315683a2db93aab75a7faab553a55902b8c736b51608688e"
 
 [metadata.files]
 amqp = [

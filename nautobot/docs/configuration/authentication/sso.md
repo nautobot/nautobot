@@ -23,10 +23,10 @@ If you are using OpenID Connect or SAML you will also need to install the extra 
 
 #### OpenID Connect
 
-For OpenID connect, you'll need to install the `openid` Python extra.
+For OpenID connect, you'll need to install the `sso` Python extra.
 
 ```no-highlight
-$ pip3 install "nautobot[openid]"
+$ pip3 install "nautobot[sso]"
 ```
 
 #### SAML
@@ -42,10 +42,10 @@ Install the system dependencies as `root`:
 $ sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
 ```
 
-Install the `saml` Python extra as the`nautobot` user.
+Install the `sso` Python extra as the`nautobot` user.
 
 ```no-highlight
-$ pip3 install "nautobot[saml]"
+$ pip3 install "nautobot[sso]"
 ```
 
 Please see the SAML configuration guide below for an example of how to configure Nautobot to authenticate using SAML with Google as the identity provider.
