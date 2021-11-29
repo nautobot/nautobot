@@ -37,14 +37,12 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
-    JSONField,
     SlugField,
     SmallTextarea,
     StaticSelect2,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
-from .choices import *
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 
@@ -66,8 +64,6 @@ class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFor
 
 
 class ClusterTypeCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterType
         fields = ClusterType.csv_headers
@@ -91,8 +87,6 @@ class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFo
 
 
 class ClusterGroupCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterGroup
         fields = ClusterGroup.csv_headers

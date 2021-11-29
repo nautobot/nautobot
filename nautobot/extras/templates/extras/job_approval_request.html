@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load helpers %}
+{% load form_helpers %}
+{% load log_levels %}
+
+{% block title %}{{ job }} - Approval Request{% endblock %}
+
+{% block content %}
+    <div class="row noprint">
+        <div class="col-md-12">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
+                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}">{{ grouping|bettertitle }}</a></li>
+                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}.module.{{ module }}">{{ module }}</a></li>
+                <li>{{ job }}</li>
+            </ol>
+        </div>
+    </div>
+    <h1>{{ job }}</h1>
+    {% if job.read_only %}
+        <label class="label label-default">Read-only</label>
+    {% endif %}
+    <p>{{ job.description }}</p>
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active">
+            <a href="#run" role="tab" data-toggle="tab" class="active">Approval Request</a>
+        </li>
+        <li role="presentation">
+            <a href="#source" role="tab" data-toggle="tab">Source</a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="run">
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3">
+                    {% if not perms.extras.run_job %}
+                        <div class="alert alert-warning">
+                            <i class="mdi mdi-alert"></i>
+                            You do not have permission to run & approve jobs.
+                        </div>
+                    {% endif %}
+                    <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+                        {% if job_form.non_field_errors or schedule_form.non_field_errors %}
+                            <div class="panel panel-danger">
+                                <div class="panel-heading"><strong>Errors</strong></div>
+                                <div class="panel-body">
+                                    {{ job_form.non_field_errors }}
+                                    {{ schedule_form.non_field_errors }}
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% csrf_token %}
+                        {% if job_form.requires_input %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Job Data</strong>
+                                </div>
+                                <div class="panel-body">
+                                    {% render_form job_form %}
+                                </div>
+                            </div>
+                        {% else %}
+                             <div class="alert alert-info">
+                                <i class="mdi mdi-information"></i>
+                                This job does not require any input to run.
+                            </div>
+                            {% render_form job_form %}
+                        {% endif %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <strong>Approval Request</strong>
+                            </div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label required">Requestor</label>
+                                    <div class="col-md-9">
+                                        <span>{{ scheduled_job.user.username|placeholder }}</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label required">Submitted</label>
+                                    <div class="col-md-9">
+                                        <span>{{ scheduled_job.start_time|placeholder }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pull-right">
+                            <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Dry Run</button>
+                            <button type="submit" name="_approve" id="id__approve" class="btn btn-success"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-check"></i> Approve</button>
+                            <button type="submit" name="_deny" id="id__approve" class="btn btn-danger"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-close"></i> Deny</button>
+                            <a href="{% url 'extras:scheduledjob_approval_queue_list' %}" class="btn btn-default">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="source">
+            <p><code>{{ job.filename }}</code></p>
+            <pre>{{ job.source }}</pre>
+        </div>
+    </div>
+{% endblock %}
+{% block javascript %}
+<script type="text/javascript">
+    var requires_approval = {{ job.approval_required|yesno:"true,false" }};
+    var run_now_text;
+    var schedule_text;
+
+    if (requires_approval) {
+        run_now_text = "Request to Run Job Now";
+        schedule_text = "Request to Schedule Job";
+    } else {
+        run_now_text = "Run Job Now";
+        schedule_text = "Schedule Job";
+    }
+
+    function toggleExecutionType() {
+        /**
+         * Toggle form elements based on the job execution type.
+         * If the type is `immediately` (the default), don't show
+         * any of the scheduling related elements, else, show them.
+         **/
+        if ($("#id__schedule_type").val() == "immediately") {
+            // Toggle run button
+            $("#id__run").html('<i class="mdi mdi-play"></i> ' + run_now_text);
+            $("#id__run").addClass("btn-primary");
+            $("#id__run").removeClass("btn-warning");
+
+            // Toggle schedule fields
+            $("#id__schedule_name").parent().parent().hide();
+            $("#id__schedule_start_date").parent().parent().hide();
+            $("#id__schedule_start_time").parent().parent().hide();
+        } else {
+            // Toggle run button
+            $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_text);
+            $("#id__run").addClass("btn-warning");
+            $("#id__run").removeClass("btn-primary");
+
+            // Toggle schedule fields
+            $("#id__schedule_name").parent().parent().show();
+            $("#id__schedule_start_date").parent().parent().show();
+            $("#id__schedule_start_time").parent().parent().show();
+        }
+    }
+
+    $(document).ready(function() {
+        $("#id__schedule_type").change(toggleExecutionType);
+        toggleExecutionType();
+    });
+</script>
+{% endblock %}

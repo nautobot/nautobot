@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields.reverse_related import ManyToOneRel
 
 import graphene
 from graphene.types import generic
@@ -14,6 +15,8 @@ from nautobot.core.graphql.generators import (
     generate_attrs_for_schema_type,
     generate_computed_field_resolver,
     generate_custom_field_resolver,
+    generate_filter_resolver,
+    generate_list_search_parameters,
     generate_relationship_resolver,
     generate_restricted_queryset,
     generate_schema_type,
@@ -120,6 +123,11 @@ def extend_schema_type(schema_type):
     #
     schema_type = extend_schema_type_null_field_choice(schema_type, model)
 
+    #
+    # Add multiple layers of filtering
+    #
+    schema_type = extend_schema_type_filter(schema_type, model)
+
     return schema_type
 
 
@@ -143,7 +151,7 @@ def extend_schema_type_null_field_choice(schema_type, model):
         field_name = f"{str_to_var_name(field.name)}"
         resolver_name = f"resolve_{field_name}"
 
-        if hasattr(schema_type, field_name):
+        if hasattr(schema_type, resolver_name):
             logger.warning(
                 f"Unable to add {field.name} to {schema_type._meta.name} "
                 f"because there is already an attribute with the same name ({field_name})"
@@ -156,6 +164,33 @@ def extend_schema_type_null_field_choice(schema_type, model):
             generate_null_choices_resolver(field.name, resolver_name),
         )
 
+    return schema_type
+
+
+def extend_schema_type_filter(schema_type, model):
+    """Extend schema_type object to be able to filter on multiple levels of a query
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+    for field in model._meta.get_fields():
+        # Check attribute is a ManyToOne field
+        if not isinstance(field, ManyToOneRel):
+            continue
+        child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
+        if child_schema_type:
+            resolver_name = f"resolve_{field.name}"
+            search_params = generate_list_search_parameters(child_schema_type)
+            # Add OneToMany field to schema_type
+            schema_type._meta.fields[field.name] = graphene.Field.mounted(
+                graphene.List(child_schema_type, **search_params)
+            )
+            # Add resolve function to schema_type
+            setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field.name))
     return schema_type
 
 
@@ -180,7 +215,7 @@ def extend_schema_type_custom_field(schema_type, model):
         field_name = f"{prefix}{str_to_var_name(field.name)}"
         resolver_name = f"resolve_{field_name}"
 
-        if hasattr(schema_type, field_name):
+        if hasattr(schema_type, resolver_name):
             logger.warning(
                 f"Unable to add the custom field {field.name} to {schema_type._meta.name} "
                 f"because there is already an attribute with the same name ({field_name})"
@@ -222,7 +257,7 @@ def extend_schema_type_computed_field(schema_type, model):
         field_name = f"{prefix}{str_to_var_name(field.slug)}"
         resolver_name = f"resolve_{field_name}"
 
-        if hasattr(schema_type, field_name):
+        if hasattr(schema_type, resolver_name):
             logger.warning(
                 "Unable to add the computed field %s to %s because there is already an attribute with the same name (%s)",
                 field.slug,
@@ -310,18 +345,23 @@ def extend_schema_type_relationships(schema_type, model):
             # Generate the name of the attribute and the name of the resolver based on the slug of the relationship
             # and based on the prefix
             rel_name = f"{prefix}{str_to_var_name(relationship.slug)}"
+            # Handle non-symmetric relationships where the model can be either source or destination
+            if not relationship.symmetric and relationship.source_type == relationship.destination_type:
+                rel_name = f"{rel_name}_{peer_side}"
             resolver_name = f"resolve_{rel_name}"
 
-            if hasattr(schema_type, rel_name):
-                logger.warning(
-                    f"Unable to add the custom relationship {relationship.slug} to {schema_type._meta.name} "
-                    f"because there is already an attribute with the same name ({rel_name})"
-                )
+            if hasattr(schema_type, resolver_name):
+                # If a symmetric relationship, and this is destination side, we already added source side, expected
+                # Otherwise something is wrong and we should warn
+                if side != "destination" or not relationship.symmetric:
+                    logger.warning(
+                        f"Unable to add the custom relationship {relationship.slug} to {schema_type._meta.name} "
+                        f"because there is already an attribute with the same name ({rel_name})"
+                    )
                 continue
 
             # Identify which object needs to be on the other side of this relationship
             # and check the registry to see if it is available,
-            # the schema_type object are organized by identifier in the registry `dcim.device`
             peer_type = getattr(relationship, f"{peer_side}_type")
             peer_model = peer_type.model_class()
             if not peer_model:

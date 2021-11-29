@@ -1,62 +1,7 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'dcim:virtualchassis_list' %}">Virtual Chassis</a></li>
-                {% if object.master %}
-                    <li><a href="{% url 'dcim:virtualchassis_list' %}?site={{ object.master.site.slug }}">{{ object.master.site }}</a></li>
-                {% endif %}
-                <li>{{ object }}</li>
-            </ol>
-        </div>
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url 'dcim:virtualchassis_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search virtual chassis" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.dcim.change_virtualchassis %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.dcim.delete_virtualchassis %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Virtual Chassis</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:virtualchassis_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-{% endblock %}
-
-{% block content %}
-<div class="row">
-	<div class="col-md-4">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Virtual Chassis</strong>
@@ -78,12 +23,9 @@
                 </tr>
             </table>
         </div>
-        {% include 'inc/custom_fields_panel.html' %}
-        {% include 'inc/relationships_panel.html' %}
-        {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:virtualchassis_list' %}
-        {% plugin_left_page object %}
-    </div>
-    <div class="col-md-8">
+{% endblock content_left_page %}
+
+{% block content_right_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Members</strong>
@@ -114,12 +56,4 @@
                 </div>
             {% endif %}
         </div>
-        {% plugin_right_page object %}
-	</div>
-</div>
-<div class="row">
-    <div class="col-md-12">
-        {% plugin_full_width_page object %}
-    </div>
-</div>
-{% endblock %}
+{% endblock content_right_page %}

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
@@ -21,6 +20,7 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import count_related
 from . import serializers
 
@@ -260,11 +260,11 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         # Determine the maximum number of IPs to return
         else:
             try:
-                limit = int(request.query_params.get("limit", settings.PAGINATE_COUNT))
+                limit = int(request.query_params.get("limit", get_settings_or_config("PAGINATE_COUNT")))
             except ValueError:
-                limit = settings.PAGINATE_COUNT
-            if settings.MAX_PAGE_SIZE:
-                limit = min(limit, settings.MAX_PAGE_SIZE)
+                limit = get_settings_or_config("PAGINATE_COUNT")
+            if get_settings_or_config("MAX_PAGE_SIZE"):
+                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE"))
 
             # Calculate available IPs within the prefix
             ip_list = []

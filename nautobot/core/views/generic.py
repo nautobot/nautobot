@@ -1,7 +1,8 @@
+from copy import deepcopy
 import logging
 import re
-from copy import deepcopy
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
@@ -14,6 +15,7 @@ from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
@@ -70,10 +72,40 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         Return any additional context data for the template.
 
-        request: The current request
-        instance: The object being viewed
+        Args:
+            request: The current request
+            instance: The object being viewed
+
+        Returns:
+            dict
         """
         return {}
+
+    def get_changelog_url(self, instance):
+        """Return the changelog URL for a given instance."""
+        meta = self.queryset.model._meta
+
+        # Don't try to generate a changelog_url for an ObjectChange.
+        if meta.model_name == "objectchange":
+            return None
+
+        route = f"{meta.app_label}:{meta.model_name}_changelog"
+        if meta.app_label in settings.PLUGINS:
+            route = f"plugins:{route}"
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(instance, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(instance, field)})
+            except NoReverseMatch:
+                continue
+
+        # This object likely doesn't have a changelog route defined.
+        return None
 
     def get(self, request, *args, **kwargs):
         """
@@ -86,6 +118,9 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             self.get_template_name(),
             {
                 "object": instance,
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                "changelog_url": self.get_changelog_url(instance),
                 **self.get_extra_context(request, instance),
             },
         )
@@ -248,12 +283,22 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         # Look up an existing object by slug or PK, if provided.
-        if "slug" in kwargs:
-            return get_object_or_404(self.queryset, slug=kwargs["slug"])
-        elif "pk" in kwargs:
-            return get_object_or_404(self.queryset, pk=kwargs["pk"])
-        # Otherwise, return a new instance.
+        if kwargs:
+            return get_object_or_404(self.queryset, **kwargs)
         return self.queryset.model()
+
+    def get_extra_context(self, request, instance):
+        """
+        Return any additional context data for the template.
+
+        Args:
+            request: The current request
+            instance: The object being edited
+
+        Returns:
+            dict
+        """
+        return {}
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
@@ -282,6 +327,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
             },
         )
 
@@ -345,6 +391,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
             },
         )
 
@@ -365,10 +412,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
-        if "slug" in kwargs:
-            return get_object_or_404(self.queryset, slug=kwargs["slug"])
-        else:
-            return get_object_or_404(self.queryset, pk=kwargs["pk"])
+        return get_object_or_404(self.queryset, **kwargs)
 
     def get(self, request, **kwargs):
         obj = self.get_object(kwargs)
