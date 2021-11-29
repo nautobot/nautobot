@@ -41,21 +41,27 @@
 </div>
 </div>
 
-<form method="post">
-{% csrf_token %}
-<div class="panel panel-default">
-<div class="panel-heading">
-    <strong>Logs</strong>
-    <div class="pull-right noprint">
-        {% if request.user.is_authenticated %}
-            <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#JobLogEntryTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
-        {% endif %}
+{% if log_table %}
+    <form method="post">
+    {% csrf_token %}
+    <div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Logs</strong>
+        <div class="pull-right noprint">
+            {% if request.user.is_authenticated %}
+                <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#JobLogEntryTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+            {% endif %}
+        </div>
+        <div class="pull-right col-md-2 noprint">
+            <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
+        </div>
     </div>
-    <div class="pull-right col-md-2 noprint">
-        <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
+    {% render_table log_table 'inc/table.html' %}
     </div>
-</div>
-{% render_table log_table 'inc/table.html' %}
-</div>
-</form>
-{% table_config_form log_table %}
+    </form>
+    {% table_config_form log_table %}
+{% else %}
+    <div class="alert alert-danger" role="alert">
+        No table of job logs was provided, perhaps you are using an out-of-date plugin?
+    </div>
+{% endif %}
