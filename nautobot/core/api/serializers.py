@@ -52,8 +52,6 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
-            request = self.context["request"]
-
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
             params = getattr(request, "query_params", getattr(request, "GET", None))
