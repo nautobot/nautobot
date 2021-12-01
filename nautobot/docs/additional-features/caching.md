@@ -89,6 +89,7 @@ of the Redis server and port for each sentinel instance to connect to
 Example:
 
 ```python
+DJANGO_REDIS_CONNECTION_FACTORY = "django_redis.pool.SentinelConnectionFactory"
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
