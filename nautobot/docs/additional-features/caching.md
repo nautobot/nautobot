@@ -64,3 +64,114 @@ Finally, calling it with the `all` argument will force invalidation of the entir
 ```no-highlight
 $ nautobot-server invalidate all
 ```
+
+# High Availability Caching
+
+[Redis](https://redis.io/) provides two different methods to achieve high availability, the first is [Redis Sentinel](https://redis.io/topics/sentinel) and the second is the newer [Redis Clustering](https://redis.io/topics/cluster-tutorial) feature.  Unfortunately, due to an [issue](https://github.com/Suor/django-cacheops/issues/35) with django-cacheops Nautobot is unable to support Redis Clustering at this time.  Nautobot can however support Redis Sentinel.
+
+## Using Redis Sentinel
+
+The installation/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary
+to configure Nautobot to connect to a Sentinel cluster.
+
+We need to configure `django-redis`, `django-cacheops`, and `celery` to use Sentinel, of course each library is configured differently so pay close attention to the details:
+
+### `django-redis` Sentinel Configuration
+
+Notable settings:
+
+* `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
+of the Redis server and port for each sentinel instance to connect to
+* `LOCATION`: Similar to a redis URL, *however*, the hostname in the URL is the master/service name in redis sentinel
+* `SENTINEL_KWARGS`: Options which will be passed directly to [Redis Sentinel](https://github.com/redis/redis-py#sentinel-support)
+* `PASSWORD`: The redis password (if set), the `SENTINEL_KWARGS["password"]` setting is the password for Sentinel
+
+Example:
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://nautobot/0",  # in this context 'nautobot' is the redis master/service name
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.SentinelClient",
+            "CONNECTION_POOL_CLASS": "redis.sentinel.SentinelConnectionPool",
+            "PASSWORD": "",
+            "SENTINEL_KWARGS": {
+                "password": "",  # likely the same password from above
+            },
+            "SENTINELS": [
+                ("mysentinel.redis.example.com", 26379),
+                ("othersentinel.redis.example.com", 26379)
+            ],
+        },
+    },
+}
+```
+
+!!! note
+    It is permissible to use Sentinel for only one database and not the other, see [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) for details.
+
+For more details on configuring django-redis with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
+
+### `django-cacheops` Sentinel Configuration
+
+Notable settings:
+
+* `locations`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
+of the Redis server and port for each sentinel instance to connect to
+* `service_name`: the master/service name in redis sentinel
+* Additional parameters may be specified in the `CACHEOPS_SENTINEL` dictionary which are passed directly to Sentinel
+
+!!! note
+    `locations` for `django-cacheops` has a different meaning than the `LOCATION` value for `django-redis`
+
+!!! warning
+    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
+
+Example:
+
+```python
+CACHEOPS_REDIS = False
+CACHEOPS_SENTINEL = {
+    "db": 0,
+    "locations": [
+        ("mysentinel.redis.example.com", 26379),
+        ("othersentinel.redis.example.com", 26379)
+    ],
+    "service_name": "nautobot",
+    "socket_timeout": 10,
+    "sentinel_kwargs": {
+        "password": ""
+    },
+    "password": "",
+    # Everything else is passed to `Sentinel()`
+}
+```
+
+For more details on how to configure Cacheops to use Redis Sentinel see the documentation for [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
+
+### `celery` Sentinel Configuration
+
+Celery Sentinel configuration is controlled by 4 variables `BROKER_URL`, `BROKER_TRANSPORT_OPTIONS`, `RESULT_BACKEND`, and `RESULT_BACKEND_TRANSPORT_OPTIONS`.  These parameters can
+be specified in the django settings in `nautobot_config.py` by prefixing these variable names with `CELERY_`.  By default Nautobot configures the celery broker and results backend with the
+same configuration.
+
+```python
+redis_password = ""
+sentinel_password = ""
+
+CELERY_BROKER_URL = (
+    f"sentinel://:{redis_password}@mysentinel.redis.example.com:26379,",
+    f"sentinel://:{redis_password}@othersentinel.redis.example.com:26379",
+)
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "master_name": "nautobot",
+    "sentinel_kwargs": {"password": sentinel_password},
+}
+
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
+```
+
+For more details on how to configure Celery to use Redis Sentinel see the documentation for [Celery](https://docs.celeryproject.org/en/stable/getting-started/backends-and-brokers/redis.html#configuration).

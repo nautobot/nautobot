@@ -157,15 +157,17 @@ CACHEOPS_REDIS = False
 
 # If you want to use Sentinel, specify this variable
 CACHEOPS_SENTINEL = {
-    "locations": [("localhost", 26379)], # Sentinel locations, required
-    "service_name": "nautobot",          # Sentinel service name, required
-    "socket_timeout": 10,                # Connection timeout in seconds, optional
-    "db": 0                              # Redis database, default: 0
-    # ...                                # Everything else is passed to `Sentinel()`
+    "locations": [("localhost", 26379)],   # Sentinel locations, required
+    "service_name": "nautobot",            # Sentinel service name, required
+    "socket_timeout": 10,                  # Connection timeout in seconds, optional
+    "db": 0,                               # Redis database, default: 0
+    # ...                                  # Everything else is passed to `Sentinel()`
+    # "sentinel_kwargs": {"password": ""}, # If a password is used it must be passed as a sentinel_kwarg
+    # "password": "",                      # and also as directly to cacheops
 }
 ```
 
-For more details on how to configure Cacheops to use Redis Sentinel see the official guide on [Cacheops
+For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
 setup](https://github.com/Suor/django-cacheops#setup).
 
 ---
@@ -284,56 +286,6 @@ The following environment variables may also be set for some of the above values
     If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
 
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
-
-#### Using Redis Sentinel
-
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must be using dictionary-style settings, and modify the connection settings. This requires the removal of the `HOST`, `PORT`, and `DEFAULT_TIMEOUT` keys from the example above and the addition of three new keys.
-
-* `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
-of the Redis server and port for each sentinel instance to connect to
-* `MASTER_NAME`: Name of the master / service to connect to
-* `SOCKET_TIMEOUT`: Timeout in seconds for a connection to timeout
-* `CONNECTION_KWARGS`: Connection timeout, in seconds
-
-Example:
-
-```python
-RQ_QUEUES = {
-    "default": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    },
-    "check_releases": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    }
-}
-```
-
-!!! note
-    It is permissible to use Sentinel for only one database and not the other.
-
-For more details on configuring RQ with Redis Sentinel, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
 ---
 
