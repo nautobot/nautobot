@@ -33,7 +33,6 @@ from nautobot.extras.models import (
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.git import GitRepo
-from nautobot.utilities.utils import copy_safe_request
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
@@ -53,11 +52,11 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
         git_repository_content_type,
         request.user,
         repository_pk=repository.pk,
-        request=copy_safe_request(request),
+        request=request,
     )
 
 
-@nautobot_task(unique_on=["repository_pk"])
+@nautobot_task(once={"keys": ["repository_pk"]})
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().

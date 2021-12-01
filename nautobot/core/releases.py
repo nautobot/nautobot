@@ -26,7 +26,7 @@ def get_latest_release(pre_releases=False):
         except CacheMiss:
             # Get the releases in the background worker, it will fill the cache
             logger.info("Initiating background task to retrieve updated releases list")
-            get_releases.apply_async(pre_releases=pre_releases, really_singleton=True)
+            get_releases.apply_async(pre_releases=pre_releases, singleton=True)
 
     else:
         logger.debug("Skipping release check; RELEASE_CHECK_URL not defined")

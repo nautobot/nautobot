@@ -2,7 +2,7 @@ import os
 import platform
 import sys
 
-from celery_singleton import DuplicateTaskError
+from celery_once import AlreadyQueued
 from django.conf import settings
 from django.http import HttpResponseServerError
 from django.shortcuts import render
@@ -60,7 +60,7 @@ class HomeView(TemplateView):
                             "version": str(latest_release),
                             "url": release_url,
                         }
-            except DuplicateTaskError:
+            except AlreadyQueued:
                 pass
 
         context = self.get_context_data()

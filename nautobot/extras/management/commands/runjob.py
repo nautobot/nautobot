@@ -10,7 +10,6 @@ from django.utils import timezone
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models import JobResult
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.utilities.utils import copy_safe_request
 
 
 class Command(BaseCommand):
@@ -64,7 +63,7 @@ class Command(BaseCommand):
             job_content_type,
             user,
             data={},  # TODO: parsing CLI args into a data dictionary is not currently implemented
-            request=copy_safe_request(request) if request else None,
+            request=request if request else None,
             commit=options["commit"],
         )
 

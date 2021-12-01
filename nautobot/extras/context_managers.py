@@ -16,8 +16,16 @@ def change_logging(request):
     Enable change logging by connecting the appropriate signals to their receivers before code is run, and
     disconnecting them afterward.
 
-    :param request: WSGIRequest object with a unique `id` set
+    :param request: WSGIRequest object with a unique `id` and `user` set
     """
+
+    # If `request` is a dict, turn it into a fake request object.
+    if isinstance(request, dict):
+        new_request = RequestFactory().request(SERVER_NAME="change_logging_request_context")
+        new_request.id = request["id"]
+        new_request.user = get_user_model().objects.get(pk=request["user"])
+        request = new_request
+
     # Curry signals receivers to pass the current request
     handle_changed_object = curry(_handle_changed_object, request)
     handle_deleted_object = curry(_handle_deleted_object, request)

@@ -1,4 +1,3 @@
-import copy
 import datetime
 import json
 import inspect
@@ -7,7 +6,6 @@ from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.serializers import serialize
 from django.db.models import Count, OuterRef, Subquery, Model
 from django.db.models.functions import Coalesce
@@ -323,40 +321,6 @@ def array_to_string(array):
     return ", ".join("-".join(map(str, (g[0], g[-1])[: len(g)])) for g in group)
 
 
-#
-# Fake request object
-#
-
-
-class NautobotFakeRequest:
-    """
-    A fake request object which is explicitly defined at the module level so it is able to be pickled. It simply
-    takes what is passed to it as kwargs on init and sets them as instance variables.
-    """
-
-    def __init__(self, _dict):
-        self.__dict__ = _dict
-
-    def nautobot_serialize(self):
-        """
-        Serialize a json representation that is safe to pass to celery
-        """
-        data = copy.deepcopy(self.__dict__)
-        data["user"] = data["user"].pk
-        return data
-
-    @classmethod
-    def nautobot_deserialize(cls, data):
-        """
-        Deserialize a json representation that is safe to pass to celery and return an actual instance
-        """
-        User = get_user_model()
-
-        obj = cls(data)
-        obj.user = User.objects.get(pk=obj.user)
-        return obj
-
-
 def copy_safe_request(request):
     """
     Copy selected attributes from a request object into a new fake request object. This is needed in places where
@@ -364,22 +328,24 @@ def copy_safe_request(request):
 
     Note that `request.FILES` is explicitly omitted because they cannot be uniformly serialized.
     """
+    # Just pass it through if request is already a dict.
+    if isinstance(request, dict):
+        return request
+
     meta = {
         k: request.META[k]
         for k in HTTP_REQUEST_META_SAFE_COPY
         if k in request.META and isinstance(request.META[k], str)
     }
 
-    return NautobotFakeRequest(
-        {
-            "META": meta,
-            "POST": request.POST,
-            "GET": request.GET,
-            "user": request.user,
-            "path": request.path,
-            "id": getattr(request, "id", None),  # UUID assigned by middleware
-        }
-    )
+    return {
+        "META": meta,
+        "POST": request.POST,
+        "GET": request.GET,
+        "user": request.user.pk,
+        "path": request.path,
+        "id": getattr(request, "id", None),  # UUID assigned by middleware
+    }
 
 
 def get_filterset_for_model(model):

@@ -2,7 +2,7 @@ import inspect
 from datetime import datetime
 import logging
 
-from celery_singleton import DuplicateTaskError
+from celery_once import AlreadyQueued
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -28,7 +28,6 @@ from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
-    copy_safe_request,
     count_related,
     prepare_cloned_fields,
     shallow_compare_dict,
@@ -620,13 +619,12 @@ class GitRepositorySyncView(View):
         else:
             try:
                 enqueue_pull_git_repository_and_refresh_data(repository, request)
-            except DuplicateTaskError as err:
-                messages.error(
-                    request,
-                    f"Unable to run job: Repository sync job already running. {err}",
-                )
+            except AlreadyQueued:
+                messages.error(request, f"Unable to run job: Repository sync already running for {slug}")
+            else:
+                return redirect("extras:gitrepository_result", slug=slug)
 
-        return redirect("extras:gitrepository_result", slug=slug)
+        return redirect("extras:gitrepository", slug=slug)
 
 
 class GitRepositoryResultView(ContentTypePermissionRequiredMixin, View):
@@ -833,7 +831,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
                 job_kwargs = {
                     "data": job_class.serialize_data(job_form.cleaned_data),
-                    "request": copy_safe_request(request),
+                    "request": request,
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job.class_path,
@@ -871,13 +869,13 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                         job_content_type,
                         request.user,
                         data=job_class.serialize_data(job_form.cleaned_data),
-                        request=copy_safe_request(request),
+                        request=request,
                         commit=commit,
                     )
-                except DuplicateTaskError as err:
+                except AlreadyQueued:
                     messages.error(
                         request,
-                        f"Unable to run job: Singleton job already running. {err}",
+                        f"Unable to run job: Singleton job already running for {job.name}",
                     )
                 else:
                     return redirect("extras:job_jobresult", pk=job_result.pk)
@@ -946,7 +944,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
                 scheduled_job.user,
                 request.user,
                 data=job_class.serialize_data(initial),
-                request=copy_safe_request(request),
+                request=request,
                 commit=False,  # force a dry-run
             )
 

@@ -33,9 +33,9 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.6.2"
 # Background task processing
-celery = "~5.1.0"
+celery = "~5.1.2"
 # Prevent duplicate celery tasks
-celery-singleton = "^0.3.1"
+celery_once = "~3.0.1"
 # Fundamental web framework for Nautobot
 Django = "~3.1.12"
 # Caching with Redis

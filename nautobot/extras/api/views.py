@@ -48,7 +48,7 @@ from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, get_jobs, run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
-from nautobot.utilities.utils import copy_safe_request, count_related
+from nautobot.utilities.utils import count_related
 from . import serializers
 
 
@@ -305,7 +305,7 @@ class JobViewSet(viewsets.ViewSet):
         """
         job_kwargs = {
             "data": data,
-            "request": copy_safe_request(request),
+            "request": request,
             "user": request.user.pk,
             "commit": commit,
             "name": job.class_path,
@@ -415,7 +415,7 @@ class JobViewSet(viewsets.ViewSet):
                 job_content_type,
                 request.user,
                 data=data,
-                request=copy_safe_request(request),
+                request=request,
                 commit=commit,
             )
             job.result = job_result
@@ -536,7 +536,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             job_content_type,
             scheduled_job.user,
             data=scheduled_job.kwargs["data"],
-            request=copy_safe_request(request),
+            request=request,
             commit=False,  # force a dry-run
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})

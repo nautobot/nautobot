@@ -200,6 +200,10 @@ class BaseJob:
     def singleton(cls):
         return getattr(cls.Meta, "singleton", False)
 
+    @classproperty
+    def singleton_keys(cls):
+        return getattr(cls.Meta, "singleton_keys", None)
+
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
@@ -982,7 +986,7 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
-@nautobot_task(unique_on=["data", "commit"])
+@nautobot_task(once={"keys": []})  # Keys can be overloaded with Job.Meta.singleton_keys
 def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
@@ -1061,7 +1065,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     # TODO: validate that all args required by this job are set in the data or else log helpful errors?
 
-    job.logger.info(f"Running job (commit={commit})")
+    job.logger.info(f"Running job {job_result.name} (commit={commit})")
 
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()

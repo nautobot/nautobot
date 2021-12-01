@@ -5,7 +5,7 @@ from collections import OrderedDict
 from datetime import timedelta
 
 from celery import schedules
-from celery_singleton import DuplicateTaskError
+from celery_once import AlreadyQueued
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
@@ -46,7 +46,7 @@ from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-from nautobot.utilities.utils import deepmerge, render_jinja2
+from nautobot.utilities.utils import copy_safe_request, deepmerge, render_jinja2
 
 
 #
@@ -814,7 +814,7 @@ class JobResult(BaseModel, CustomFieldModel):
             self.completed = timezone.now()
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, *args, schedule=None, **kwargs):
+    def enqueue_job(cls, func, name, obj_type, user, *args, schedule=None, celery_kwargs=None, **kwargs):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
@@ -824,7 +824,8 @@ class JobResult(BaseModel, CustomFieldModel):
         user: User object to link to the JobResult instance
         args: additional args passed to the callable
         schedule: Optional ScheduledJob instance to link to the JobResult
-        kwargs: additional kargs passed to the callable
+        celery_kwargs: Dictionary of options to pass as kwargs to Celery `apply_async` method
+        kwargs: additional kwargs passed to the `func` callable
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
         job_class = job_result.related_object
@@ -832,11 +833,31 @@ class JobResult(BaseModel, CustomFieldModel):
         # Explicitly pass along the PK of the JobResult
         kwargs["job_result_pk"] = job_result.pk
 
+        # Prepare kwargs that will be sent to Celery
+        if celery_kwargs is None:
+            celery_kwargs = {}
+
+        # Set the specialized Singleton options
+        once_default_run_job = "nautobot.extras.jobs.run_job"
+        once_default_keys = getattr(job_class, "singleton_keys", None) or ["data", "commit"]
+        is_singleton = getattr(job_class, "singleton", False)
+        celery_kwargs["singleton"] = is_singleton
+
+        # If the default `run_job` function is being used, default to doing Singleton on its
+        # argument keys, unless they are explicitly passed in by the caller.
+        if func.name == once_default_run_job and "once" not in celery_kwargs:
+            celery_kwargs["once"] = dict(keys=once_default_keys)
+
+        # Serialize the request object if there is one.
+        request = kwargs.get("request")
+        if request is not None:
+            kwargs["request"] = copy_safe_request(request)
+
         # Execute the Celery task to capture the AsyncResult, or if it fails to be scheduled such as
         # it being a duplicate Singleton execution, clean up the JobResult.
         try:
-            task_result = func.apply_async(args=args, kwargs=kwargs, really_singleton=job_class.singleton)
-        except DuplicateTaskError:
+            task_result = func.apply_async(args=args, kwargs=kwargs, **celery_kwargs)
+        except AlreadyQueued:
             job_result.delete()
             raise
 

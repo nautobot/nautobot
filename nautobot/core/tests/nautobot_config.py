@@ -61,3 +61,10 @@ STORAGE_CONFIG = {
     "AWS_STORAGE_BUCKET_NAME": "nautobot",
     "AWS_S3_REGION_NAME": "us-west-1",
 }
+
+# Configuration for `celery-once` for detecting/preventing duplicate Job/task
+# submissions.
+CELERY_ONCE = {
+    "backend": "celery_once.backends.Redis",
+    "settings": {"url": "redis://localhost:6379/0", "default_timeout": 60 * 60},
+}
