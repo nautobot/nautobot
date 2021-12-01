@@ -1,5 +1,6 @@
 import logging
 from collections import OrderedDict
+from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.core.serializers.json import DjangoJSONEncoder
@@ -16,6 +17,7 @@ from nautobot.utilities.utils import get_filterset_for_model
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    widgets,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
 
@@ -306,6 +308,8 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
         if side == RelationshipSideChoices.SIDE_SOURCE:
             destination_model = self.destination_type.model_class()
+            if not destination_model:  # perhaps a plugin was uninstalled?
+                return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
@@ -317,6 +321,8 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
         elif side == RelationshipSideChoices.SIDE_DESTINATION:
             source_model = self.source_type.model_class()
+            if not source_model:  # perhaps a plugin was uninstalled?
+                return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
@@ -363,15 +369,23 @@ class Relationship(BaseModel, ChangeLoggedModel):
             object_type = getattr(self, "source_type")
             filters = getattr(self, "source_filter") or {}
 
-        queryset = object_type.model_class().objects.all()
+        model_class = object_type.model_class()
+        if model_class:
+            queryset = model_class.objects.all()
+        else:  # maybe a relationship to a model that no longer exists, such as a removed plugin?
+            queryset = None
 
         field_class = None
-        if self.has_many(peer_side):
-            field_class = DynamicModelMultipleChoiceField
-        else:
-            field_class = DynamicModelChoiceField
+        if queryset:
+            if self.has_many(peer_side):
+                field_class = DynamicModelMultipleChoiceField
+            else:
+                field_class = DynamicModelChoiceField
 
-        field = field_class(queryset=queryset, query_params=filters)
+            field = field_class(queryset=queryset, query_params=filters)
+        else:
+            field = forms.MultipleChoiceField(widget=widgets.StaticSelect2Multiple)
+
         field.model = self
         field.required = False
         field.label = self.get_label(side)
@@ -389,6 +403,8 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
             filter = getattr(self, f"{side}_filter")
             side_model = getattr(self, f"{side}_type").model_class()
+            if not side_model:  # can happen if for example a plugin providing the model was uninstalled
+                raise ValidationError({f"{side}_type": "Unable to locate model class"})
             model_name = side_model._meta.label
             if not isinstance(filter, dict):
                 raise ValidationError({f"{side}_filter": f"Filter for {model_name} must be a dictionary"})
