@@ -16,7 +16,9 @@ def change_logging(request):
     Enable change logging by connecting the appropriate signals to their receivers before code is run, and
     disconnecting them afterward.
 
-    :param request: WSGIRequest object with a unique `id` and `user` set
+    :param request:
+        `WSGIRequest` object or `dict` with a unique `id` and `user` set. If a `dict`, it will be
+        converted into a `WSGIRequest` with the `user` PK restored to a `User` instance.
     """
 
     # If `request` is a dict, turn it into a fake request object.

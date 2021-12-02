@@ -28,6 +28,7 @@ from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
+    copy_safe_request,
     count_related,
     prepare_cloned_fields,
     shallow_compare_dict,
@@ -831,7 +832,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
                 job_kwargs = {
                     "data": job_class.serialize_data(job_form.cleaned_data),
-                    "request": request,
+                    "request": copy_safe_request(request),  # Request must be serialized
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job.class_path,
