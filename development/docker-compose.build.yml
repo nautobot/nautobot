@@ -9,7 +9,6 @@ services:
     ports:
       - 8443:8443
     healthcheck:
-
       test:
         - "CMD"
         - "curl"
