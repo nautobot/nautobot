@@ -131,6 +131,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Fixed
 
 - [#1078](https://github.com/nautobot/nautobot/issues/1078) - Fixed missing support for filtering several models by their custom fields and/or created/updated stamps.
+- [#1093](https://github.com/nautobot/nautobot/pull/1093) - Improved REST API performance by adding caching of serializer "opt-in fields".
 
 ## v1.2.0b1 (2021-11-19)
 
