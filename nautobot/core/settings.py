@@ -625,10 +625,6 @@ CELERY_RESULT_SERIALIZER = "nautobot_json"
 
 CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
 
-# When `True` an attempt to queue a duplicate task will raise a `DuplicateTaskError`. The default
-# behavior is to return the `AsyncResult` for the existing task.
-CELERY_SINGLETON_RAISE_ON_DUPLICATE = True
-
 #
 # Custom branding (logo and title)
 #

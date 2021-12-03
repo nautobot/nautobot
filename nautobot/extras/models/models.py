@@ -839,13 +839,12 @@ class JobResult(BaseModel, CustomFieldModel):
 
         # Set the specialized Singleton options
         once_default_run_job = "nautobot.extras.jobs.run_job"
-        once_default_keys = getattr(job_class, "singleton_keys", None) or ["data", "commit"]
-        is_singleton = getattr(job_class, "singleton", False)
-        celery_kwargs["singleton"] = is_singleton
+        celery_kwargs["singleton"] = getattr(job_class, "singleton", False)
 
         # If the default `run_job` function is being used, default to doing Singleton on its
         # argument keys, unless they are explicitly passed in by the caller.
         if func.name == once_default_run_job and "once" not in celery_kwargs:
+            once_default_keys = getattr(job_class, "singleton_keys", None) or ["data", "commit"]
             celery_kwargs["once"] = dict(keys=once_default_keys)
 
         # Serialize the request object if there is one.

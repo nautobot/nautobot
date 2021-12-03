@@ -323,8 +323,8 @@ def array_to_string(array):
 
 def copy_safe_request(request):
     """
-    Copy selected attributes from a request object into a new fake request object. This is needed in places where
-    thread safe pickling of the useful request data is needed.
+    Copy selected attributes from a request object into a dict. This is needed in places where thread safe JSON
+    encoding of the useful request data is needed.
 
     Note that `request.FILES` is explicitly omitted because they cannot be uniformly serialized.
     """
