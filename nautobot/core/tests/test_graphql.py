@@ -488,6 +488,14 @@ class GraphQLAPIPermissionTest(TestCase):
         }
         """
 
+        self.get_rack_query = """
+        query ($id: ID!) {
+            rack (id: $id) {
+                name
+            }
+        }
+        """
+
     def test_graphql_api_token_with_perm(self):
         """Validate that users can query based on their permissions."""
         # First user
@@ -578,6 +586,14 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 2-1", "Rack 2-2"])
+
+    def test_graphql_single_object_query(self):
+        """Validate graphql query for a single object as opposed to a set of objects also works."""
+        payload = {"query": self.get_rack_query, "variables": {"id": Rack.objects.first().pk}}
+        response = self.clients[2].post(self.api_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data["data"]["rack"], dict)
+        self.assertEqual(response.data["data"]["rack"]["name"], Rack.objects.first().name)
 
     def test_graphql_query_multi_level(self):
         """Validate request with multiple levels return the proper information, following the permissions."""
@@ -805,24 +821,36 @@ class GraphQLQueryTest(TestCase):
                 config_context
                 _custom_field_data
             }
+            device (id: "%s") {
+                name
+                config_context
+                _custom_field_data
+            }
         }
-        """
+        """ % (
+            self.device1.id,
+        )
 
         expected_data = {"a": 123, "b": 456, "c": 777}
 
         result = self.execute_query(query)
 
         self.assertIsInstance(result.data["devices"], list)
+        self.assertIsInstance(result.data["device"], dict)
+
         device_names = [item["name"] for item in result.data["devices"]]
         self.assertEqual(sorted(device_names), ["Device 1", "Device 2", "Device 3"])
+        self.assertEqual(result.data["device"]["name"], "Device 1")
 
         config_contexts = [item["config_context"] for item in result.data["devices"]]
         self.assertIsInstance(config_contexts[0], dict)
         self.assertDictEqual(config_contexts[0], expected_data)
+        self.assertEqual(result.data["device"]["config_context"], expected_data)
 
         custom_field_data = [item["_custom_field_data"] for item in result.data["devices"]]
         self.assertIsInstance(custom_field_data[0], dict)
         self.assertEqual(custom_field_data[0], {})
+        self.assertEqual(result.data["device"]["_custom_field_data"], {})
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_device_role_filter(self):
