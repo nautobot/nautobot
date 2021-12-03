@@ -41,5 +41,8 @@ class DummyPluginConfig(PluginConfig):
         # database operations such as defining CustomFields, Relationships, etc. at the appropriate time.
         nautobot_database_ready.connect(nautobot_database_ready_callback, sender=self)
 
+        # Register Celery tasks
+        import dummy_plugin.tasks  # noqa
+
 
 config = DummyPluginConfig

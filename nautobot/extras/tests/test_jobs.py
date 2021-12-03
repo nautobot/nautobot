@@ -1,8 +1,11 @@
 import json
 from io import StringIO
 import os
+from unittest import skipIf
 import uuid
 
+# from celery import registry
+from celery_once import AlreadyQueued
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -384,6 +387,108 @@ class JobFileUploadTest(TestCase):
 
             # Assert that FileProxy was cleaned up
             self.assertEqual(FileProxy.objects.count(), 0)
+
+
+@skipIf("dummy_plugin" not in settings.PLUGINS, "dummy_plugin not in settings.PLUGINS")
+class JobSingletonTestCase(CeleryTestCase):
+    """Test cases for Jobs with `singleton=True` in their `Meta`."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    def test_already_queued_no_arguments(self):
+        """Executing the same task IGNORING args results in an `AlreadyQueued` error."""
+        from dummy_plugin.tasks import slow_add  # noqa: Avoid import issues
+
+        slow_add.apply_async(args=(1, 3), kwargs={"interval": 0.1}, singleton=True)
+        with self.assertRaises(AlreadyQueued):
+            slow_add.apply_async(args=(1, 2), kwargs={"interval": 0.1}, singleton=True)
+
+    def test_already_queued_with_arguments(self):
+        """Executing the same task INCLUDING args results in an `AlreadyQueued` error."""
+        from dummy_plugin.tasks import slow_add  # noqa: Avoid import issues
+
+        slow_add.apply_async(args=(1, 2), kwargs={"interval": 0.1}, singleton=True, once={"keys": ["a", "b"]})
+        with self.assertRaises(AlreadyQueued):
+            slow_add.apply_async(args=(1, 2), kwargs={"interval": 0.1}, singleton=True, once={"keys": ["a", "b"]})
+
+    def test_celery_kwargs(self):
+        # TODO(jathan): Implement test for celery_kwargs passthru
+        assert True
+
+    def test_singleton_job_no_arguments(self):
+        """Singleton Job execution WITHOUT arguments results in an `AlreadyQueued` error."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            job_name = "local/test_singleton/SingletonJobNoArguments"
+            job_class = get_job(job_name)
+            job_content_type = ContentType.objects.get(app_label="extras", model="job")
+            user = get_user_model().objects.create(username="dummy_user")
+
+            # Serialize the job data
+            data = {"interval": 1}
+            form = job_class().as_form(data=data)
+            self.assertTrue(form.is_valid())
+            serialized_data = job_class.serialize_data(form.cleaned_data)
+
+            serialized_data["interval"] = 0.5  # Shorten the interval
+            JobResult.enqueue_job(
+                run_job,
+                name=job_class.class_path,
+                obj_type=job_content_type,
+                user=None,
+                data=serialized_data,
+                request={"id": uuid.uuid4(), "user": user.pk},
+            )
+
+            # Change the `interval` to a different number, to assert that it is IGNORED for the
+            # purpose of dupe checking.
+            serialized_data["interval"] = 0.3
+            with self.assertRaises(AlreadyQueued):
+                JobResult.enqueue_job(
+                    run_job,
+                    name=job_class.class_path,
+                    obj_type=job_content_type,
+                    user=None,
+                    data=serialized_data,
+                    request={"id": uuid.uuid4(), "user": user.pk},
+                )
+
+    def test_singleton_job_with_arguments(self):
+        """Singleton Job execution WITHOUT arguments results in an `AlreadyQueued` error."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            job_name = "local/test_singleton/SingletonJobWithArguments"
+            job_class = get_job(job_name)
+            job_content_type = ContentType.objects.get(app_label="extras", model="job")
+            user = get_user_model().objects.create(username="dummy_user")
+
+            # Serialize the job data
+            data = {"interval": 1}
+            form = job_class().as_form(data=data)
+            self.assertTrue(form.is_valid())
+            serialized_data = job_class.serialize_data(form.cleaned_data)
+
+            serialized_data["interval"] = 0.5  # Shorten the interval
+            JobResult.enqueue_job(
+                run_job,
+                name=job_class.class_path,
+                obj_type=job_content_type,
+                user=None,
+                data=serialized_data,
+                request={"id": uuid.uuid4(), "user": user.pk},
+            )
+
+            # Run it again with the same incoming `data`, to assert that it is INCLUDED for the
+            # purpose of dupe checking.
+            with self.assertRaises(AlreadyQueued):
+                JobResult.enqueue_job(
+                    run_job,
+                    name=job_class.class_path,
+                    obj_type=job_content_type,
+                    user=None,
+                    data=serialized_data,
+                    request={"id": uuid.uuid4(), "user": user.pk},
+                )
 
 
 class RunJobManagementCommandTest(CeleryTestCase):
