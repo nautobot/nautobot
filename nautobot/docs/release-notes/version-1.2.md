@@ -122,7 +122,21 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.0b1 (2021-??-??)
+## v1.2.0b2 (2021-??-??)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- [#1078](https://github.com/nautobot/nautobot/issues/1078) - Fixed missing support for filtering several models by their custom fields and/or created/updated stamps.
+- [#1093](https://github.com/nautobot/nautobot/pull/1093) - Improved REST API performance by adding caching of serializer "opt-in fields".
+- [#1112](https://github.com/nautobot/nautobot/issues/1112) - Fixed broken single-object GraphQL query endpoints.
+- [#1116](https://github.com/nautobot/nautobot/issues/1116) - Fixed UnboundLocalError when using device NAPALM integration
+- [#1121](https://github.com/nautobot/nautobot/pull/1121) - Fixed issue with handling of relationships referencing no-longer-present model classes.
+
+## v1.2.0b1 (2021-11-19)
 
 ### Added
 
@@ -167,6 +181,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#853](https://github.com/nautobot/nautobot/issues/853) - Fixed `AttributeError` on certain object detail views
 - [#891](https://github.com/nautobot/nautobot/issues/891) - Fixed custom field select/multiselect not handled by new UI and added integration tests
 - [#966](https://github.com/nautobot/nautobot/issues/966) - Fixed missing "Advanced" tab on Device detail views
+- [#1060](https://github.com/nautobot/nautobot/issues/1060) - Fixed documentation incorrectly indicating that the Admin UI was the only way to manage custom field definitions.
 
 ### Security
 
