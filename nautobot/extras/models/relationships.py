@@ -1,5 +1,6 @@
 import logging
 from collections import OrderedDict
+
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
