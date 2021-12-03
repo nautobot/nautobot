@@ -235,7 +235,9 @@ def generate_single_item_resolver(schema_type, resolver_name):
 
         obj_id = kwargs.get("id", None)
         if obj_id:
-            return gql_optimizer.query(model.objects.restrict(info.context.user, "view").get(pk=obj_id), info)
+            return gql_optimizer.query(
+                model.objects.restrict(info.context.user, "view").filter(pk=obj_id), info
+            ).first()
         return None
 
     single_resolver.__name__ = resolver_name
