@@ -357,6 +357,13 @@ $ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
+Alternatively use the following command to generate a secret even before `nautobot-server` is runable:
+
+```no-highlight
+$ tr -cd '[=CHAR=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)]' < /dev/urandom | fold -w50 | head -n1
+9.V$@Kxkc@@Kd@z<a/=.J-Y;rYc79<y@](9o9(L(*sS)Q+ud5P
+```
+
 !!! warning
     In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
 
