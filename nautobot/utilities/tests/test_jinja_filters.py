@@ -5,9 +5,6 @@ from netutils.utils import jinja2_convenience_function
 
 from nautobot.utilities.utils import render_jinja2
 
-from nautobot.dcim.models import Site
-from dummy_plugin.models import DummyModel
-
 
 class NautobotJinjaFilterTest(TestCase):
     def test_invalid_templatetags_raise_exception(self):
