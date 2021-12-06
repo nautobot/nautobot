@@ -23,7 +23,6 @@ class SingletonJob(Job):
         self.log_info(message=f"Sleeping for {interval} seconds")
         time.sleep(interval)
         self.log_success(obj=None)
-        self.status = "complete"
         return "I just woke up."
 
 

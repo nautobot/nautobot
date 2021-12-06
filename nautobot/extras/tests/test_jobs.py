@@ -417,10 +417,10 @@ class JobSingletonTestCase(CeleryTestCase):
         # TODO(jathan): Implement test for celery_kwargs passthru
         assert True
 
-    def test_singleton_job_no_arguments(self):
-        """Singleton Job execution WITHOUT arguments results in an `AlreadyQueued` error."""
+    def test_singleton_job_no_singleton_keys(self):
+        """Singleton Job execution WITHOUT `singleton_keys` results in an `AlreadyQueued` error."""
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
-            job_name = "local/test_singleton/SingletonJobNoArguments"
+            job_name = "local/test_singleton/SingletonJobNoSingletonKeys"
             job_class = get_job(job_name)
             job_content_type = ContentType.objects.get(app_label="extras", model="job")
             user = get_user_model().objects.create(username="dummy_user")
@@ -431,7 +431,9 @@ class JobSingletonTestCase(CeleryTestCase):
             self.assertTrue(form.is_valid())
             serialized_data = job_class.serialize_data(form.cleaned_data)
 
-            serialized_data["interval"] = 0.5  # Shorten the interval
+            # Shorten the interval to save some time. This wouldn't validater but it's fine for
+            # lowering execution time in testing.
+            serialized_data["interval"] = 0.5
             JobResult.enqueue_job(
                 run_job,
                 name=job_class.class_path,
@@ -454,10 +456,10 @@ class JobSingletonTestCase(CeleryTestCase):
                     request={"id": uuid.uuid4(), "user": user.pk},
                 )
 
-    def test_singleton_job_with_arguments(self):
-        """Singleton Job execution WITHOUT arguments results in an `AlreadyQueued` error."""
+    def test_singleton_job_with_singleton_keys(self):
+        """Singleton Job execution WITH `singleton_keys` results in an `AlreadyQueued` error."""
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
-            job_name = "local/test_singleton/SingletonJobWithArguments"
+            job_name = "local/test_singleton/SingletonJobWithSingletonKeys"
             job_class = get_job(job_name)
             job_content_type = ContentType.objects.get(app_label="extras", model="job")
             user = get_user_model().objects.create(username="dummy_user")
@@ -468,7 +470,9 @@ class JobSingletonTestCase(CeleryTestCase):
             self.assertTrue(form.is_valid())
             serialized_data = job_class.serialize_data(form.cleaned_data)
 
-            serialized_data["interval"] = 0.5  # Shorten the interval
+            # Shorten the interval to save some time. This wouldn't validater but it's fine for
+            # lowering execution time in testing.
+            serialized_data["interval"] = 0.5
             JobResult.enqueue_job(
                 run_job,
                 name=job_class.class_path,

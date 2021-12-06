@@ -66,5 +66,5 @@ STORAGE_CONFIG = {
 # submissions.
 CELERY_ONCE = {
     "backend": "celery_once.backends.Redis",
-    "settings": {"url": "redis://localhost:6379/0", "default_timeout": 60 * 60},
+    "settings": {"url": parse_redis_connection(redis_database=2), "default_timeout": 10 * 60},
 }

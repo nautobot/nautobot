@@ -625,6 +625,12 @@ CELERY_RESULT_SERIALIZER = "nautobot_json"
 
 CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
 
+# Configuration for `celery-once` for detecting/preventing duplicate Job/task submissions.
+CELERY_ONCE = {
+    "backend": "celery_once.backends.Redis",
+    "settings": {"url": parse_redis_connection(redis_database=0), "default_timeout": 10 * 60},
+}
+
 #
 # Custom branding (logo and title)
 #
