@@ -650,6 +650,7 @@ class GitRepositoryResultView(generic.ObjectView):
             "log_table": log_table,
             "base_template": "extras/gitrepository.html",
             "object": instance,
+            "active_tab": "result",
         }
 
 
