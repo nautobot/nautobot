@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
-{% load helpers %}
 {% load form_helpers %}
-{% load log_levels %}
+{% load helpers %}
 
 {% block title %}{{ job }}{% endblock %}
 
@@ -40,14 +39,23 @@
                         </div>
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+                        {% if job_form.non_field_errors or schedule_form.non_field_errors %}
+                            <div class="panel panel-danger">
+                                <div class="panel-heading"><strong>Errors</strong></div>
+                                <div class="panel-body">
+                                    {{ job_form.non_field_errors }}
+                                    {{ schedule_form.non_field_errors }}
+                                </div>
+                            </div>
+                        {% endif %}
                         {% csrf_token %}
-                        {% if form.requires_input %}
+                        {% if job_form.requires_input %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Job Data</strong>
                                 </div>
                                 <div class="panel-body">
-                                    {% render_form form %}
+                                    {% render_form job_form %}
                                 </div>
                             </div>
                         {% else %}
@@ -55,10 +63,26 @@
                                 <i class="mdi mdi-information"></i>
                                 This job does not require any input to run.
                             </div>
-                            {% render_form form %}
+                            {% render_form job_form %}
                         {% endif %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <strong>Job Execution</strong>
+                            </div>
+                            <div class="panel-body">
+                                {% render_form schedule_form %}
+                            </div>
+                            {% if job.approval_required %}
+                                <div class="panel-footer">
+                                    <span class="help-block">
+                                        <i class="mdi mdi-information-outline"></i>
+                                        This job requires approval to run or schedule.
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
                         <div class="pull-right">
-                            <button type="submit" name="_run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Run Job</button>
+                            <button type="submit" name="_run" id="id__run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Run Job Now</button>
                             <a href="{% url 'extras:job_list' %}" class="btn btn-default">Cancel</a>
                         </div>
                     </form>
@@ -70,4 +94,53 @@
             <pre>{{ job.source }}</pre>
         </div>
     </div>
+{% endblock %}
+{% block javascript %}
+<script type="text/javascript">
+    var requires_approval = {{ job.approval_required|yesno:"true,false" }};
+    var run_now_text;
+    var schedule_text;
+
+    if (requires_approval) {
+        run_now_text = "Request to Run Job Now";
+        schedule_text = "Request to Schedule Job";
+    } else {
+        run_now_text = "Run Job Now";
+        schedule_text = "Schedule Job";
+    }
+
+    function toggleExecutionType() {
+        /**
+         * Toggle form elements based on the job execution type.
+         * If the type is `immediately` (the default), don't show
+         * any of the scheduling related elements, else, show them.
+         **/
+        if ($("#id__schedule_type").val() == "immediately") {
+            // Toggle run button
+            $("#id__run").html('<i class="mdi mdi-play"></i> ' + run_now_text);
+            $("#id__run").addClass("btn-primary");
+            $("#id__run").removeClass("btn-warning");
+
+            // Toggle schedule fields
+            $("#id__schedule_name").parent().parent().hide();
+            $("#id__schedule_start_date").parent().parent().hide();
+            $("#id__schedule_start_time").parent().parent().hide();
+        } else {
+            // Toggle run button
+            $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_text);
+            $("#id__run").addClass("btn-warning");
+            $("#id__run").removeClass("btn-primary");
+
+            // Toggle schedule fields
+            $("#id__schedule_name").parent().parent().show();
+            $("#id__schedule_start_date").parent().parent().show();
+            $("#id__schedule_start_time").parent().parent().show();
+        }
+    }
+
+    $(document).ready(function() {
+        $("#id__schedule_type").change(toggleExecutionType);
+        toggleExecutionType();
+    });
+</script>
 {% endblock %}

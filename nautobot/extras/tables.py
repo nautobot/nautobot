@@ -17,13 +17,16 @@ from nautobot.utilities.tables import (
     ColorColumn,
     ColoredLabelColumn,
     ContentTypesColumn,
+    TagColumn,
     ToggleColumn,
 )
-from .jobs import get_job_classpaths, Job
+from nautobot.utilities.templatetags.helpers import render_markdown
+from .jobs import Job
 from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -32,11 +35,16 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
+    Secret,
+    SecretsGroup,
     Status,
     Tag,
     TaggedItem,
     Webhook,
 )
+from .registry import registry
+
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -77,25 +85,49 @@ WEBHOOK_CONTENT_TYPES = """
 {{ value.all|join:", "|truncatewords:15 }}
 """
 
+SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_dry_run')"
+        title="Dry Run"
+        class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-play"></i>
+</button>
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_approve')"
+        title="Approve"
+        class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-check"></i>
+</button>
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_deny')"
+        title="Deny"
+        class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-close"></i>
+</button>
+"""
 
-class TagTable(BaseTable):
+
+class ComputedFieldTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
-    color = ColorColumn()
-    actions = ButtonsColumn(Tag, pk_field="slug")
+    label = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
-        model = Tag
-        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
-
-
-class TaggedItemTable(BaseTable):
-    content_object = tables.TemplateColumn(template_code=TAGGED_ITEM, orderable=False, verbose_name="Object")
-    content_type = tables.Column(verbose_name="Type")
-
-    class Meta(BaseTable.Meta):
-        model = TaggedItem
-        fields = ("content_object", "content_type")
+        model = ComputedField
+        fields = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+        )
 
 
 class ConfigContextTable(BaseTable):
@@ -165,11 +197,98 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
         return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
 
 
+class CustomFieldTable(BaseTable):
+    pk = ToggleColumn()
+    # TODO: Replace name column with slug #464
+    slug = tables.Column(linkify=True, accessor="name")
+    content_types = ContentTypesColumn(truncate_words=15)
+    required = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomField
+        fields = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "description",
+            "required",
+            "default",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "required",
+            "weight",
+        )
+
+    def render_description(self, record):
+        if record.description:
+            return mark_safe(render_markdown(record.description))
+        return self.default
+
+
+class CustomLinkTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    new_window = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomLink
+        fields = (
+            "pk",
+            "name",
+            "content_type",
+            "text",
+            "target_url",
+            "weight",
+            "group_name",
+            "button_class",
+            "new_window",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "group_name",
+            "weight",
+        )
+
+
+class ExportTemplateTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    owner = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = ExportTemplate
+        fields = (
+            "pk",
+            "owner",
+            "content_type",
+            "name",
+            "description",
+            "mime_type",
+            "file_extension",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "file_extension",
+        )
+
+
 class GitRepositoryTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     last_sync_time = tables.DateTimeColumn(
         empty_values=(), format=settings.SHORT_DATETIME_FORMAT, verbose_name="Sync Time"
     )
@@ -196,7 +315,7 @@ class GitRepositoryTable(BaseTable):
             "slug",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
             "last_sync_time",
             "last_sync_user",
@@ -229,7 +348,7 @@ class GitRepositoryBulkTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
 
     class Meta(BaseTable.Meta):
@@ -239,8 +358,21 @@ class GitRepositoryBulkTable(BaseTable):
             "name",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
+        )
+
+
+class GraphQLQueryTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = GraphQLQuery
+        fields = (
+            "pk",
+            "name",
+            "slug",
         )
 
 
@@ -259,8 +391,8 @@ def job_creator_link(value, record):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    name = tables.Column(linkify=job_creator_link)
-    job_id = tables.Column(linkify=job_creator_link, verbose_name="Job ID")
+    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
+    name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
@@ -282,16 +414,48 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "created",
-            "obj_type",
             "name",
-            "job_id",
+            "obj_type",
+            "related_object",
             "duration",
             "completed",
             "user",
             "status",
             "data",
         )
-        default_columns = ("pk", "created", "name", "user", "status", "data")
+        default_columns = ("pk", "created", "related_object", "user", "status", "data")
+
+
+#
+# ScheduledJobs
+#
+
+
+class ScheduledJobTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    job_class = tables.Column(verbose_name="Job")
+    interval = tables.Column(verbose_name="Execution Type")
+    start_time = tables.Column(verbose_name="First Run")
+    last_run_at = tables.Column(verbose_name="Most Recent Run")
+    total_run_count = tables.Column(verbose_name="Total Run Count")
+
+    class Meta(BaseTable.Meta):
+        model = ScheduledJob
+        fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
+
+
+class ScheduledJobApprovalQueueTable(BaseTable):
+    name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
+    job_class = tables.Column(verbose_name="Job")
+    interval = tables.Column(verbose_name="Execution Type")
+    start_time = tables.Column(verbose_name="Requested")
+    user = tables.Column(verbose_name="Requestor")
+    actions = tables.TemplateColumn(SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS)
+
+    class Meta(BaseTable.Meta):
+        model = ScheduledJob
+        fields = ("name", "job_class", "interval", "user", "start_time", "actions")
 
 
 class ObjectChangeTable(BaseTable):
@@ -313,55 +477,140 @@ class ObjectChangeTable(BaseTable):
         )
 
 
-class ExportTemplateTable(BaseTable):
+#
+# Relationship
+#
+
+
+class RelationshipTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    owner = tables.LinkColumn()
+    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
-        model = ExportTemplate
+        model = Relationship
         fields = (
             "pk",
-            "owner",
-            "content_type",
             "name",
             "description",
-            "mime_type",
-            "file_extension",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_type",
-            "file_extension",
+            "type",
+            "source_type",
+            "destination_type",
+            "actions",
         )
 
 
-class CustomLinkTable(BaseTable):
+class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    new_window = BooleanColumn()
+    actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
+
+    source_type = tables.Column()
+    source = tables.Column(linkify=True, orderable=False)
+
+    destination_type = tables.Column()
+    destination = tables.Column(linkify=True, orderable=False)
 
     class Meta(BaseTable.Meta):
-        model = CustomLink
+        model = RelationshipAssociation
+        fields = ("pk", "relationship", "source_type", "source", "destination_type", "destination", "actions")
+        default_columns = ("pk", "relationship", "source", "destination", "actions")
+
+
+#
+# Secrets
+#
+
+
+class SecretTable(BaseTable):
+    """Table for list view of `Secret` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    tags = TagColumn(url_name="extras:secret_list")
+
+    class Meta(BaseTable.Meta):
+        model = Secret
         fields = (
             "pk",
             "name",
-            "content_type",
-            "text",
-            "target_url",
-            "weight",
-            "group_name",
-            "button_class",
-            "new_window",
+            "provider",
+            "description",
+            "tags",
         )
         default_columns = (
             "pk",
             "name",
-            "content_type",
-            "group_name",
-            "weight",
+            "provider",
+            "description",
+            "tags",
         )
+
+    def render_provider(self, value):
+        return registry["secrets_providers"][value].name if value in registry["secrets_providers"] else value
+
+
+class SecretsGroupTable(BaseTable):
+    """Table for list view of `SecretsGroup` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = SecretsGroup
+        fields = (
+            "pk",
+            "name",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "description",
+        )
+
+
+#
+# Custom statuses
+#
+
+
+class StatusTable(BaseTable):
+    """Table for list view of `Status` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
+    color = ColorColumn()
+    actions = ButtonsColumn(Status, pk_field="slug")
+    content_types = ContentTypesColumn(truncate_words=15)
+
+    class Meta(BaseTable.Meta):
+        model = Status
+        fields = ["pk", "name", "slug", "color", "content_types", "description"]
+
+
+class StatusTableMixin(BaseTable):
+    """Mixin to add a `status` field to a table."""
+
+    status = ColoredLabelColumn()
+
+
+class TagTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
+    color = ColorColumn()
+    actions = ButtonsColumn(Tag, pk_field="slug")
+
+    class Meta(BaseTable.Meta):
+        model = Tag
+        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
+
+
+class TaggedItemTable(BaseTable):
+    content_object = tables.TemplateColumn(template_code=TAGGED_ITEM, orderable=False, verbose_name="Object")
+    content_type = tables.Column(verbose_name="Type")
+
+    class Meta(BaseTable.Meta):
+        model = TaggedItem
+        fields = ("content_object", "content_type")
 
 
 class WebhookTable(BaseTable):
@@ -397,99 +646,4 @@ class WebhookTable(BaseTable):
             "payload_url",
             "http_content_type",
             "enabled",
-        )
-
-
-#
-# Custom statuses
-#
-
-
-class StatusTable(BaseTable):
-    """Table for list view of `Status` objects."""
-
-    pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
-    color = ColorColumn()
-    actions = ButtonsColumn(Status, pk_field="slug")
-    content_types = ContentTypesColumn(truncate_words=15)
-
-    class Meta(BaseTable.Meta):
-        model = Status
-        fields = ["pk", "name", "slug", "color", "content_types", "description"]
-
-
-class StatusTableMixin(BaseTable):
-    """Mixin to add a `status` field to a table."""
-
-    status = ColoredLabelColumn()
-
-
-#
-# Relationship
-#
-
-
-class RelationshipTable(BaseTable):
-    pk = ToggleColumn()
-    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
-
-    class Meta(BaseTable.Meta):
-        model = Relationship
-        fields = (
-            "name",
-            "description",
-            "type",
-            "source_type",
-            "destination_type",
-            "actions",
-        )
-
-
-class RelationshipAssociationTable(BaseTable):
-    pk = ToggleColumn()
-    actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
-
-    source = tables.Column(linkify=True)
-
-    destination = tables.Column(linkify=True)
-
-    class Meta(BaseTable.Meta):
-        model = RelationshipAssociation
-        fields = ("relationship", "source", "destination", "actions")
-
-
-class GraphQLQueryTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-
-    class Meta(BaseTable.Meta):
-        model = GraphQLQuery
-        fields = (
-            "pk",
-            "name",
-            "slug",
-        )
-
-
-class ComputedFieldTable(BaseTable):
-    pk = ToggleColumn()
-    label = tables.Column(linkify=True)
-
-    class Meta(BaseTable.Meta):
-        model = ComputedField
-        fields = (
-            "pk",
-            "label",
-            "slug",
-            "content_type",
-            "description",
-            "weight",
-        )
-        default_columns = (
-            "pk",
-            "label",
-            "slug",
-            "content_type",
-            "description",
         )

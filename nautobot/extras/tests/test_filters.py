@@ -5,9 +5,29 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
-from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.constants import *
-from nautobot.extras.filters import *
+from nautobot.extras.choices import (
+    ObjectChangeActionChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
+from nautobot.extras.filters import (
+    ConfigContextFilterSet,
+    CustomLinkFilterSet,
+    ExportTemplateFilterSet,
+    GraphQLQueryFilterSet,
+    ImageAttachmentFilterSet,
+    ObjectChangeFilterSet,
+    RelationshipAssociationFilterSet,
+    RelationshipFilterSet,
+    SecretFilterSet,
+    SecretsGroupFilterSet,
+    SecretsGroupAssociationFilterSet,
+    StatusFilterSet,
+    TagFilterSet,
+    WebhookFilterSet,
+)
+
 from nautobot.extras.models import (
     ConfigContext,
     CustomLink,
@@ -17,8 +37,11 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
-    Tag,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
+    Tag,
     Webhook,
 )
 from nautobot.ipam.models import IPAddress, VLAN
@@ -29,121 +52,6 @@ from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 # Use the proper swappable User model
 User = get_user_model()
-
-
-class ExportTemplateTestCase(TestCase):
-    queryset = ExportTemplate.objects.all()
-    filterset = ExportTemplateFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-
-        content_types = ContentType.objects.filter(model__in=["site", "rack", "device"])
-
-        ExportTemplate.objects.create(
-            name="Export Template 1",
-            content_type=content_types[0],
-            template_code="TESTING",
-        )
-        ExportTemplate.objects.create(
-            name="Export Template 2",
-            content_type=content_types[1],
-            template_code="TESTING",
-        )
-        ExportTemplate.objects.create(
-            name="Export Template 3",
-            content_type=content_types[2],
-            template_code="TESTING",
-        )
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Export Template 1", "Export Template 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_content_type(self):
-        params = {"content_type": ContentType.objects.get(model="site").pk}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_search(self):
-        params = {"q": "export"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-
-class ImageAttachmentTestCase(TestCase):
-    queryset = ImageAttachment.objects.all()
-    filterset = ImageAttachmentFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-
-        site_ct = ContentType.objects.get(app_label="dcim", model="site")
-        rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
-
-        racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0]),
-            Rack.objects.create(name="Rack 2", site=sites[1]),
-        )
-
-        ImageAttachment.objects.create(
-            content_type=site_ct,
-            object_id=sites[0].pk,
-            name="Image Attachment 1",
-            image="http://example.com/image1.png",
-            image_height=100,
-            image_width=100,
-        ),
-        ImageAttachment.objects.create(
-            content_type=site_ct,
-            object_id=sites[1].pk,
-            name="Image Attachment 2",
-            image="http://example.com/image2.png",
-            image_height=100,
-            image_width=100,
-        ),
-        ImageAttachment.objects.create(
-            content_type=rack_ct,
-            object_id=racks[0].pk,
-            name="Image Attachment 3",
-            image="http://example.com/image3.png",
-            image_height=100,
-            image_width=100,
-        ),
-        ImageAttachment.objects.create(
-            content_type=rack_ct,
-            object_id=racks[1].pk,
-            name="Image Attachment 4",
-            image="http://example.com/image4.png",
-            image_height=100,
-            image_width=100,
-        )
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Image Attachment 1", "Image Attachment 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_content_type(self):
-        params = {"content_type": "dcim.site"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_content_type_id_and_object_id(self):
-        params = {
-            "content_type_id": ContentType.objects.get(app_label="dcim", model="site").pk,
-            "object_id": [Site.objects.first().pk],
-        }
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConfigContextTestCase(TestCase):
@@ -303,273 +211,6 @@ class ConfigContextTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class RelationshipTestCase(TestCase):
-    queryset = Relationship.objects.all()
-    filterset = RelationshipFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        device_type = ContentType.objects.get_for_model(Device)
-        interface_type = ContentType.objects.get_for_model(Interface)
-        vlan_type = ContentType.objects.get_for_model(VLAN)
-
-        Relationship.objects.create(
-            name="Device VLANs",
-            slug="device-vlans",
-            type="many-to-many",
-            source_type=device_type,
-            destination_type=vlan_type,
-        )
-        Relationship.objects.create(
-            name="Primary VLAN",
-            slug="primary-vlan",
-            type="one-to-many",
-            source_type=vlan_type,
-            destination_type=device_type,
-        )
-        Relationship.objects.create(
-            name="Primary Interface",
-            slug="primary-interface",
-            type="one-to-one",
-            source_type=device_type,
-            destination_type=interface_type,
-        )
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Primary VLAN", "Primary Interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_type(self):
-        params = {"type": "one-to-many"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_source_type(self):
-        params = {"source_type": ["dcim.device"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_destination_type(self):
-        params = {"destination_type": ["ipam.vlan", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-
-class RelationshipAssociationTestCase(TestCase):
-    queryset = RelationshipAssociation.objects.all()
-    filterset = RelationshipAssociationFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.device_type = ContentType.objects.get_for_model(Device)
-        cls.vlan_type = ContentType.objects.get_for_model(VLAN)
-
-        cls.relationships = (
-            Relationship.objects.create(
-                name="Device VLANs",
-                slug="device-vlans",
-                type="many-to-many",
-                source_type=cls.device_type,
-                destination_type=cls.vlan_type,
-            ),
-            Relationship.objects.create(
-                name="Primary VLAN",
-                slug="primary-vlan",
-                type="one-to-many",
-                source_type=cls.vlan_type,
-                destination_type=cls.device_type,
-            ),
-        )
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-        )
-        cls.vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1"),
-            VLAN.objects.create(vid=2, name="VLAN 2"),
-        )
-
-        RelationshipAssociation.objects.create(
-            relationship=cls.relationships[0],
-            source_type=cls.device_type,
-            source_id=cls.devices[0].pk,
-            destination_type=cls.vlan_type,
-            destination_id=cls.vlans[0].pk,
-        )
-        RelationshipAssociation.objects.create(
-            relationship=cls.relationships[0],
-            source_type=cls.device_type,
-            source_id=cls.devices[1].pk,
-            destination_type=cls.vlan_type,
-            destination_id=cls.vlans[1].pk,
-        )
-        RelationshipAssociation.objects.create(
-            relationship=cls.relationships[1],
-            source_type=cls.vlan_type,
-            source_id=cls.vlans[0].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[0].pk,
-        )
-        RelationshipAssociation.objects.create(
-            relationship=cls.relationships[1],
-            source_type=cls.vlan_type,
-            source_id=cls.vlans[1].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[1].pk,
-        )
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_relationship(self):
-        params = {"relationship": [self.relationships[0].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_source_type(self):
-        params = {"source_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_source_id(self):
-        params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_destination_type(self):
-        params = {"destination_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_destination_id(self):
-        params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-
-class TagTestCase(TestCase):
-    queryset = Tag.objects.all()
-    filterset = TagFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-
-        Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000")
-        Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00")
-        Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff")
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Tag 1", "Tag 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["tag-1", "tag-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_color(self):
-        params = {"color": ["ff0000", "00ff00"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-
-class ObjectChangeTestCase(TestCase):
-    queryset = ObjectChange.objects.all()
-    filterset = ObjectChangeFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        users = (
-            User.objects.create(username="user1"),
-            User.objects.create(username="user2"),
-            User.objects.create(username="user3"),
-        )
-
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
-        ipaddress = IPAddress.objects.create(address="192.0.2.1/24")
-
-        ObjectChange.objects.create(
-            user=users[0],
-            user_name=users[0].username,
-            request_id=uuid.uuid4(),
-            action=ObjectChangeActionChoices.ACTION_CREATE,
-            changed_object=site,
-            object_repr=str(site),
-            object_data={"name": site.name, "slug": site.slug},
-        )
-        ObjectChange.objects.create(
-            user=users[0],
-            user_name=users[0].username,
-            request_id=uuid.uuid4(),
-            action=ObjectChangeActionChoices.ACTION_UPDATE,
-            changed_object=site,
-            object_repr=str(site),
-            object_data={"name": site.name, "slug": site.slug},
-        )
-        ObjectChange.objects.create(
-            user=users[1],
-            user_name=users[1].username,
-            request_id=uuid.uuid4(),
-            action=ObjectChangeActionChoices.ACTION_DELETE,
-            changed_object=site,
-            object_repr=str(site),
-            object_data={"name": site.name, "slug": site.slug},
-        )
-        ObjectChange.objects.create(
-            user=users[1],
-            user_name=users[1].username,
-            request_id=uuid.uuid4(),
-            action=ObjectChangeActionChoices.ACTION_CREATE,
-            changed_object=ipaddress,
-            object_repr=str(ipaddress),
-            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
-        )
-        ObjectChange.objects.create(
-            user=users[2],
-            user_name=users[2].username,
-            request_id=uuid.uuid4(),
-            action=ObjectChangeActionChoices.ACTION_UPDATE,
-            changed_object=ipaddress,
-            object_repr=str(ipaddress),
-            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
-        )
-        ObjectChange.objects.create(
-            user=users[2],
-            user_name=users[2].username,
-            request_id=uuid.uuid4(),
-            action=ObjectChangeActionChoices.ACTION_DELETE,
-            changed_object=ipaddress,
-            object_repr=str(ipaddress),
-            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
-        )
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:3]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_user(self):
-        params = {"user_id": User.objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-        params = {"user": ["user1", "user2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_user_name(self):
-        params = {"user_name": ["user1", "user2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_changed_object_type(self):
-        params = {"changed_object_type": "dcim.site"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_changed_object_type_id(self):
-        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="site").pk}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-
 class CustomLinkTestCase(TestCase):
     queryset = CustomLink.objects.all()
     filterset = CustomLinkFilterSet
@@ -623,113 +264,46 @@ class CustomLinkTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
-class WebhookTestCase(TestCase):
-    queryset = Webhook.objects.all()
-    filterset = WebhookFilterSet
+class ExportTemplateTestCase(TestCase):
+    queryset = ExportTemplate.objects.all()
+    filterset = ExportTemplateFilterSet
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = (
-            Webhook(
-                name="webhook-1",
-                enabled=True,
-                type_create=True,
-                payload_url="http://test-url.com/test-1",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-            Webhook(
-                name="webhook-2",
-                enabled=True,
-                type_update=True,
-                payload_url="http://test-url.com/test-2",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-            Webhook(
-                name="webhook-3",
-                enabled=True,
-                type_delete=True,
-                payload_url="http://test-url.com/test-3",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
+
+        content_types = ContentType.objects.filter(model__in=["site", "rack", "device"])
+
+        ExportTemplate.objects.create(
+            name="Export Template 1",
+            content_type=content_types[0],
+            template_code="TESTING",
         )
-        obj_type = ContentType.objects.get_for_model(Site)
-        for webhook in webhooks:
-            webhook.save()
-            webhook.content_types.set([obj_type])
-
-    def test_name(self):
-        params = {"name": ["webhook-1"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_create(self):
-        params = {"type_create": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_update(self):
-        params = {"type_update": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_delete(self):
-        params = {"type_delete": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_enabled(self):
-        params = {"enabled": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_search(self):
-        params = {"q": "webhook"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-
-class StatusTestCase(TestCase):
-    queryset = Status.objects.all()
-    filterset = StatusFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
+        ExportTemplate.objects.create(
+            name="Export Template 2",
+            content_type=content_types[1],
+            template_code="TESTING",
+        )
+        ExportTemplate.objects.create(
+            name="Export Template 3",
+            content_type=content_types[2],
+            template_code="TESTING",
+        )
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {"name": ["Active", "Offline"]}
+        params = {"name": ["Export Template 1", "Export Template 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_slug(self):
-        params = {"slug": ["active", "offline"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_content_types(self):
-        ct = ContentType.objects.get_for_model(Device)
-        status_count = self.queryset.filter(content_types=ct).count()
-        params = {"content_types": ["dcim.device"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), status_count)
-
-    def test_color(self):
-        """Test the color search field."""
-        params = {"color": [ColorChoices.COLOR_GREY]}
-        # This current expected count may change as more `Status` objects are
-        # imported by way of `extras.management.create_custom_statuses`. If as
-        # these objects are imported, and this test fails, this number will need
-        # to be adjusted.
-        expected_count = 3
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
+    def test_content_type(self):
+        params = {"content_type": ContentType.objects.get(model="site").pk}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_search(self):
-        params = {"q": "active"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"q": "export"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
 class GraphQLTestCase(TestCase):
@@ -858,4 +432,599 @@ query ($device: String!) {
 
     def test_query(self):
         params = {"query": ["sites"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class ImageAttachmentTestCase(TestCase):
+    queryset = ImageAttachment.objects.all()
+    filterset = ImageAttachmentFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+
+        site_ct = ContentType.objects.get(app_label="dcim", model="site")
+        rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
+
+        sites = (
+            Site.objects.create(name="Site 1", slug="site-1"),
+            Site.objects.create(name="Site 2", slug="site-2"),
+        )
+
+        racks = (
+            Rack.objects.create(name="Rack 1", site=sites[0]),
+            Rack.objects.create(name="Rack 2", site=sites[1]),
+        )
+
+        ImageAttachment.objects.create(
+            content_type=site_ct,
+            object_id=sites[0].pk,
+            name="Image Attachment 1",
+            image="http://example.com/image1.png",
+            image_height=100,
+            image_width=100,
+        ),
+        ImageAttachment.objects.create(
+            content_type=site_ct,
+            object_id=sites[1].pk,
+            name="Image Attachment 2",
+            image="http://example.com/image2.png",
+            image_height=100,
+            image_width=100,
+        ),
+        ImageAttachment.objects.create(
+            content_type=rack_ct,
+            object_id=racks[0].pk,
+            name="Image Attachment 3",
+            image="http://example.com/image3.png",
+            image_height=100,
+            image_width=100,
+        ),
+        ImageAttachment.objects.create(
+            content_type=rack_ct,
+            object_id=racks[1].pk,
+            name="Image Attachment 4",
+            image="http://example.com/image4.png",
+            image_height=100,
+            image_width=100,
+        )
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Image Attachment 1", "Image Attachment 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_type(self):
+        params = {"content_type": "dcim.site"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_type_id_and_object_id(self):
+        params = {
+            "content_type_id": ContentType.objects.get(app_label="dcim", model="site").pk,
+            "object_id": [Site.objects.first().pk],
+        }
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class ObjectChangeTestCase(TestCase):
+    queryset = ObjectChange.objects.all()
+    filterset = ObjectChangeFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        users = (
+            User.objects.create(username="user1"),
+            User.objects.create(username="user2"),
+            User.objects.create(username="user3"),
+        )
+
+        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        ipaddress = IPAddress.objects.create(address="192.0.2.1/24")
+
+        ObjectChange.objects.create(
+            user=users[0],
+            user_name=users[0].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            changed_object=site,
+            object_repr=str(site),
+            object_data={"name": site.name, "slug": site.slug},
+        )
+        ObjectChange.objects.create(
+            user=users[0],
+            user_name=users[0].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            changed_object=site,
+            object_repr=str(site),
+            object_data={"name": site.name, "slug": site.slug},
+        )
+        ObjectChange.objects.create(
+            user=users[1],
+            user_name=users[1].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object=site,
+            object_repr=str(site),
+            object_data={"name": site.name, "slug": site.slug},
+        )
+        ObjectChange.objects.create(
+            user=users[1],
+            user_name=users[1].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            changed_object=ipaddress,
+            object_repr=str(ipaddress),
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
+        )
+        ObjectChange.objects.create(
+            user=users[2],
+            user_name=users[2].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            changed_object=ipaddress,
+            object_repr=str(ipaddress),
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
+        )
+        ObjectChange.objects.create(
+            user=users[2],
+            user_name=users[2].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object=ipaddress,
+            object_repr=str(ipaddress),
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
+        )
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:3]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_user(self):
+        params = {"user_id": User.objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        params = {"user": ["user1", "user2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_user_name(self):
+        params = {"user_name": ["user1", "user2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_changed_object_type(self):
+        params = {"changed_object_type": "dcim.site"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_changed_object_type_id(self):
+        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="site").pk}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class RelationshipTestCase(TestCase):
+    queryset = Relationship.objects.all()
+    filterset = RelationshipFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device_type = ContentType.objects.get_for_model(Device)
+        interface_type = ContentType.objects.get_for_model(Interface)
+        vlan_type = ContentType.objects.get_for_model(VLAN)
+
+        Relationship(
+            name="Device VLANs",
+            slug="device-vlans",
+            type="many-to-many",
+            source_type=device_type,
+            destination_type=vlan_type,
+        ).validated_save()
+        Relationship(
+            name="Primary VLAN",
+            slug="primary-vlan",
+            type="one-to-many",
+            source_type=vlan_type,
+            destination_type=device_type,
+        ).validated_save()
+        Relationship(
+            name="Primary Interface",
+            slug="primary-interface",
+            type="one-to-one",
+            source_type=device_type,
+            destination_type=interface_type,
+        ).validated_save()
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Primary VLAN", "Primary Interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_type(self):
+        params = {"type": "one-to-many"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_source_type(self):
+        params = {"source_type": ["dcim.device"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_destination_type(self):
+        params = {"destination_type": ["ipam.vlan", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class RelationshipAssociationTestCase(TestCase):
+    queryset = RelationshipAssociation.objects.all()
+    filterset = RelationshipAssociationFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_type = ContentType.objects.get_for_model(Device)
+        cls.vlan_type = ContentType.objects.get_for_model(VLAN)
+
+        cls.relationships = (
+            Relationship(
+                name="Device VLANs",
+                slug="device-vlans",
+                type="many-to-many",
+                source_type=cls.device_type,
+                destination_type=cls.vlan_type,
+            ),
+            Relationship(
+                name="Primary VLAN",
+                slug="primary-vlan",
+                type="one-to-many",
+                source_type=cls.vlan_type,
+                destination_type=cls.device_type,
+            ),
+        )
+        for relationship in cls.relationships:
+            relationship.validated_save()
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.devices = (
+            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
+        )
+        cls.vlans = (
+            VLAN.objects.create(vid=1, name="VLAN 1"),
+            VLAN.objects.create(vid=2, name="VLAN 2"),
+        )
+
+        RelationshipAssociation(
+            relationship=cls.relationships[0],
+            source_type=cls.device_type,
+            source_id=cls.devices[0].pk,
+            destination_type=cls.vlan_type,
+            destination_id=cls.vlans[0].pk,
+        ).validated_save()
+        RelationshipAssociation(
+            relationship=cls.relationships[0],
+            source_type=cls.device_type,
+            source_id=cls.devices[1].pk,
+            destination_type=cls.vlan_type,
+            destination_id=cls.vlans[1].pk,
+        ).validated_save()
+        RelationshipAssociation(
+            relationship=cls.relationships[1],
+            source_type=cls.vlan_type,
+            source_id=cls.vlans[0].pk,
+            destination_type=cls.device_type,
+            destination_id=cls.devices[0].pk,
+        ).validated_save()
+        RelationshipAssociation(
+            relationship=cls.relationships[1],
+            source_type=cls.vlan_type,
+            source_id=cls.vlans[1].pk,
+            destination_type=cls.device_type,
+            destination_id=cls.devices[1].pk,
+        ).validated_save()
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_relationship(self):
+        params = {"relationship": [self.relationships[0].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_source_type(self):
+        params = {"source_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_source_id(self):
+        params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_destination_type(self):
+        params = {"destination_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_destination_id(self):
+        params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class SecretTestCase(TestCase):
+    queryset = Secret.objects.all()
+    filterset = SecretFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets = (
+            Secret(
+                name="Secret 1",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_1"},
+            ),
+            Secret(
+                name="Secret 2",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_2"},
+            ),
+            Secret(
+                name="Secret 3",
+                provider="text-file",
+                parameters={"path": "/github-tokens/user/myusername.txt"},
+            ),
+        )
+
+        for secret in secrets:
+            secret.validated_save()
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Secret 1", "Secret 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {"slug": ["secret-1", "secret-2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_provider(self):
+        params = {"provider": ["environment-variable"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class SecretsGroupTestCase(TestCase):
+    queryset = SecretsGroup.objects.all()
+    filterset = SecretsGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        SecretsGroup.objects.create(name="Group 1", slug="group-1")
+        SecretsGroup.objects.create(name="Group 2", slug="group-2")
+        SecretsGroup.objects.create(name="Group 3", slug="group-3")
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Group 1", "Group 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {"slug": ["group-1", "group-2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class SecretsGroupAssociationTestCase(TestCase):
+    queryset = SecretsGroupAssociation.objects.all()
+    filterset = SecretsGroupAssociationFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.secrets = (
+            Secret(
+                name="Secret 1",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_1"},
+            ),
+            Secret(
+                name="Secret 2",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_2"},
+            ),
+            Secret(
+                name="Secret 3",
+                provider="text-file",
+                parameters={"path": "/github-tokens/user/myusername.txt"},
+            ),
+        )
+
+        for secret in cls.secrets:
+            secret.validated_save()
+
+        cls.groups = (
+            SecretsGroup.objects.create(name="Group 1", slug="group-1"),
+            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
+            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            group=cls.groups[0],
+            secret=cls.secrets[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=cls.groups[1],
+            secret=cls.secrets[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=cls.groups[2],
+            secret=cls.secrets[2],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_group(self):
+        params = {"group_id": [self.groups[0].pk, self.groups[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"group": [self.groups[0].slug, self.groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_secret(self):
+        params = {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"secret": [self.secrets[0].slug, self.secrets[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_access_type(self):
+        params = {"access_type": [SecretsGroupAccessTypeChoices.TYPE_GENERIC]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_secret_type(self):
+        params = {"secret_type": [SecretsGroupSecretTypeChoices.TYPE_PASSWORD]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class StatusTestCase(TestCase):
+    queryset = Status.objects.all()
+    filterset = StatusFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        """
+        Since many `Status` objects are created as part of data migrations, we're
+        testing against those. If this seems magical, it's because they are
+        imported from `ChoiceSet` enum objects.
+
+        This method is defined just so it's clear that there is no need to
+        create test data for this test case.
+
+        See `extras.management.create_custom_statuses` for context.
+        """
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Active", "Offline"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {"slug": ["active", "offline"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_types(self):
+        ct = ContentType.objects.get_for_model(Device)
+        status_count = self.queryset.filter(content_types=ct).count()
+        params = {"content_types": ["dcim.device"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), status_count)
+
+    def test_color(self):
+        """Test the color search field."""
+        params = {"color": [ColorChoices.COLOR_GREY]}
+        # This current expected count may change as more `Status` objects are
+        # imported by way of `extras.management.create_custom_statuses`. If as
+        # these objects are imported, and this test fails, this number will need
+        # to be adjusted.
+        expected_count = 3
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
+
+    def test_search(self):
+        params = {"q": "active"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class TagTestCase(TestCase):
+    queryset = Tag.objects.all()
+    filterset = TagFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+
+        Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000")
+        Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00")
+        Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff")
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Tag 1", "Tag 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {"slug": ["tag-1", "tag-2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_color(self):
+        params = {"color": ["ff0000", "00ff00"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class WebhookTestCase(TestCase):
+    queryset = Webhook.objects.all()
+    filterset = WebhookFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        webhooks = (
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                payload_url="http://test-url.com/test-1",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_update=True,
+                payload_url="http://test-url.com/test-2",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-3",
+                enabled=True,
+                type_delete=True,
+                payload_url="http://test-url.com/test-3",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+        )
+        obj_type = ContentType.objects.get_for_model(Site)
+        for webhook in webhooks:
+            webhook.save()
+            webhook.content_types.set([obj_type])
+
+    def test_name(self):
+        params = {"name": ["webhook-1"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_create(self):
+        params = {"type_create": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_update(self):
+        params = {"type_update": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_delete(self):
+        params = {"type_delete": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_enabled(self):
+        params = {"enabled": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_search(self):
+        params = {"q": "webhook"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)

@@ -1,6 +1,6 @@
 {% extends 'dcim/device/base.html' %}
-{% load render_table from django_tables2 %}
 {% load helpers %}
+{% load render_table from django_tables2 %}
 {% load static %}
 
 {% block content %}
@@ -48,10 +48,11 @@
         </div>
     </form>
     {% table_config_form interface_table %}
-{% endblock %}
+{% endblock content %}
 
 {% block javascript %}
-  <script src="{% static 'js/connection_toggles.js' %}?v{{ settings.VERSION }}"></script>
-  <script src="{% static 'js/interface_filtering.js' %}?v{{ settings.VERSION }}"></script>
-  <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
-{% endblock %}
+    {{ block.super }}
+    <script src="{% static 'js/connection_toggles.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% static 'js/interface_filtering.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+{% endblock javascript %}

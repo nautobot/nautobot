@@ -1,6 +1,6 @@
 from django.urls import reverse
 
-from nautobot.circuits.choices import *
+from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
@@ -31,10 +31,12 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
             "name": "Provider 6",
             "slug": "provider-6",
         },
+        {"name": "Provider 7"},
     ]
     bulk_update_data = {
         "asn": 1234,
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -60,10 +62,12 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
             "name": "Circuit Type 6",
             "slug": "circuit-type-6",
         },
+        {"name": "Circuit Type 7"},
     )
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):

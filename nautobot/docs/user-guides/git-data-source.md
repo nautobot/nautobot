@@ -37,14 +37,17 @@ This table defines repository parameters that are required to establish a reposi
 |Slug|Computer-friendly name for the repo. Auto-generated based on the `name` provided, but you can change it if you wish.|
 |Remote URL|The URL pointing to the Git repo. Current git url usage is limited to `http` or `https`.|
 |Branch|The branch in the Git repo to use. Defaults to `main`.|
-|Token|The token is a personal access token for the `username` provided.  For more information on generating a personal access token see the corresponding links below. **Token is the only option supported currently.**|
-|Username|The Git username that corresponds with the personal access token above. Note not required for GitHub, but is for GitLab.|
+|Token|(Optional) A personal access token for the `username` provided.  For more information on generating a personal access token see the corresponding links below.|
+|Username|(Optional) The Git username that corresponds with the personal access token above. Note not required for GitHub, but is for GitLab.|
+|Secrets Group|(Optional) Grouping containing a *HTTP token* and/or *HTTP username* as needed to access the repository.|
 |Provides|Resource type(s) provided by this Git repo.|
 
 - [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
 - [GitLab Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 - [Bitbucket Personal Access Token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
 
+!!! warning
+    Beginning in Nautobot 1.2, there are two ways to define a `token` and/or `username` for a Git repository -- either by directly configuring them into the repository definition, or by associating the repository with a [secrets group](../models/extras/secretsgroup.md) record (this latter approach is new in Nautobot 1.2). The direct-configuration approach should be considered as deprecated, as it is less secure and poses a number of maintainability issues. If at all possible, you should use a secrets group instead. The direct-configuration approach may be removed altogether as an option in a future release of Nautobot.
 
 ## Using Git Data Sources
 
@@ -78,6 +81,9 @@ Fill out the details for the Git repository. More information on the inputs can 
 ![Example Details Export-Templates](./images/git-as-data-source/03-git-data-source.png)
 
 As soon as you click on **Create**, Nautobot will clone and sync the repository and provide status of the job.
+
+!!! note
+    If you are using a self-signed Git repository, the Server Administrator will need to ensure the [`GIT_SSL_NO_VERIFY`](../configuration/optional-settings.md#git_ssl_no_verify) environment variable is set to permit this.
 
 ![View of Synchronization Status](./images/git-as-data-source/04-git-data-source.png)
 ![Status of Export-Templates](./images/git-as-data-source/06-git-data-source.png)
@@ -171,7 +177,7 @@ Jobs need to be defined in `/jobs/` directory at the root of a Git repository.
 An example tree for `/jobs/`.
 
 ```no-highlight
-▶ tree jobs 
+▶ tree jobs
 jobs
 ├── __init__.py
 └── get-device-connection.py
