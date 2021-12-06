@@ -10,6 +10,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
 from markdown import markdown
+from django_jinja import library
 
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
@@ -23,10 +24,19 @@ register = template.Library()
 #
 
 
+@library.filter()
 @register.filter()
 def placeholder(value):
-    """
-    Render a muted placeholder if value equates to False.
+    """Render a muted placeholder if value equates to False.
+
+    Args:
+        value (any): Input value, can be any variable.
+
+    Returns:
+        str: Placeholder in HTML
+
+    Example:
+        {{ html | placeholder }}
     """
     if value:
         return value
@@ -34,10 +44,14 @@ def placeholder(value):
     return mark_safe(placeholder)
 
 
+@library.filter()
 @register.filter(is_safe=True)
 def render_markdown(value):
     """
     Render text as Markdown
+
+    Example:
+        {{ text | render_markdown }}
     """
     # Strip HTML tags
     value = strip_tags(value)
@@ -53,6 +67,7 @@ def render_markdown(value):
     return mark_safe(html)
 
 
+@library.filter()
 @register.filter()
 def render_json(value):
     """
@@ -61,6 +76,7 @@ def render_json(value):
     return json.dumps(value, indent=4, sort_keys=True)
 
 
+@library.filter()
 @register.filter()
 def render_yaml(value):
     """
@@ -69,48 +85,86 @@ def render_yaml(value):
     return yaml.dump(json.loads(json.dumps(value)))
 
 
+@library.filter()
 @register.filter()
 def meta(obj, attr):
     """
     Return the specified Meta attribute of a model. This is needed because Django does not permit templates
     to access attributes which begin with an underscore (e.g. _meta).
+
+    Args:
+        obj (models.Model): Class or Instance of a Django Model
+        attr (str): name of the attribute to access
+
+    Returns:
+        any: return the value of the attribute
     """
     return getattr(obj._meta, attr, "")
 
 
+@library.filter()
 @register.filter()
 def viewname(model, action):
     """
     Return the view name for the given model and action. Does not perform any validation.
-    """
-    return f"{model._meta.app_label}:{model._meta.model_name}_{action}"
 
+    Args:
+        model (models.Model): Class or Instance of a Django Model
+        action (str): name of the action in the viewname
 
-@register.filter()
-def validated_viewname(model, action):
-    """
-    Return the view name for the given model and action if valid, or None if invalid.
+    Returns:
+        str: return the name of the view for the model/action provided.
     """
     viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
     if model._meta.app_label in settings.PLUGINS:
         viewname = f"plugins:{viewname}"
+
+    return viewname
+
+
+@library.filter()
+@register.filter()
+def validated_viewname(model, action):
+    """
+    Return the view name for the given model and action if valid, or None if invalid.
+
+    Args:
+        model (models.Model): Class or Instance of a Django Model
+        action (str): name of the action in the viewname
+
+    Returns:
+        str or None: return the name of the view for the model/action provided if valid, or None if invalid.
+    """
+    viewname_str = viewname(model, action)
+
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
         # are written to pass a name to {% url %}.
-        reverse(viewname)
-        return viewname
+        reverse(viewname_str)
+        return viewname_str
     except NoReverseMatch:
         return None
 
 
+@library.filter()
 @register.filter()
 def bettertitle(value):
     """
     Alternative to the builtin title(); uppercases words without replacing letters that are already uppercase.
+
+    Args:
+        value (str): string to convert to Title Case
+
+    Returns:
+        str: string in Title format
+
+    Example:
+        {{ obj_type.name|bettertitle }}
     """
     return " ".join([w[0].upper() + w[1:] for w in value.split()])
 
 
+@library.filter()
 @register.filter()
 def humanize_speed(speed):
     """
@@ -134,6 +188,7 @@ def humanize_speed(speed):
         return "{} Kbps".format(speed)
 
 
+@library.filter()
 @register.filter()
 def tzoffset(value):
     """
@@ -142,10 +197,20 @@ def tzoffset(value):
     return datetime.datetime.now(value).strftime("%z")
 
 
+@library.filter()
 @register.filter()
 def fgcolor(value):
     """
-    Return black (#000000) or white (#ffffff) given an arbitrary background color in RRGGBB format.
+    Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
+
+    Args:
+        value (str): Color in RRGGBB format, with or without #
+
+    Returns:
+        str: ideal foreground color, either black (#000000) or white (#ffffff)
+
+    Example:
+        color: {{ object.status.color|fgcolor }}
     """
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
@@ -153,30 +218,57 @@ def fgcolor(value):
     return "#{}".format(foreground_color(value))
 
 
+@library.filter()
 @register.filter()
 def divide(x, y):
-    """
-    Return x/y (rounded).
+    """Return x/y (rounded).
+
+    Args:
+        x (int or float): dividend number
+        y (int or float): divisor number
+
+    Returns:
+        int: x/y (rounded)
+
+    Examples:
+        {{ powerfeed.available_power|divide:3 }}VA      # Django Template
+        {{ powerfeed.available_power|divide(3) }}VA     # Jinja
     """
     if x is None or y is None:
         return None
     return round(x / y)
 
 
+@library.filter()
 @register.filter()
 def percentage(x, y):
-    """
-    Return x/y as a percentage.
+    """Return x/y as a percentage.
+
+    Args:
+        x (int or float): dividend number
+        y (int or float): divisor number
+
+    Returns:
+        int: x/y as a percentage
     """
     if x is None or y is None:
         return None
     return round(x / y * 100)
 
 
+@library.filter()
 @register.filter()
 def get_docs(model):
-    """
-    Render and return documentation for the specified model.
+    """Render and return documentation for the specified model.
+
+    Args:
+        model (models.Model): Instance of a Django model
+
+    Returns:
+        str: documentation for the specified model in Markdown format
+
+    Example:
+        {{ obj | get_docs }}
     """
     path = "{}/models/{}/{}.md".format(settings.DOCS_ROOT, model._meta.app_label, model._meta.model_name)
     try:
@@ -193,6 +285,7 @@ def get_docs(model):
     return mark_safe(content)
 
 
+@library.filter()
 @register.filter()
 def has_perms(user, permissions_list):
     """
@@ -201,6 +294,7 @@ def has_perms(user, permissions_list):
     return user.has_perms(permissions_list)
 
 
+@library.filter()
 @register.filter()
 def has_one_or_more_perms(user, permissions_list):
     """
@@ -212,41 +306,81 @@ def has_one_or_more_perms(user, permissions_list):
     return False
 
 
+@library.filter()
 @register.filter()
 def split(string, sep=","):
-    """
-    Split a string by the given value (default: comma)
+    """Split a string by the given value (default: comma)
+
+    Args:
+        string (str): string to split into a list
+        sep (str default=,): separator to look for in the string
+
+    Returns:
+        [list]: List of string, if the separator wasn't found, list of 1
     """
     return string.split(sep)
 
 
+@library.filter()
 @register.filter()
 def as_range(n):
-    """
-    Return a range of n items.
+    """Return a range of n items.
+
+    Args:
+        n (int, str): Number of element in the range
+
+    Returns:
+        [list, Range]: range function from o to the value provided. Returns an empty list if n is not valid.
+
+    Example:
+        {% for i in record.parents|as_range %}
+            <i class="mdi mdi-circle-small"></i>
+        {% endfor %}
     """
     try:
         int(n)
-    except TypeError:
+    except (TypeError, ValueError):
         return list()
-    return range(n)
+    return range(int(n))
 
 
+@library.filter()
 @register.filter()
 def meters_to_feet(n):
-    """
-    Convert a length from meters to feet.
+    """Convert a length from meters to feet.
+
+    Args:
+        n (int, float, str): Number of meters to convert
+
+    Returns:
+        [float]: Value in feet
     """
     return float(n) * 3.28084
 
 
-@register.filter
+@library.filter()
+@register.filter()
 def get_item(d, key):
+    """Access a specific item/key in a dictionary
+
+    Args:
+        d (dict): dictionary containing the data to access
+        key (str]): name of the item/key to access
+
+    Returns:
+        [any]: Value of the item in the dictionary provided
+
+    Example:
+        {{ labels|get_item:key }}        # Django Template
+        {{ labels|get_item(key) }}       # Jinja
+    """
     return d.get(key)
 
 
-@register.filter
+@library.filter()
+@register.filter()
 def settings_or_config(key):
+    """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
     return get_settings_or_config(key)
 
 
