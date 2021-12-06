@@ -59,15 +59,6 @@ namespace.configure(
                 "networktocode/nautobot-dev",
                 "ghcr.io/nautobot/nautobot-dev",
             ],
-            # Image names to use when building from "develop" branch
-            "docker_image_names_develop": [
-                # Production containers - not containing development tools
-                "networktocode/nautobot",
-                "ghcr.io/nautobot/nautobot",
-                # Development containers - include development tools like linters
-                "networktocode/nautobot-dev",
-                "ghcr.io/nautobot/nautobot-dev",
-            ],
         }
     }
 )
@@ -200,27 +191,23 @@ def get_nautobot_version():
     }
 )
 def docker_push(context, branch, commit="", datestamp=""):
-    """Tags and pushes docker images to the appropriate repos, intended for CI use only."""
+    """Tags and pushes docker images to the appropriate repos, intended for release use only.
+
+    Before running this command, you **must** be on the `main` branch and **must** have run
+    the appropriate set of `invoke buildx` commands. Refer to the developer release-checklist docs for details.
+    """
     nautobot_version = get_nautobot_version()
 
     docker_image_tags_main = [
-        f"latest-py{context.nautobot.python_ver}",
+        f"stable-py{context.nautobot.python_ver}",
         f"{nautobot_version}-py{context.nautobot.python_ver}",
-    ]
-    docker_image_tags_develop = [
-        f"develop-py{context.nautobot.python_ver}",
-        f"develop-py{context.nautobot.python_ver}-{commit}-{datestamp}",
     ]
 
     if context.nautobot.python_ver == "3.6":
-        docker_image_tags_main += ["latest", f"{nautobot_version}"]
-        docker_image_tags_develop += ["develop", f"develop-{commit}-{datestamp}"]
+        docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
         docker_image_tags = docker_image_tags_main
-    elif branch == "develop":
-        docker_image_names = context.nautobot.docker_image_names_develop
-        docker_image_tags = docker_image_tags_develop
     else:
         raise Exit(f"Unknown Branch ({branch}) Specified", 1)
 

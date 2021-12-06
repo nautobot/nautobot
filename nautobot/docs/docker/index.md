@@ -4,36 +4,45 @@ Nautobot is packaged as a Docker image for use in a production environment. The 
 
 ## Tags
 
-The Docker image is published to Docker Hub.
+A set of Docker images are built for each Nautobot release and published to both [Docker Hub](https://hub.docker.com/r/networktocode/nautobot/) and [GitHub Packages](https://github.com/nautobot/nautobot/pkgs/container/nautobot).
 
-To get the image from Docker Hub run:
+Additionally, GitHub Actions are used to automatically build images corresponding to each commit to the `develop` and `next` branches; these images are only published to GitHub Packages.
 
-```no-highlight
-docker image pull networktocode/nautobot
-```
-
-The following tags are available:
-
-* `X.Y.Z` these images are built with the same baseline as the released Python packages based on the default python version (3.6) docker container
-* `X.Y.Z-py${PYTHON_VER}` these images are built with the same baseline as the released Python packages based on the python version ($PYTHON_VER) docker container
-* `stable` these images are built from the latest code in the main branch (should be the latest released version) based on the default python version (3.6) docker container
-* `stable-py${PYTHON_VER}` these images are built from the latest code in the main branch (should be the latest released version) based on the python version ($PYTHON_VER) docker container
-* `latest` these images are built from the latest code in the develop branch based on the default python version (3.6) docker container
-* `latest-py${PYTHON_VER}` these images are built from the latest code in the develop branch based on the python version ($PYTHON_VER) docker container
-* `develop` these images are built from the latest code in the develop branch on each commit based on the default python version (3.6) docker container
-* `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch based on the default python version (3.6) docker container
-* `develop-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
-* `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the develop branch based on the python version ($PYTHON_VER) docker container
-* `next` these images are built from the latest code in the next branch on each commit based on the default python version (3.6) docker container
-* `next-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the next branch based on the default python version (3.6) docker container
-* `next-py${PYTHON_VER}` these images are built from the latest code in the next branch on each commit based on the python version ($PYTHON_VER) docker container
-* `next-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the next branch based on the python version ($PYTHON_VER) docker container
-
-To pull a specific tag you can append the image name with `:tag` for example, to pull the 1.0.0 image:
+To get a specific tagged image from Docker Hub or GitHub Packages run:
 
 ```no-highlight
-$ docker image pull networktocode/nautobot:1.0.0
+docker image pull networktocode/nautobot:${TAG}
 ```
+
+or
+
+```no-highlight
+docker pull ghcr.io/nautobot/nautobot:${TAG}
+```
+
+The following tags are available on both Docker Hub and GitHub Packages:
+
+| Tag                               | Nautobot Version      | Python Version | Example        |
+| --------------------------------- | --------------------- | -------------- | -------------- |
+| `${NAUTOBOT_VER}`                 | As specified          | 3.6            | `1.1.6`        |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}` | As specified          | As specified   | `1.1.6-py3.8`  |
+| `stable`                          | Latest stable release | 3.6            | `stable`       |
+| `stable-py${PYTHON_VER}`          | Latest stable release | As specified   | `stable-py3.8` |
+
+The following additional tags are only available from GitHub Packages:
+
+| Tag                                                  | Nautobot Branch              | Python Version |
+| ---------------------------------------------------- | ---------------------------- | -------------- |
+| `latest`                                             | `develop`, the latest commit | 3.6            |
+| `latest-py${PYTHON_VER}`                             | `develop`, the latest commit | As specified   |
+| `develop`                                            | `develop`, the latest commit | 3.6            |
+| `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
+| `develop-${GIT_SHA:0:7}-$(date +%s)`                 | `develop`, a specific commit | 3.6            |
+| `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` | `develop`, a specific commit | As specified   |
+| `next`                                               | `next`, the latest commit    | 3.6            |
+| `next-py${PYTHON_VER}`                               | `next`, the latest commit    | As specified   |
+| `next-${GIT_SHA:0:7}-$(date +%s)`                    | `next`, a specific commit    | 3.6            |
+| `next-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}`    | `next`, a specific commit    | As specified   |
 
 Currently images are pushed for the following python versions:
 
@@ -43,7 +52,7 @@ Currently images are pushed for the following python versions:
 * 3.9
 
 !!! info
-    A dev image `networktocode/nautobot-dev` is also provided with the same tags, this image provides the development dependencies needed to build Nautobot.  This container can be used as a base for development to develop additional Nautobot plugins but should **NOT** be used in production.
+    Developer images `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}` are also provided with the same tags as above. These images provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop additional Nautobot plugins but should **NOT** be used in production.
 
 ## Getting Started
 
