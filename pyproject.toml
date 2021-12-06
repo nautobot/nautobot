@@ -94,6 +94,8 @@ Markdown = "~3.3.6"
 mysqlclient = {version = "~2.0.3", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
+# Library of network related Jinja Filters
+netutils = "~1.0.0"
 # Image processing library
 Pillow = "~8.3.2"
 # PostgreSQL database adapter
@@ -108,8 +110,7 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
-# Library of network related Jinja Filters
-netutils = "~0.2.4"
+
 
 [tool.poetry.extras]
 mysql = ["mysqlclient"]
