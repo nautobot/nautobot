@@ -13,6 +13,7 @@ from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import count_related
+from nautobot.utilities.utils import normalize_querydict
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -199,7 +200,7 @@ class ClusterAddDevicesView(generic.ObjectEditView):
 
     def get(self, request, pk):
         cluster = get_object_or_404(self.queryset, pk=pk)
-        form = self.form(cluster, initial=request.GET)
+        form = self.form(cluster, initial=normalize_querydict(request.GET))
 
         return render(
             request,
