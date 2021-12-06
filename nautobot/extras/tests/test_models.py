@@ -1075,7 +1075,7 @@ class JobLogEntryTest(TestCase):
             log.save()
 
             self.assertEqual(JobLogEntry.objects.all().count(), 1)
-            log_object = JobLogEntry.objects.all()[0]
+            log_object = JobLogEntry.objects.first()
             self.assertEqual(log_object.message, log.message)
             self.assertEqual(log_object.log_level, log.log_level)
             self.assertEqual(log_object.grouping, log.grouping)
