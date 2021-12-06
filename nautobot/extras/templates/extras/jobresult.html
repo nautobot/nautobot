@@ -76,7 +76,7 @@
                 <div class="col-md-6">
                     {% include 'extras/inc/jobresult.html' with result=result log_table=log_table %}
         </div>
-        <dif role="tabpanel" class="tab-pane" id="json">
+        <div role="tabpanel" class="tab-pane" id="json">
             <div class="container-fluid">
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -87,7 +87,7 @@
                     </div>
                 </div>
             </div>
-        </dif>
+        </div>
         {% if result.data.output %}
             <div role="tabpanel" class="tab-pane" id="output">
                 <pre>{{ result.data.output }}</pre>
