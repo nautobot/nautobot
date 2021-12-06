@@ -51,9 +51,10 @@ class ExtrasConfig(NautobotConfig):
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
-        # Register netutils jinja2 filters
+
+        # Register netutils jinja2 filters in django_jinja
         from netutils.utils import jinja2_convenience_function
-        from django_jinja.library import filter, _register_function
+        from django_jinja import library
 
         for name, func in jinja2_convenience_function().items():
-            _register_function("filters", name=name, fn=func)
+            library.filters(name=name, fn=func)
