@@ -15,7 +15,10 @@ class SingletonJob(Job):
 
     class Meta:
         name = "Singleton Job"
-        description = "Singleton job, only runs one at a time. Arguments are ignored for uniqueness. Try running several and see what happens."
+        description = (
+            "Singleton job, only runs one at a time. Arguments are ignored for uniqueness. "
+            "Try running several and see what happens."
+        )
         singleton = True
         singleton_keys = []  # Null singleton_keys
 
@@ -32,7 +35,9 @@ class SingletonKeysJob(Job):
 
     class Meta:
         name = "Singleton Keys Job"
-        description = "Singleton job, only runs one at a time if the arguments match. Try running several and see what happens."
+        description = (
+            "Singleton job, only runs one at a time if the arguments match. Try running several and see what happens."
+        )
         singleton = True
         singleton_keys = ["data"]
 
