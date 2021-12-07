@@ -478,7 +478,7 @@ class CustomField(BaseModel):
 
         super().delete(*args, **kwargs)
 
-        delete_custom_field_data.delay(self.name, content_types)
+        delete_custom_field_data.apply_async(args=(self.name, content_types))
 
     def get_absolute_url(self):
         return reverse("extras:customfield", args=[self.name])
@@ -528,7 +528,9 @@ class CustomFieldChoice(BaseModel):
 
         if self.value != database_object.value:
             transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+                lambda: update_custom_field_choice_data.apply_async(
+                    args=(self.field.pk, database_object.value, self.value),
+                )
             )
 
     def delete(self, *args, **kwargs):

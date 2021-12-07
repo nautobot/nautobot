@@ -11,6 +11,7 @@ class SingletonJobNoSingletonKeys(Job):
         name = "Singleton Job without argument hashing"
         description = "Singleton job, only runs one at a time. Uses only Job name for dupe detection."
         singleton = True
+        singleton_keys = []  # Null singleton_keys
 
     def run(self, data, commit):
         interval = data["interval"]

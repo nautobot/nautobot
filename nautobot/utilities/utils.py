@@ -321,15 +321,16 @@ def array_to_string(array):
     return ", ".join("-".join(map(str, (g[0], g[-1])[: len(g)])) for g in group)
 
 
-def copy_safe_request(request):
+def copy_safe_request(request, **nautobot_kwargs):
     """
     Copy selected attributes from a request object into a dict. This is needed in places where thread safe JSON
     encoding of the useful request data is needed.
 
     Note that `request.FILES` is explicitly omitted because they cannot be uniformly serialized.
     """
-    # Just pass it through if request is already a dict.
+    # Just pass it through if request is already a dict, adding `nautobot_kwargs` if not already set.
     if isinstance(request, dict):
+        request.setdefault("nautobot_kwargs", nautobot_kwargs)
         return request
 
     meta = {
@@ -338,14 +339,16 @@ def copy_safe_request(request):
         if k in request.META and isinstance(request.META[k], str)
     }
 
-    return {
+    serialized = {
         "META": meta,
         "POST": request.POST,
         "GET": request.GET,
         "user": request.user.pk,
         "path": request.path,
         "id": getattr(request, "id", None),  # UUID assigned by middleware
+        "nautobot_kwargs": nautobot_kwargs,
     }
+    return serialized
 
 
 def get_filterset_for_model(model):

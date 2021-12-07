@@ -393,10 +393,6 @@ class JobFileUploadTest(TestCase):
 class JobSingletonTestCase(CeleryTestCase):
     """Test cases for Jobs with `singleton=True` in their `Meta`."""
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-
     def test_already_queued_no_arguments(self):
         """Executing the same task IGNORING args results in an `AlreadyQueued` error."""
         from dummy_plugin.tasks import slow_add  # noqa: Avoid import issues

@@ -843,14 +843,18 @@ class JobResult(BaseModel, CustomFieldModel):
 
         # If the default `run_job` function is being used, default to doing Singleton on its
         # argument keys, unless they are explicitly passed in by the caller.
+        once_default_keys = getattr(job_class, "singleton_keys", None)
         if func.name == once_default_run_job and "once" not in celery_kwargs:
-            once_default_keys = getattr(job_class, "singleton_keys", None) or ["data", "commit"]
+            if once_default_keys is None:
+                once_default_keys = ["data", "commit"]
             celery_kwargs["once"] = dict(keys=once_default_keys)
 
         # Serialize the request object if there is one.
         request = kwargs.get("request")
         if request is not None:
-            kwargs["request"] = copy_safe_request(request)
+            kwargs["request"] = copy_safe_request(
+                request, once=celery_kwargs.get("once", {}), job_name=job_class.class_path
+            )
 
         # Execute the Celery task to capture the AsyncResult, or if it fails to be scheduled such as
         # it being a duplicate Singleton execution, clean up the JobResult.
