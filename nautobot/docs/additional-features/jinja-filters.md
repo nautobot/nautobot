@@ -1,13 +1,14 @@
-# Additional Django Template helpers and Jinja2 filters
+# Additional Jinja2 filters and Django Template helpers
 
 ## Introduction
 
 Nautobot is using primarily 2 template engines internally, Django Template and Jinja2.
-Django Template is used mainly to render the UI pages and Jinja2 is used for user defined features like: computed fields, custom links etc ...
+Django Template is used to render the UI pages and Jinja2 is used for all extensibility features like: computed fields, custom links etc ...
 
-Django Template and Jinja2 are very closed to each other. The main differences between them is the syntax of the template. Historically, Django Template has been the go-to solution to generate webpage in Django and Jinja2 is the industry standard outside of Django.
+!!! note
+	Jinja2 and Django Template are very similar, the main difference between them is the syntax of the template. Historically, Django Template has been the go-to solution to generate webpage in Django and Jinja2 is the industry standard outside of Django.
 
-Both Django Template and Jinja2 can be extended with a library of functions, called `helpers` in Django Template and `filters` in Jinja2. Nautobot includes some built-in helpers/filters out of the box and automatically include more network specific helpers/filters from the netutils library.
+Both Django Template and Jinja2 can be extended with a library of functions, called `filters` in Jinja2 and `helpers` in Django Template. Nautobot includes some built-in `filters`/`helpers` out of the box and automatically include more network specific `filters`/`helpers` from the [netutils library](https://netutils.readthedocs.io/en/latest/index.html).
 
 ## Netutils Django Template helpers / Jinja2 filters
 
@@ -15,11 +16,11 @@ Both Django Template and Jinja2 can be extended with a library of functions, cal
 
 Please [check the netutils documentation](https://netutils.readthedocs.io/en/latest/netutils/index.html) to see the list of available functions.
 
-All functions in Netutils are available in Nautobot in both Jinja2 and Django Template
+All functions in Netutils are available in Nautobot in both Jinja2 and Django Template.
 
 ## Nautobot Built-in Django Template helpers / Jinja2 filters
 
-the Nautobot project is also maintaining a list of Built in helpers/filters that can be used in both Jinja2 and Django Template.
+The Nautobot project is also maintaining a list of built-in `filters`/`helpers` that can be used in both Jinja2 and Django Template.
 
 ### as_range
 
