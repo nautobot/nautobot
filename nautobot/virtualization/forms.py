@@ -8,6 +8,7 @@ from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
+    CustomFieldBulkCreateForm,
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
@@ -679,18 +680,25 @@ class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class VirtualMachineBulkAddComponentForm(BootstrapMixin, forms.Form):
+class VirtualMachineBulkAddComponentForm(CustomFieldBulkCreateForm, BootstrapMixin, forms.Form):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     name_pattern = ExpandableNameField(label="Name")
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
-    def clean_tags(self):
-        # Because we're feeding TagField data (on the bulk edit form) to another TagField (on the model form), we
-        # must first convert the list of tags to a string.
-        return ",".join(self.cleaned_data.get("tags"))
+    class Meta:
+        nullable_fields = []
 
 
 class VMInterfaceBulkCreateForm(
-    form_from_model(VMInterface, ["enabled", "mtu", "description", "tags"]),
+    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode"]),
     VirtualMachineBulkAddComponentForm,
 ):
-    pass
+    field_order = (
+        "name_pattern",
+        "enabled",
+        "mtu",
+        "description",
+        "mode",
+        "tags",
+    )
+
