@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os.path
 import uuid
-from unittest import skipIf
+from unittest import skipIf, mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -46,15 +46,11 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
-from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
 
 User = get_user_model()
-
-
-celery_worker_running = bool(get_worker_count())
 
 
 THIS_DIRECTORY = os.path.dirname(__file__)
@@ -617,10 +613,11 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-    @skipIf(celery_worker_running, "Celery worker is running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_git_sync_no_celery_worker(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_git_sync_no_celery_worker(self, mock_get_worker_count):
         """Git sync cannot be triggered if Celery is not running."""
+        mock_get_worker_count.return_value = 0
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
@@ -628,28 +625,31 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_git_sync_nonexistent_repo(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_git_sync_nonexistent_repo(self, mock_get_worker_count):
         """Git sync request handles case of a nonexistent repository."""
+        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_git_sync_without_permissions(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_git_sync_without_permissions(self, mock_get_worker_count):
         """Git sync request verifies user permissions."""
+        mock_get_worker_count.return_value = 1
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_git_sync_with_permissions(self):
-        """Git sync request can run successfully."""
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_git_sync_with_permissions(self, mock_get_worker_count):
+        """Git sync request can be submitted successfully."""
+        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
@@ -941,18 +941,20 @@ class JobTest(APITestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
-    def test_run_job_without_permission(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_without_permission(self, mock_get_worker_count):
         """Job run request enforces user permissions."""
+        mock_get_worker_count.return_value = 1
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         with disable_warnings("django.request"):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @skipIf(celery_worker_running, "Celery worker is running")
-    def test_run_job_no_worker(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_no_worker(self, mock_get_worker_count):
         """Job run cannot be requested if Celery is not running."""
+        mock_get_worker_count.return_value = 0
         self.add_permissions("extras.run_job")
         device_role = DeviceRole.objects.create(name="role", slug="role")
         job_data = {
@@ -972,10 +974,11 @@ class JobTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
-    def test_run_job_object_var(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_var(self, mock_get_worker_count):
         """Job run requests can reference objects by their primary keys."""
+        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         device_role = DeviceRole.objects.create(name="role", slug="role")
         job_data = {
@@ -1002,11 +1005,11 @@ class JobTest(APITestCase):
         job = ScheduledJob.objects.last()
         self.assertEqual(job.kwargs["data"]["var4"], str(device_role.pk))
 
-    # TODO: needs to be fixed - see https://github.com/nautobot/nautobot/issues/958
-    @skipIf(True, "Disabled due to issue #958")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
-    def test_run_job_object_var_lookup(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_var_lookup(self, mock_get_worker_count):
         """Job run requests can reference objects by their attributes."""
+        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         device_role = DeviceRole.objects.create(name="role", slug="role")
         job_data = {
@@ -1016,11 +1019,19 @@ class JobTest(APITestCase):
             "var4": {"name": "role"},
         }
 
-        self.assertEqual(self.TestJob.deserialize_data(job_data), {"var4": device_role})
+        self.assertEqual(
+            self.TestJob.deserialize_data(job_data),
+            {"var1": "FooBar", "var2": 123, "var3": False, "var4": device_role},
+        )
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, {"data": job_data}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
-    def test_run_job_future(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_future(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         data = {
@@ -1037,9 +1048,10 @@ class JobTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
-    def test_run_job_future_past(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_future_past(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         data = {
@@ -1056,9 +1068,10 @@ class JobTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
-    def test_run_job_interval(self):
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_interval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         data = {

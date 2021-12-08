@@ -416,7 +416,7 @@ class BaseJob:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
         # defer validation to the form object
-        f = self.as_form(data=data)
+        f = self.as_form(data=self.deserialize_data(data))
         if not f.is_valid():
             raise ValidationError(f.errors)
 
