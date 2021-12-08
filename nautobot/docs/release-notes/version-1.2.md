@@ -127,6 +127,8 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Added
 
 - [#876](https://github.com/nautobot/nautobot/issues/876) - Added option to apply a validation regex when defining CustomFieldChoices.
+- [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
+- [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
 
 ### Changed
 
