@@ -258,10 +258,9 @@ class CustomField(BaseModel):
         validators=[validate_regex],
         max_length=500,
         verbose_name="Validation regex",
-        help_text=(
-            "Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. For "
-            "example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters."
-        ),
+        help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
+        "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters. Regular "
+        "expression on select and multi-select will be applied at <code>Custom Field Choices</code> definition.",
     )
 
     objects = CustomFieldManager()
@@ -307,10 +306,12 @@ class CustomField(BaseModel):
         regex_types = (
             CustomFieldTypeChoices.TYPE_TEXT,
             CustomFieldTypeChoices.TYPE_URL,
+            CustomFieldTypeChoices.TYPE_SELECT,
+            CustomFieldTypeChoices.TYPE_MULTISELECT,
         )
         if self.validation_regex and self.type not in regex_types:
             raise ValidationError(
-                {"validation_regex": "Regular expression validation is supported only for text and URL fields"}
+                {"validation_regex": "Regular expression validation is supported only for text, URL and select fields"}
             )
 
         # Choices can be set only on selection fields
@@ -514,6 +515,9 @@ class CustomFieldChoice(BaseModel):
     def clean(self):
         if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
+
+        if not re.match(self.field.validation_regex, self.value):
+            raise ValidationError(f"Value must match regex {self.field.validation_regex} got {self.value}.")
 
     def save(self, *args, **kwargs):
         """
