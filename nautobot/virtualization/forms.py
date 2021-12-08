@@ -701,4 +701,3 @@ class VMInterfaceBulkCreateForm(
         "mode",
         "tags",
     )
-
