@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import pkgutil
+import sys
 import shutil
 import traceback
 import warnings
@@ -855,6 +856,10 @@ def get_jobs():
         # Iterate over all modules (Python files) found in any of the directory paths identified for the given grouping
         for importer, module_name, _ in pkgutil.iter_modules(path_list):
             try:
+                # Remove cached module to ensure consistency with filesystem
+                if module_name in sys.modules:
+                    del sys.modules[module_name]
+
                 # Dynamically import this module to make its contents (job(s)) available to Python
                 module = importer.find_module(module_name).load_module(module_name)
             except Exception as exc:
