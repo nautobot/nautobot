@@ -126,7 +126,7 @@ AUTH_LDAP_USER_ATTR_MAP = {
 }
 ```
 
-The following snippet shows how to search for users in multiple LDAP groups:
+#### Searching in Multiple LDAP Groups
 
 - Define the user-groups in *.env file (delimiter `';'`)
 
