@@ -361,3 +361,58 @@ This should be the URL that is mapped to the "Log in" button on the top right of
 ---
 
 Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+
+### Azure AD
+
+1. In the Azure admin portal, search for and select *Azure Active Directory*.
+2. Under *Manage*, select *App registrations -> New registration*.
+3. Configure the application as follows:
+
+    * *Name*: This is the user-facing display name for the app.
+    * *Supported account types*: This specifies the AD directories that you're allowing to authenticate with this app.
+    * *Redirect URIs*: Don't fill this out yet, it will be configured in the following steps.
+
+4. Once the application is configured in Azure, you'll be shown the app registration's *Overview* page. Please take note of the *Application (client) ID* for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC).  When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
+5. From the App registration page, click on *Authentication*. Under *Platform configurations*, select *Add a platform* and select *Web*.
+6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
+
+    * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
+
+7. Once the Redirect URI is set, the last thing you'll need is to generate a *client secret*. To do so, click on *Certificates & secrets* and then the *New client secret* option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
+
+8. With the client secret generated, edit your `nautobot_config.py` as follows:
+
+#### Azure AD - OAuth2
+
+If your app is linked to the common tenant, you'll want to edit your `nautobot_config.py` as follows:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.azuread.AzureADOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = "<Client ID from Azure>"
+SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = "<Client Secret From Azure>"
+```
+
+#### Azure - Tenant Support
+
+If your app is linked to a specific tenant instead of the common tenant, you'll want to edit your `nautobot_config.py` as follows:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.azuread.AzureADOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_KEY = "<Client ID from Azure>"
+SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_SECRET = "<Client Secret From Azure>"
+SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_TENANT_ID = "<Tenant ID from Azure>"
+```
+
+---
+
+With those settings in place your users should be able to authenticate against Azure AD and successfully login to Nautobot. However, that user will not be placed in any groups or given any permissions. In order to do so, you'll need to utilize a script to synchronize the groups passed from Azure to Nautobot after authentication succeeds. Any group permissions will need to be set manually in the Nautobot admin panel.
+
+An example to sync groups with Azure is provided in the [`examples/azure_ad`](https://github.com/nautobot/nautobot/tree/main/examples/azure_ad) folder in the root of the Nautobot repository.
