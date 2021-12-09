@@ -282,9 +282,11 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return get_permission_for_model(self.queryset.model, self._permission_action)
 
     def get_object(self, kwargs):
+        """Retrieve an object based on `kwargs."""
         # Look up an existing object by slug or PK, if provided.
-        if kwargs:
-            return get_object_or_404(self.queryset, **kwargs)
+        for field in ("slug", "pk", "name"):
+            if field in kwargs:
+                return get_object_or_404(self.queryset, **dict(field=kwargs[field]))
         return self.queryset.model()
 
     def get_extra_context(self, request, instance):
