@@ -58,7 +58,7 @@ Return x/y (rounded).
 
 ### fgcolor
 
-Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
+Return the ideal foreground color (black `"#000000"` or white `"#ffffff"`) given an arbitrary background color in RRGGBB format.
 
 ```no-highlight
 color: {{ object.status.color|fgcolor }}
