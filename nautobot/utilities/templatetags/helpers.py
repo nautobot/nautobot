@@ -165,7 +165,8 @@ def bettertitle(value):
         str: string in Title format
 
     Example:
-        {{ obj_type.name|bettertitle }}
+        >>> bettertitle("IP address")
+        "IP Address"
     """
     return " ".join([w[0].upper() + w[1:] for w in value.split()])
 
