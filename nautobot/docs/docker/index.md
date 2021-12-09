@@ -4,11 +4,11 @@ Nautobot is packaged as a Docker image for use in a production environment. The 
 
 ## Tags
 
-A set of Docker images are built for each Nautobot release and published to both [Docker Hub](https://hub.docker.com/r/networktocode/nautobot/) and [GitHub Packages](https://github.com/nautobot/nautobot/pkgs/container/nautobot).
+A set of Docker images are built for each Nautobot release and published to both [Docker Hub](https://hub.docker.com/r/networktocode/nautobot/) and the [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot).
 
-Additionally, GitHub Actions are used to automatically build images corresponding to each commit to the `develop` and `next` branches; these images are only published to GitHub Packages.
+Additionally, GitHub Actions are used to automatically build images corresponding to each commit to the `develop` and `next` branches; these images are only published to the GitHub Container Registry.
 
-To get a specific tagged image from Docker Hub or GitHub Packages run:
+To get a specific tagged image from Docker Hub or the GitHub Container Registry run:
 
 ```no-highlight
 docker image pull networktocode/nautobot:${TAG}
@@ -20,7 +20,7 @@ or
 docker pull ghcr.io/nautobot/nautobot:${TAG}
 ```
 
-The following tags are available on both Docker Hub and GitHub Packages:
+The following tags are available on both Docker Hub and the GitHub Container Registry:
 
 | Tag                               | Nautobot Version      | Python Version | Example        |
 | --------------------------------- | --------------------- | -------------- | -------------- |
@@ -29,7 +29,7 @@ The following tags are available on both Docker Hub and GitHub Packages:
 | `stable`                          | Latest stable release | 3.6            | `stable`       |
 | `stable-py${PYTHON_VER}`          | Latest stable release | As specified   | `stable-py3.8` |
 
-The following additional tags are only available from GitHub Packages:
+The following additional tags are only available from the GitHub Container Registry:
 
 | Tag                                                  | Nautobot Branch              | Python Version |
 | ---------------------------------------------------- | ---------------------------- | -------------- |
