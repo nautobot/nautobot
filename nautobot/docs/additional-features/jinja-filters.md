@@ -35,7 +35,9 @@ Given a list of *n* items, return a corresponding range of *n* integers.
 
 ### bettertitle
 
-Alternative to the builtin title(); uppercases words without replacing letters that are already uppercase.
+Alternative to the built-in `title` filter; uppercases words without replacing letters that are already uppercase.
+
+For example, `title("IP address") == "Ip Address"`, while `bettertitle("IP address") == "IP Address"`.
 
 ```no-highlight
 {{ obj_type.name|bettertitle }}
