@@ -1,9 +1,10 @@
 from django.test import override_settings
+from django.contrib.contenttypes.models import ContentType
 from netaddr import EUI
 
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import DeviceRole, Platform, Site
-from nautobot.extras.models import ConfigContextSchema, Status
+from nautobot.extras.models import ConfigContextSchema, CustomField, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, post_data
 from nautobot.virtualization.models import (
@@ -300,6 +301,11 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VLAN.objects.create(vid=103, name="VLAN103", site=site),
         )
 
+        obj_type = ContentType.objects.get_for_model(VMInterface)
+        cf = CustomField.objects.create(name="custom_field_1", type="text")
+        cf.save()
+        cf.content_types.set([obj_type])
+
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
@@ -312,6 +318,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "custom_field_1": "Custom Field Data",
             "tags": [t.pk for t in tags],
         }
 
@@ -325,6 +332,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "custom_field_1": "Custom Field Data",
             "tags": [t.pk for t in tags],
         }
 
@@ -342,4 +350,5 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "custom_field_1": "New Custom Field Data",
         }
