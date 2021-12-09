@@ -18,7 +18,7 @@ Please [check the netutils documentation](https://netutils.readthedocs.io/en/lat
 
 All functions in Netutils are available in Nautobot in both Jinja2 and Django Template.
 
-## Nautobot Built-in Django Template helpers / Jinja2 filters
+## Nautobot Built-In Filters
 
 The Nautobot project also provides the following built-in `filters` that can be used in both Jinja2 and Django Template.
 
