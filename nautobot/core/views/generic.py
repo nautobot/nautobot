@@ -286,7 +286,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Look up an existing object by slug, PK, or name, if provided.
         for field in ("slug", "pk", "name"):
             if field in kwargs:
-                return get_object_or_404(self.queryset, **dict(field=kwargs[field]))
+                return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()
 
     def get_extra_context(self, request, instance):
@@ -417,7 +417,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Look up an existing object by slug or PK, or name if provided.
         for field in ("slug", "pk", "name"):
             if field in kwargs:
-                return get_object_or_404(self.queryset, **dict(field=kwargs[field]))
+                return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()
 
     def get(self, request, **kwargs):
