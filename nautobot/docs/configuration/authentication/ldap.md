@@ -164,9 +164,10 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 
 ## Multiple LDAP Server Support
-Multiple Server is supported in `django-auth-ldap`. The features [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).
 
-In order to load the custom backends into Nautobot a plugin can be used, this plugin will allow the backends to be loaded into the Django settings for use within the `nautobot_config.py` file.  At the simplest form the plugin should have custom backends defined.
+Multiple servers can be supported in `django-auth-ldap` by the use of additional LDAP backends, as described in the library's [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).
+
+In order to define and load additional backends into Nautobot a plugin can be used. This plugin will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file.  At the simplest form the plugin should have a custom backend(s) defined:
 
 ```python
 # my_customer_backends.py
@@ -177,7 +178,7 @@ class LDAPBackendSecondary(LDAPBackend):
     settings_prefix = "AUTH_LDAP_SECONDARY_"
 ```
 
-Assume the plugin is name `nautobot_ldap_plugin`.  The following snippet could be used to load the additional LDAP backend.
+If the plugin is named `nautobot_ldap_plugin`, the following snippet could be used to load the additional LDAP backend:
 
 ```python
 # nautobot_config.py
@@ -192,10 +193,12 @@ AUTHENTICATION_BACKENDS = [
 Once the custom backend is loaded into the settings all the configuration items mentioned previously need to be completed for each server.  As a simplified example defining the URIs would be accomplished by the following two lines in the `nautobot_config.py` file.  A similar approach would be done to define the rest of the settings.
 
 ```python
+# nautobot_config.py
+
 # Server URI which uses django_auth_ldap.backend.LDAPBackend
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
 
-# Server URI which uses nautobot_ldap_plugin.my_customer_backends.LDAPBackend1
+# Server URI which uses nautobot_ldap_plugin.my_customer_backends.LDAPBackendSecondary
 AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
 ```
 
