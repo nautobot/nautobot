@@ -24,7 +24,7 @@ The Nautobot project also provides the following built-in `filters` that can be 
 
 ### as_range
 
-Return a range of n items.
+Given a list of *n* items, return a corresponding range of *n* integers.
 
 ```no-highlight
 # Django template
