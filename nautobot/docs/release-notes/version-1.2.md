@@ -138,6 +138,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#958](https://github.com/nautobot/nautobot/issues/958) - Fixed Job REST API handling of ObjectVars specified by query parameters.
 - [#1078](https://github.com/nautobot/nautobot/issues/1078) - Fixed missing support for filtering several models by their custom fields and/or created/updated stamps.
 - [#1093](https://github.com/nautobot/nautobot/pull/1093) - Improved REST API performance by adding caching of serializer "opt-in fields".
+- [#1098](https://github.com/nautobot/nautobot/issues/1098) - Fixed 404 error when creating a circuit termination for circuit and other edge cases resulting in 404 errors
 - [#1112](https://github.com/nautobot/nautobot/issues/1112) - Fixed broken single-object GraphQL query endpoints.
 - [#1116](https://github.com/nautobot/nautobot/issues/1116) - Fixed UnboundLocalError when using device NAPALM integration
 - [#1121](https://github.com/nautobot/nautobot/pull/1121) - Fixed issue with handling of relationships referencing no-longer-present model classes.
