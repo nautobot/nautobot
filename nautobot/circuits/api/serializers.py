@@ -65,7 +65,7 @@ class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 #
 
 
-class ProviderNetworkSerializer(CustomFieldModelSerializer):
+class ProviderNetworkSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:providernetwork-detail")
     provider = NestedProviderSerializer()
 
