@@ -12,7 +12,7 @@ Both Django Template and Jinja2 can be extended with a library of functions, cal
 
 ## Netutils Django Template helpers / Jinja2 filters
 
-[Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by network to code, that is focusing on providing a collection of functions and objects for common network automation tasks.
+[Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by Network to Code, that is focusing on providing a collection of functions for common network automation tasks.
 
 Please [check the netutils documentation](https://netutils.readthedocs.io/en/latest/netutils/index.html) to see the list of available functions.
 
