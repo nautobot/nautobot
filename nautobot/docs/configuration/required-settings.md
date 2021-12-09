@@ -360,7 +360,7 @@ $ nautobot-server generate_secret_key
 Alternatively use the following command to generate a secret even before `nautobot-server` is runable:
 
 ```no-highlight
-$ tr -cd '[=CHAR=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)]' < /dev/urandom | fold -w50 | head -n1
+$ LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1
 9.V$@Kxkc@@Kd@z<a/=.J-Y;rYc79<y@](9o9(L(*sS)Q+ud5P
 ```
 
