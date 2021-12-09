@@ -8,7 +8,7 @@ Django Template is used to render the UI pages and Jinja2 is used for all extens
 !!! note
 	Jinja2 and Django Template are very similar, the main difference between them is the syntax of the template. Historically, Django Template has been the go-to solution to generate webpage in Django and Jinja2 is the industry standard outside of Django.
 
-Both Django Template and Jinja2 can be extended with a library of functions, called `filters` in Jinja2 and `helpers` in Django Template. Nautobot includes some built-in `filters`/`helpers` out of the box and automatically include more network specific `filters`/`helpers` from the [netutils library](https://netutils.readthedocs.io/en/latest/index.html).
+Both Django Template and Jinja2 can be extended with a library of functions, called `filters`, that apply formatting or transformations to a provided input. Nautobot provides many built-in `filters`, including network specific `filters` from the [netutils library](https://netutils.readthedocs.io/en/latest/index.html).
 
 ## Netutils Django Template helpers / Jinja2 filters
 
