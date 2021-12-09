@@ -36,7 +36,10 @@ def placeholder(value):
         str: Placeholder in HTML, or the string representation of the value.
 
     Example:
-        {{ html | placeholder }}
+        >>> placeholder("")
+        '<span class="text-muted">&mdash;</span>'
+        >>> placeholder("hello")
+        "hello"
     """
     if value:
         return value
