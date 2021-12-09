@@ -26,6 +26,7 @@
     </div>
     {% if termination %}
         <table class="table table-hover panel-body attr-table">
+            {% if termination.site %}
             <tr>
                 <td>Site</td>
                 <td>
@@ -79,6 +80,14 @@
                     {% endif %}
                 </td>
             </tr>
+            {% else %}
+            <tr>
+                <td>Provider Network</td>
+                <td>
+                    <a href="{{ termination.providernetwork.get_absolute_url }}">{{ termination.providernetwork }}</a>
+                </td>
+            </tr>
+            {% endif %}
             <tr>
                 <td>Speed</td>
                 <td>

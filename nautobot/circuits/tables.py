@@ -9,7 +9,24 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from .models import Circuit, CircuitType, Provider
+from .models import Circuit, CircuitType, Provider, ProviderNetwork
+
+
+#
+# Provider Network
+#
+
+
+class ProviderNetworkTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    provider = tables.Column(linkify=True)
+    tags = TagColumn(url_name="circuits:providernetwork_list")
+
+    class Meta(BaseTable.Meta):
+        model = ProviderNetwork
+        fields = ("pk", "name", "provider", "description", "tags")
+        default_columns = ("pk", "name", "provider", "description")
 
 
 #
@@ -73,8 +90,8 @@ class CircuitTable(StatusTableMixin, BaseTable):
     cid = tables.LinkColumn(verbose_name="ID")
     provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__slug")])
     tenant = TenantColumn()
-    a_side = tables.Column(verbose_name="A Side")
-    z_side = tables.Column(verbose_name="Z Side")
+    termination_a = tables.Column(linkify=True, verbose_name="Side A")
+    termination_z = tables.Column(linkify=True, verbose_name="Side Z")
     tags = TagColumn(url_name="circuits:circuit_list")
 
     class Meta(BaseTable.Meta):
@@ -86,8 +103,8 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "type",
             "status",
             "tenant",
-            "a_side",
-            "z_side",
+            "termination_a",
+            "termination_z",
             "install_date",
             "commit_rate",
             "description",
@@ -100,7 +117,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "type",
             "status",
             "tenant",
-            "a_side",
-            "z_side",
+            "termination_a",
+            "termination_z",
             "description",
         )

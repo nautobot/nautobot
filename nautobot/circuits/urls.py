@@ -3,7 +3,7 @@ from django.urls import path
 from nautobot.dcim.views import CableCreateView, PathTraceView
 from nautobot.extras.views import ObjectChangeLogView
 from . import views
-from .models import Circuit, CircuitTermination, CircuitType, Provider
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 app_name = "circuits"
 urlpatterns = [
@@ -41,6 +41,22 @@ urlpatterns = [
         ObjectChangeLogView.as_view(),
         name="provider_changelog",
         kwargs={"model": Provider},
+    ),
+    path("providernetworks/", views.ProviderNetworkListView.as_view(), name="providernetwork_list"),
+    path("providernetworks/add/", views.ProviderNetworkEditView.as_view(), name="providernetwork_add"),
+    path("providernetworks/import/", views.ProviderNetworkBulkImportView.as_view(), name="providernetwork_import"),
+    path("providernetworks/edit/", views.ProviderNetworkBulkEditView.as_view(), name="providernetwork_bulk_edit"),
+    path("providernetworks/delete/", views.ProviderNetworkBulkDeleteView.as_view(), name="providernetwork_bulk_delete"),
+    path("providernetworks/<uuid:pk>/", views.ProviderNetworkView.as_view(), name="providernetwork"),
+    path("providernetworks/<uuid:pk>/edit/", views.ProviderNetworkEditView.as_view(), name="providernetwork_edit"),
+    path(
+        "providernetworks/<uuid:pk>/delete/", views.ProviderNetworkDeleteView.as_view(), name="providernetwork_delete"
+    ),
+    path(
+        "providernetworks/<uuid:pk>/changelog/",
+        ObjectChangeLogView.as_view(),
+        name="providernetwork_changelog",
+        kwargs={"model": ProviderNetwork},
     ),
     # Circuit types
     path("circuit-types/", views.CircuitTypeListView.as_view(), name="circuittype_list"),

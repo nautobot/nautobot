@@ -26,7 +26,7 @@ from nautobot.utilities.forms import (
     SlugField,
     TagFilterField,
 )
-from .models import Circuit, CircuitTermination, CircuitType, Provider
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
 #
@@ -102,6 +102,62 @@ class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
         query_params={"region": "$region"},
     )
     asn = forms.IntegerField(required=False, label="ASN")
+    tag = TagFilterField(model)
+
+
+#
+# Provider Networks
+#
+
+
+class ProviderNetworkForm(BootstrapMixin, CustomFieldModelForm):
+    provider = DynamicModelChoiceField(queryset=Provider.objects.all())
+    comments = CommentField()
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = ProviderNetwork
+        fields = [
+            "provider",
+            "name",
+            "description",
+            "comments",
+            "tags",
+        ]
+        fieldsets = (("Provider Network", ("provider", "name", "description", "tags")),)
+
+
+class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
+    provider = CSVModelChoiceField(queryset=Provider.objects.all(), to_field_name="name", help_text="Assigned provider")
+
+    class Meta:
+        model = ProviderNetwork
+        fields = [
+            "provider",
+            "name",
+            "description",
+            "comments",
+        ]
+
+
+class ProviderNetworkBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ProviderNetwork.objects.all(), widget=forms.MultipleHiddenInput)
+    provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
+    description = forms.CharField(max_length=100, required=False)
+    comments = CommentField(widget=SmallTextarea, label="Comments")
+
+    class Meta:
+        nullable_fields = [
+            "description",
+            "comments",
+        ]
+
+
+class ProviderNetworkFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = ProviderNetwork
+    field_order = ["q", "provider_id"]
+    q = forms.CharField(required=False, label="Search")
+    provider_id = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), required=False, label="Provider")
     tag = TagFilterField(model)
 
 
@@ -223,7 +279,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
         "q",
         "type",
         "provider",
-        "status",
+        "providernetwork" "status",
         "region",
         "site",
         "tenant_group",
@@ -233,6 +289,12 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
     q = forms.CharField(required=False, label="Search")
     type = DynamicModelMultipleChoiceField(queryset=CircuitType.objects.all(), to_field_name="slug", required=False)
     provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="slug", required=False)
+    providernetwork = DynamicModelMultipleChoiceField(
+        queryset=ProviderNetwork.objects.all(),
+        required=False,
+        query_params={"provider_id": "$provider"},
+        label="Provider Network",
+    )
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(
         queryset=Site.objects.all(),
@@ -252,6 +314,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
 class CircuitTerminationForm(BootstrapMixin, RelationshipModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+    providernetwork = DynamicModelChoiceField(queryset=ProviderNetwork.objects.all(), required=False)
 
     class Meta:
         model = CircuitTermination
@@ -259,6 +322,7 @@ class CircuitTerminationForm(BootstrapMixin, RelationshipModelForm):
             "term_side",
             "region",
             "site",
+            "providernetwork",
             "port_speed",
             "upstream_speed",
             "xconnect_id",

@@ -8,7 +8,20 @@ __all__ = [
     "NestedCircuitTerminationSerializer",
     "NestedCircuitTypeSerializer",
     "NestedProviderSerializer",
+    "NestedProviderNetworkSerializer",
 ]
+
+#
+# Provider Networks
+#
+
+
+class NestedProviderNetworkSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="circuits-api:providernetwork-detail")
+
+    class Meta:
+        model = Provider
+        fields = ["id", "url", "display", "name"]
 
 
 #
