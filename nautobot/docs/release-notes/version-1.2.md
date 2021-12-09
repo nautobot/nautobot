@@ -136,6 +136,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#926](https://github.com/nautobot/nautobot/issues/926) - Fixed inability to pass multiple values for a MultiObjectVar as query parameters.
 - [#958](https://github.com/nautobot/nautobot/issues/958) - Fixed Job REST API handling of ObjectVars specified by query parameters.
+- [#1043](https://github.com/nautobot/nautobot/issues/1043) - Fixed `AttributeError` when bulk-adding interfaces to virtual machines.
 - [#1078](https://github.com/nautobot/nautobot/issues/1078) - Fixed missing support for filtering several models by their custom fields and/or created/updated stamps.
 - [#1093](https://github.com/nautobot/nautobot/pull/1093) - Improved REST API performance by adding caching of serializer "opt-in fields".
 - [#1098](https://github.com/nautobot/nautobot/issues/1098) - Fixed 404 error when creating a circuit termination for circuit and other edge cases resulting in 404 errors
