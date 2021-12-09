@@ -114,6 +114,9 @@ def viewname(model, action):
 
     Returns:
         str: return the name of the view for the model/action provided.
+    Examples:
+        >>> viewname(Device, "list")
+        "dcim:device_list"
     """
     viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
     if model._meta.app_label in settings.PLUGINS:
