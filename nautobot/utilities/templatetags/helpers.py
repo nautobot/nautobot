@@ -33,7 +33,7 @@ def placeholder(value):
         value (any): Input value, can be any variable.
 
     Returns:
-        str: Placeholder in HTML
+        str: Placeholder in HTML, or the string representation of the value.
 
     Example:
         {{ html | placeholder }}
