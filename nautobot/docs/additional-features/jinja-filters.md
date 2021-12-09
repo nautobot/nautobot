@@ -10,7 +10,7 @@ Django Template is used to render the UI pages and Jinja2 is used for all extens
 
 Both Django Template and Jinja2 can be extended with a library of functions, called `filters`, that apply formatting or transformations to a provided input. Nautobot provides many built-in `filters`, including network specific `filters` from the [netutils library](https://netutils.readthedocs.io/en/latest/index.html).
 
-## Netutils Django Template helpers / Jinja2 filters
+## Netutils Filters
 
 [Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by Network to Code, that is focusing on providing a collection of functions for common network automation tasks.
 
