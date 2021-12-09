@@ -88,7 +88,7 @@ Access a specific item/key in a dictionary.
 
 ### has_one_or_more_perms
 
-Return True if the user has *at least one* permissions in the list.
+Return True if the user has *at least one* of the permissions in the list.
 
 ```no-highlight
 # Django Template
