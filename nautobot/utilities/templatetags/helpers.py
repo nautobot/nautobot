@@ -27,7 +27,7 @@ register = template.Library()
 @library.filter()
 @register.filter()
 def placeholder(value):
-    """Render a muted placeholder if value equates to False.
+    """Render a muted placeholder if value is falsey, else render the value.
 
     Args:
         value (any): Input value, can be any variable.
