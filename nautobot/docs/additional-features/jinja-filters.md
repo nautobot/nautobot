@@ -152,7 +152,7 @@ Return x/y as a percentage.
 
 ### placeholder
 
-Render a muted placeholder if value equates to False.
+Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value is falsey, else render the provided value.
 
 ```no-highlight
 {{ html | placeholder }}
