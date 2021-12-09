@@ -162,6 +162,46 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 !!! warning
     Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
 
+
+## Multiple LDAP Server Support
+Multiple Server is supported in `django-auth-ldap`. The features [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).
+
+In order to load the custom backends into Nautobot a plugin can be used, this plugin will allow the backends to be loaded into the Django settings for use within the `nautobot_config.py` file.  At the simplest form the plugin should have custom backends defined.
+
+```python
+# my_customer_backends.py
+
+from django_auth_ldap.backend import LDAPBackend
+
+class LDAPBackendSecondary(LDAPBackend):
+    settings_prefix = "AUTH_LDAP_SECONDARY_"
+```
+
+Assume the plugin is name `nautobot_ldap_plugin`.  The following snippet could be used to load the additional LDAP backend.
+
+```python
+# nautobot_config.py
+
+AUTHENTICATION_BACKENDS = [
+    'django_auth_ldap.backend.LDAPBackend',
+    'nautobot_ldap_plugin.my_customer_backends.LDAPBackendSecondary',  # path to the custom LDAP Backend
+    'nautobot.core.authentication.ObjectPermissionBackend',
+]
+```
+
+Once the custom backend is loaded into the settings all the configuration items mentioned previously need to be completed for each server.  As a simplified example defining the URIs would be accomplished by the following two lines in the `nautobot_config.py` file.  A similar approach would be done to define the rest of the settings.
+
+```python
+# Server URI which uses django_auth_ldap.backend.LDAPBackend
+AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
+
+# Server URI which uses nautobot_ldap_plugin.my_customer_backends.LDAPBackend1
+AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
+```
+
+!!! info
+    In this example the default LDAPBackend was still used as the first LDAP server, which utilized the `AUTH_LDAP_*` environment variables. It is also possible to remove the default backend and create multiple custom backends instead to normalize the environment variable naming scheme.
+
 ## Troubleshooting LDAP
 
 `systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `nautobot_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
