@@ -240,7 +240,7 @@ def divide(x, y):
 
     Examples:
         >>> divide(10, 3)
-        3 
+        3
     """
     if x is None or y is None:
         return None
