@@ -217,7 +217,8 @@ def fgcolor(value):
         str: ideal foreground color, either black (#000000) or white (#ffffff)
 
     Example:
-        color: {{ object.status.color|fgcolor }}
+        >>> fgcolor("#999999")
+        "#ffffff"
     """
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
@@ -238,8 +239,8 @@ def divide(x, y):
         int: x/y (rounded)
 
     Examples:
-        {{ powerfeed.available_power|divide:3 }}VA      # Django Template
-        {{ powerfeed.available_power|divide(3) }}VA     # Jinja
+        >>> divide(10, 3)
+        3 
     """
     if x is None or y is None:
         return None
@@ -257,6 +258,11 @@ def percentage(x, y):
 
     Returns:
         int: x/y as a percentage
+
+    Examples:
+        >>> percentage(2, 10)
+        20
+
     """
     if x is None or y is None:
         return None
@@ -275,7 +281,8 @@ def get_docs(model):
         str: documentation for the specified model in Markdown format
 
     Example:
-        {{ obj | get_docs }}
+        >>> get_docs(obj)
+        "some text"
     """
     path = "{}/models/{}/{}.md".format(settings.DOCS_ROOT, model._meta.app_label, model._meta.model_name)
     try:
@@ -378,8 +385,8 @@ def get_item(d, key):
         [any]: Value of the item in the dictionary provided
 
     Example:
-        {{ labels|get_item:key }}        # Django Template
-        {{ labels|get_item(key) }}       # Jinja
+        >>> get_items(data, key)
+        "value"
     """
     return d.get(key)
 

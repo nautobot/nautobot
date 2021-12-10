@@ -97,9 +97,10 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_fgcolor(self):
         self.assertEqual(fgcolor("#999999"), "#ffffff")
         self.assertEqual(fgcolor("#111111"), "#ffffff")
+        self.assertEqual(fgcolor("#000000"), "#ffffff")
+        self.assertEqual(fgcolor("#ffffff"), "#000000")
 
     def test_divide(self):
-        self.assertEqual(divide(10, 3), 3)
         self.assertEqual(divide(10, 3), 3)
         self.assertEqual(divide(12, 4), 3)
         self.assertEqual(divide(11, 3), 4)
