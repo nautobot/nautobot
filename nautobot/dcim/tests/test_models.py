@@ -472,7 +472,9 @@ class CableTestCase(TestCase):
         self.circuit2 = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="2")
         self.circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="A")
         self.circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="Z")
-        self.circuittermination3 = CircuitTermination.objects.create(circuit=self.circuit2, providernetwork=providernetwork, term_side="Z")
+        self.circuittermination3 = CircuitTermination.objects.create(
+            circuit=self.circuit2, providernetwork=providernetwork, term_side="Z"
+        )
 
     def test_cable_creation(self):
         """
@@ -549,7 +551,6 @@ class CableTestCase(TestCase):
         cable = Cable(termination_a=self.interface3, termination_b=self.circuittermination3)
         with self.assertRaises(ValidationError):
             cable.clean()
-
 
     def test_rearport_connections(self):
         """

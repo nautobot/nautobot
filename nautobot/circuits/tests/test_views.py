@@ -157,25 +157,27 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         providers = (
-            Provider(name='Provider 1', slug='provider-1'),
-            Provider(name='Provider 2', slug='provider-2'),
+            Provider(name="Provider 1", slug="provider-1"),
+            Provider(name="Provider 2", slug="provider-2"),
         )
         Provider.objects.bulk_create(providers)
 
-        ProviderNetwork.objects.bulk_create([
-            ProviderNetwork(name='Provider Network 1', provider=providers[0]),
-            ProviderNetwork(name='Provider Network 2', provider=providers[0]),
-            ProviderNetwork(name='Provider Network 3', provider=providers[0]),
-        ])
+        ProviderNetwork.objects.bulk_create(
+            [
+                ProviderNetwork(name="Provider Network 1", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 2", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 3", provider=providers[0]),
+            ]
+        )
 
-        tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
+        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
-            'name': 'Cloud X',
-            'provider': providers[1].pk,
-            'description': 'A new cloud',
-            'comments': 'Longer description goes here',
-            'tags': [t.pk for t in tags],
+            "name": "Cloud X",
+            "provider": providers[1].pk,
+            "description": "A new cloud",
+            "comments": "Longer description goes here",
+            "tags": [t.pk for t in tags],
         }
 
         cls.csv_data = (
@@ -186,7 +188,7 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            'provider': providers[1].pk,
-            'description': 'New description',
-            'comments': 'New comments',
+            "provider": providers[1].pk,
+            "description": "New description",
+            "comments": "New comments",
         }
