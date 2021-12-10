@@ -96,6 +96,8 @@ jsonschema = "~3.2.0"
 Markdown = "~3.3.6"
 # MySQL database adapter
 mysqlclient = {version = "~2.0.3", optional = true}
+# NAPALM automation library
+napalm = {version = "^3.3.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Image processing library
@@ -116,9 +118,10 @@ social-auth-app-django = "^4.0.0"
 svgwrite = "~1.4.1"
 
 [tool.poetry.extras]
-all = ["mysqlclient", "social-auth-core", "django-auth-ldap", "django-storages"]
+all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
 ldap = ["django-auth-ldap"]
 mysql = ["mysqlclient"]
+napalm = ["napalm"]
 # This is not currently possible, there is a feature request with Poetry https://github.com/python-poetry/poetry/issues/3913
 # openid = ["social-auth-core[openidconnect]"]
 remote_storage = ["django-storages"]
