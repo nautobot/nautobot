@@ -34,6 +34,7 @@ from nautobot.utilities.utils import (
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ContentTypePermissionRequiredMixin
+from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
@@ -775,8 +776,8 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
-        job_form = job.as_form(initial=request.GET)
-        schedule_form = forms.JobScheduleForm(initial=request.GET)
+        job_form = job.as_form(initial=normalize_querydict(request.GET))
+        schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
 
         return render(
             request,

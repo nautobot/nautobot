@@ -19,6 +19,10 @@ class OptInFieldsMixin:
     which fields should be displayed.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__pruned_fields = None
+
     @property
     def fields(self):
         """
@@ -29,38 +33,43 @@ class OptInFieldsMixin:
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
         from the list of fields.
         """
-        fields = super().fields
-        serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
+        if self.__pruned_fields is None:
+            fields = dict(super().fields)
+            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
 
-        if not serializer_opt_in_fields:
-            return fields
+            if not serializer_opt_in_fields:
+                # This serializer has no defined opt_in_fields, so we never need to go further than this
+                self.__pruned_fields = fields
+                return self.__pruned_fields
 
-        if not hasattr(self, "_context"):
-            # We are being called before a request cycle
-            return fields
+            if not hasattr(self, "_context"):
+                # We are being called before a request cycle
+                return fields
 
-        try:
-            request = self.context["request"]
-        except KeyError:
-            return fields
+            try:
+                request = self.context["request"]
+            except KeyError:
+                # No available request?
+                return fields
 
-        request = self.context["request"]
+            # NOTE: drf test framework builds a request object where the query
+            # parameters are found under the GET attribute.
+            params = getattr(request, "query_params", getattr(request, "GET", None))
 
-        # NOTE: drf test framework builds a request object where the query
-        # parameters are found under the GET attribute.
-        params = getattr(request, "query_params", getattr(request, "GET", None))
+            try:
+                user_opt_in_fields = params.get("include", None).split(",")
+            except AttributeError:
+                # include parameter was not specified
+                user_opt_in_fields = []
 
-        try:
-            user_opt_in_fields = params.get("include", None).split(",")
-        except AttributeError:
-            user_opt_in_fields = []
+            # Drop any fields that are not specified in the users opt in fields
+            for field in serializer_opt_in_fields:
+                if field not in user_opt_in_fields:
+                    fields.pop(field, None)
 
-        # Drop any fields that are not specified in the users opt in fields
-        for field in serializer_opt_in_fields:
-            if field not in user_opt_in_fields:
-                fields.pop(field, None)
+            self.__pruned_fields = fields
 
-        return fields
+        return self.__pruned_fields
 
 
 class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
