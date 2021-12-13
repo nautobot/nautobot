@@ -134,7 +134,7 @@ Custom Fields have been overhauled for asserting data integrity and improving us
 ### IPAM Network Field Types
 
 !!! tip
-	Prior to Nautobot 1.2, IPAM network objects were overhauled and network membership queries using nested filter expressions and custom lookups will required updats in your code. Since Nautobot 1.2, you can use the same custom lookups for all use cases within MySQL and most use cases for Postgresql. See [filtering documentation](../rest-api/filtering.md#Network-and-Host-Fields) for more details.
+	Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../rest-api/filtering.md#Network-and-Host-Fields) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.) 
 
 !!! note
 	Nautobot did not mimic the support of non-subnets for the `net_in` query to avoid mistakes and confusion caused by an IP address being mistaken for a /32 as an example.
