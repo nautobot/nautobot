@@ -109,8 +109,8 @@ Nautobot core or plugin data model.
 - `net_contains_or_equals` - Given a network, determine which networks contain or is the provided network e.g. `network__net_contains="192.168.0.0/16"` would include 192.0.0.0/8 and 192.168.0.0/16 in the result
 - `net_equals` - Given a network, determine which which networks are an exact match. e.g. `network__net_equals="192.168.0.0/16"` would include only 192.168.0.0/16 in the result
 - `net_host` - Determine which networks are parent of the provided IP, e.g. `host__net_host="10.0.0.1"`  would include 10.0.0.1/32 and 10.0.0.0/24 in the result
-- `net_host_contained` - Given a network, select IPs whose host address falls within that network, e.g. `host__net_host_contained="10.0.0.0/24"` would include 10.0.0.1/8 and 10.0.0.254/32 in the result
-- `net_in` - Given a list of networks, select addresses within those networks, e.g. `host__net_in=["10.0.0.0/24", "2001:db8::/64"]` would include hosts 10.0.0.1/16 and 2001:db8::1/65 in the result
+- `net_host_contained` - Given a network, select IPs whose host address (regardless of its subnet mask) falls within that network , e.g. `host__net_host_contained="10.0.0.0/24"` would include hosts 10.0.0.1/8 and 10.0.0.254/32 in the result
+- `net_in` - Given a list of networks, select addresses (regardless of their subnet masks) within those networks, e.g. `host__net_in=["10.0.0.0/24", "2001:db8::/64"]` would include hosts 10.0.0.1/16 and 2001:db8::1/65 in the result
 - `family` - Given an IP address family of 4 or 6, provide hosts or networks that are that IP version type, e.g. `host__family=6` would include 2001:db8::1 in the result
 
 > Note: The fields denoted with `**` are only supported in the MySQL dialect (and not Postgresql) at the current time.
