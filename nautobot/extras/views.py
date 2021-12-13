@@ -870,9 +870,6 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
                 return redirect("extras:job_jobresult", pk=job_result.pk)
 
-            # TODO: Define interface/API for getting queue (or other kwargs in future) for celery_kwargs
-            celery_kwargs = {}
-
         return render(
             request,
             "extras/job.html",
@@ -936,8 +933,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
                 job_content_type,
                 scheduled_job.user,
                 request.user,
-                celery_kwargs=celery_kwargs,
-                data=job_class.serialize_data(form.cleaned_data),
+                data=job_class.serialize_data(initial),
                 request=copy_safe_request(request),
                 commit=False,  # force a dry-run
             )
