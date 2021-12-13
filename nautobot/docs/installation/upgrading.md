@@ -7,8 +7,23 @@ have been published since your current version was released. Although the upgrad
 additional work, certain releases may introduce breaking or backward-incompatible changes. These are called out in the
 release notes under the release in which the change went into effect.
 
-!!! note
-    As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facilitate this, a new service called `celery-scheduler` is now required. Please review the [service installation documentation](./services.md) to find out how to set it up.
+The below sub-sections describe some key changes that deployers should be aware of, but are not intended to be a replacement for reading the release notes carefully and in depth.
+
+### Updating from Nautobot 1.0.x to 1.1.x
+
+#### Migration from RQ to Celery
+
+Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*, as Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery.
+
+RQ support for custom tasks was not removed in order to give plugin authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
+
+Please see the section on [migrating to Celery from RQ](./services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
+
+### Updating from Nautobot 1.1.x to 1.2.x
+
+#### Introduction of Celery Beat Scheduler
+
+As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facilitate this, a new service called `celery-scheduler` is now required. Please review the [service installation documentation](./services.md#celery-beat-scheduler) to find out how to set it up.
 
 ## Update Prerequisites to Required Versions
 
