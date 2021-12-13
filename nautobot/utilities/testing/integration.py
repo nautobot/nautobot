@@ -5,7 +5,7 @@ from celery.contrib.testing.worker import start_worker
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
-from django.test import tag, TestCase
+from django.test import tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
