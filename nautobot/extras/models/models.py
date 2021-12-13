@@ -41,9 +41,9 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import (
     HTTP_CONTENT_TYPE_JSON,
-    MAX_ABSOLUTE_URL_LENGTH,
-    MAX_GROUPING_LENGTH,
-    MAX_LOG_OBJECT_LENGTH,
+    JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
+    JOB_LOG_MAX_GROUPING_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
 )
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
@@ -673,15 +673,15 @@ class JobLogEntry(BaseModel):
 
     job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE)
     log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT)
-    grouping = models.CharField(max_length=MAX_GROUPING_LENGTH, default="main")
+    grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
     created = models.DateTimeField(default=timezone.now)
     # Storing both of the below as strings instead of using GenericForeignKey to support
     # compatibility with existing JobResult logs. GFK would pose a problem with dangling foreign-key
     # references, whereas this allows us to retain all records for as long as the entry exists.
     # This also simplifies migration from the JobResult Data field as these were stored as strings.
-    log_object = models.CharField(max_length=MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
-    absolute_url = models.CharField(max_length=MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
+    log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
+    absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
 
     def __str__(self):
         return self.message
@@ -863,11 +863,11 @@ class JobResult(BaseModel, CustomFieldModel):
         log = JobLogEntry(
             job_result=self,
             log_level=level_choice,
-            grouping=grouping[:MAX_GROUPING_LENGTH],
+            grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
             message=str(message),
             created=timezone.now().isoformat(),
-            log_object=str(obj)[:MAX_LOG_OBJECT_LENGTH] if obj else None,
-            absolute_url=obj.get_absolute_url()[:MAX_ABSOLUTE_URL_LENGTH] if hasattr(obj, "get_absolute_url") else None,
+            log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else None,
+            absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH] if hasattr(obj, "get_absolute_url") else None,
         )
 
         # If the override is provided, we want to use the default database(pass no using argument)
