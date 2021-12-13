@@ -397,12 +397,44 @@ class RoleBulkDeleteView(generic.BulkDeleteView):
 
 
 class PrefixListView(generic.ObjectListView):
-    # By default we annotate the prefix hierarchy such that child prefixes are intended in the table
-    queryset = Prefix.objects.annotate(parents=Count(None)) if settings.DISABLE_PREFIX_LIST_HIERARCHY else Prefix.objects.annotate_tree()
     filterset = filters.PrefixFilterSet
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
+    # `queryset` is implemented as a property, see below
+
+    def __init__(self, *args, **kwargs):
+        # Set the internal queryset value
+        self._queryset = None
+        super().__init__(*args, **kwargs)
+
+    @property
+    def queryset(self):
+        """
+        Property getter for queryset that acts upon `settings.DISABLE_PREFIX_LIST_HIERARCHY`
+
+        By default we annotate the prefix hierarchy such that child prefixes are indented in the table.
+        When `settings.DISABLE_PREFIX_LIST_HIERARCHY` is True, we do not annotate the queryset, and the
+        table is rendered as a flat list.
+
+        TODO(john): When the base views support a formal `get_queryset()` method, this approach is not needed
+        """
+        if self._queryset:
+            return self._queryset
+
+        if settings.DISABLE_PREFIX_LIST_HIERARCHY:
+            self._queryset = Prefix.objects.annotate(parents=Count(None))
+        else:
+            self._queryset = Prefix.objects.annotate_tree()
+
+        return self._queryset
+
+    @queryset.setter
+    def queryset(self, value):
+        """
+        Property setter for `queryset`
+        """
+        self._queryset = value
 
 
 class PrefixView(generic.ObjectView):

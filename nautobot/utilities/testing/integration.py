@@ -5,7 +5,7 @@ from celery.contrib.testing.worker import start_worker
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
-from django.test import tag
+from django.test import tag, TestCase
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
@@ -13,6 +13,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
 
 from nautobot.core.celery import app
+from nautobot.extras.management import create_custom_statuses
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 
@@ -222,6 +223,9 @@ class SplinterTestCase(StaticLiveServerTestCase):
             cls.celery_worker.__enter__()
 
     def setUp(self):
+        # Repopulate custom statuses between test cases
+        create_custom_statuses(None, verbosity=0)
+
         # Setup test user
         self.user, _ = User.objects.get_or_create(username="testuser")
 
