@@ -250,9 +250,22 @@ def settings_or_config(key):
     return get_settings_or_config(key)
 
 
+@register.filter
+def quote_string(value):
+    """Add literal quote characters around the provided value if it's a string."""
+    if isinstance(value, str):
+        return f'"{value}"'
+    return value
+
+
 #
 # Tags
 #
+
+
+@register.simple_tag()
+def get_attr(obj, attr, default=None):
+    return getattr(obj, attr, default)
 
 
 @register.simple_tag()
