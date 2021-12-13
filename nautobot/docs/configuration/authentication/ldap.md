@@ -86,7 +86,7 @@ ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
 
-Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`. 
+Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`.
 
 ```
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
@@ -121,6 +121,32 @@ AUTH_LDAP_USER_ATTR_MAP = {
     "last_name": "sn",
     "email": "mail"
 }
+```
+
+#### Searching in Multiple LDAP Groups
+
+Define the user-groups in your environment, such as a *.env file (delimiter `';'`):
+
+```python
+# Groups to search for user objects. "(sAMAccountName=%(user)s),..."
+NAUTOBOT_AUTH_LDAP_USER_SEARCH_DN=OU=IT-Admins,OU=special-users,OU=Acme-User,DC=Acme,DC=local;OU=Infrastruktur,OU=IT,OU=my-location,OU=User,OU=Acme-User,DC=Acme,DC=local
+```
+
+Import LDAPSearchUnion in `nautobot_config.py`, and replace the AUTH_LDAP_USER_SEARCH command from above:
+
+```python
+from django_auth_ldap.config import ..., LDAPSearchUnion
+
+# ...
+
+AUTH_LDAP_USER_SEARCH_DN = os.getenv("NAUTOBOT_AUTH_LDAP_USER_SEARCH_DN", "")
+
+if AUTH_LDAP_USER_SEARCH_DN != "":
+    user_search_dn_list = str(AUTH_LDAP_USER_SEARCH_DN).split(";")
+    ldapsearch_objects = []
+    for sdn in user_search_dn_list:
+        ldapsearch_objects.append(LDAPSearch(sdn.strip(), ldap.SCOPE_SUBTREE, "(sAMAccountName=%(user)s)"))
+    AUTH_LDAP_USER_SEARCH = LDAPSearchUnion(*ldapsearch_objects)
 ```
 
 ### User Groups for Permissions
