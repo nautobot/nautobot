@@ -116,11 +116,50 @@ Nautobot core applications and plugins can now both define panels, groups, and i
 
 The Admin sub-site within Nautobot (`/admin/` and its child pages) has been revamped in appearance and functionality. It has been re-skinned to resemble the rest of the Nautobot UI, and has been slimmed down to only include those models and features that are still exclusive to admin users, such as user/group/permission management.
 
+#### JobLogEntry Data Model ([#1030](https://github.com/nautobot/nautobot/pull/1030))
+
+Job log messages are now stored in a separate database table as a separate `JobLogEntry` data model, instead of being stored as JSON on the `JobResult` model/table. This provides faster and more robust rendering of `JobResult`-related views and lays groundwork for future enhancements of the Jobs feature.
+
 #### Slug fields are now Optional in CSV import, REST API and ORM ([#493](https://github.com/nautobot/nautobot/issues/493))
 
 All models that have `slug` fields now use `AutoSlugField` from the `django-extensions` package. This means that when creating a record via the REST API, CSV import, or direct ORM Python calls, the `slug` field is now fully optional; if unspecified, it will be automatically assigned a unique value, just as how a `slug` is auto-populated in the UI when creating a new record.
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
+
+## v1.2.0b2 (2021-??-??)
+
+### Added
+
+- [#843](https://github.com/nautobot/nautobot/issues/843) - Added more information about Celery in the Upgrading Nautobot docs.
+- [#876](https://github.com/nautobot/nautobot/issues/876) - Added option to apply a validation regex when defining CustomFieldChoices.
+- [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
+- [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
+- [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
+
+### Changed
+
+- [#1068](https://github.com/nautobot/nautobot/issues/1068) - Docker images now include optional Nautobot dependencies by default.
+- [#1095](https://github.com/nautobot/nautobot/issues/1095) - Refined Admin Configuration UI.
+
+### Fixed
+
+- [#453](https://github.com/nautobot/nautobot/issues/453) - Fixed potential `ValueError` when rendering `JobResult` detail view with non-standard `JobResult.data` contents.
+- [#864](https://github.com/nautobot/nautobot/issues/864) - Fixed inconsistent `JobResult` detail view page templates.
+- [#888](https://github.com/nautobot/nautobot/issues/888) - Addressed FIXME comment in LDAP documentation.
+- [#926](https://github.com/nautobot/nautobot/issues/926) - Fixed inability to pass multiple values for a MultiObjectVar as query parameters.
+- [#958](https://github.com/nautobot/nautobot/issues/958) - Fixed Job REST API handling of ObjectVars specified by query parameters.
+- [#992](https://github.com/nautobot/nautobot/issues/992) - Improved loading/rendering time of the `JobResult` table/list view.
+- [#1043](https://github.com/nautobot/nautobot/issues/1043) - Fixed `AttributeError` when bulk-adding interfaces to virtual machines.
+- [#1078](https://github.com/nautobot/nautobot/issues/1078) - Fixed missing support for filtering several models by their custom fields and/or created/updated stamps.
+- [#1093](https://github.com/nautobot/nautobot/pull/1093) - Improved REST API performance by adding caching of serializer "opt-in fields".
+- [#1098](https://github.com/nautobot/nautobot/issues/1098) - Fixed 404 error when creating a circuit termination for circuit and other edge cases resulting in 404 errors
+- [#1112](https://github.com/nautobot/nautobot/issues/1112) - Fixed broken single-object GraphQL query endpoints.
+- [#1116](https://github.com/nautobot/nautobot/issues/1116) - Fixed UnboundLocalError when using device NAPALM integration
+- [#1121](https://github.com/nautobot/nautobot/pull/1121) - Fixed issue with handling of relationships referencing no-longer-present model classes.
+
+### Removed
+
+- [#1094](https://github.com/nautobot/nautobot/issues/1094) - Removed leftover custom field management views from Admin UI
 
 ## v1.2.0b1 (2021-11-19)
 
