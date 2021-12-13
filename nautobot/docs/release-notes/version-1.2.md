@@ -130,11 +130,16 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#876](https://github.com/nautobot/nautobot/issues/876) - Added option to apply a validation regex when defining CustomFieldChoices.
 - [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
 - [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
+- [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
 
 ### Changed
 
+- [#1068](https://github.com/nautobot/nautobot/issues/1068) - Docker images now include optional Nautobot dependencies by default.
+- [#1095](https://github.com/nautobot/nautobot/issues/1095) - Refined Admin Configuration UI.
+
 ### Fixed
 
+- [#888](https://github.com/nautobot/nautobot/issues/888) - Addressed FIXME comment in LDAP documentation.
 - [#926](https://github.com/nautobot/nautobot/issues/926) - Fixed inability to pass multiple values for a MultiObjectVar as query parameters.
 - [#958](https://github.com/nautobot/nautobot/issues/958) - Fixed Job REST API handling of ObjectVars specified by query parameters.
 - [#1043](https://github.com/nautobot/nautobot/issues/1043) - Fixed `AttributeError` when bulk-adding interfaces to virtual machines.
@@ -144,6 +149,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1112](https://github.com/nautobot/nautobot/issues/1112) - Fixed broken single-object GraphQL query endpoints.
 - [#1116](https://github.com/nautobot/nautobot/issues/1116) - Fixed UnboundLocalError when using device NAPALM integration
 - [#1121](https://github.com/nautobot/nautobot/pull/1121) - Fixed issue with handling of relationships referencing no-longer-present model classes.
+
+### Removed
+
+- [#1094](https://github.com/nautobot/nautobot/issues/1094) - Removed leftover custom field management views from Admin UI
 
 ## v1.2.0b1 (2021-11-19)
 
