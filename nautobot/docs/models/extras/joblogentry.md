@@ -1,6 +1,6 @@
 # Job Log Entry
 
-As of Nautobot 1.2, log messages from jobs are now stored in the JobLogEntry model. This allows more performant querying of log messages and even allows viewing of logs while the job is still running.
+As of Nautobot 1.2, log messages from jobs are now stored in as `JobLogEntry` objects. This allows more performant querying of log messages and even allows viewing of logs while the job is still running.
 
 Records of this type store the following data:
 
