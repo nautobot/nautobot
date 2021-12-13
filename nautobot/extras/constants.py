@@ -15,3 +15,8 @@ EXTRAS_FEATURES = [
     "statuses",
     "webhooks",
 ]
+
+# JobLogEntry Truncation Length
+JOB_LOG_MAX_GROUPING_LENGTH = 100
+JOB_LOG_MAX_LOG_OBJECT_LENGTH = 200
+JOB_LOG_MAX_ABSOLUTE_URL_LENGTH = 255

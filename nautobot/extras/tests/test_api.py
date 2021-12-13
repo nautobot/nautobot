@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os.path
 import uuid
-from unittest import skipIf
+from unittest import mock, skipIf
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -557,6 +557,10 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+# Override the JOB_LOGS to None so that the Log Objects are created in the default database.
+# This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
+# database cleanup will fail and cause tests to fail as this is not a real database.
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
     brief_fields = ["display", "id", "name", "url"]
