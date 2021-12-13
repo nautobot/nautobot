@@ -867,7 +867,9 @@ class JobResult(BaseModel, CustomFieldModel):
             message=str(message),
             created=timezone.now().isoformat(),
             log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else None,
-            absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH] if hasattr(obj, "get_absolute_url") else None,
+            absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
+            if hasattr(obj, "get_absolute_url")
+            else None,
         )
 
         # If the override is provided, we want to use the default database(pass no using argument)
