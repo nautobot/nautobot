@@ -4,7 +4,7 @@ As of Nautobot 1.2, log messages from jobs are now stored in the JobLogEntry mod
 
 Records of this type store the following data:
 
-- A reference to the JobResult object that created the log.
+- A reference to the `JobResult` object that created the log.
 - Timestamps indicating when the log message was created.
 - The logging level of the log message.
 - The log message.
