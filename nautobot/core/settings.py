@@ -447,7 +447,7 @@ CONSTANCE_CONFIG = {
     ],
     "DISABLE_PREFIX_LIST_HIERARCHY": [
         False,
-        "Dissable rendering parent/child relationships in the IPAM Prefix list view and instead " "show a flat list.",
+        "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
     ],
     "HIDE_RESTRICTED_UI": [
         False,
