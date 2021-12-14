@@ -44,8 +44,9 @@
                                             <br>Remove that declaration from <code>{{ settings.SETTINGS_PATH }}</code>
                                             if you want to manage it via this interface instead.
                                         </div>
+                                        {{ item.form_field.as_hidden }}
                                     {% else %}
-                                        <label class="col-md-3 control-label" for="{{ item.formfield.id_for_label }}">
+                                        <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
                                             {{ item.name | split:"_" | join:" " }}
                                             <span class="help-block">
                                                 (default: <code>{{ item.default }}</code>)
