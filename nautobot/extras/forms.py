@@ -899,13 +899,13 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         """
         cleaned_data = super().clean()
 
-        if cleaned_data["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
-            if not cleaned_data["_schedule_name"]:
+        if "_schedule_type" in cleaned_data and cleaned_data.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY:
+            if not cleaned_data.get("_schedule_name"):
                 raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 
             if (
-                not cleaned_data["_schedule_start_time"]
-                or cleaned_data["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
+                not cleaned_data.get("_schedule_start_time")
+                or cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
             ):
                 raise ValidationError(
                     {

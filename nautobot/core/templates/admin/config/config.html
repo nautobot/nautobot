@@ -1,5 +1,6 @@
 {% extends "admin/constance/change_list.html" %}
 {% load admin_list static i18n %}
+{% load helpers %}
 
 {% block content %}
     <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
@@ -33,17 +34,30 @@
                             <div class="panel-heading"><strong>{{ fieldset.title }}</strong></div>
                             <div class="panel-body">
                                 {% for item in fieldset.config_values %}
+                                {% get_attr settings item.name as settings_value %}
                                 <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                    <label class="col-md-3 control-label" for="{{ item.formfield.id_for_label }}">
-                                        {{ item.name }}
-                                        <span class="help-block">(default: <code>{{ item.default }}</code>)</span>
-                                    </label>
-                                    <div class="col-md-9">
-                                        {{ item.form_field.errors }}
-                                        {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
-                                        {{ item.form_field }}
-                                        <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
-                                    </div>
+                                    {% if settings_value is not None %}
+                                        <div class="alert alert-warning" role="alert">
+                                            <code>{{ item.name }} = {{ settings_value | quote_string }}</code>
+                                            is defined in <code>{{ settings.SETTINGS_PATH }}</code>,
+                                            therefore it is not currently editable here.
+                                            <br>Remove that declaration from <code>{{ settings.SETTINGS_PATH }}</code>
+                                            if you want to manage it via this interface instead.
+                                        </div>
+                                    {% else %}
+                                        <label class="col-md-3 control-label" for="{{ item.formfield.id_for_label }}">
+                                            {{ item.name | split:"_" | join:" " }}
+                                            <span class="help-block">
+                                                (default: <code>{{ item.default }}</code>)
+                                            </span>
+                                        </label>
+                                        <div class="col-md-9">
+                                            {{ item.form_field.errors }}
+                                            {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
+                                                {{ item.form_field }}
+                                            <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </div>

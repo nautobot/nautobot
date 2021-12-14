@@ -494,6 +494,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
                     password = settings.NAPALM_PASSWORD
             except SecretError as exc:
                 raise ServiceUnavailable(f"Unable to retrieve device credentials: {exc.message}") from exc
+        else:
+            username = settings.NAPALM_USERNAME
+            password = settings.NAPALM_PASSWORD
 
         optional_args = settings.NAPALM_ARGS.copy()
         if device.platform.napalm_args is not None:
