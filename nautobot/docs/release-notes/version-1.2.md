@@ -156,6 +156,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1112](https://github.com/nautobot/nautobot/issues/1112) - Fixed broken single-object GraphQL query endpoints.
 - [#1116](https://github.com/nautobot/nautobot/issues/1116) - Fixed UnboundLocalError when using device NAPALM integration
 - [#1121](https://github.com/nautobot/nautobot/pull/1121) - Fixed issue with handling of relationships referencing no-longer-present model classes.
+- [#1133](https://github.com/nautobot/nautobot/pull/1133) - Fixed some incorrect documentation about the Docker image build/publish process.
 
 ### Removed
 
