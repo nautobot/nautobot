@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db.models import Prefetch, Q, Count
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
@@ -6,6 +5,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device, Interface
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -420,7 +420,7 @@ class PrefixListView(generic.ObjectListView):
         if self._queryset:
             return self._queryset
 
-        if settings.DISABLE_PREFIX_LIST_HIERARCHY:
+        if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
             self._queryset = Prefix.objects.annotate(parents=Count(None))
         else:
             self._queryset = Prefix.objects.annotate_tree()

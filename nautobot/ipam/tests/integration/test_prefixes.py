@@ -38,7 +38,11 @@ class PrefixHierarchyTest(SplinterTestCase):
         self.browser.links.find_by_partial_text("IPAM").click()
         self.browser.links.find_by_partial_text("Prefixes").click()
 
-        self.assertTrue(self.browser.find_by_tag("tr")[2].find_by_tag("i").first.has_class("mdi-circle-small"))
+        self.assertEqual(len(self.browser.find_by_tag("tr")[1].find_by_text("10.0.0.0/16")), 1)  # 10.0.0.0/16 is first
+        self.assertEqual(len(self.browser.find_by_tag("tr")[2].find_by_text("10.0.0.0/24")), 1)  # 10.0.0.0/24 is second
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[2].find_by_tag("i").first.has_class("mdi-circle-small")
+        )  # 10.0.0.0/24 is indented via an <i> tag
 
     @override_settings(DISABLE_PREFIX_LIST_HIERARCHY=True)
     def test_child_relationship_flat(self):
@@ -54,4 +58,8 @@ class PrefixHierarchyTest(SplinterTestCase):
         self.browser.links.find_by_partial_text("IPAM").click()
         self.browser.links.find_by_partial_text("Prefixes").click()
 
-        self.assertEqual(len(self.browser.find_by_tag("tr")[2].find_by_tag("i")), 0)  # no such element
+        self.assertEqual(len(self.browser.find_by_tag("tr")[1].find_by_text("10.0.0.0/16")), 1)  # 10.0.0.0/16 is first
+        self.assertEqual(len(self.browser.find_by_tag("tr")[2].find_by_text("10.0.0.0/24")), 1)  # 10.0.0.0/24 is second
+        self.assertEqual(
+            len(self.browser.find_by_tag("tr")[2].find_by_tag("i")), 0
+        )  # 10.0.0.0/24 is *not* indented via an <i> tag

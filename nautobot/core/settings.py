@@ -445,6 +445,10 @@ CONSTANCE_CONFIG = {
         90,
         "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
     ],
+    "DISABLE_PREFIX_LIST_HIERARCHY": [
+        False,
+        "Dissable rendering parent/child relationships in the IPAM Prefix list view and instead " "show a flat list.",
+    ],
     "HIDE_RESTRICTED_UI": [
         False,
         "If set to True, users with limited permissions will not be shown menu items and home-page elements that "
@@ -502,7 +506,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["HIDE_RESTRICTED_UI"],
+    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
 }
 
 #
@@ -657,8 +661,3 @@ BRANDING_URLS = {
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
 BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
-
-# Do not annotate the depth of prefix parent/child relationships in the prefix list view
-# TODO: we should consider this a temporary workaround available to users
-# for https://github.com/nautobot/nautobot/issues/947, until a proper data model change is made.
-DISABLE_PREFIX_LIST_HIERARCHY = is_truthy(os.getenv("NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY", False))
