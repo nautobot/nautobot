@@ -1,4 +1,4 @@
-from django.db.models import Prefetch, Q, Count
+from django.db.models import Prefetch, Q, Count, F
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
@@ -421,7 +421,11 @@ class PrefixListView(generic.ObjectListView):
             return self._queryset
 
         if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
-            self._queryset = Prefix.objects.annotate(parents=Count(None))
+            self._queryset = Prefix.objects.annotate(parents=Count(None)).order_by(
+                F("vrf__name").asc(nulls_first=True),
+                "network",
+                "prefix_length",
+            )
         else:
             self._queryset = Prefix.objects.annotate_tree()
 
