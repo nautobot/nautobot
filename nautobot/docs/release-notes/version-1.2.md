@@ -147,6 +147,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#1068](https://github.com/nautobot/nautobot/issues/1068) - Docker images now include optional Nautobot dependencies by default.
 - [#1095](https://github.com/nautobot/nautobot/issues/1095) - Refined Admin Configuration UI.
+- [#1105](https://github.com/nautobot/nautobot/pull/1105) - Reverted minimum Python 3.6 version to 3.6.0 rather than 3.6.2.
 
 ### Fixed
 
