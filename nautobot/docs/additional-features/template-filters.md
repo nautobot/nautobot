@@ -1,4 +1,4 @@
-# Additional Filters
+# Additional Template Filters
 
 ## Introduction
 
