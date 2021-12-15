@@ -166,6 +166,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1133](https://github.com/nautobot/nautobot/pull/1133) - Fixed some incorrect documentation about the Docker image build/publish process.
 - [#1141](https://github.com/nautobot/nautobot/issues/1141) - Improved reloading of changed Job files. (Port of [NetBox #7820](https://github.com/netbox-community/netbox/pull/7820))
 - [#1154](https://github.com/nautobot/nautobot/issues/1154) - Fixed inability to save changes in Admin Configuration UI.
+- [#1162](https://github.com/nautobot/nautobot/issues/1162) - Fixed error when creating a `NavMenuItem` without specifying the `buttons` argument.
 
 ### Removed
 
