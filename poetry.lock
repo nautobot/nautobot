@@ -219,14 +219,14 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "click-didyoumean"
-version = "0.3.0"
-description = "Enables git-like *did-you-mean* feature in click"
+version = "0.0.3"
+description = "Enable git-like did-you-mean feature in click."
 category = "main"
 optional = false
-python-versions = ">=3.6.2,<4.0.0"
+python-versions = "*"
 
 [package.dependencies]
-click = ">=7"
+click = "*"
 
 [[package]]
 name = "click-plugins"
@@ -1407,11 +1407,11 @@ test = ["pytest (>=2.7.3)", "pytest-cov", "coveralls", "futures", "pytest-benchm
 
 [[package]]
 name = "prompt-toolkit"
-version = "3.0.24"
+version = "3.0.3"
 description = "Library for building powerful interactive command lines in Python"
 category = "main"
 optional = false
-python-versions = ">=3.6.2"
+python-versions = ">=3.6"
 
 [package.dependencies]
 wcwidth = "*"
@@ -1775,7 +1775,7 @@ python-versions = "*"
 
 [[package]]
 name = "scp"
-version = "0.14.1"
+version = "0.14.2"
 description = "scp module for paramiko"
 category = "main"
 optional = true
@@ -2099,8 +2099,8 @@ sso = ["social-auth-core"]
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.6.2"
-content-hash = "7fe2d5be602310f47d166ed262cc1b98b063c0e654978eccff45457157b3bad5"
+python-versions = "^3.6"
+content-hash = "6ff7ed1d124aad8400509fb36711876dcab953514918349ba02a4dbd6d96d18d"
 
 [metadata.files]
 aiocontextvars = [
@@ -2217,8 +2217,7 @@ click = [
     {file = "click-7.1.2.tar.gz", hash = "sha256:d2b5255c7c6349bc1bd1e59e08cd12acbbd63ce649f2588755783aa94dfb6b1a"},
 ]
 click-didyoumean = [
-    {file = "click-didyoumean-0.3.0.tar.gz", hash = "sha256:f184f0d851d96b6d29297354ed981b7dd71df7ff500d82fa6d11f0856bee8035"},
-    {file = "click_didyoumean-0.3.0-py3-none-any.whl", hash = "sha256:a0713dc7a1de3f06bc0df5a9567ad19ead2d3d5689b434768a6145bff77c0667"},
+    {file = "click-didyoumean-0.0.3.tar.gz", hash = "sha256:112229485c9704ff51362fe34b2d4f0b12fc71cc20f6d2b3afabed4b8bfa6aeb"},
 ]
 click-plugins = [
     {file = "click-plugins-1.1.1.tar.gz", hash = "sha256:46ab999744a9d831159c3411bb0c79346d94a444df9a3a3742e9ed63645f264b"},
@@ -2806,8 +2805,8 @@ promise = [
     {file = "promise-2.3.tar.gz", hash = "sha256:dfd18337c523ba4b6a58801c164c1904a9d4d1b1747c7d5dbf45b693a49d93d0"},
 ]
 prompt-toolkit = [
-    {file = "prompt_toolkit-3.0.24-py3-none-any.whl", hash = "sha256:e56f2ff799bacecd3e88165b1e2f5ebf9bcd59e80e06d395fa0cc4b8bd7bb506"},
-    {file = "prompt_toolkit-3.0.24.tar.gz", hash = "sha256:1bb05628c7d87b645974a1bad3f17612be0c29fa39af9f7688030163f680bad6"},
+    {file = "prompt_toolkit-3.0.3-py3-none-any.whl", hash = "sha256:c93e53af97f630f12f5f62a3274e79527936ed466f038953dfa379d4941f651a"},
+    {file = "prompt_toolkit-3.0.3.tar.gz", hash = "sha256:a402e9bf468b63314e37460b68ba68243d55b2f8c4d0192f85a019af3945050e"},
 ]
 psycopg2-binary = [
     {file = "psycopg2-binary-2.8.6.tar.gz", hash = "sha256:11b9c0ebce097180129e422379b824ae21c8f2a6596b159c7659e2e5a00e1aa0"},
@@ -3111,8 +3110,8 @@ rx = [
     {file = "Rx-1.6.1.tar.gz", hash = "sha256:13a1d8d9e252625c173dc795471e614eadfe1cf40ffc684e08b8fff0d9748c23"},
 ]
 scp = [
-    {file = "scp-0.14.1-py2.py3-none-any.whl", hash = "sha256:e4e0b9b41b73ebcc4e988e8f43039dc3715e88f3ee7b3e2d21521975bcfc82ee"},
-    {file = "scp-0.14.1.tar.gz", hash = "sha256:b776bd6ce8c8385aa9a025b64a9815b5d798f12d4ef0d712d569503f62aece8b"},
+    {file = "scp-0.14.2-py2.py3-none-any.whl", hash = "sha256:ec00097adadf85f147d085561b2f9cc209293f59541b8e1b65649bf9e4120b4a"},
+    {file = "scp-0.14.2.tar.gz", hash = "sha256:713f117413bbd616a1a7da8f07db9adcd835ce73d8585fb469ea5b5785f92e4d"},
 ]
 selenium = [
     {file = "selenium-3.141.0-py2.py3-none-any.whl", hash = "sha256:2d7131d7bc5a5b99a2d9b04aaf2612c411b03b8ca1b1ee8d3de5845a9be2cb3c"},
