@@ -68,6 +68,10 @@ Additionally, plugins now have the option of registering specific "home" and/or 
 
 Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
 
+#### IPAM custom lookups for filtering ([#982](https://github.com/nautobot/nautobot/issues/982))
+
+Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../rest-api/filtering.md#network-and-host-fields) for more specifics and examples.
+
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 
 Jobs can now be optionally defined as `approval_required = True`, in which case the Job will not be executed immediately upon submission, but will instead be placed into an approval queue; any user *other than the submitter* can approve or deny a queued Job, at which point it will then be executed as normal.
@@ -137,6 +141,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#843](https://github.com/nautobot/nautobot/issues/843) - Added more information about Celery in the Upgrading Nautobot docs.
 - [#876](https://github.com/nautobot/nautobot/issues/876) - Added option to apply a validation regex when defining CustomFieldChoices.
 - [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
+- [#982](https://github.com/nautobot/nautobot/issues/982) - Added IPAM custom lookup database functions.
 - [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
 - [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
 - [#1082](https://github.com/nautobot/nautobot/issues/1082) - Added `netutils` template filters for both Django and Jinja2 template rendering.
