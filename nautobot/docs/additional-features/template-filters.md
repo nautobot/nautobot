@@ -2,8 +2,7 @@
 
 ## Introduction
 
-Nautobot uses 2 template engines internally, Django Template and Jinja2.
-Django Template is used to render the UI pages and Jinja2 is used for all extensibility features like: computed fields, custom links etc ...
+Nautobot uses 2 template engines internally, Django Template and Jinja2. Django Template is used to render the UI pages and Jinja2 is used for features such as computed fields, custom links, export templates, etc.
 
 !!! note
 	Jinja2 and Django Template are very similar, the main difference between them is the syntax of the template. Historically, Django Template has been the go-to solution to generate webpage in Django and Jinja2 is the industry standard outside of Django.
