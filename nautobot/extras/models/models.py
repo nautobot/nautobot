@@ -818,7 +818,7 @@ class JobResult(BaseModel, CustomFieldModel):
             self.completed = timezone.now()
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, *args, schedule=None, **kwargs):
+    def enqueue_job(cls, func, name, obj_type, user, celery_kwargs=None, *args, schedule=None, **kwargs):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
@@ -826,15 +826,20 @@ class JobResult(BaseModel, CustomFieldModel):
         name: Name for the JobResult instance
         obj_type: ContentType to link to the JobResult instance obj_type
         user: User object to link to the JobResult instance
+        celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
         args: additional args passed to the callable
         schedule: Optional ScheduledJob instance to link to the JobResult
-        kwargs: additional kargs passed to the callable
+        kwargs: additional kwargs passed to the callable
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
         kwargs["job_result_pk"] = job_result.pk
 
-        func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id))
+        # Prepare kwargs that will be sent to Celery
+        if celery_kwargs is None:
+            celery_kwargs = {}
+
+        func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 
         return job_result
 
