@@ -68,6 +68,10 @@ Additionally, plugins now have the option of registering specific "home" and/or 
 
 Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
 
+#### IPAM custom lookups for filtering ([#982](https://github.com/nautobot/nautobot/issues/982))
+
+Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../rest-api/filtering.md#network-and-host-fields) for more specifics and examples.
+
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 
 Jobs can now be optionally defined as `approval_required = True`, in which case the Job will not be executed immediately upon submission, but will instead be placed into an approval queue; any user *other than the submitter* can approve or deny a queued Job, at which point it will then be executed as normal.
@@ -80,6 +84,10 @@ Jobs can now be scheduled for execution at a future date and time (such as durin
     Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
 Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
+
+#### Networking Template Filters ([#1082](https://github.com/nautobot/nautobot/issues/1082))
+
+Template rendering with Django and/or Jinja2 now supports by default all filters provided by the [`netutils`](https://netutils.readthedocs.io/en/latest/index.html) library. These filters can be used in page templates, computed fields, custom links, export templates, etc. For details, please refer to the [filters](../additional-features/filters.md) documentation.
 
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 
@@ -126,20 +134,25 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.0b2 (2021-??-??)
+## v1.2.0 (2021-12-14)
 
 ### Added
 
 - [#843](https://github.com/nautobot/nautobot/issues/843) - Added more information about Celery in the Upgrading Nautobot docs.
 - [#876](https://github.com/nautobot/nautobot/issues/876) - Added option to apply a validation regex when defining CustomFieldChoices.
 - [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
+- [#982](https://github.com/nautobot/nautobot/issues/982) - Added IPAM custom lookup database functions.
 - [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
 - [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
+- [#1082](https://github.com/nautobot/nautobot/issues/1082) - Added `netutils` template filters for both Django and Jinja2 template rendering.
+- [#1124](https://github.com/nautobot/nautobot/issues/1124) - Added documentation on generating `SECRET_KEY` before Nautobot is configured.
+- [#1143](https://github.com/nautobot/nautobot/pull/1143) - Added documentation on using LDAP with multiple LDAP servers.
 
 ### Changed
 
 - [#1068](https://github.com/nautobot/nautobot/issues/1068) - Docker images now include optional Nautobot dependencies by default.
 - [#1095](https://github.com/nautobot/nautobot/issues/1095) - Refined Admin Configuration UI.
+- [#1105](https://github.com/nautobot/nautobot/pull/1105) - Reverted minimum Python 3.6 version to 3.6.0 rather than 3.6.2.
 
 ### Fixed
 
@@ -156,6 +169,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1112](https://github.com/nautobot/nautobot/issues/1112) - Fixed broken single-object GraphQL query endpoints.
 - [#1116](https://github.com/nautobot/nautobot/issues/1116) - Fixed UnboundLocalError when using device NAPALM integration
 - [#1121](https://github.com/nautobot/nautobot/pull/1121) - Fixed issue with handling of relationships referencing no-longer-present model classes.
+- [#1133](https://github.com/nautobot/nautobot/pull/1133) - Fixed some incorrect documentation about the Docker image build/publish process.
+- [#1141](https://github.com/nautobot/nautobot/issues/1141) - Improved reloading of changed Job files. (Port of [NetBox #7820](https://github.com/netbox-community/netbox/pull/7820))
+- [#1154](https://github.com/nautobot/nautobot/issues/1154) - Fixed inability to save changes in Admin Configuration UI.
+- [#1162](https://github.com/nautobot/nautobot/issues/1162) - Fixed error when creating a `NavMenuItem` without specifying the `buttons` argument.
 
 ### Removed
 
@@ -190,6 +207,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#935](https://github.com/nautobot/nautobot/pull/935) - Added Installed Plugins list view and detail view
 - [#937](https://github.com/nautobot/nautobot/issues/937) - Added bulk-delete option for scheduled jobs
 - [#938](https://github.com/nautobot/nautobot/issues/938) - Added titles to job approval UI buttons
+- [#947](https://github.com/nautobot/nautobot/pull/947) - Added `DISABLE_PREFIX_LIST_HIERARCHY` setting to render IPAM Prefix list view as a flat list
 - [#953](https://github.com/nautobot/nautobot/pull/953) - Added option to use MySQL in docker-compose development environment
 
 ### Changed
