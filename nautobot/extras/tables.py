@@ -21,6 +21,7 @@ from nautobot.utilities.tables import (
     ToggleColumn,
 )
 from nautobot.utilities.templatetags.helpers import render_markdown
+from .choices import LogLevelChoices
 from .jobs import Job
 from .models import (
     ComputedField,
@@ -32,6 +33,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     JobResult,
+    JobLogEntry,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -376,6 +378,48 @@ class GraphQLQueryTable(BaseTable):
         )
 
 
+def log_object_link(value, record):
+    return record.absolute_url
+
+
+def log_entry_color_css(record):
+    if record.log_level.lower() == "failure":
+        return "danger"
+    return record.log_level.lower()
+
+
+class JobLogEntryTable(BaseTable):
+    created = tables.DateTimeColumn(verbose_name="Time", format=settings.SHORT_DATETIME_FORMAT)
+    grouping = tables.Column()
+    log_level = tables.Column(
+        verbose_name="Level",
+        attrs={"td": {"class": "text-nowrap report-stats"}},
+    )
+    log_object = tables.Column(verbose_name="Object", linkify=log_object_link)
+    message = tables.Column()
+
+    def render_log_level(self, value):
+        log_level = value.lower()
+        # The css is label-danger for failure items.
+        if log_level == "failure":
+            log_level = "danger"
+
+        return format_html('<label class="label label-{}">{}</label>', log_level, value)
+
+    class Meta(BaseTable.Meta):
+        model = JobLogEntry
+        fields = ("created", "grouping", "log_level", "log_object", "message")
+        default_columns = ("created", "grouping", "log_level", "log_object", "message")
+        row_attrs = {
+            "class": log_entry_color_css,
+            "data-name": lambda record: record.log_level,
+        }
+        attrs = {
+            "class": "table table-hover table-headings",
+            "id": "logs",
+        }
+
+
 def job_creator_link(value, record):
     """
     Get a link to the related object, if any, associated with the given JobResult record.
@@ -397,17 +441,32 @@ class JobResultTable(BaseTable):
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
-    data = tables.TemplateColumn(
-        """
-        <label class="label label-success">{{ value.total.success }}</label>
-        <label class="label label-info">{{ value.total.info }}</label>
-        <label class="label label-warning">{{ value.total.warning }}</label>
-        <label class="label label-danger">{{ value.total.failure }}</label>
-        """,
+    summary = tables.Column(
+        empty_values=(),
         verbose_name="Results",
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+
+    def render_summary(self, record):
+        """
+        Define custom rendering for the summary column.
+        """
+        log_objects = JobLogEntry.objects.filter(job_result__pk=record.pk)
+        success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+        info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
+        warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
+        failure = log_objects.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
+        return format_html(
+            """<label class="label label-success">{}</label>
+            <label class="label label-info">{}</label>
+            <label class="label label-warning">{}</label>
+            <label class="label label-danger">{}</label>""",
+            success,
+            info,
+            warning,
+            failure,
+        )
 
     class Meta(BaseTable.Meta):
         model = JobResult
@@ -421,9 +480,9 @@ class JobResultTable(BaseTable):
             "completed",
             "user",
             "status",
-            "data",
+            "logs",
         )
-        default_columns = ("pk", "created", "related_object", "user", "status", "data")
+        default_columns = ("pk", "created", "related_object", "user", "status", "logs")
 
 
 #

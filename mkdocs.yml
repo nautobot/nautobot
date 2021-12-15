@@ -84,6 +84,7 @@ nav:
         - Relationships: 'models/extras/relationship.md'
         - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
+        - Template Filters: 'additional-features/template-filters.md'
         - Webhooks: 'models/extras/webhook.md'
     - Plugins:
         - Using Plugins: 'plugins/index.md'

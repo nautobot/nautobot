@@ -137,7 +137,7 @@ $ pip3 install nautobot
 ```
 
 !!! hint 
-    If you are using MySQL as your database backend, use `pip3 install nautobot[mysql]` to install Nautobot and the `mysqlclient` library together!
+    If you are using MySQL as your database backend, use `pip3 install "nautobot[mysql]"` to install Nautobot and the `mysqlclient` library together!
 
 ### Install MySQL client library
 
@@ -147,7 +147,7 @@ If you are using MySQL as your database server you must install the `mysqlclient
     If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
     
 ```no-highlight
-$ pip3 install mysqlclient
+$ pip3 install "nautobot[mysql]"
 ```
 
 Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
@@ -211,20 +211,20 @@ We will cover two examples of common optional settings below.
 
 Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
-To use NAPALM, add `napalm` to your `local_requirements.txt` so that it can be installed and kept up to date:
+To use NAPALM, add `nautobot[napalm]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
 ```no-highlight
-$ echo napalm >> $NAUTOBOT_ROOT/local_requirements.txt
+$ echo "nautobot[napalm]" >> $NAUTOBOT_ROOT/local_requirements.txt
 ```
 
 ### Remote File Storage
 
 By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../../configuration/optional-settings/#storage_backend) in `nautobot_config.py`.
 
-To use remote file storage, add `django-storages` to your `local_requirements.txt` so that it can be installed and kept up to date:
+To use remote file storage, add `nautobot[remote_storage]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
 ```no-highlight
-$ echo django-storages >> $NAUTOBOT_ROOT/local_requirements.txt
+$ echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
 ```
 
 ## Prepare the Database
