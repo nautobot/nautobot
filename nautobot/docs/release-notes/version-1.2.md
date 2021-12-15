@@ -149,6 +149,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
 - [#982](https://github.com/nautobot/nautobot/issues/982) - Added IPAM custom lookup database functions.
 - [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
+- [#1041](https://github.com/nautobot/nautobot/pull/1041) - Add passing of `**kwargs` to Celery tasks when using `JobResult.enqueue_job()` to execute a `Job`.
 - [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
 - [#1082](https://github.com/nautobot/nautobot/issues/1082) - Added `netutils` template filters for both Django and Jinja2 template rendering.
 - [#1124](https://github.com/nautobot/nautobot/issues/1124) - Added documentation on generating `SECRET_KEY` before Nautobot is configured.
