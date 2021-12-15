@@ -6,13 +6,10 @@ This guide explains how to implement LDAP authentication using an external serve
 
 ### Install System Packages
 
-!!! danger
-    FIXME(jathan): With `wheel` packages asserted, let's make doubly sure these development libraries even need to be installed anymore.
-
 On Ubuntu:
 
 ```no-highlight
-$ sudo apt install -y libldap2-dev libsasl2-dev libssl-dev
+$ sudo apt install -y libldap-dev libsasl2-dev
 ```
 
 On CentOS:
@@ -32,13 +29,13 @@ Activate the Python virtual environment and install the `django-auth-ldap` packa
 
 ```no-highlight
 $ source /opt/nautobot/bin/activate
-(nautobot) $ pip3 install django-auth-ldap
+(nautobot) $ pip3 install "nautobot[ldap]"
 ```
 
 Once installed, add the package to `local_requirements.txt` to ensure it is re-installed during future rebuilds of the virtual environment:
 
 ```no-highlight
-(nautobot) $ echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
+(nautobot) $ echo "nautobot[ldap]" >> /opt/nautobot/local_requirements.txt
 ```
 
 ## Configuration
@@ -86,7 +83,7 @@ ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
 
-Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`. 
+Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`.
 
 ```
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
@@ -121,6 +118,32 @@ AUTH_LDAP_USER_ATTR_MAP = {
     "last_name": "sn",
     "email": "mail"
 }
+```
+
+#### Searching in Multiple LDAP Groups
+
+Define the user-groups in your environment, such as a *.env file (delimiter `';'`):
+
+```python
+# Groups to search for user objects. "(sAMAccountName=%(user)s),..."
+NAUTOBOT_AUTH_LDAP_USER_SEARCH_DN=OU=IT-Admins,OU=special-users,OU=Acme-User,DC=Acme,DC=local;OU=Infrastruktur,OU=IT,OU=my-location,OU=User,OU=Acme-User,DC=Acme,DC=local
+```
+
+Import LDAPSearchUnion in `nautobot_config.py`, and replace the AUTH_LDAP_USER_SEARCH command from above:
+
+```python
+from django_auth_ldap.config import ..., LDAPSearchUnion
+
+# ...
+
+AUTH_LDAP_USER_SEARCH_DN = os.getenv("NAUTOBOT_AUTH_LDAP_USER_SEARCH_DN", "")
+
+if AUTH_LDAP_USER_SEARCH_DN != "":
+    user_search_dn_list = str(AUTH_LDAP_USER_SEARCH_DN).split(";")
+    ldapsearch_objects = []
+    for sdn in user_search_dn_list:
+        ldapsearch_objects.append(LDAPSearch(sdn.strip(), ldap.SCOPE_SUBTREE, "(sAMAccountName=%(user)s)"))
+    AUTH_LDAP_USER_SEARCH = LDAPSearchUnion(*ldapsearch_objects)
 ```
 
 ### User Groups for Permissions
@@ -161,6 +184,49 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 !!! warning
     Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
+
+
+## Multiple LDAP Server Support
+
+Multiple servers can be supported in `django-auth-ldap` by the use of additional LDAP backends, as described in the library's [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).
+
+In order to define and load additional backends into Nautobot a plugin can be used. This plugin will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file.  At the simplest form the plugin should have a custom backend(s) defined:
+
+```python
+# my_customer_backends.py
+
+from django_auth_ldap.backend import LDAPBackend
+
+class LDAPBackendSecondary(LDAPBackend):
+    settings_prefix = "AUTH_LDAP_SECONDARY_"
+```
+
+If the plugin is named `nautobot_ldap_plugin`, the following snippet could be used to load the additional LDAP backend:
+
+```python
+# nautobot_config.py
+
+AUTHENTICATION_BACKENDS = [
+    'django_auth_ldap.backend.LDAPBackend',
+    'nautobot_ldap_plugin.my_customer_backends.LDAPBackendSecondary',  # path to the custom LDAP Backend
+    'nautobot.core.authentication.ObjectPermissionBackend',
+]
+```
+
+Once the custom backend is loaded into the settings all the configuration items mentioned previously need to be completed for each server.  As a simplified example defining the URIs would be accomplished by the following two lines in the `nautobot_config.py` file.  A similar approach would be done to define the rest of the settings.
+
+```python
+# nautobot_config.py
+
+# Server URI which uses django_auth_ldap.backend.LDAPBackend
+AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
+
+# Server URI which uses nautobot_ldap_plugin.my_customer_backends.LDAPBackendSecondary
+AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
+```
+
+!!! info
+    In this example the default LDAPBackend was still used as the first LDAP server, which utilized the `AUTH_LDAP_*` environment variables. It is also possible to remove the default backend and create multiple custom backends instead to normalize the environment variable naming scheme.
 
 ## Troubleshooting LDAP
 

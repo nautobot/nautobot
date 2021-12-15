@@ -29,6 +29,8 @@ The following context data is available within the template when rendering a cus
 | `user`     | The current user (if authenticated) |
 | `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
 
+All [built-in Jinja2 filters](../../additional-features/filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
+
 ## Conditional Rendering
 
 Only links which render with non-empty text are included on the page. You can employ conditional Jinja2 logic to control the conditions under which a link gets rendered.
