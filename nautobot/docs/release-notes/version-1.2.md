@@ -124,7 +124,7 @@ Job log messages are now stored in a separate database table as a separate `JobL
     If you use Jobs inside tests, your Tests Class should have `@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)`. This will allow the tests and the JobLogEntry objects to use the `default` database.
 
 !!! note
-    If you are using the antipattern `job.job_result = JobResult()` in tests, this will no longer work. Instead you will need to create the JobResult object `job.job_result = JobResult.objects.create(...)`.
+    Because `JobLogEntry` records reference their associated `JobResult`, the pattern `job.job_result = JobResult()` (creating only an in-memory `JobResult` object, rather than a database entry) will no longer work. Instead you will need to create a proper JobResult database object `job.job_result = JobResult.objects.create(...)`.
 
 #### Slug fields are now Optional in CSV import, REST API and ORM ([#493](https://github.com/nautobot/nautobot/issues/493))
 
