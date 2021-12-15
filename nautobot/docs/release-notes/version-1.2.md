@@ -135,6 +135,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
 - [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
 - [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
+- [#1124](https://github.com/nautobot/nautobot/issues/1124) - Added documentation on generating `SECRET_KEY` before Nautobot is configured.
 
 ### Changed
 
