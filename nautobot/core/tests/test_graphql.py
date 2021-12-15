@@ -1006,6 +1006,7 @@ query {
                 virtual_machine { name }
             }
         }
+        family
         interface { name }
         vminterface { name }
     }
@@ -1018,6 +1019,7 @@ query {
                 entry["address"], (str(self.ipaddr1.address), str(self.ipaddr2.address), str(self.vmipaddr.address))
             )
             self.assertIn("assigned_object", entry)
+            self.assertIn(entry["family"], (4, 6))
             if entry["address"] == str(self.vmipaddr.address):
                 self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
                 self.assertEqual(entry["vminterface"]["name"], self.vminterface.name)
