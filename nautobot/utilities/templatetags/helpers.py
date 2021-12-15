@@ -398,7 +398,8 @@ def settings_or_config(key):
     return get_settings_or_config(key)
 
 
-@register.filter
+@library.filter()
+@register.filter()
 def quote_string(value):
     """Add literal quote characters around the provided value if it's a string."""
     if isinstance(value, str):

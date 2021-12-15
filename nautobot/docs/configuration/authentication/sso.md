@@ -42,7 +42,7 @@ Install the system dependencies as `root`:
 $ sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
 ```
 
-Install the `sso` Python extra as the`nautobot` user.
+Install the `sso` Python extra as the `nautobot` user.
 
 ```no-highlight
 $ pip3 install "nautobot[sso]"
