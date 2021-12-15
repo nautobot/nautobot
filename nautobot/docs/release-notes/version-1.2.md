@@ -154,6 +154,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1082](https://github.com/nautobot/nautobot/issues/1082) - Added `netutils` template filters for both Django and Jinja2 template rendering.
 - [#1124](https://github.com/nautobot/nautobot/issues/1124) - Added documentation on generating `SECRET_KEY` before Nautobot is configured.
 - [#1143](https://github.com/nautobot/nautobot/pull/1143) - Added documentation on using LDAP with multiple LDAP servers.
+- [#1159](https://github.com/nautobot/nautobot/pull/1159) - Add `family` field to `IPAddressType` for GraphQL API enable filtering of `IPAddress` objects by `family`.
 
 ### Changed
 
