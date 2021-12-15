@@ -200,7 +200,7 @@ labels will be applied for categorization.
 
 #### Executing Tests
 
-To test individual unit tests, the syntax is invoke unittest --label <label>.
+To test individual unit tests, the syntax is `invoke unittest --label <label>`.
 
 ##### Examples
 
