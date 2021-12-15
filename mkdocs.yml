@@ -75,6 +75,7 @@ nav:
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'
         - Export Templates: 'models/extras/exporttemplate.md'
+        - Filters: 'additional-features/filters.md'
         - Git Repositories: 'models/extras/gitrepository.md'
         - Health Check: 'additional-features/healthcheck.md'
         - Jobs: 'additional-features/jobs.md'
