@@ -81,6 +81,10 @@ Jobs can now be scheduled for execution at a future date and time (such as durin
 
 Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
 
+#### Networking Template Filters ([#1082](https://github.com/nautobot/nautobot/issues/1082))
+
+Template rendering with Django and/or Jinja2 now supports by default all filters provided by the [`netutils`](https://netutils.readthedocs.io/en/latest/index.html) library. These filters can be used in page templates, computed fields, custom links, export templates, etc. For details, please refer to the [filters](../additional-features/filters.md) documentation.
+
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 
 Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
@@ -135,6 +139,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#965](https://github.com/nautobot/nautobot/pull/965) - Added example script for performing group sync from AzureAD.
 - [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
 - [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
+- [#1082](https://github.com/nautobot/nautobot/issues/1082) - Added `netutils` template filters for both Django and Jinja2 template rendering.
 - [#1124](https://github.com/nautobot/nautobot/issues/1124) - Added documentation on generating `SECRET_KEY` before Nautobot is configured.
 - [#1143](https://github.com/nautobot/nautobot/pull/1143) - Added documentation on using LDAP with multiple LDAP servers.
 
