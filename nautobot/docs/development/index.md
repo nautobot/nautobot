@@ -38,7 +38,7 @@ The following provides more detail on these.
 - The GitHub **Release Milestone** will track items for the _current_ release.
 
 !!! note
-Release windows and dates will be updated per [Release Management](release-management).
+    Release windows and dates will be updated per [Release Management](release-management).
 
 #### Near Term
 
