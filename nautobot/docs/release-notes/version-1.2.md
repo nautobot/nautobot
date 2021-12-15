@@ -87,7 +87,7 @@ Please see the documentation on enabling the [Celery Beat scheduler service](../
 
 #### Networking Template Filters ([#1082](https://github.com/nautobot/nautobot/issues/1082))
 
-Template rendering with Django and/or Jinja2 now supports by default all filters provided by the [`netutils`](https://netutils.readthedocs.io/en/latest/index.html) library. These filters can be used in page templates, computed fields, custom links, export templates, etc. For details, please refer to the [filters](../additional-features/filters.md) documentation.
+Template rendering with Django and/or Jinja2 now supports by default all filters provided by the [`netutils`](https://netutils.readthedocs.io/en/latest/index.html) library. These filters can be used in page templates, computed fields, custom links, export templates, etc. For details, please refer to the [filters](../additional-features/template-filters.md) documentation.
 
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 

@@ -338,7 +338,7 @@ These two methods will load data in YAML or JSON format, respectively, from file
 !!! note
     To run any job, a user must be assigned the `extras.run_job` permission. This is achieved by assigning the user (or group) a permission on the `extras > job` object and specifying the `run` action in the admin UI as shown below.
 
-    ![Adding the run action to a permission](../../media/admin_ui_run_permission.png)
+    ![Adding the run action to a permission](../media/admin_ui_run_permission.png)
 
 ### Jobs and `class_path`
 
