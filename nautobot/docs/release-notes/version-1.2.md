@@ -136,6 +136,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1002](https://github.com/nautobot/nautobot/pull/1002) - Added `URM-P2`, `URM-P4`, and `URM-P8` port types.
 - [#1080](https://github.com/nautobot/nautobot/pull/1080) - Added documentation around using LDAP with multiple search groups.
 - [#1124](https://github.com/nautobot/nautobot/issues/1124) - Added documentation on generating `SECRET_KEY` before Nautobot is configured.
+- [#1143](https://github.com/nautobot/nautobot/pull/1143) - Added documentation on using LDAP with multiple LDAP servers.
 
 ### Changed
 
@@ -158,6 +159,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1116](https://github.com/nautobot/nautobot/issues/1116) - Fixed UnboundLocalError when using device NAPALM integration
 - [#1121](https://github.com/nautobot/nautobot/pull/1121) - Fixed issue with handling of relationships referencing no-longer-present model classes.
 - [#1133](https://github.com/nautobot/nautobot/pull/1133) - Fixed some incorrect documentation about the Docker image build/publish process.
+- [#1141](https://github.com/nautobot/nautobot/issues/1141) - Improved reloading of changed Job files. (Port of [NetBox #7820](https://github.com/netbox-community/netbox/pull/7820))
 - [#1154](https://github.com/nautobot/nautobot/issues/1154) - Fixed inability to save changes in Admin Configuration UI.
 
 ### Removed
