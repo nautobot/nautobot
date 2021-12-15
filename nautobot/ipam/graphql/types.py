@@ -37,6 +37,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
 
     address = graphene.String()
     assigned_object = AssignedObjectType()
+    family = graphene.Int()
     interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
     vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
 
@@ -53,6 +54,9 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         if self.assigned_object:
             return self.assigned_object
         return None
+
+    def resolve_family(self, args):
+        return self.family
 
     def resolve_interface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
