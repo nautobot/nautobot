@@ -140,6 +140,16 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.1 (2021-??-??)
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
 ## v1.2.0 (2021-12-15)
 
 ### Added
