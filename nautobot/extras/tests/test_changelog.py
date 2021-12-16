@@ -1,7 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.test import override_settings
 from rest_framework import status
 
+from nautobot.core.graphql import execute_query
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
@@ -292,3 +294,22 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
         self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_graphql_object(self):
+        """Test GET with changelogs via GraphQL."""
+        site_payload = {
+            "name": "Test Site 1",
+            "slug": "test-site-1",
+            "status": "active",
+        }
+        self.add_permissions("dcim.add_site")
+
+        sites_url = reverse("dcim-api:site-list")
+        new_site_response = self.client.post(sites_url, site_payload, format="json", **self.header)
+        self.assertHttpStatus(new_site_response, status.HTTP_201_CREATED)
+
+        gql_payload = '{query: object_changes(q: "") { object_repr } }'
+        resp = execute_query(gql_payload, user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+        self.assertEqual(first=site_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
