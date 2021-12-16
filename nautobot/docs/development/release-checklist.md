@@ -161,7 +161,7 @@ $ poetry build
 
 Next, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
 
-```
+```no-highlight
 $ poetry publish --username __token__ --password <api_token>
 ```
 
@@ -172,39 +172,19 @@ Build the images locally:
 ```no-highlight
 for ver in 3.6 3.7 3.8 3.9; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
-  invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-  invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+  invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local &
+  invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local &
 done
 ```
 
-Test the images locally - to do this you need to set the following in your `invoke.yml`:
+Push the images to GitHub Container Registry and Docker Hub:
 
-```yaml
----
-nautobot:
-  compose_files:
-    - "docker-compose.yml"
-    - "docker-compose.build.yml"
-```
-
-!!! warning
-    You should *not* include `docker-compose.dev.yml` in this test scenario!
-
-```no-highlight
-for ver in 3.6 3.7 3.8 3.9; do
-  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
-  invoke stop
-  invoke integration-tests
-done
-```
-
-Push the images to GitHub Container Registry and Docker Hub
 ```no-highlight
 docker login
 docker login ghcr.io
 for ver in 3.6 3.7 3.8 3.9; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
-  invoke docker-push main
+  invoke docker-push main &
 done
 ```
 
@@ -214,7 +194,7 @@ Use `poetry version prepatch` to bump the version to the next release and commit
 
 For example, if you just released `v1.1.0`:
 
-```
+```no-highlight
 $ poetry version prepatch
 Bumping version from 1.1.0 to 1.1.1-alpha.0
 ```
