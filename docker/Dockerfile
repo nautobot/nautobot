@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
 # hadolint ignore=DL3005,DL3008,DL3013
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git mime-support curl libxml2 default-libmysqlclient-dev && \
+    apt-get install --no-install-recommends -y git mime-support curl libxml2 libmariadb3 && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
@@ -30,7 +30,7 @@ ENV PATH="${PATH}:/root/.local/bin"
 # Install development OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y openssl build-essential libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev && \
+    apt-get install --no-install-recommends -y openssl build-essential libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -97,7 +97,7 @@ RUN poetry build && \
 FROM base as cleaninstall
 
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev
+RUN apt-get update && apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev
 
 # pyuwsgi doesn't support ssl so we build it from source
 # https://github.com/nautobot/nautobot/issues/193
