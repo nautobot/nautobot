@@ -7,3 +7,13 @@ A serialized representation of the instance being modified is included in JSON f
 When a request is made, a UUID is generated and attached to any change records resulting from that request. For example, editing three objects in bulk will create a separate change record for each  (three in total), and each of those objects will be associated with the same UUID. This makes it easy to identify all the change records resulting from a particular request.
 
 Change records are exposed in the API via the read-only endpoint `/api/extras/object-changes/`. They may also be exported via the web UI in CSV format.
+
+Change records can also be accessed via the read-only GraphQL endpoint `/api/graphql/`. An example query to fetch change logs by action:
+```gql
+{ 
+  query: object_changes(action: "created") {
+    action
+    user_name
+    object_repr
+  }
+}
