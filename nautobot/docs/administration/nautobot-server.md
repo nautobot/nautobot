@@ -143,7 +143,7 @@ $ nautobot-server dumpdata \
 
 Use this command to generate a JSON dump of the database contents.
 
-Details see: [`Export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql)
+One example of using this command would be to [`export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql).
 
 ### `fix_custom_fields`
 
