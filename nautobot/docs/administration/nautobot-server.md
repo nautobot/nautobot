@@ -223,10 +223,10 @@ There are a number of other options not covered here.
 
 `nautobot-server loaddata --traceback nautobot_dump.json`
 
-To import the data exported that was exported with `dumpdata` see the following descriptions:
+To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
 
-- [`Remove the auto-populated Status records from the MySQL database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
-- [`Import the database dump into MySQL`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
+- [`Remove the auto-populated Status records from the database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
 
 ### `migrate`
 
