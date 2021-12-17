@@ -140,13 +140,20 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.1 (2021-??-??)
+## v1.2.1 (2021-12-16)
 
 ### Added
 
+- [#1110](https://github.com/nautobot/nautobot/issues/1110) - Added GraphQL support for the `ObjectChange` model.
+
 ### Changed
 
+- [#1106](https://github.com/nautobot/nautobot/issues/1106) - Updating Docker health checks to be more robust and greatly reduce performance impact.
+
 ### Fixed
+
+- [#1170](https://github.com/nautobot/nautobot/pull/1170) - Fixed bug in renamed column of `JobResultTable` where rename was not made to the `Meta`.
+- [#1173](https://github.com/nautobot/nautobot/issues/1173) - Fixed official Docker image: v1.2.0 tagged images fail to load with `ImportError: libxml2.so.2`.
 
 ### Removed
 
