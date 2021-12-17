@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
 # hadolint ignore=DL3005,DL3008,DL3013
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git mime-support curl && \
+    apt-get install --no-install-recommends -y git mime-support curl libxml2 && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
