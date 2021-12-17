@@ -8,6 +8,7 @@ from django.urls import reverse
 from nautobot.utilities.utils import serialize_object
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.utils import extras_features
 
 
 #
@@ -40,6 +41,7 @@ class ChangeLoggedModel(models.Model):
         )
 
 
+@extras_features("graphql")
 class ObjectChange(BaseModel):
     """
     Record a change to an object and the user account associated with that change. A change record may optionally
