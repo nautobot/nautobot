@@ -157,6 +157,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Removed
 
+### Security
+
+- [#1077](https://github.com/nautobot/nautobot/issues/1077) - Updated `graphiql` to 1.5.16 as well as updating the associated Javascript libraries used in the GraphiQL UI to address a reported security flaw in older versions of GraphiQL. To the best of our understanding, the Nautobot implementation of GraphiQL was not vulnerable to said flaw.
+
 ## v1.2.0 (2021-12-15)
 
 ### Added
