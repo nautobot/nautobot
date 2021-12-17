@@ -480,9 +480,9 @@ class JobResultTable(BaseTable):
             "completed",
             "user",
             "status",
-            "logs",
+            "summary",
         )
-        default_columns = ("pk", "created", "related_object", "user", "status", "logs")
+        default_columns = ("pk", "created", "related_object", "user", "status", "summary")
 
 
 #
