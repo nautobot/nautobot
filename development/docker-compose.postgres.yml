@@ -10,5 +10,7 @@ services:
       - dev.env
     volumes:
       - pgdata_nautobot:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 volumes:
   pgdata_nautobot:

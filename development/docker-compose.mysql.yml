@@ -2,14 +2,31 @@
 version: "3.4"
 services:
   nautobot:
+    env_file:
+      - dev.mysql.env
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+  worker:
+    env_file:
+      - dev.mysql.env
+  celery_worker:
+    env_file:
+      - dev.mysql.env
+  celery_beat:
+    env_file:
+      - dev.mysql.env
   mysql:
     image: mysql:8
     command: "--character-set-server=utf8mb4 --collation-server=utf8mb4_bin"
     env_file:
       - dev.env
+      - dev.mysql.env
     volumes:
       - mysqldata_nautobot:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 volumes:
   mysqldata_nautobot:
