@@ -2,6 +2,12 @@
 name: "Update Nautobot Sandbox"
 on:
   push:
+    paths-ignore:
+      - "nautobot/docs/**"
+      - "examples/**"
+      - "**.md"
+      - "development/**"
+
     branches:
       - "develop"
       - "next"

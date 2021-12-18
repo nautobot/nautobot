@@ -4,7 +4,12 @@
 # # testing as fast as possible, this test avoid building or using any docker containers.
 # name: "CI - PR"
 # on:
-#   - "pull_request"
+#   pull_request:
+#     paths-ignore:
+#       - "nautobot/docs/**"
+#       - "examples/**"
+#       - "**.md"
+#       - "development/**"
 
 # jobs:
 #   black:

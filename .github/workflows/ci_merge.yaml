@@ -11,6 +11,11 @@ on:
       - "main"
       - "develop"
       - "next"
+    paths-ignore:
+      - "nautobot/docs/**"
+      - "examples/**"
+      - "**.md"
+      - "development/**"
 
 jobs:
   black:
@@ -114,7 +119,7 @@ jobs:
         if: "github.ref != 'refs/heads/main'"
         uses: "docker/build-push-action@v2"
         with:
-          push: true
+          push: false
           load: true
           target: final-dev
           file: "docker/Dockerfile"
@@ -142,7 +147,7 @@ jobs:
         if: "github.ref == 'refs/heads/main'"
         uses: "docker/build-push-action@v2"
         with:
-          push: true
+          push: false
           load: true
           target: final-dev
           file: "docker/Dockerfile"
@@ -179,7 +184,7 @@ jobs:
       - name: "Build Dev Containers from cache"
         uses: "docker/build-push-action@v2"
         with:
-          push: true
+          push: false
           load: true
           target: final-dev
           file: "docker/Dockerfile"
@@ -229,7 +234,7 @@ jobs:
       - name: "Build Dev Containers from cache"
         uses: "docker/build-push-action@v2"
         with:
-          push: true
+          push: false
           load: true
           target: final-dev
           file: "docker/Dockerfile"
@@ -292,7 +297,7 @@ jobs:
       - name: "Build Prod Containers from cache"
         uses: "docker/build-push-action@v2"
         with:
-          push: true
+          push: false
           load: true
           target: final
           file: "docker/Dockerfile"
