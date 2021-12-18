@@ -259,11 +259,16 @@ jobs:
     needs:
       # TODO: Nick should we let unittests and integration tests run in parallel or should we do unittests first?  For now we just need this to run
       - "container-build"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.6", "3.7", "3.8", "3.9" ]
     env:
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
       NAUTOBOT_REDIS_PASSWORD: "decinablesprewad"
       NAUTOBOT_SELENIUM_HOST: "nautobot"
+      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     services:
       postgres:
         image: "postgres:13-alpine"

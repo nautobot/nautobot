@@ -18,6 +18,7 @@ nautobot.pid
 docker-compose.override.yml
 *.env
 !dev.env
+!dev.mysql.env
 *.egg-info
 .python-version
 db_output.*
