@@ -1,3 +1,4 @@
+# TODO Nick Uncomment entire file
 # ---
 # # This CI process should be run on a PR or a commit to an open PR, the intent is to provide complete
 # # testing as fast as possible, this test avoid building or using any docker containers.
