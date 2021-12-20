@@ -224,7 +224,6 @@ class CustomFieldAPITest(APITestCase):
         cls.cf_json = CustomField(
             type=CustomFieldTypeChoices.TYPE_JSON,
             name="json_field",
-            default="null",
         )
         cls.cf_json.save()
         cls.cf_json.content_types.set([content_type])

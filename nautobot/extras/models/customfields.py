@@ -1,6 +1,5 @@
 import logging
 import re
-import json
 from collections import OrderedDict
 from datetime import datetime, date
 

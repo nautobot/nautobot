@@ -24,7 +24,7 @@
                                         Expand/Collapse
                                     </button>
                                 </p>
-                                <pre class="collapse" id="cf_json">{{ value|render_json }}</pre>
+				<pre class="collapse" id="cf_json"><code>{{ value|render_json }}</code></pre>
                             {% elif value or value == 0 %}
                                 {{ value }}
                             {% elif field.required %}
