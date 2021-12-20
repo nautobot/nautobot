@@ -114,6 +114,9 @@ By default the Docker development environment is configured to use a PostgreSQL 
           celery_worker:
             env_file:
               - "override.env"
+          celery_beat:
+            env_file:
+              - "override.env"
 
 - Set up an `invoke.yml` that overrides the docker-compose files used so that `docker-compose.mysql.yml` is used instead of `docker-compose.postgres.yml` and your `docker-compose.override.yml` is also used:
 

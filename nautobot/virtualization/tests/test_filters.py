@@ -4,8 +4,13 @@ from nautobot.dcim.models import DeviceRole, Platform, Region, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.virtualization.choices import *
-from nautobot.virtualization.filters import *
+from nautobot.virtualization.filters import (
+    ClusterTypeFilterSet,
+    ClusterGroupFilterSet,
+    ClusterFilterSet,
+    VirtualMachineFilterSet,
+    VMInterfaceFilterSet,
+)
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,

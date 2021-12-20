@@ -1,9 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.datastructures import DictWrapper
 import netaddr
 
 from .formfields import IPNetworkFormField
+from . import lookups
 
 
 class VarbinaryIPField(models.BinaryField):
@@ -90,3 +90,21 @@ class VarbinaryIPField(models.BinaryField):
         defaults = {"form_class": self.form_class()}
         defaults.update(kwargs)
         return super().formfield(**defaults)
+
+
+VarbinaryIPField.register_lookup(lookups.IExact)
+VarbinaryIPField.register_lookup(lookups.EndsWith)
+VarbinaryIPField.register_lookup(lookups.IEndsWith)
+VarbinaryIPField.register_lookup(lookups.StartsWith)
+VarbinaryIPField.register_lookup(lookups.IStartsWith)
+VarbinaryIPField.register_lookup(lookups.Regex)
+VarbinaryIPField.register_lookup(lookups.IRegex)
+VarbinaryIPField.register_lookup(lookups.NetContained)
+VarbinaryIPField.register_lookup(lookups.NetContainedOrEqual)
+VarbinaryIPField.register_lookup(lookups.NetContains)
+VarbinaryIPField.register_lookup(lookups.NetContainsOrEquals)
+VarbinaryIPField.register_lookup(lookups.NetEquals)
+VarbinaryIPField.register_lookup(lookups.NetHost)
+VarbinaryIPField.register_lookup(lookups.NetIn)
+VarbinaryIPField.register_lookup(lookups.NetHostContained)
+VarbinaryIPField.register_lookup(lookups.NetFamily)

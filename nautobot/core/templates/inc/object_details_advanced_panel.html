@@ -1,0 +1,47 @@
+{% if object.pk %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Object Details</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr>
+                    <td>UUID</td>
+                    <td>
+                        <span class="hover_copy">
+                            <span id="uuid_copy">{{ object.id }}</span>
+                            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#uuid_copy">
+                                <span class="mdi mdi-content-copy"></span>
+                            </button>
+                        </span>
+                    </td>
+                </tr>
+                {% if object.slug %}
+                    <tr>
+                        <td>Slug</td>
+                        <td>
+                            <span class="hover_copy">
+                                <span id="slug_copy">{{ object.slug }}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#slug_copy">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                {% endif %}
+                {% if object.created %}
+                    <tr>
+                        <td>Created</td>
+                        <td>{{ object.created }}</td>
+                    </tr>
+                {% endif %}
+                {% if object.last_updated %}
+                    <tr>
+                        <td>Updated</td>
+                        <td>{{ object.last_updated }}</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}

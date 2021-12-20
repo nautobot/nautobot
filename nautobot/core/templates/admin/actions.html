@@ -1,0 +1,5 @@
+{% load i18n bootstrapped_goodies_tags %}
+<div class="actions form-group">
+    {% for field in action_form %}{% if field.label %}<span style="vertical-align:sub">{{ field.label }}</span> {% endif %}{% dab_field_rendering field %}{% endfor %}
+    <button type="submit" class="btn btn-sm btn-primary" title="{% trans "Run the selected action" %}" name="index" value="{{ action_index|default:0 }}">{% trans "Go" %}</button>
+</div>

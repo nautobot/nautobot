@@ -6,7 +6,7 @@
 import os
 
 from nautobot.core.settings import *  # noqa: F401,F403
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
+from nautobot.core.settings_funcs import parse_redis_connection
 
 
 ALLOWED_HOSTS = ["*"]
@@ -53,6 +53,7 @@ CACHES = {
 
 # REDIS CACHEOPS
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
+CACHEOPS_ENABLED = False  # TODO(john): we should revisit this, but caching has caused issues with testing
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {

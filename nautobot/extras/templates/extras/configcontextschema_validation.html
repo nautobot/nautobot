@@ -1,0 +1,13 @@
+{% extends 'extras/configcontextschema.html' %}
+
+<h1>{% block title %}{{ object }} - Validation{% endblock %}</h1>
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% include 'utilities/obj_table.html' with table=config_context_table table_template='panel_table.html' heading='Config Contexts' %}
+            {% include 'utilities/obj_table.html' with table=device_table table_template='panel_table.html' heading='Devices' %}
+            {% include 'utilities/obj_table.html' with table=virtual_machine_table table_template='panel_table.html' heading='Virtual Machines' %}
+        </div>
+    </div>
+{% endblock %}

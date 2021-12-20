@@ -66,8 +66,6 @@ class ProviderForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class ProviderCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = Provider
         fields = Provider.csv_headers
@@ -125,8 +123,6 @@ class CircuitTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFor
 
 
 class CircuitTypeCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = CircuitType
         fields = CircuitType.csv_headers

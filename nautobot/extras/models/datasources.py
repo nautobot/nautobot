@@ -6,10 +6,10 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models, transaction
 from django.urls import reverse
-
 from django_cryptography.fields import encrypt
 
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 
 
@@ -30,10 +30,7 @@ class GitRepository(PrimaryModel):
         max_length=100,
         unique=True,
     )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True,
-    )
+    slug = AutoSlugField(populate_from="name")
 
     remote_url = models.URLField(
         max_length=255,
@@ -68,12 +65,20 @@ class GitRepository(PrimaryModel):
         default="",
     )
 
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+    )
+
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
-    csv_headers = ["name", "slug", "remote_url", "branch", "provided_contents"]
-    clone_fields = ["remote_url", "provided_contents"]
+    csv_headers = ["name", "slug", "remote_url", "branch", "secrets_group", "provided_contents"]
+    clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
     class Meta:
         ordering = ["name"]

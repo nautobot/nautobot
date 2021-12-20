@@ -4,7 +4,6 @@ Utilities and primitives for the `nautobot-server` CLI command.
 
 from pathlib import Path
 import os
-import warnings
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
@@ -133,13 +132,9 @@ def _configure_settings(config):
     if settings.METRICS_ENABLED and "postgres" in settings.DATABASES["default"]["ENGINE"]:
         settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
 
-    #
-    # Pagination
-    #
-
-    if settings.PAGINATE_COUNT not in settings.PER_PAGE_DEFAULTS:
-        settings.PER_PAGE_DEFAULTS.append(settings.PAGINATE_COUNT)
-        settings.PER_PAGE_DEFAULTS = sorted(settings.PER_PAGE_DEFAULTS)
+    # Create fake db for job logs. This uses the default db, but allows us to save logs within
+    # transaction.atomic().
+    settings.DATABASES["job_logs"] = settings.DATABASES["default"]
 
     #
     # Media storage

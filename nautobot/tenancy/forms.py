@@ -47,7 +47,6 @@ class TenantGroupCSVForm(CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Parent group",
     )
-    slug = SlugField()
 
     class Meta:
         model = TenantGroup
@@ -78,7 +77,6 @@ class TenantForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class TenantCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
     group = CSVModelChoiceField(
         queryset=TenantGroup.objects.all(),
         required=False,

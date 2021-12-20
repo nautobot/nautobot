@@ -63,7 +63,7 @@ def check_object_permissions_backend(app_configs, **kwargs):
 
 @register(Tags.compatibility)
 def check_release_check_timeout(app_configs, **kwargs):
-    if settings.RELEASE_CHECK_TIMEOUT < 3600:
+    if hasattr(settings, "RELEASE_CHECK_TIMEOUT") and settings.RELEASE_CHECK_TIMEOUT < 3600:
         return [E003]
     return []
 
@@ -71,7 +71,7 @@ def check_release_check_timeout(app_configs, **kwargs):
 @register(Tags.compatibility)
 def check_release_check_url(app_configs, **kwargs):
     validator = URLValidator()
-    if settings.RELEASE_CHECK_URL:
+    if hasattr(settings, "RELEASE_CHECK_URL") and settings.RELEASE_CHECK_URL:
         try:
             validator(settings.RELEASE_CHECK_URL)
         except ValidationError:

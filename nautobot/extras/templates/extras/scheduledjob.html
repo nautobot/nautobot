@@ -1,0 +1,137 @@
+{% extends 'generic/object_detail.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load perms %}
+{% load plugins %}
+
+{% block buttons %}
+    {% plugin_buttons object %}
+    {% if user|can_delete:object %}
+        {% delete_button object key='pk' %}
+    {% endif %}
+{% endblock buttons %}
+
+{% block content_left_page %}
+      <div class="panel panel-default">
+          <div class="panel-heading">
+              <strong>Scheduled Job</strong>
+          </div>
+          <table class="table table-hover panel-body attr-table">
+              <tr>
+                  <td>Name</td>
+                  <td>
+                      {{ object.name }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Description</td>
+                  <td>
+                      {{ object.description }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Requester</td>
+                  <td>
+                      {{ object.user }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Approver</td>
+                  <td>
+                      {{ object.approved_by_user | placeholder }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Approval Required?</td>
+                  <td>
+                      {% if object.approval_required %}
+                          <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                      {% else %}
+                          <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                      {% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Approved At</td>
+                  <td>
+                      {{ object.approved_at | placeholder }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Job Class</td>
+                  <td>
+                      {{ object.job_class }}
+                  </td>
+              </tr>
+          </table>
+      </div>
+      <div class="panel panel-default">
+          <div class="panel-heading">
+              <strong>Scheduling</strong>
+          </div>
+          <table class="table table-hover panel-body attr-table">
+              <tr>
+                  <td>Enabled?</td>
+                  <td>
+                      {% if object.enabled %}
+                          <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                      {% else %}
+                          <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                      {% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Interval</td>
+                  <td>
+                      {{ object.interval }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>One Off?</td>
+                  <td>
+                      {% if object.one_off %}
+                          <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                      {% else %}
+                          <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                      {% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Start Time</td>
+                  <td>
+                      {{ object.start_time }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Last Run At</td>
+                  <td>
+                      {{ object.last_run_at|placeholder }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Total Run Count</td>
+                  <td>
+                      {{ object.total_run_count }}
+                  </td>
+              </tr>
+          </table>
+      </div>
+{% endblock %}
+{% block content_right_page %}
+      <div class="panel panel-default">
+          <div class="panel-heading">
+              <strong>User Inputs</strong>
+          </div>
+          <table class="table table-hover panel-body attr-table">
+              {% for key, value in object.kwargs.data.items %}
+              <tr>
+                <td>{{ labels|get_item:key }}</td>
+                <td>{% if value is None %}–{% else %}<code>{{ value }}</code>{% endif %}</td>
+              </tr>
+              {% empty %}
+                <tr><td>—</td></tr>
+              {% endfor %}
+          </table>
+      </div>
+{% endblock %}

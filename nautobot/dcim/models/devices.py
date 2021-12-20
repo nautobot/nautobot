@@ -1,25 +1,35 @@
 from collections import OrderedDict
 
 import yaml
-from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, ProtectedError
+from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+from nautobot.dcim.choices import DeviceFaceChoices, SubdeviceRoleChoices
+
 from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField
-from .device_components import *
+from .device_components import (
+    ConsolePort,
+    ConsoleServerPort,
+    DeviceBay,
+    FrontPort,
+    Interface,
+    PowerOutlet,
+    PowerPort,
+    RearPort,
+)
 
 
 __all__ = (
@@ -51,7 +61,7 @@ class Manufacturer(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = ["name", "slug", "description"]
@@ -96,7 +106,8 @@ class DeviceType(PrimaryModel):
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
     model = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    slug = AutoSlugField(populate_from="model", unique=None)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     is_full_depth = models.BooleanField(
@@ -127,6 +138,7 @@ class DeviceType(PrimaryModel):
         ordering = ["manufacturer", "model"]
         unique_together = [
             ["manufacturer", "model"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["manufacturer", "slug"],
         ]
 
@@ -327,7 +339,7 @@ class DeviceRole(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     color = ColorField(default=ColorChoices.COLOR_GREY)
     vm_role = models.BooleanField(
         default=True,
@@ -369,7 +381,7 @@ class Platform(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -523,6 +535,14 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+    )
+
     objects = ConfigContextModelQuerySet.as_manager()
 
     csv_headers = [
@@ -540,6 +560,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "rack_name",
         "position",
         "face",
+        "secrets_group",
         "comments",
     ]
     clone_fields = [
@@ -551,6 +572,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "rack",
         "status",
         "cluster",
+        "secrets_group",
     ]
 
     class Meta:
@@ -773,7 +795,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
     @property
     def primary_ip(self):
-        if settings.PREFER_IPV4 and self.primary_ip4:
+        if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
             return self.primary_ip4
         elif self.primary_ip6:
             return self.primary_ip6

@@ -100,6 +100,10 @@ menu_items = (
 
 ## Classes and Attributes
 
+!!! note
+    For the `NavMenuTab`, `NavMenuGroup`, and `NavMenuItem` objects to be hidden when the user does not have permissions, set `HIDE_RESTRICTED_UI = True` in the `nautobot_config.py`.
+    Please refer to [HIDE_RESTRICTED_UI](../configuration/optional-settings.md#hide_restricted_ui)
+
 A `NavMenuTab` has the following attributes:
 
 * `name` - Display name to be shown in navigation menu

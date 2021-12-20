@@ -33,8 +33,9 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         self.browser.links.find_by_partial_text("Extensibility").click()
         self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
-        # Click add add button
-        self.browser.find_by_xpath("/html/body/div/div[1]/a").click()
+        # Click add button
+        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
+        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
 
         # Fill out form
         self.browser.fill("name", "Integration Schema 1")
@@ -44,7 +45,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
 
         # Verify form redirect
         self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
-        self.assertTrue(self.browser.is_text_present("Clone"))
+        self.assertTrue(self.browser.is_text_present("Edit"))
 
     def test_create_invalid_config_context_schema(self):
         """
@@ -60,8 +61,9 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         self.browser.links.find_by_partial_text("Extensibility").click()
         self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
-        # Click add add button
-        self.browser.find_by_xpath("/html/body/div/div[1]/a").click()
+        # Click add button
+        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
+        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
 
         # Fill out form
         self.browser.fill("name", "Integration Schema 2")

@@ -1,6 +1,7 @@
-from django.conf import settings
 from django.db.models import QuerySet
 from rest_framework.pagination import LimitOffsetPagination
+
+from nautobot.utilities.config import get_settings_or_config
 
 
 class OptionalLimitOffsetPagination(LimitOffsetPagination):
@@ -41,11 +42,12 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
                 if limit < 0:
                     raise ValueError()
                 # Enforce maximum page size, if defined
-                if settings.MAX_PAGE_SIZE:
+                max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+                if max_page_size:
                     if limit == 0:
-                        return settings.MAX_PAGE_SIZE
+                        return max_page_size
                     else:
-                        return min(limit, settings.MAX_PAGE_SIZE)
+                        return min(limit, max_page_size)
                 return limit
             except (KeyError, ValueError):
                 pass

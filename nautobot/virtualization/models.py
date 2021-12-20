@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -15,12 +14,13 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
 from nautobot.utilities.utils import serialize_object
-from .choices import *
 
 
 __all__ = (
@@ -49,7 +49,7 @@ class ClusterType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = ["name", "slug", "description"]
@@ -88,7 +88,7 @@ class ClusterGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = ["name", "slug", "description"]
@@ -348,7 +348,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
 
     @property
     def primary_ip(self):
-        if settings.PREFER_IPV4 and self.primary_ip4:
+        if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
             return self.primary_ip4
         elif self.primary_ip6:
             return self.primary_ip6

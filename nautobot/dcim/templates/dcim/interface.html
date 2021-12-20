@@ -1,10 +1,7 @@
 {% extends 'dcim/device_component.html' %}
 {% load helpers %}
-{% load plugins %}
 
-{% block content %}
-    <div class="row">
-        <div class="col-md-6">
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Interface</strong>
@@ -66,12 +63,9 @@
                     </tr>
                 </table>
             </div>
-            {% include 'inc/custom_fields_panel.html' %}
-            {% include 'inc/relationships_panel.html' %}
-            {% include 'extras/inc/tags_panel.html' with tags=object.tags.all %}
-            {% plugin_left_page object %}
-        </div>
-        <div class="col-md-6">
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             {% if object.is_connectable %}
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -223,22 +217,9 @@
                     </table>
                 </div>
             {% endif %}
-            {% plugin_right_page object %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% include 'panel_table.html' with table=ipaddress_table heading="IP Addresses" %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% plugin_full_width_page object %}
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    {% include 'panel_table.html' with table=ipaddress_table heading="IP Addresses" %}
+    {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
+{% endblock content_full_width_page %}

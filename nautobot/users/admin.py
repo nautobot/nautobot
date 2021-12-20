@@ -5,10 +5,11 @@ from django.contrib.auth.admin import UserAdmin as UserAdmin_
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
-from django.db.models import Q
+from django.db import models
 
 from nautobot.extras.admin import order_content_types
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
+from nautobot.utilities.forms.widgets import StaticSelect2Multiple
 
 
 #
@@ -97,6 +98,10 @@ class UserAdmin(UserAdmin_):
     )
     filter_horizontal = ("groups",)
     readonly_fields = ("config_data",)
+
+    formfield_overrides = {
+        models.ManyToManyField: {"widget": StaticSelect2Multiple},
+    }
 
     def get_inlines(self, request, obj):
         if obj is not None:
@@ -196,7 +201,7 @@ class ObjectPermissionForm(forms.ModelForm):
             for ct in object_types:
                 model = ct.model_class()
                 try:
-                    model.objects.filter(*[Q(**c) for c in constraints]).exists()
+                    model.objects.filter(*[models.Q(**c) for c in constraints]).exists()
                 except FieldError as e:
                     raise ValidationError({"constraints": f"Invalid filter for {model}: {e}"})
 
@@ -262,6 +267,10 @@ class ObjectPermissionAdmin(admin.ModelAdmin):
     ]
     list_filter = ["enabled", ActionListFilter, ObjectTypeListFilter, "groups", "users"]
     search_fields = ["actions", "constraints", "description", "name"]
+
+    formfield_overrides = {
+        models.ManyToManyField: {"widget": StaticSelect2Multiple},
+    }
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related("object_types", "users", "groups")

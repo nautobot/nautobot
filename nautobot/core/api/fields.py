@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from django.core.exceptions import ObjectDoesNotExist
-import pytz
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField

@@ -1,7 +1,7 @@
 {% load helpers %}
 
 {% with relationships=object.get_relationships_data %}
-    {% if relationships.source or relationships.destination %}
+    {% if relationships.source or relationships.destination or relationships.peer %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Relationships</strong>

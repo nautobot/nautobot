@@ -1,8 +1,7 @@
 import django_filters
 import netaddr
 from django.core.exceptions import ValidationError
-from django.db.models import Q, F
-from django.db.models.functions import Length
+from django.db.models import Q
 from netaddr.core import AddrFormatError
 
 from nautobot.dcim.models import Device, Interface, Region, Site
@@ -15,15 +14,13 @@ from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
-    MultiValueNumberFilter,
     NameSlugSearchFilterSet,
     NumericArrayFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from .choices import *
-from .constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
+from .choices import IPAddressRoleChoices
 from .models import (
     Aggregate,
     IPAddress,
@@ -645,7 +642,7 @@ class VLANFilterSet(
         return queryset.filter(qs_filter)
 
 
-class ServiceFilterSet(BaseFilterSet, CreatedUpdatedFilterSet):
+class ServiceFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

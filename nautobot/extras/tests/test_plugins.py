@@ -1,18 +1,21 @@
 from unittest import skipIf
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.dcim.models import Site
+from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
+from nautobot.extras.models import CustomField, Secret
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases
+from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from dummy_plugin import config as dummy_config
 from dummy_plugin.datasources import refresh_git_text_files
@@ -47,7 +50,15 @@ class PluginTest(TestCase):
         url = reverse("admin:dummy_plugin_dummymodel_add")
         self.assertEqual(url, "/admin/dummy_plugin/dummymodel/add/")
 
-    def test_template_extensions(self):
+    def test_banner_registration(self):
+        """
+        Check that plugin Banner is registered.
+        """
+        from dummy_plugin.banner import banner
+
+        self.assertIn(banner, registry["plugin_banners"])
+
+    def test_template_extensions_registration(self):
         """
         Check that plugin TemplateExtensions are registered.
         """
@@ -75,7 +86,7 @@ class PluginTest(TestCase):
 
         self.assertEqual(leet_speak, rendering_engine.env.filters[leet_speak.__name__])
 
-    def test_graphql_types(self):
+    def test_graphql_types_registration(self):
         """
         Check that plugin GraphQL Types are registered.
         """
@@ -125,7 +136,7 @@ class PluginTest(TestCase):
             jobs_dict["plugins"]["dummy_plugin.jobs"]["jobs"]["DummyJob"],
         )
 
-    def test_git_datasource_contents(self):
+    def test_git_datasource_contents_registration(self):
         """
         Check that plugin DatasourceContents are registered.
         """
@@ -271,6 +282,30 @@ class PluginTest(TestCase):
             )
         )
 
+    def test_nautobot_database_ready_signal(self):
+        """
+        Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
+        creating a custom field definition in the database.
+        """
+        cf = CustomField.objects.get(name="dummy-plugin-auto-custom-field")
+        self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
+        self.assertEqual(cf.label, "Dummy Plugin Automatically Added Custom Field")
+        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
+
+    def test_secrets_provider(self):
+        """
+        Validate that a plugin can provide a custom Secret provider and it will be used.
+        """
+        # The "constant-value" provider is implemented by the plugin
+        secret = Secret.objects.create(
+            name="Constant Secret",
+            slug="constant-secret",
+            provider="constant-value",
+            parameters={"constant": "It's a secret to everybody"},
+        )
+        self.assertEqual(secret.get_value(), secret.parameters["constant"])
+        self.assertEqual(secret.get_value(obj=secret), secret.parameters["constant"])
+
 
 @skipIf(
     "dummy_plugin" not in settings.PLUGINS,
@@ -302,6 +337,49 @@ class PluginGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "number": 31337,
         }
+
+
+class PluginListViewTest(TestCase):
+    def test_list_plugins_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        response = self.client.get(reverse("plugins:plugins_list"))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    @skipIf(
+        "dummy_plugin" not in settings.PLUGINS,
+        "dummy_plugin not in settings.PLUGINS",
+    )
+    def test_list_plugins_authenticated(self):
+        response = self.client.get(reverse("plugins:plugins_list"))
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset)).lower()
+        self.assertIn("dummy plugin", response_body, msg=response_body)
+
+
+@skipIf(
+    "dummy_plugin" not in settings.PLUGINS,
+    "dummy_plugin not in settings.PLUGINS",
+)
+class PluginDetailViewTest(TestCase):
+    def test_view_detail_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "dummy_plugin"}))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    def test_view_detail_authenticated(self):
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "dummy_plugin"}))
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset)).lower()
+        # plugin verbose name
+        self.assertIn("dummy plugin", response_body, msg=response_body)
+        # plugin description
+        self.assertIn("for testing purposes only", response_body, msg=response_body)
 
 
 @skipIf(

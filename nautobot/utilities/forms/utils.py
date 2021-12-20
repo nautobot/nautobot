@@ -4,7 +4,7 @@ from django import forms
 from django.forms.models import fields_for_model
 
 from nautobot.utilities.querysets import RestrictedQuerySet
-from .constants import *
+from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
 
 __all__ = (
     "add_blank_choice",

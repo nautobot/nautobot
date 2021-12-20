@@ -5,8 +5,7 @@ from celery.contrib.testing.worker import start_worker
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
-from django.db.utils import IntegrityError
-from django.test import Client, tag
+from django.test import tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
@@ -14,6 +13,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
 
 from nautobot.core.celery import app
+from nautobot.extras.management import create_custom_statuses
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 
@@ -41,6 +41,9 @@ class NautobotRemote(webdriver.Remote):
     def find_button(self, button_text):
         """Return a `<button>` element with the given `button_text`."""
         return self.find_element_by_xpath(f'//button[text()="{button_text}"]')
+
+    def find_elements_by_class_name(self, name):
+        return self.find_elements_by_xpath(f"//*[contains(@class, '{name}')]")
 
 
 FIREFOX_PROFILE_PREFERENCES = {
@@ -203,9 +206,15 @@ class SplinterTestCase(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Instantiate the browser object
+        # Instantiate the browser object.
         profile = cls._create_firefox_profile()
-        cls.browser = Browser("remote", command_executor=SELENIUM_URL, browser_profile=profile)
+        cls.browser = Browser(
+            "remote",
+            command_executor=SELENIUM_URL,
+            browser_profile=profile,
+            # See: https://developer.mozilla.org/en-US/docs/Web/WebDriver/Timeouts
+            # desired_capabilities={"timeouts": {"implicit": 60 * 60 * 1000 }},  # 1 hour timeout
+        )
 
         if cls.requires_celery:
             app.loader.import_module("celery.contrib.testing.tasks")
@@ -214,6 +223,9 @@ class SplinterTestCase(StaticLiveServerTestCase):
             cls.celery_worker.__enter__()
 
     def setUp(self):
+        # Repopulate custom statuses between test cases
+        create_custom_statuses(None, verbosity=0)
+
         # Setup test user
         self.user, _ = User.objects.get_or_create(username="testuser")
 

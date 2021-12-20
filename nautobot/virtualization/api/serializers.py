@@ -24,7 +24,6 @@ from nautobot.ipam.api.nested_serializers import (
 )
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.virtualization.choices import *
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -32,8 +31,16 @@ from nautobot.virtualization.models import (
     VirtualMachine,
     VMInterface,
 )
-from .nested_serializers import *
 
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
+    NestedClusterGroupSerializer,
+    NestedClusterSerializer,
+    NestedClusterTypeSerializer,
+    NestedVirtualMachineSerializer,
+    NestedVMInterfaceSerializer,
+)
 
 #
 # Clusters

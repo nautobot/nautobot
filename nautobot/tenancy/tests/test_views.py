@@ -11,6 +11,7 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1")
         TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2")
         TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3")
+        TenantGroup.objects.create(name="Tenant Group 8")
 
         cls.form_data = {
             "name": "Tenant Group X",
@@ -23,7 +24,10 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Tenant Group 4,tenant-group-4,Fourth tenant group",
             "Tenant Group 5,tenant-group-5,Fifth tenant group",
             "Tenant Group 6,tenant-group-6,Sixth tenant group",
+            "Tenant Group 7,,Seventh tenant group",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "Tenant Group 8"
 
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -40,6 +44,7 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0])
         Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[0])
         Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[0])
+        Tenant.objects.create(name="Tenant 8", group=tenant_groups[0])
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -57,8 +62,11 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "Tenant 4,tenant-4",
             "Tenant 5,tenant-5",
             "Tenant 6,tenant-6",
+            "Tenant 7,",
         )
 
         cls.bulk_edit_data = {
             "group": tenant_groups[1].pk,
         }
+        cls.slug_source = "name"
+        cls.slug_test_object = "Tenant 8"

@@ -17,12 +17,22 @@ services:
     env_file:
       - dev.env
     tty: true
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+      test:
+        - "CMD"
+        - "curl"
+        - "-f"
+        - "http://localhost:8080/health/"
   worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server rqworker"
     healthcheck:
-      interval: 5s
-      timeout: 5s
+      interval: 60s
+      timeout: 30s
       start_period: 5s
       retries: 3
       test: ["CMD", "nautobot-server", "health_check"]
@@ -35,11 +45,31 @@ services:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server celery worker -l INFO"
     healthcheck:
-      interval: 5s
-      timeout: 5s
-      start_period: 5s
+      interval: 60s
+      timeout: 30s
+      start_period: 30s
       retries: 3
-      test: ["CMD", "nautobot-server", "health_check"]
+      test:
+        - "CMD"
+        - "bash"
+        - "-c"
+        - "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
+    depends_on:
+      - nautobot
+      - redis
+    env_file:
+      - ./dev.env
+    tty: true
+  celery_beat:
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "nautobot-server celery beat -l INFO"
+    healthcheck:
+      disable: true
+    #   interval: 5s
+    #   timeout: 5s
+    #   start_period: 5s
+    #   retries: 3
+    #   test: ["CMD", "nautobot-server", "health_check"]
     depends_on:
       - nautobot
       - redis
@@ -56,6 +86,6 @@ services:
       - dev.env
   selenium:
     image: selenium/standalone-firefox:latest
-    ports: 
+    ports:
         - "4444:4444"
     shm_size: 2g

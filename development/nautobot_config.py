@@ -2,7 +2,7 @@
 import os
 import sys
 
-from nautobot.core.settings import *
+from nautobot.core.settings import *  # noqa: F403
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 
@@ -11,7 +11,6 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 
 ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
-HIDE_RESTRICTED_UI = os.getenv("HIDE_RESTRICTED_UI", False)
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
 
 #
@@ -43,10 +42,10 @@ DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", True))
 # Django Debug Toolbar
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
 
-if "debug_toolbar" not in INSTALLED_APPS:
-    INSTALLED_APPS.append("debug_toolbar")
-if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
-    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+if "debug_toolbar" not in INSTALLED_APPS:  # noqa: F405
+    INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:  # noqa: F405
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
 
 #
 # Logging

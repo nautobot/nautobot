@@ -10,7 +10,7 @@
                 <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand" href="{% url 'home' %}">
-                <img src="{% static 'img/nautobot_logo.svg' %}" height="30" />
+                <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" height="30" />
             </a>
         </div>
 
@@ -18,17 +18,17 @@
             {% if request.user.is_authenticated %}
                 <ul class="nav navbar-nav">
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
-                        {% if request.user|has_one_or_more_perms:tab_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                        {% if request.user|has_one_or_more_perms:tab_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     {{ tab_name }} <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
                                     {% for group_name, group_details in tab_details.groups.items %}
-                                        {% if request.user|has_one_or_more_perms:group_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                                        {% if request.user|has_one_or_more_perms:group_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                                             <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
-                                                {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                                                {% if request.user|has_one_or_more_perms:item_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                                                     <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
                                                         <div class="buttons pull-right">
                                                             {% for button_title, button_details in item_details.buttons.items %}
