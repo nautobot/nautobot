@@ -140,6 +140,12 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.2 (TBD)
+
+### Fixed
+
+- [#1186](https://github.com/nautobot/nautobot/pull/1186) - Corrected an error in the docs regarding developing secrets providers in plugins.
+
 ## v1.2.1 (2021-12-16)
 
 ### Added
