@@ -2,14 +2,13 @@
 
 ## Git Branches
 
-The Nautobot project follows a branching model based on [Git-flow](https://nvie.com/posts/a-successful-git-branching-model/). As such, there are two persistent git branches:
+The Nautobot project follows a branching model based on [Git-flow](https://nvie.com/posts/a-successful-git-branching-model/). As such, there are three persistent git branches:
 
 * `main` - Serves as a snapshot of the current stable release
-* `develop` - All development on the upcoming stable release occurs here
+* `develop` - All bug fixes and minor feature development on the upcoming stable release occurs here
+* `next` - All major new feature development for the next feature release occurs here.
 
-At any given time, there may additionally be zero or more long-lived branches of the form `develop-X.Y.Z`, where `X.Y.Z` is a future stable release later than the one currently being worked on in the main `develop` branch.
-
-You will always base pull requests off of the `develop` branch, or off of `develop-X.Y.Z` if you're working on a feature targeted for a later release. **Never** target pull requests into the `main` branch, which receives merges only from the `develop` branch.
+You will always base pull requests off of either the `develop` branch, for fixes and minor features, or `next`, if you're working on a feature targeted for a later release. **Never** target fix or feature pull requests into the `main` branch, which receives merges only from the `develop` branch and only for new stable releases of Nautobot.
 
 ## Forking the Repo
 
@@ -78,9 +77,9 @@ You're now ready to proceed to the next steps.
 
 ### Creating a Branch
 
-Before you make any changes, always create a new branch. In the majority of cases, you'll always want to create your branches from the `develop` branch.
+Before you make any changes, always create a new branch. Again, for bug fixes and minor features, you'll want to create your branches from the `develop` branch, while for major new features, you'll branch from `next` instead.
 
-Before you ever create a new branch, always  checkout the `develop` branch and make sure you you've got the latest changes from `upstream`.
+Before you ever create a new branch, always checkout the appropriate branch and make sure you you've got the latest changes from `upstream`:
 
 ```no-highlight
 $ git checkout develop
@@ -90,10 +89,10 @@ $ git pull upstream develop
 !!! warning
 	If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
 
-Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username, separated by hyphens. For example:
+Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username or your initials, and suffix it with the issue number if appropriate, separated by hyphens. For example:
 
 ```no-highlight
-$ git checkout -b yourusername-myfeature
+$ git checkout -b yourusername-myfeature-1234
 ```
 
 ## Enabling Pre-Commit Hooks
@@ -188,8 +187,8 @@ Additional useful commands for the development environment:
 
 !!! note
     If you are making edits to Nautobot's documentation in the Docker Compose workflow or otherwise needing to serve the docs locally, it is necessary to run a Python virtual environment:
-    
-    - Follow the steps in the Nautobot docs to [install poetry](#install-poetry) 
+
+    - Follow the steps in the Nautobot docs to [install poetry](#install-poetry)
     - `poetry shell`
     - `poetry install`
     - `mkdocs serve`
