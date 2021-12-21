@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="provider",
             name="account",
-            field=models.CharField(blank=True, max_length=50),
+            field=models.CharField(blank=True, max_length=100),
         ),
     ]
