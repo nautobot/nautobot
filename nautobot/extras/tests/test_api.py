@@ -34,7 +34,6 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    JobLogEntry,
     JobResult,
     Relationship,
     RelationshipAssociation,
@@ -1174,54 +1173,6 @@ class JobResultTest(APITestCase):
         url = reverse("extras-api:jobresult-detail", kwargs={"pk": job_result.pk})
         response = self.client.delete(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-
-
-class JobLogEntryTest(
-    APIViewTestCases.GetObjectViewTestCase,
-    APIViewTestCases.ListObjectsViewTestCase,
-):
-    model = JobLogEntry
-    brief_fields = [
-        "absolute_url",
-        "created",
-        "grouping",
-        "id",
-        "job_result",
-        "log_level",
-        "log_object",
-        "message",
-        "url",
-    ]
-    choices_fields = []
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.job_result = JobResult.objects.create(
-            name="test",
-            job_id=uuid.uuid4(),
-            obj_type=ContentType.objects.get_for_model(GitRepository),
-        )
-
-        for log_level in ("debug", "info", "success", "warning"):
-            JobLogEntry.objects.create(
-                log_level=log_level,
-                grouping="run",
-                job_result=cls.job_result,
-                message=f"I am a {log_level} log.",
-            )
-
-    def test_list_job_logs_from_job_results_detail(self):
-        """Test `logs` endpoint from `JobResult` detail."""
-        self.add_permissions("extras.view_jobresult")
-        url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
-        response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.json()), JobLogEntry.objects.count())
-
-    def test_options_objects_returns_display_and_value(self):
-        """Overridden because this test case is not applicable to this viewset."""
-
-    def test_options_returns_expected_choices(self):
-        """Overridden because this test case is not applicable to this viewset."""
 
 
 class ScheduledJobTest(

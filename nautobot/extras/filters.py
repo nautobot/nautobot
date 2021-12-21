@@ -33,7 +33,6 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     ScheduledJob,
-    JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
@@ -59,7 +58,6 @@ __all__ = (
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
-    "JobLogEntryFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "ObjectChangeFilterSet",
@@ -552,24 +550,6 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(Q(name__icontains=value) | Q(user__username__icontains=value))
-
-
-class JobLogEntryFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
-
-    class Meta:
-        model = JobLogEntry
-        exclude = []
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(grouping__icontains=value) | Q(message__icontains=value) | Q(log_level__icontains=value)
-        )
 
 
 class ScheduledJobFilterSet(BaseFilterSet):

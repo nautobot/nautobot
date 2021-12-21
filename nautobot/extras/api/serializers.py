@@ -39,7 +39,6 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
@@ -657,24 +656,6 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default="")
     commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobSerializer(required=False)
-
-
-class JobLogEntrySerializer(serializers.ModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
-
-    class Meta:
-        model = JobLogEntry
-        fields = [
-            "id",
-            "url",
-            "absolute_url",
-            "created",
-            "grouping",
-            "job_result",
-            "log_level",
-            "log_object",
-            "message",
-        ]
 
 
 #

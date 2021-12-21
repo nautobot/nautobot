@@ -39,9 +39,6 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 # Jobs
 router.register("jobs", views.JobViewSet, basename="job")
 
-# Job Log Entries
-router.register("job-logs", views.JobLogEntryViewSet)
-
 # Job Results
 router.register("job-results", views.JobResultViewSet)
 
