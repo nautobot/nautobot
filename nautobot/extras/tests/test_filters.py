@@ -540,11 +540,9 @@ class JobLogEntryTestCase(TestCase):
         params = {"log_level": "success"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    # TODO(jathan): Uncomment me when we figure out why this test won't pass,
-    # but this filter works in the API on a live server instance.
-    # def test_grouping(self):
-    #     params = {"grouping": "run"}
-    #     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+    def test_grouping(self):
+        params = {"grouping": ["run"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_message(self):
         params = {"message": "I am a success log."}
