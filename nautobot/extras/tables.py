@@ -389,7 +389,7 @@ def log_entry_color_css(record):
 
 
 class JobLogEntryTable(BaseTable):
-    created = tables.DateTimeColumn(verbose_name="Time", format="c")
+    created = tables.DateTimeColumn(verbose_name="Time", format="H:i:s.u")
     grouping = tables.Column()
     log_level = tables.Column(
         verbose_name="Level",
