@@ -8,13 +8,9 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
-- [#1152](https://github.com/nautobot/nautobot/pull/1152) - Added Add REST API and GraphQL for `JobLogEntry` objects.
-
 ### Changed
 
 ### Fixed
-
-- [#1193](https://github.com/nautobot/nautobot/issues/1193) - Fixed `JobResult` page may fail to list `JobLogEntries` in chronological order
 
 ### Removed
 
