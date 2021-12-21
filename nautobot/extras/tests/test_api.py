@@ -1218,10 +1218,10 @@ class JobLogEntryTest(
         self.assertEqual(len(response.json()), JobLogEntry.objects.count())
 
     def test_options_objects_returns_display_and_value(self):
-        """Overriden because this test case is not applicable to this viewset"""
+        """Overridden because this test case is not applicable to this viewset."""
 
     def test_options_returns_expected_choices(self):
-        """Overriden because this test case is not applicable to this viewset"""
+        """Overridden because this test case is not applicable to this viewset."""
 
 
 class ScheduledJobTest(

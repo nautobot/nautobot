@@ -15,7 +15,7 @@ class DummyLoggingJob(Job):
     interval = IntegerVar(default=4, description="The time in seconds to sleep.")
 
     class Meta:
-        name = "Dummmy logging job."
+        name = "Dummy logging job."
         description = "I log stuff to demonstrate how UI logging works."
 
     def run(self, data, commit):
