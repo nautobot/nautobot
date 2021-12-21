@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0007_device_secrets_group'),
+        ("dcim", "0007_device_secrets_group"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='device',
-            name='serial',
+            model_name="device",
+            name="serial",
             field=models.CharField(blank=True, max_length=255),
         ),
     ]
