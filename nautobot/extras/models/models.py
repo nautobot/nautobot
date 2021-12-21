@@ -668,6 +668,9 @@ class Job(models.Model):
         managed = False
 
 
+@extras_features(
+    "graphql",
+)
 class JobLogEntry(BaseModel):
     """Stores each log entry for the JobResult."""
 
@@ -689,6 +692,7 @@ class JobLogEntry(BaseModel):
     class Meta:
         ordering = ["created"]
         get_latest_by = "created"
+        verbose_name_plural = "job log entries"
 
 
 #
