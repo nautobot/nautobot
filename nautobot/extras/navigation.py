@@ -101,7 +101,7 @@ menu_items = (
         groups=(
             NavMenuGroup(
                 name="Jobs",
-                weight=400,
+                weight=100,
                 items=(
                     NavMenuItem(
                         link="extras:job_list",
