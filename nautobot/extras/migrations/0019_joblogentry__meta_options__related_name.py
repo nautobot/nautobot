@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterModelOptions(
             name="joblogentry",
-            options={"get_latest_by": "created", "ordering": ["created"]},
+            options={"get_latest_by": "created", "ordering": ["created"], "verbose_name_plural": "job log entries"},
         ),
         migrations.AlterField(
             model_name="joblogentry",
