@@ -39,7 +39,6 @@
 {% plugin_right_page result %}
 </div>
 
-{% if log_table %}
     <form method="post">
     {% csrf_token %}
     <div class="panel panel-default">
@@ -58,8 +57,3 @@
     </div>
     </form>
     {% table_config_form log_table %}
-{% else %}
-    <div class="alert alert-danger" role="alert">
-        No table of job logs was provided, perhaps you are using an out-of-date plugin?
-    </div>
-{% endif %}

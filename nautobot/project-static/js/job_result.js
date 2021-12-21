@@ -31,15 +31,7 @@ $(document).ready(function(){
                 context: this,
                 success: function(data) {
                     updatePendingStatusLabel(data.status);
-                    if (data.status.value === 'completed' || data.status.value === 'failed' || data.status.value === 'errored'){
-                        jobTerminatedAction()
-                    } else {
-                        setTimeout(checkPendingResult, timeout);
-                        if (timeout < 10000) {
-                            // back off each iteration, until we reach a 10s interval
-                            timeout += 1000
-                        }
-                    }
+                    setTimeout(jobTerminatedAction, 1000);
                 }
             });
         })();
