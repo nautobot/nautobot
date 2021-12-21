@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0008_increase_length_of_device_serial'),
+        ("dcim", "0008_increase_length_of_device_serial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='inventoryitem',
-            name='serial',
+            model_name="inventoryitem",
+            name="serial",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AlterField(
-            model_name='rack',
-            name='serial',
+            model_name="rack",
+            name="serial",
             field=models.CharField(blank=True, max_length=255),
         ),
     ]
