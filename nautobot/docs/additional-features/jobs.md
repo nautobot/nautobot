@@ -79,7 +79,7 @@ This is the human-friendly name of your job, as will be displayed in the Nautobo
 #### `description`
 
 A human-friendly description of what this job does.
-This can accept either plain text or markdown-formatted test. It can also be multiple lines like so:
+This can accept either plain text or markdown-formatted text. It can also be multiple lines like so:
 
 ```python
 class ExampleJob(Job):
