@@ -20,6 +20,8 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Changed
 
+- [#909](https://github.com/nautobot/nautobot/issues/909) - Device, InventoryItem, and Rack serial numbers can now be up to 255 characters in length.
+
 ### Fixed
 
 ### Removed
