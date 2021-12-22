@@ -74,7 +74,7 @@ class ProviderCSVForm(CustomFieldModelCSVForm):
 class ProviderBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Provider.objects.all(), widget=forms.MultipleHiddenInput)
     asn = forms.IntegerField(required=False, label="ASN")
-    account = forms.CharField(max_length=30, required=False, label="Account number")
+    account = forms.CharField(max_length=100, required=False, label="Account number")
     portal_url = forms.URLField(required=False, label="Portal")
     noc_contact = forms.CharField(required=False, widget=SmallTextarea, label="NOC contact")
     admin_contact = forms.CharField(required=False, widget=SmallTextarea, label="Admin contact")
