@@ -25,6 +25,12 @@ class ProviderTestCase(TestCase):
             Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003, account="3456"),
             Provider.objects.create(name="Provider 4", slug="provider-4", asn=65004, account="4567"),
             Provider.objects.create(name="Provider 5", slug="provider-5", asn=65005, account="5678"),
+            Provider.objects.create(
+                name="Provider 6 (long account)",
+                slug="provider-6",
+                asn=65006,
+                account="this-is-a-long-account-number-012345678901234567890123456789",
+            ),
         )
 
         regions = (
