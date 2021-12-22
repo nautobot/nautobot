@@ -3,10 +3,12 @@ from collections import OrderedDict
 import inspect
 import json
 import logging
+from markdown import Markdown
 import os
 import pkgutil
 import sys
 import shutil
+from textwrap import dedent
 import traceback
 import warnings
 
@@ -35,6 +37,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, ScheduledJob
 from .registry import registry
+from .utils import strip_markdown
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -175,7 +178,19 @@ class BaseJob:
 
     @classproperty
     def description(cls):
-        return getattr(cls.Meta, "description", "")
+        return dedent(getattr(cls.Meta, "description", "")).strip()
+
+    @classproperty
+    def description_first_line(cls):
+        """
+        This returns a plain text string from the first line of a description
+        """
+        if cls.description:
+            Markdown.output_formats["plain"] = strip_markdown
+            md = Markdown(output_format="plain")
+            md.stripTopLevelTags = False
+            return md.convert(cls.description.splitlines()[0])
+        return ""
 
     @classproperty
     def read_only(cls):
