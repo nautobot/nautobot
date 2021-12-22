@@ -22,7 +22,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Provider X",
             "slug": "provider-x",
             "asn": 65123,
-            "account": "1234",
+            "account": "this-is-a-long-account-number-012345678901234567890123456789",
             "portal_url": "http://example.com/portal",
             "noc_contact": "noc@example.com",
             "admin_contact": "admin@example.com",
@@ -40,7 +40,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "asn": 65009,
-            "account": "5678",
+            "account": "this-is-a-long-account-number-012345678901234567890123456789",
             "portal_url": "http://example.com/portal2",
             "noc_contact": "noc2@example.com",
             "admin_contact": "admin2@example.com",
