@@ -9,7 +9,7 @@ class DummyJob(Job):
         name = "Dummy job, does nothing"
         description = """
             Markdown Formatting
-            
+
             *This is italicized*
         """
 
