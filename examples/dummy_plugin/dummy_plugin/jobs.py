@@ -8,8 +8,9 @@ class DummyJob(Job):
     class Meta:
         name = "Dummy job, does nothing"
         description = """
-        ### Markdown Formatting
-        This demonstrates a multiline markdown-formatted job description.
+            Markdown Formatting
+            
+            *This is italicized*
         """
 
 
