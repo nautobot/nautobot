@@ -36,6 +36,8 @@ python = "^3.6"
 celery = "~5.1.0"
 # Fundamental web framework for Nautobot
 Django = "~3.1.12"
+# Adds AJAX capabilities to django-tables2
+django-ajax-tables = "~1.1.1"
 # LDAP Support
 django-auth-ldap = {version = "~3.0.0", optional = true}
 # Caching with Redis
