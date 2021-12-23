@@ -7,6 +7,7 @@ import os
 import pkgutil
 import sys
 import shutil
+from textwrap import dedent
 import traceback
 import warnings
 
@@ -175,7 +176,13 @@ class BaseJob:
 
     @classproperty
     def description(cls):
-        return getattr(cls.Meta, "description", "")
+        return dedent(getattr(cls.Meta, "description", "")).strip()
+
+    @classproperty
+    def description_first_line(cls):
+        if cls.description:
+            return cls.description.splitlines()[0]
+        return ""
 
     @classproperty
     def read_only(cls):

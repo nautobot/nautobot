@@ -38,7 +38,7 @@
                                         <label class="label label-default">Read-only</label>
                                     {% endif %}
                                 </td>
-                                <td>{{ job.description | placeholder }}</td>
+                                <td>{{ job.description_first_line | render_markdown | placeholder }}</td>
                                 <td class="text-right text-nowrap">
                                     {% if job.result %}
                                         <a href="{% url 'extras:job_jobresult' pk=job.result.pk %}">
