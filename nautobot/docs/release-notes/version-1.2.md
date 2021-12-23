@@ -149,6 +149,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Fixed
 
+- [#1181](https://github.com/nautobot/nautobot/pull/1181) - Avoid throwing a 500 error in the case where users have deleted a required Status value. (Preventing the user from doing this will need to be a later fix.)
 - [#1186](https://github.com/nautobot/nautobot/pull/1186) - Corrected an error in the docs regarding developing secrets providers in plugins.
 - [#1188](https://github.com/nautobot/nautobot/pull/1188) - Corrected some errors in the developer documentation about our branch management approach.
 - [#1193](https://github.com/nautobot/nautobot/issues/1193) - Fixed `JobResult` page may fail to list `JobLogEntries` in chronological order
