@@ -396,7 +396,9 @@ class JobLogEntryTable(BaseTable):
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
     log_object = tables.Column(verbose_name="Object", linkify=log_object_link)
-    message = tables.Column()
+    message = tables.Column(
+        attrs={"td": {"class": "rendered-markdown"}},
+    )
 
     def render_log_level(self, value):
         log_level = value.lower()
@@ -405,6 +407,9 @@ class JobLogEntryTable(BaseTable):
             log_level = "danger"
 
         return format_html('<label class="label label-{}">{}</label>', log_level, value)
+
+    def render_message(self, value):
+        return render_markdown(value)
 
     class Meta(BaseTable.Meta):
         model = JobLogEntry
