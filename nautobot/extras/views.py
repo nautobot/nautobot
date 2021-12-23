@@ -55,7 +55,6 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     ObjectChange,
-    JobLogEntry,
     JobResult,
     Relationship,
     RelationshipAssociation,
@@ -643,12 +642,8 @@ class GitRepositoryResultView(generic.ObjectView):
             .first()
         )
 
-        logs = JobLogEntry.objects.restrict(request.user, "view").filter(job_result=job_result)
-        log_table = tables.JobLogEntryTable(data=logs, user=request.user)
-
         return {
             "result": job_result,
-            "log_table": log_table,
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
@@ -1107,15 +1102,10 @@ class JobResultView(generic.ObjectView):
         elif related_object:
             associated_record = related_object
 
-        # This is used as a sentinel for backwards compatibility since the table
-        # object is rendered inside of `JobLogEntryTableView`.
-        log_table = True
-
         return {
             "job": job,
             "associated_record": associated_record,
             "result": instance,
-            "log_table": log_table,
         }
 
 
