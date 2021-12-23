@@ -79,7 +79,7 @@ class TestCase(_TestCase):
                 field = None
 
             # Handle ManyToManyFields
-            if value and type(field) in (ManyToManyField, TaggableManager):
+            if value and isinstance(field, (ManyToManyField, TaggableManager)):
 
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
@@ -91,22 +91,22 @@ class TestCase(_TestCase):
             if api:
 
                 # Replace ContentType primary keys with <app_label>.<model>
-                if type(getattr(instance, key)) is ContentType:
+                if isinstance(getattr(instance, key), ContentType):
                     ct = ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
 
                 # Convert IPNetwork instances to strings
-                elif type(value) is IPNetwork:
+                elif isinstance(value, IPNetwork):
                     model_dict[key] = str(value)
 
             else:
 
                 # Convert ArrayFields to CSV strings
-                if type(field) is JSONArrayField:
+                if isinstance(field, JSONArrayField):
                     model_dict[key] = ",".join([str(v) for v in value])
 
                 # Convert JSONField dict values to JSON strings
-                if type(field) is JSONField and isinstance(value, dict):
+                if isinstance(field, JSONField) and isinstance(value, dict):
                     model_dict[key] = json.dumps(value)
 
         return model_dict

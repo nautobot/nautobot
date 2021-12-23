@@ -676,18 +676,18 @@ class IPAddressForm(
         initial = kwargs.get("initial", {}).copy()
 
         if instance:
-            if type(instance.assigned_object) is Interface:
+            if isinstance(instance.assigned_object, Interface):
                 initial["interface"] = instance.assigned_object
-            elif type(instance.assigned_object) is VMInterface:
+            elif isinstance(instance.assigned_object, VMInterface):
                 initial["vminterface"] = instance.assigned_object
             if instance.nat_inside:
                 nat_inside_parent = instance.nat_inside.assigned_object
-                if type(nat_inside_parent) is Interface:
+                if isinstance(nat_inside_parent, Interface):
                     initial["nat_site"] = nat_inside_parent.device.site.pk
                     if nat_inside_parent.device.rack:
                         initial["nat_rack"] = nat_inside_parent.device.rack.pk
                     initial["nat_device"] = nat_inside_parent.device.pk
-                elif type(nat_inside_parent) is VMInterface:
+                elif isinstance(nat_inside_parent, VMInterface):
                     initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
                     initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
         kwargs["initial"] = initial
