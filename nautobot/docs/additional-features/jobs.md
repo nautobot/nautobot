@@ -78,17 +78,22 @@ This is the human-friendly name of your job, as will be displayed in the Nautobo
 
 #### `description`
 
-A human-friendly description of what this job does.
-This can accept either plain text or markdown-formatted text. It can also be multiple lines like so:
+An optional human-friendly description of what this job does.
+This can accept either plain text or markdown-formatted text. It can also be multiple lines:
 
 ```python
 class ExampleJob(Job):
     class Meta:
         description = """
-        #### Title
-        Another line
+            This job does a number of interesting things.
+            
+             1. It hacks the Gibson
+             2. It immanentizes the eschaton
+             3. It's a floor wax *and* a dessert topping
         """
 ```
+
+If you code a description, the first line is used in the description column of the jobs list.
 
 #### `approval_required`
 

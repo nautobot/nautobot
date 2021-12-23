@@ -1,7 +1,6 @@
 import collections
 import hashlib
 import hmac
-from io import StringIO
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -11,18 +10,6 @@ from taggit.managers import _TaggableManager
 
 from nautobot.extras.constants import EXTRAS_FEATURES
 from nautobot.extras.registry import registry
-
-
-def strip_markdown(element, stream=None):
-    if stream is None:
-        stream = StringIO()
-    if element.text:
-        stream.write(element.text)
-    for sub in element:
-        strip_markdown(sub, stream)
-    if element.tail:
-        stream.write(element.tail)
-    return stream.getvalue()
 
 
 def is_taggable(obj):
