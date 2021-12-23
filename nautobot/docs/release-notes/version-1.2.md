@@ -140,10 +140,10 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.2 (TBD)
+## v1.2.2 (2021-12-27)
 ### Added
 
-- [#1152](https://github.com/nautobot/nautobot/pull/1152) - Added Add REST API and GraphQL for `JobLogEntry` objects.
+- [#1152](https://github.com/nautobot/nautobot/pull/1152) - Added REST API and GraphQL for `JobLogEntry` objects.
 
 ### Changed
 
