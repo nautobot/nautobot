@@ -41,21 +41,16 @@
 {% include 'inc/custom_fields_panel.html' %}
 {% plugin_right_page result %}
 </div>
-{% if log_table %}
-    <form method="post">
+
+<form method="post">
     {% csrf_token %}
     <div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Logs</strong>
-        <div class="pull-right col-md-2 noprint">
-            <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
+        <div class="panel-heading">
+            <strong>Logs</strong>
+            <div class="pull-right col-md-2 noprint">
+                <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
+            </div>
         </div>
+        {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
     </div>
-    {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
-    </div>
-    </form>
-{% else %}
-    <div class="alert alert-danger" role="alert">
-        No table of job logs was provided, perhaps you are using an out-of-date plugin?
-    </div>
-{% endif %}
+</form>
