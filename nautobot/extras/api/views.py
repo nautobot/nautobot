@@ -453,7 +453,7 @@ class JobResultViewSet(ModelViewSet):
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
-        logs = JobLogEntry.objects.filter(job_result=job_result)
+        logs = job_result.logs.all()
         serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
