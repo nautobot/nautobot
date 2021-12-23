@@ -93,7 +93,7 @@ class ExampleJob(Job):
         """
 ```
 
-If you code a description, the first line is used in the description column of the jobs list.
+If you code a multi-line description, the first line only will be used in the description column of the jobs list, while the full description will be displayed in the job submission, approval, and results pages.
 
 #### `approval_required`
 
