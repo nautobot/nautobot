@@ -147,6 +147,8 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Changed
 
+- [#650](https://github.com/nautobot/nautobot/issues/650) - Job Results UI now render job log messages immediately
+
 ### Fixed
 
 - [#1181](https://github.com/nautobot/nautobot/pull/1181) - Avoid throwing a 500 error in the case where users have deleted a required Status value. (Preventing the user from doing this will need to be a later fix.)
