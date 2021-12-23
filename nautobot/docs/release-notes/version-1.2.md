@@ -151,6 +151,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#1186](https://github.com/nautobot/nautobot/pull/1186) - Corrected an error in the docs regarding developing secrets providers in plugins.
 - [#1193](https://github.com/nautobot/nautobot/issues/1193) - Fixed `JobResult` page may fail to list `JobLogEntries` in chronological order
+- [#1195](https://github.com/nautobot/nautobot/issues/1195) - Job log entries now again correctly render inline Markdown formatting.
 
 ## v1.2.1 (2021-12-16)
 
