@@ -149,6 +149,6 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_render_boolean(self):
         self.assertEqual(render_boolean(None), self.HTML_NONE)
         self.assertEqual(render_boolean(True), self.HTML_TRUE)
-        self.assertEqual(render_boolean('arbitrary string'), self.HTML_TRUE)
+        self.assertEqual(render_boolean("arbitrary string"), self.HTML_TRUE)
         for value in [False, "", "n", "no", "f", "false", "off", "0"]:
             self.assertEqual(render_boolean(value), self.HTML_FALSE)
