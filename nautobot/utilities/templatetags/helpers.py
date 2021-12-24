@@ -12,9 +12,14 @@ from django.utils.safestring import mark_safe
 from markdown import markdown
 from django_jinja import library
 
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.utils import foreground_color
+
+HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
+HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+HTML_NONE = '<span class="text-muted">&mdash;</span>'
 
 register = template.Library()
 
@@ -45,6 +50,50 @@ def placeholder(value):
         return value
     placeholder = '<span class="text-muted">&mdash;</span>'
     return mark_safe(placeholder)
+
+
+@library.filter()
+@register.filter()
+def render_boolean(value):
+    """Render HTML from a computed boolean value.
+
+    Args:
+        value (any): Input value, can be any variable.
+        A string with a value of either 'n', 'no', 'f', 'false', 'off', or '0'
+        (or their equivalent uppercase values) is considered False.
+
+    Returns:
+        str: HTML
+        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
+        - or -
+        '<span class="text-muted">&mdash;</span>' if None value
+        - or -
+        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
+
+    Examples:
+        >>> render_boolean(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> render_boolean(True or "arbitrary string")
+        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
+         >>> render_boolean(None or False or "" or " " or "F" or "off")
+        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+    """
+    if isinstance(value, str):
+        try:
+            if is_truthy(value):
+                return mark_safe(HTML_TRUE)
+            else:
+                return mark_safe(HTML_FALSE)
+        except ValueError:
+            if value.strip():
+                return mark_safe(HTML_TRUE)
+            else:
+                return mark_safe(HTML_FALSE)
+    if value is None:
+        return mark_safe(HTML_NONE)
+    if bool(value):
+        return mark_safe(HTML_TRUE)
+    return mark_safe(HTML_FALSE)
 
 
 @library.filter()
