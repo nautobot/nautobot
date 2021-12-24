@@ -83,13 +83,7 @@
                                     <i class="mdi {{ entry.icon }}"></i>
                                 </span>
                                 {{ entry.name|title }}</td>
-                            <td>
-                                {% if entry.content_identifier in object.provided_contents %}
-                                    <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
-                                {% else %}
-                                    <span class="text-danger"><i class="mdi mdi-close"></i></span>
-                                {% endif %}
-                            </td>
+                            <td>{{ entry.content_identifier in object.provided_contents | render_boolean }}</td>
                         </tr>
                     {% endfor %}
                 </table>
