@@ -1,7 +1,9 @@
 from django.conf import settings as django_settings
+from django.utils.safestring import mark_safe
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.extras.registry import registry
+from nautobot.utilities.templatetags.helpers import HTML_FALSE, HTML_NONE, HTML_TRUE
 
 
 def get_saml_idp():
@@ -49,4 +51,16 @@ def sso_auth(request):
     return {
         "SAML_IDP": get_saml_idp,
         "SSO_AUTH_ENABLED": lambda: sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS),
+    }
+
+
+def boolean_html_helpers(request):
+    """
+    Expose HTML snippets for boolean rendering where the render_boolean template tag cannot be used directly.
+    """
+
+    return {
+        "HTML_FALSE": mark_safe(HTML_FALSE),
+        "HTML_NONE": mark_safe(HTML_NONE),
+        "HTML_TRUE": mark_safe(HTML_TRUE),
     }
