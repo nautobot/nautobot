@@ -113,6 +113,14 @@ class MyJob(Job):
 
 A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
 
+#### `hidden`
+
+Default: `False`
+
+A Boolean that if set to `True` will prevent the job from being displayed in the list of jobs in the Nautobot UI.
+
+Since the jobs execution framework is designed to be generic, there may be several technical jobs defined by users which interact with or are invoked by external systems. In such cases, these jobs are not meant to be executed by a human and likely do not make sense to expose to end users for execution, and thus having them exposed in the UI at all is extraneous.
+
 #### `read_only`
 
 A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.

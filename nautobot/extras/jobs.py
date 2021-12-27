@@ -93,6 +93,7 @@ class BaseJob:
         - name (str)
         - description (str)
         - commit_default (bool)
+        - hidden (bool)
         - field_order (list)
         - read_only (bool)
         - approval_required (bool)
@@ -169,6 +170,10 @@ class BaseJob:
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
+
+    @classproperty
+    def hidden(cls):
+        return getattr(cls.Meta, "hidden", False)
 
     @classproperty
     def name(cls):
