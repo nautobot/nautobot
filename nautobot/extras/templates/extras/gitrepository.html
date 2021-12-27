@@ -85,9 +85,9 @@
                                 {{ entry.name|title }}</td>
                             <td>
                                 {% if entry.content_identifier in object.provided_contents %}
-                                    {{ HTML_TRUE }}
+                                    <span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>
                                 {% else %}
-                                    {{ HTML_FALSE }}
+                                    <span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>
                                 {% endif %}
                             </td>
                         </tr>
