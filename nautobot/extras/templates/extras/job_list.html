@@ -86,6 +86,7 @@
                                     {% endif %}
                                 </td>
                             </tr>
+                            {% endif %}
                             {% for method, stats in job.result.data.items %}
                                 {% if method != "total" and method != "output" %}
                                     <tr class="{{ job.class_path }} collapse">
