@@ -294,6 +294,7 @@ INSTALLED_APPS = [
     "health_check.storage",
     "django_extensions",
     "constance.backends.database",
+    "django_ajax_tables",
 ]
 
 # Middleware
