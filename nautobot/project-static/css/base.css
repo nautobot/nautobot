@@ -496,3 +496,8 @@ span.hover_copy:hover .hover_copy_button {
     position: relative;
     top: 2px;
 }
+
+/* fixes GH#1140 */
+select[multiple] {
+    resize: vertical;
+}
