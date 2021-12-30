@@ -211,20 +211,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Docker Metadata"
-        id: "dockermeta"
-        uses: "docker/metadata-action@v3"
-        with:
-          images: "ghcr.io/nautobot/nautobot"
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.6 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.6 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.6 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
       - name: "Build"
         uses: "docker/build-push-action@v2"
         with:
@@ -232,26 +218,12 @@ jobs:
           target: final
           file: "docker/Dockerfile"
           platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockermeta.outputs.tags }}"
+          tags: "ghcr.io/nautobot/nautobot:testing"
           cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-      - name: "Docker Dev Metadata"
-        id: "dockerdevmeta"
-        uses: "docker/metadata-action@v3"
-        with:
-          images: "ghcr.io/nautobot/nautobot-dev"
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.6 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.6 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.6 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
       - name: "Build Dev Containers"
         uses: "docker/build-push-action@v2"
         with:
@@ -259,7 +231,7 @@ jobs:
           target: final-dev
           file: "docker/Dockerfile"
           platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockerdevmeta.outputs.tags }}"
+          tags: "ghcr.io/nautobot/nautobot-dev:testing"
           cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           context: "."
