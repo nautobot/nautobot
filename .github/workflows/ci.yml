@@ -190,8 +190,6 @@ jobs:
   # Test build Don't push
   test-build:
     runs-on: "ubuntu-20.04"
-    needs:
-      - "integration-test"
     strategy:
       fail-fast: true
       matrix:
@@ -203,6 +201,8 @@ jobs:
         uses: "actions/checkout@v2"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
+      - name: "Set up QEMU"
+        uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
         uses: "docker/setup-buildx-action@v1"
       - name: Login to GitHub Container Registry
@@ -254,6 +254,8 @@ jobs:
         uses: "actions/checkout@v2"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
+      - name: "Set up QEMU"
+        uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
         uses: "docker/setup-buildx-action@v1"
       - name: Login to GitHub Container Registry
