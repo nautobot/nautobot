@@ -64,11 +64,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: "Docker Metadata"
         id: "dockermeta"
         uses: "docker/metadata-action@v3"
         with:
-          images: "ghcr.io/nautobot/nautobot"
+          images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
           flavor: |
             latest=false
           tags: |
@@ -92,7 +97,7 @@ jobs:
         id: "dockerdevmeta"
         uses: "docker/metadata-action@v3"
         with:
-          images: "ghcr.io/nautobot/nautobot-dev"
+          images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
           flavor: |
             latest=false
           tags: |
