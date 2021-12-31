@@ -22,7 +22,4 @@ class AppTest(APITestCase):
         url = reverse("api-root")
         response = self.client.get(f"{url}/non-existent-resource-url/", **self.header)
         response_json = json.loads(response.content)
-        self.assertEqual(response_json, {
-            "status_code": 404,
-            "error": "The resource was not found"
-        })
+        self.assertEqual(response_json, {"status_code": 404, "error": "The resource was not found"})

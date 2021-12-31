@@ -44,7 +44,6 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
-
     # Last in the list to catch all non-matched API URLs and
     # return a JSonResponse error instead of HTML 404 page
     re_path(r"^.*$", json404),
