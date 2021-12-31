@@ -3,7 +3,7 @@ from django.urls import path, re_path
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 
-from nautobot.core.api.views import APIRootView, StatusView, GraphQLDRFAPIView
+from nautobot.core.api.views import APIRootView, json404, StatusView, GraphQLDRFAPIView
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
 
@@ -20,6 +20,7 @@ schema_view = get_schema_view(
     validators=["flex", "ssv"],
     public=True,
 )
+
 
 urlpatterns = [
     # Base views
@@ -43,4 +44,8 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
+
+    # Last in the list to catch all non-matched API URLs and
+    # return a JSonResponse error instead of HTML 404 page
+    re_path(r"^.*$", json404),
 ]
