@@ -80,15 +80,9 @@ def render_boolean(value):
     """
     if isinstance(value, str):
         try:
-            if is_truthy(value):
-                return mark_safe(HTML_TRUE)
-            else:
-                return mark_safe(HTML_FALSE)
+            value = is_truthy(value)
         except ValueError:
-            if value.strip():
-                return mark_safe(HTML_TRUE)
-            else:
-                return mark_safe(HTML_FALSE)
+            value = bool(value.strip())
     if value is None:
         return mark_safe(HTML_NONE)
     if bool(value):
