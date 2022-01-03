@@ -10,7 +10,7 @@
 {% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
 
 {% block breadcrumbs %}
-<ul class="breadcrumb">
+<ol class="breadcrumb">
     <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
     <li>
         <a href="{% url 'admin:app_list' app_label=opts.app_label %}">
@@ -27,7 +27,7 @@
         {% endif %}
     </li>
     <li>Delete</li>
-</ul>
+</ol>
 {% endblock %}
 
 {% block content %}

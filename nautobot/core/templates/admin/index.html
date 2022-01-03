@@ -2,14 +2,14 @@
 {% load i18n static bootstrapped_goodies_tags %}
 
 {% block breadcrumbs %}
-<ul class="breadcrumb">
+<ol class="breadcrumb">
 <li>{% trans 'Admin Home' %}</li>
-</ul>
+</ol>
 {% endblock %}
 
 
 {% block object-tools %}
-<ul class="nav navbar-nav">
+<ol class="nav navbar-nav">
     <li class="dropdown">
         <ul class="dropdown-menu" role="menu">
             {% for app in app_list %}
@@ -31,7 +31,7 @@
             {% endfor %}
         </ul>
     </li>
-</ul>
+</ol>
 {% endblock %}
 
 
