@@ -20,11 +20,11 @@
                                 {{ value|join:", " }}
                             {% elif field.type == 'json' and value %}
                                 <p>
-                                    <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse" data-target="#cf_json" aria-expanded="false" aria-controls="cf_json">
+                                    <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse" data-target="#{{ field.name }}" aria-expanded="false" aria-controls="{{ field.name }}">
                                         Expand/Collapse
                                     </button>
                                 </p>
-				<pre class="collapse" id="cf_json"><code>{{ value|render_json }}</code></pre>
+				<pre class="collapse" id="{{ field.name }}"><code>{{ value|render_json }}</code></pre>
                             {% elif value or value == 0 %}
                                 {{ value }}
                             {% elif field.required %}
