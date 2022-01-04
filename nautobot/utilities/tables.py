@@ -348,10 +348,7 @@ class CustomFieldColumn(tables.Column):
             return self.default
 
         if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-            if value is True:
-                template = '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
-            else:
-                template = '<span class="text-danger"><i class="mdi mdi-close-thick"></i></span>'
+            template = render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
             if value:
                 template = ""

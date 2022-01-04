@@ -143,7 +143,8 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         )  # 3 rows (config context, device, virtual machine)
         for row in self.browser.find_by_xpath("//tbody/tr"):
             self.assertEqual(
-                row.find_by_tag("td")[-2].html, '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
+                row.find_by_tag("td")[-2].html,
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             )
 
         # Edit the schema
@@ -186,7 +187,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Device now passes
         self.assertEqual(
             self.browser.find_by_xpath("//tbody/tr")[1].find_by_tag("td")[-2].html,
-            '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>',
+            '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
         )
         # Virtual machine still fails
         self.assertEqual(

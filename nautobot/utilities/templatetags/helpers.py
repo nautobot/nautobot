@@ -48,8 +48,7 @@ def placeholder(value):
     """
     if value:
         return value
-    placeholder = '<span class="text-muted">&mdash;</span>'
-    return mark_safe(placeholder)
+    return mark_safe(HTML_NONE)
 
 
 @library.filter()
@@ -59,8 +58,8 @@ def render_boolean(value):
 
     Args:
         value (any): Input value, can be any variable.
-        A string with a value of either 'n', 'no', 'f', 'false', 'off', or '0'
-        (or their equivalent uppercase values) is considered False.
+        A value with a whitespace-only string, an empty string or string with a value of either
+        'n', 'no', 'f', 'false', 'off', or '0' (or their equivalent uppercase values) is considered False.
 
     Returns:
         str: HTML
@@ -75,7 +74,7 @@ def render_boolean(value):
         '<span class="text-muted">&mdash;</span>'
         >>> render_boolean(True or "arbitrary string")
         '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-         >>> render_boolean(None or False or "" or " " or "F" or "off")
+        >>> render_boolean(False or "" or " " or "F" or "off")
         '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
     """
     if isinstance(value, str):

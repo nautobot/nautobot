@@ -120,10 +120,11 @@ VLANGROUP_ADD_VLAN = """
 """
 
 VLAN_MEMBER_TAGGED = """
+{% load helpers %}
 {% if record.untagged_vlan_id == object.pk %}
-    <span class="text-danger"><i class="mdi mdi-close-thick"></i></span>
+    {{ false | render_boolean }}
 {% else %}
-    <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+    {{ true | render_boolean }}
 {% endif %}
 """
 

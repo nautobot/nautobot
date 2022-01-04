@@ -18,10 +18,11 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+- [#803](https://github.com/nautobot/nautobot/issues/803) - There is now a *render_boolean* template filter in helpers, which renders computed boolean values as HTML in a consistent manner.
+
 ### Changed
 
 - [#591](https://github.com/nautobot/nautobot/issues/591) - All uses of type() are now refactored to use isinstance() where applicable.
-- [#803](https://github.com/nautobot/nautobot/issues/803) - There is now a *render_boolean* template filter in helpers, which renders boolean values as HTML in a consistent manner.
 - [#880](https://github.com/nautobot/nautobot/issues/880) - Jobs menu items now form their own top-level menu instead of a sub-section under the Extensibility menu.
 - [#909](https://github.com/nautobot/nautobot/issues/909) - Device, InventoryItem, and Rack serial numbers can now be up to 255 characters in length.
 - [#916](https://github.com/nautobot/nautobot/issues/916) - A Job.Meta.description can now contain markdown-formatted multi-line text.
