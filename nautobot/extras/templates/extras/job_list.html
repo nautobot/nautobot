@@ -7,6 +7,11 @@
             $(this).children("i").toggleClass("mdi-chevron-right mdi-chevron-down");
         });
     </script>
+    <script>
+	$(".accordion-toggle").click(function() {
+	    $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+        });
+    </script>
 {% endblock %}
 
 {% block content %}
@@ -14,23 +19,29 @@
     <div class="row">
         <div class="col-md-12">
             {% if jobs %}
-                <table class="table table-hover table-headings reports">
-                    <tr>
-                        <th>Module / Job</th>
-                        <th>Description</th>
-                        <th class="text-right">Last Run</th>
-                        <th style="width: 40px"></th>
-                        <th style="width: 100px">Last Status</th>
-                        <th style="width: 180px">Last Results</th>
-                    </tr>
+	        <div class="panel-group" id="accordion">
+		    <div class="row panel">
+                        <div class="col-md-2">Module / Job</div>
+                        <div class="col-md-4">Description</div>
+                        <div class="col-md-2 text-right">Last Run</div>
+                        <div class="col-md-2">&nbsp;</div>
+                        <div class="col-md-1">Last Status</div>
+                        <div class="col-md-1">Last Results</div>
+                    </div>
                     {% for module, module_jobs in jobs %}
-                        <tr>
-                            <th colspan="6"><h3><a name="module.{{ module }}"></a>{{ module|bettertitle }}</h3></th>
-                        </tr>
+                        <div class="row panel panel-default">
+			    <div class="panel-heading">
+				<h3 class="panel-title">
+				    <a class="accordion-toggle mdi mdi-chevron-down" type="button" data-toggle="collapse" href=".collapse-{{ module|slugify }}" name="module.{{ module }}">
+					{{ module|bettertitle }}
+				    </a>
+				</h3>
+			    </div>
+			</div>
                         {% for job in module_jobs %}
                             {% if not job.hidden %}
-                            <tr>
-                                <td>
+                            <div class="row collapse-{{ module|slugify }} collapse in">
+                                <div class="col-md-2">
                                     <a href="{% url 'extras:job' class_path=job.class_path %}"
                                        id="{{ job.class_path }}">
                                         <strong>{{ job }}</strong>
@@ -38,9 +49,11 @@
                                     {% if job.read_only %}
                                         <label class="label label-default">Read-only</label>
                                     {% endif %}
-                                </td>
-                                <td>{{ job.description_first_line | render_markdown | placeholder }}</td>
-                                <td class="text-right text-nowrap">
+                                </div>
+				<div class="col-md-4">
+				    {{ job.description_first_line | render_markdown | placeholder }}
+				</div>
+                                <div class="col-md-2 text-right text-nowrap">
                                     {% if job.result %}
                                         <a href="{% url 'extras:job_jobresult' pk=job.result.pk %}">
                                             {{ job.result.created }} by {{ job.result.user }}
@@ -48,8 +61,8 @@
                                     {% else %}
                                         <span class="text-muted">Never</span>
                                     {% endif %}
-                                </td>
-                                <td>
+                                </div>
+				<div class="col-md-2">
                                     {% if job.result %}
                                         <a class="btn btn-xs btn-default"
                                            href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}"
@@ -57,11 +70,11 @@
                                             <i class="mdi mdi-history"></i>
                                         </a>
                                     {% endif %}
-                                </td>
-                                <td>
+                                </div>
+                                <div class="col-md-1">
                                     {% include 'extras/inc/job_label.html' with result=job.result %}
-                                </td>
-                                <td class="text-nowrap report-stats">
+				</div>
+                                <div class="col-md-1 text-nowrap report-stats">
                                     {% if job.result %}
                                         <label class="label label-success">{{ job.result.data.total.success }}</label>
                                         <label class="label label-info">{{ job.result.data.total.info }}</label>
@@ -84,24 +97,23 @@
                                     {% else %}
                                         —
                                     {% endif %}
-                                </td>
-                            </tr>
-                            {% endif %}
+                                </div>
+                            </div>
                             {% for method, stats in job.result.data.items %}
                                 {% if method != "total" and method != "output" %}
-                                    <tr class="{{ job.class_path }} collapse">
-                                        <td colspan="5" class="method">
+                                    <div class="row {{ job.class_path }} collapse">
+                                        <div class="col-md-8 method">
                                             <a href="{% url 'extras:job_jobresult' pk=job.result.pk %}#{{method}}">
                                                 {{ method }}
                                             </a>
-                                        </td>
-                                        <td class="text-nowrap report-stats">
+                                        </div>
+                                        <div class="col-md-4 text-nowrap report-stats">
                                             <label class="label label-success">{{ stats.success }}</label>
                                             <label class="label label-info">{{ stats.info }}</label>
                                             <label class="label label-warning">{{ stats.warning }}</label>
                                             <label class="label label-danger">{{ stats.failure }}</label>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
                                 {% endif %}
                             {% endfor %}
                             {% endif %}

@@ -496,3 +496,16 @@ span.hover_copy:hover .hover_copy_button {
     position: relative;
     top: 2px;
 }
+
+/* >>> New CSS for the Jobs list accordion feature */
+h3.panel-title {
+    font-weight: bold;
+}
+div.row .panel div {
+    font-weight: bold;
+}
+.row .collapse {
+    background: #fff;
+    padding-top: 5px;
+}
+/* >>> New CSS for the Jobs list accordion feature */
