@@ -134,7 +134,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
         # https://github.com/nautobot/nautobot/issues/1228
-        # If querying for **only** the ID of the RelationshipAssociation, for example:
+        # If querying for **only** the ID of the related object, for example:
         # { device(id:"...") { ... rel_my_relationship { id } } }
         # we will get this exception:
         # TypeError: Cannot call select_related() after .values() or .values_list()
