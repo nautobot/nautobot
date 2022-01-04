@@ -14,4 +14,11 @@ class DummyJob(Job):
         """
 
 
-jobs = (DummyJob,)
+class DummyHiddenJob(Job):
+    class Meta:
+        hidden = True
+        name = "Dummy hidden job"
+        description = "I should not show in the UI!"
+
+
+jobs = (DummyJob, DummyHiddenJob)

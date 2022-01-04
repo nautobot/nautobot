@@ -28,6 +28,7 @@
                             <th colspan="6"><h3><a name="module.{{ module }}"></a>{{ module|bettertitle }}</h3></th>
                         </tr>
                         {% for job in module_jobs %}
+                            {% if not job.hidden %}
                             <tr>
                                 <td>
                                     <a href="{% url 'extras:job' class_path=job.class_path %}"
@@ -102,6 +103,7 @@
                                     </tr>
                                 {% endif %}
                             {% endfor %}
+                            {% endif %}
                         {% endfor %}
                     {% endfor %}
                 </table>
