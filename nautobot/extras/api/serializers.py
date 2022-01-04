@@ -890,9 +890,9 @@ class StatusSerializer(CustomFieldModelSerializer):
 
 
 class StatusModelSerializerMixin(serializers.Serializer):
-    """Mixin to add non-required `status` choice field to model serializers."""
+    """Mixin to add `status` choice field to model serializers."""
 
-    status = StatusSerializerField(queryset=Status.objects.all(), required=True)
+    status = StatusSerializerField(queryset=Status.objects.all())
 
 
 #
