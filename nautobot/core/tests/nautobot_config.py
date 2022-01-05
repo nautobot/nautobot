@@ -24,7 +24,7 @@ DATABASES = {
 }
 
 PLUGINS = [
-    "dummy_plugin",
+    "example_plugin",
 ]
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

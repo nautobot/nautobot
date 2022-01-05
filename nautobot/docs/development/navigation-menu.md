@@ -23,22 +23,22 @@ menu_tabs = (
                 weight=150,
                 items=(
                     NavMenuItem(
-                        link="plugins:dummy_plugin:dummymodel_list",
+                        link="plugins:example_plugin:dummymodel_list",
                         name="Dummy Model",
                         permissions=[
-                            "dummy_plugin.view_dummymodel"
+                            "example_plugin.view_dummymodel"
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:dummy_plugin:dummymodel_add",
+                                link="plugins:example_plugin:dummymodel_add",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel",
+                                    "example_plugin.add_dummymodel",
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="plugins:dummy_plugin:dummymodel_import",
+                                link="plugins:example_plugin:dummymodel_import",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel"
+                                    "example_plugin.add_dummymodel"
                                 ],
                             ),
                         ),
@@ -71,22 +71,22 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="plugins:dummy_plugin:dummymodel_list",
+                        link="plugins:example_plugin:dummymodel_list",
                         link_text="Dummy Model",
                         permissions=[
-                            "dummy_plugin.view_dummymodel"
+                            "example_plugin.view_dummymodel"
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:dummy_plugin:dummymodel_add",
+                                link="plugins:example_plugin:dummymodel_add",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel",
+                                    "example_plugin.add_dummymodel",
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="plugins:dummy_plugin:dummymodel_import",
+                                link="plugins:example_plugin:dummymodel_import",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel"
+                                    "example_plugin.add_dummymodel"
                                 ],
                             ),
                         ),

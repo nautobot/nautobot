@@ -17,24 +17,24 @@ from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
 from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
-from dummy_plugin import config as dummy_config
-from dummy_plugin.datasources import refresh_git_text_files
-from dummy_plugin.models import DummyModel
+from example_plugin import config as dummy_config
+from example_plugin.datasources import refresh_git_text_files
+from example_plugin.models import DummyModel
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginTest(TestCase):
     def test_config(self):
         self.assertIn(
-            "dummy_plugin.DummyPluginConfig",
+            "example_plugin.ExamplePluginConfig",
             settings.INSTALLED_APPS,
         )
 
     def test_models(self):
-        from dummy_plugin.models import DummyModel
+        from example_plugin.models import DummyModel
 
         # Test saving an instance
         instance = DummyModel(name="Instance 1", number=100)
@@ -47,14 +47,14 @@ class PluginTest(TestCase):
 
     def test_admin(self):
         # Test admin view URL resolution
-        url = reverse("admin:dummy_plugin_dummymodel_add")
-        self.assertEqual(url, "/admin/dummy_plugin/dummymodel/add/")
+        url = reverse("admin:example_plugin_dummymodel_add")
+        self.assertEqual(url, "/admin/example_plugin/dummymodel/add/")
 
     def test_banner_registration(self):
         """
         Check that plugin Banner is registered.
         """
-        from dummy_plugin.banner import banner
+        from example_plugin.banner import banner
 
         self.assertIn(banner, registry["plugin_banners"])
 
@@ -62,7 +62,7 @@ class PluginTest(TestCase):
         """
         Check that plugin TemplateExtensions are registered.
         """
-        from dummy_plugin.template_content import SiteContent
+        from example_plugin.template_content import SiteContent
 
         self.assertIn(SiteContent, registry["plugin_template_extensions"]["dcim.site"])
 
@@ -70,7 +70,7 @@ class PluginTest(TestCase):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from dummy_plugin.custom_validators import (
+        from example_plugin.custom_validators import (
             SiteCustomValidator,
         )
 
@@ -80,7 +80,7 @@ class PluginTest(TestCase):
         """
         Check that plugin custom jinja filters are registered correctly.
         """
-        from dummy_plugin.jinja_filters import leet_speak
+        from example_plugin.jinja_filters import leet_speak
 
         rendering_engine = engines["jinja"]
 
@@ -90,7 +90,7 @@ class PluginTest(TestCase):
         """
         Check that plugin GraphQL Types are registered.
         """
-        from dummy_plugin.graphql.types import AnotherDummyType
+        from example_plugin.graphql.types import AnotherDummyType
 
         self.assertIn(AnotherDummyType, registry["plugin_graphql_types"])
 
@@ -100,40 +100,40 @@ class PluginTest(TestCase):
         """
         registered_models = registry.get("model_features", {}).get("graphql", {})
 
-        self.assertIn("dummy_plugin", registered_models.keys())
-        self.assertIn("dummymodel", registered_models["dummy_plugin"])
+        self.assertIn("example_plugin", registered_models.keys())
+        self.assertIn("dummymodel", registered_models["example_plugin"])
 
     def test_jobs_registration(self):
         """
         Check that plugin jobs are registered correctly and discoverable.
         """
-        from dummy_plugin.jobs import DummyJob
+        from example_plugin.jobs import DummyJob
 
         self.assertIn(DummyJob, registry.get("plugin_jobs", []))
 
         self.assertEqual(
             DummyJob,
-            get_job("plugins/dummy_plugin.jobs/DummyJob"),
+            get_job("plugins/example_plugin.jobs/DummyJob"),
         )
         self.assertIn(
-            "plugins/dummy_plugin.jobs/DummyJob",
+            "plugins/example_plugin.jobs/DummyJob",
             get_job_classpaths(),
         )
         jobs_dict = get_jobs()
         self.assertIn("plugins", jobs_dict)
-        self.assertIn("dummy_plugin.jobs", jobs_dict["plugins"])
+        self.assertIn("example_plugin.jobs", jobs_dict["plugins"])
         self.assertEqual(
-            "DummyPlugin jobs",
-            jobs_dict["plugins"]["dummy_plugin.jobs"].get("name"),
+            "ExamplePlugin jobs",
+            jobs_dict["plugins"]["example_plugin.jobs"].get("name"),
         )
-        self.assertIn("jobs", jobs_dict["plugins"]["dummy_plugin.jobs"])
+        self.assertIn("jobs", jobs_dict["plugins"]["example_plugin.jobs"])
         self.assertIn(
             "DummyJob",
-            jobs_dict["plugins"]["dummy_plugin.jobs"]["jobs"],
+            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"],
         )
         self.assertEqual(
             DummyJob,
-            jobs_dict["plugins"]["dummy_plugin.jobs"]["jobs"]["DummyJob"],
+            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"]["DummyJob"],
         )
 
     def test_git_datasource_contents_registration(self):
@@ -144,7 +144,7 @@ class PluginTest(TestCase):
 
         plugin_datasource = DatasourceContent(
             name="text files",
-            content_identifier="dummy_plugin.textfile",
+            content_identifier="example_plugin.textfile",
             icon="mdi-note-text",
             weight=1000,
             callback=refresh_git_text_files,
@@ -165,7 +165,7 @@ class PluginTest(TestCase):
         Check that plugin middleware is registered.
         """
         self.assertIn(
-            "dummy_plugin.middleware.DummyMiddleware",
+            "example_plugin.middleware.DummyMiddleware",
             settings.MIDDLEWARE,
         )
 
@@ -181,7 +181,7 @@ class PluginTest(TestCase):
         """
         Check that plugin caching configuration is registered and valid.
         """
-        self.assertIn("dummy_plugin.*", settings.CACHEOPS)
+        self.assertIn("example_plugin.*", settings.CACHEOPS)
 
         # Establish dummy config to have invalid cache_config (list)
         class DummyConfigWithBadCacheConfig(dummy_config):
@@ -257,10 +257,10 @@ class PluginTest(TestCase):
         Validate that plugin installed apps and dependencies are are registered.
         """
         self.assertIn(
-            "dummy_plugin.DummyPluginConfig",
+            "example_plugin.ExamplePluginConfig",
             settings.INSTALLED_APPS,
         )
-        self.assertIn("nautobot.extras.tests.dummy_plugin_dependency", settings.INSTALLED_APPS)
+        self.assertIn("nautobot.extras.tests.example_plugin_dependency", settings.INSTALLED_APPS)
 
         # Establish dummy config to have invalid installed_apps (tuple)
         class DummyConfigWithInstalledApps(dummy_config):
@@ -272,13 +272,13 @@ class PluginTest(TestCase):
 
     def test_registry_nav_menu_dict(self):
         """
-        Validate that dummy plugin is adding new items to `registry["nav_menu"]`.
+        Validate that example plugin is adding new items to `registry["nav_menu"]`.
         """
         self.assertTrue(registry["nav_menu"]["tabs"].get("Dummy Tab"))
         self.assertTrue(registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"].get("Dummy Group 1"))
         self.assertTrue(
             registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"]["Dummy Group 1"]["items"].get(
-                "plugins:dummy_plugin:dummymodel_list"
+                "plugins:example_plugin:dummymodel_list"
             )
         )
 
@@ -287,9 +287,9 @@ class PluginTest(TestCase):
         Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
         creating a custom field definition in the database.
         """
-        cf = CustomField.objects.get(name="dummy-plugin-auto-custom-field")
+        cf = CustomField.objects.get(name="example-plugin-auto-custom-field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
-        self.assertEqual(cf.label, "Dummy Plugin Automatically Added Custom Field")
+        self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
         self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
 
     def test_secrets_provider(self):
@@ -308,8 +308,8 @@ class PluginTest(TestCase):
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
     model = DummyModel
@@ -348,43 +348,43 @@ class PluginListViewTest(TestCase):
         self.assertHttpStatus(response, 302)
 
     @skipIf(
-        "dummy_plugin" not in settings.PLUGINS,
-        "dummy_plugin not in settings.PLUGINS",
+        "example_plugin" not in settings.PLUGINS,
+        "example_plugin not in settings.PLUGINS",
     )
     def test_list_plugins_authenticated(self):
         response = self.client.get(reverse("plugins:plugins_list"))
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
-        self.assertIn("dummy plugin", response_body, msg=response_body)
+        self.assertIn("example plugin", response_body, msg=response_body)
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginDetailViewTest(TestCase):
     def test_view_detail_anonymous(self):
         # Make the request as an unauthenticated user
         self.client.logout()
-        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "dummy_plugin"}))
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin"}))
         # Redirects to the login page
         self.assertHttpStatus(response, 302)
 
     def test_view_detail_authenticated(self):
-        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "dummy_plugin"}))
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin"}))
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         # plugin verbose name
-        self.assertIn("dummy plugin", response_body, msg=response_body)
+        self.assertIn("example plugin", response_body, msg=response_body)
         # plugin description
         self.assertIn("for testing purposes only", response_body, msg=response_body)
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginAPITest(APIViewTestCases.APIViewTestCase):
     model = DummyModel
@@ -418,18 +418,18 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_api_urls(self):
         # Test list URL resolution
-        list_url = reverse("plugins-api:dummy_plugin-api:dummymodel-list")
+        list_url = reverse("plugins-api:example_plugin-api:dummymodel-list")
         self.assertEqual(list_url, self._get_list_url())
 
         # Test detail URL resolution
         instance = DummyModel.objects.first()
-        detail_url = reverse("plugins-api:dummy_plugin-api:dummymodel-detail", kwargs={"pk": instance.pk})
+        detail_url = reverse("plugins-api:example_plugin-api:dummymodel-detail", kwargs={"pk": instance.pk})
         self.assertEqual(detail_url, self._get_detail_url(instance))
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginCustomValidationTest(TestCase):
     def setUp(self):
@@ -465,6 +465,6 @@ class LoadPluginTest(TestCase):
         with self.assertRaises(ModuleNotFoundError):
             load_plugin(plugin_name, settings)
 
-        # Move to the dummy plugin. No errors should be raised (which is good).
-        plugin_name = "dummy_plugin"
+        # Move to the example plugin. No errors should be raised (which is good).
+        plugin_name = "example_plugin"
         load_plugin(plugin_name, settings)
