@@ -167,7 +167,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
                 '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
-                '<span class="text-danger">123 is not of type \'string\'</span>',
+                "<span class=\"text-danger\">123 is not of type 'string'</span>",
             )
 
         # Edit the device local context data and redirect back to the validation tab
