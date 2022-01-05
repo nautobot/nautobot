@@ -20,7 +20,7 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.utilities.templatetags.helpers import render_markdown
+from nautobot.utilities.templatetags.helpers import render_boolean, render_markdown
 from .choices import LogLevelChoices
 from .jobs import Job
 from .models import (
@@ -196,7 +196,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
             return format_html(f'<span class="text-danger"><i class="mdi mdi-close-thick"></i>{e.message}</span>')
 
         # Return a green check (like a boolean column)
-        return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
+        return render_boolean(1)
 
 
 class CustomFieldTable(BaseTable):

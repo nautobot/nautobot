@@ -159,12 +159,9 @@ Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value 
 
 Render HTML from a computed boolean value. 
 
-If value is truthey - a string value of either 'y', 'yes', 't', 'true', 'on' or '1' (or their equivalent uppercase
-values) -- or True / > 0 -- this
-renders `<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>`
+If value is (for example) a non-empty string / True / number < or > 0, this renders `<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>`
 
-If value is falsey - a whitespace-only string, an empty string or string with a value of either
-'n', 'no', 'f', 'false', 'off', or '0' (or their equivalent uppercase values) -- or False / 0 -- this renders `<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>`
+If value is (for example) "" or 0 or False, this renders `<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>`
 
 If value is None this renders `<span class="text-muted">&mdash;</span>`
 

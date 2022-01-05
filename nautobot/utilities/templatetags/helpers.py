@@ -12,7 +12,6 @@ from django.utils.safestring import mark_safe
 from markdown import markdown
 from django_jinja import library
 
-from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.utils import foreground_color
@@ -58,8 +57,9 @@ def render_boolean(value):
 
     Args:
         value (any): Input value, can be any variable.
-        A value with a whitespace-only string, an empty string or string with a value of either
-        'n', 'no', 'f', 'false', 'off', or '0' (or their equivalent uppercase values) is considered False.
+        A thruthey value (for example non-empty string / True / number < or > 0) is considered True
+        A falsey value (for example "" or 0 or False) with an empty string "" or 0 or False is considered False.
+        A None value with None is considered None.
 
     Returns:
         str: HTML
@@ -72,16 +72,11 @@ def render_boolean(value):
     Examples:
         >>> render_boolean(None)
         '<span class="text-muted">&mdash;</span>'
-        >>> render_boolean(True or "arbitrary string")
+        >>> render_boolean(True or "arbitrary string" or 1)
         '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-        >>> render_boolean(False or "" or " " or "F" or "off")
+        >>> render_boolean(False or "" or 0)
         '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
     """
-    if isinstance(value, str):
-        try:
-            value = is_truthy(value)
-        except ValueError:
-            value = bool(value.strip())
     if value is None:
         return mark_safe(HTML_NONE)
     if bool(value):

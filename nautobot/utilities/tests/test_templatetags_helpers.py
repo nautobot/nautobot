@@ -142,13 +142,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(get_item(data, "first"), "1st")
         self.assertEqual(get_item(data, "second"), "2nd")
 
-    HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-    HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
-    HTML_NONE = '<span class="text-muted">&mdash;</span>'
-
     def test_render_boolean(self):
-        self.assertEqual(render_boolean(None), self.HTML_NONE)
-        self.assertEqual(render_boolean(True), self.HTML_TRUE)
-        self.assertEqual(render_boolean("arbitrary string"), self.HTML_TRUE)
-        for value in [False, "", "n", "no", "f", "false", "off", "0"]:
-            self.assertEqual(render_boolean(value), self.HTML_FALSE)
+        for value in [True, "arbitrary string", 1]:
+            self.assertEqual(
+                render_boolean(value),
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+            )
+        for value in [False, "", 0]:
+            self.assertEqual(
+                render_boolean(value), '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+            )
+        self.assertEqual(render_boolean(None), '<span class="text-muted">&mdash;</span>')

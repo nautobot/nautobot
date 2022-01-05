@@ -14,6 +14,7 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.utilities.templatetags.helpers import render_boolean
 from nautobot.virtualization.models import VMInterface
 from .models import (
     Aggregate,
@@ -117,15 +118,6 @@ VLANGROUP_ADD_VLAN = """
         </a>
     {% endif %}
 {% endwith %}
-"""
-
-VLAN_MEMBER_TAGGED = """
-{% load helpers %}
-{% if record.untagged_vlan_id == object.pk %}
-    {{ false | render_boolean }}
-{% else %}
-    {{ true | render_boolean }}
-{% endif %}
 """
 
 #
@@ -574,7 +566,10 @@ class VLANMembersTable(BaseTable):
     """
 
     name = tables.LinkColumn(verbose_name="Interface")
-    tagged = tables.TemplateColumn(template_code=VLAN_MEMBER_TAGGED, orderable=False)
+    tagged = tables.Column(empty_values=(), orderable=False)
+
+    def render_tagged(self, value, record):
+        return render_boolean(record.untagged_vlan_id != self.context["object"].pk)
 
 
 class VLANDevicesTable(VLANMembersTable):
