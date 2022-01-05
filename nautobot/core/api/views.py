@@ -556,4 +556,4 @@ class GraphQLDRFAPIView(APIView):
 
 
 def json404(request):
-    return JsonResponse({"status_code": 404, "error": "The resource was not found"})
+    return JsonResponse({"error": "The resource was not found"}, status=404)
