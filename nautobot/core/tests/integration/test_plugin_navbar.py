@@ -7,8 +7,8 @@ from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIco
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginNavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
@@ -18,7 +18,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
         "Dummy Tab": {
             "Dummy Group 1": {
                 "Dummy Model": {
-                    "permission": "dummy_plugin.view_dummymodel",
+                    "permission": "example_plugin.view_dummymodel",
                     "buttons": ["Add", "Import"],
                 },
             },
@@ -36,7 +36,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
             },
             "Dummy Circuit Group": {
                 "Dummy Model": {
-                    "permission": "dummy_plugin.view_dummymodel",
+                    "permission": "example_plugin.view_dummymodel",
                     "buttons": ["Add", "Import"],
                 },
             },
@@ -48,13 +48,13 @@ class PluginNavBarTestCase(SeleniumTestCase):
             },
         },
         "Plugins": {
-            "Dummy plugin": {
+            "Example plugin": {
                 "Models": {
-                    "permission": "dummy_plugin.view_dummymodel",
+                    "permission": "example_plugin.view_dummymodel",
                     "buttons": ["Add a new dummy model", "Import dummy models"],
                 },
                 "Other Models": {
-                    "permission": "dummy_plugin.view_dummymodel",
+                    "permission": "example_plugin.view_dummymodel",
                     "buttons": [],
                 },
             },
@@ -71,7 +71,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     def test_plugin_navbar_new_tab(self):
         """
-        Verify that a new menu tab defined and populated by the dummy plugin is rendered properly.
+        Verify that a new menu tab defined and populated by the example plugin is rendered properly.
         """
         # Set test user to admin
         self.user.is_superuser = True
@@ -92,7 +92,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     def test_plugin_navbar_modify_circuits(self):
         """
-        Verify that the dummy plugin is able to add a new group and items to an existing menu tab.
+        Verify that the example plugin is able to add a new group and items to an existing menu tab.
         """
         # Set test user to admin
         self.user.is_superuser = True

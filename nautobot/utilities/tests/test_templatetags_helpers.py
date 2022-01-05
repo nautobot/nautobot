@@ -26,12 +26,12 @@ from nautobot.utilities.templatetags.helpers import (
 )
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
-from dummy_plugin.models import DummyModel
+from example_plugin.models import DummyModel
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class NautobotTemplatetagsHelperTest(TestCase):
     def test_placeholder(self):
@@ -59,7 +59,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(meta(Site, "app_label"), "dcim")
         self.assertEqual(meta(site, "not_present"), "")
 
-        self.assertEqual(meta(DummyModel, "app_label"), "dummy_plugin")
+        self.assertEqual(meta(DummyModel, "app_label"), "example_plugin")
 
     def test_viewname(self):
         status = Status.objects.get_for_model(Site).first()
@@ -68,7 +68,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(viewname(site, "edit"), "dcim:site_edit")
         self.assertEqual(viewname(Site, "test"), "dcim:site_test")
 
-        self.assertEqual(viewname(DummyModel, "edit"), "plugins:dummy_plugin:dummymodel_edit")
+        self.assertEqual(viewname(DummyModel, "edit"), "plugins:example_plugin:dummymodel_edit")
 
     def test_validated_viewname(self):
         status = Status.objects.get_for_model(Site).first()
@@ -77,7 +77,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(validated_viewname(site, "list"), "dcim:site_list")
         self.assertIsNone(validated_viewname(Site, "notvalid"))
 
-        self.assertEqual(validated_viewname(DummyModel, "list"), "plugins:dummy_plugin:dummymodel_list")
+        self.assertEqual(validated_viewname(DummyModel, "list"), "plugins:example_plugin:dummymodel_list")
         self.assertIsNone(validated_viewname(DummyModel, "notvalid"))
 
     def test_bettertitle(self):

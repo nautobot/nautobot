@@ -13,12 +13,12 @@ from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
 from nautobot.utilities.testing.integration import SplinterTestCase
 
-from dummy_plugin.models import DummyModel
+from example_plugin.models import DummyModel
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginWebhookTest(SplinterTestCase):
     """
@@ -37,7 +37,7 @@ class PluginWebhookTest(SplinterTestCase):
                 os.remove(os.path.join("/tmp", f))
 
         self.url = f"http://localhost:{self.server_thread.port}" + reverse(
-            "plugins-api:dummy_plugin-api:dummymodel_webhook"
+            "plugins-api:example_plugin-api:dummymodel_webhook"
         )
         self.webhook = Webhook.objects.create(
             name="DummyModel",

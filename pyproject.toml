@@ -139,8 +139,8 @@ black = {version="^21.10b0", python="^3.6.2"}
 coverage = "~5.4"
 # Tool for debugging Django
 django-debug-toolbar = "~3.2.1"
-# Nautobot dummy plugin used for testing
-dummy-plugin = {path = "examples/dummy_plugin", develop = true}
+# Nautobot example plugin used for testing
+example-plugin = {path = "examples/example_plugin", develop = true}
 # Code style checking and limited static analysis
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`

@@ -7,12 +7,12 @@ from nautobot.dcim.models import PowerFeed, PowerPanel, Site
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
-from dummy_plugin.models import DummyModel
+from example_plugin.models import DummyModel
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginHomeTestCase(SeleniumTestCase):
     """Integration test the plugin homepage."""
@@ -21,11 +21,11 @@ class PluginHomeTestCase(SeleniumTestCase):
     layout = {
         "Organization": {
             "Sites": {"model": Site, "permission": "dcim.view_site"},
-            "Dummy Models": {"model": DummyModel, "permission": "dummy_plugin.view_dummymodel"},
+            "Dummy Models": {"model": DummyModel, "permission": "example_plugin.view_dummymodel"},
             "Tenants": {"model": Tenant, "permission": "tenancy.view_tenant"},
         },
-        "Dummy Plugin": {
-            "Dummy Models": {"model": DummyModel, "permission": "dummy_plugin.view_dummymodel"},
+        "Example Plugin": {
+            "Dummy Models": {"model": DummyModel, "permission": "example_plugin.view_dummymodel"},
         },
         "Power": {
             "Power Feeds": {"model": PowerFeed, "permission": "dcim.view_powerfeed"},
@@ -38,7 +38,7 @@ class PluginHomeTestCase(SeleniumTestCase):
     }
 
     custom_panel_dummymodel = {
-        "name": "Custom Dummy Plugin",
+        "name": "Custom Example Plugin",
         "items": [
             "Example 1",
             "Example 2",
@@ -127,7 +127,7 @@ class PluginHomeTestCase(SeleniumTestCase):
         """
         self.add_permissions("dcim.view_site")
         self.add_permissions("circuits.view_circuit")
-        self.add_permissions("dummy_plugin.view_dummymodel")
+        self.add_permissions("example_plugin.view_dummymodel")
         user_permissions = self.user.get_all_permissions()
 
         self.load_page(self.live_server_url)
