@@ -196,7 +196,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
             return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
 
         # Return a green check (like a boolean column)
-        return render_boolean(1)
+        return render_boolean(True)
 
 
 class CustomFieldTable(BaseTable):
