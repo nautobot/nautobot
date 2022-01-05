@@ -57,9 +57,9 @@ def render_boolean(value):
 
     Args:
         value (any): Input value, can be any variable.
-        A thruthey value (for example non-empty string / True / number < or > 0) is considered True
-        A falsey value (for example "" or 0 or False) with an empty string "" or 0 or False is considered False.
-        A None value with None is considered None.
+        A truthy value (for example non-empty string / True / non-zero number) is considered True.
+        A falsey value other than None (for example "" or 0 or False) is considered False.
+        A value of None is considered neither True nor False.
 
     Returns:
         str: HTML
