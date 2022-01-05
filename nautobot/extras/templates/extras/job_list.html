@@ -8,10 +8,10 @@
         });
     </script>
     <script>
-	$(".accordion-toggle").click(function() {
-	    $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-        });
-    </script>
+         $(".accordion-toggle").click(function() {
+             $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+         });
+     </script>
 {% endblock %}
 
 {% block content %}
@@ -19,29 +19,27 @@
     <div class="row">
         <div class="col-md-12">
             {% if jobs %}
-	        <div class="panel-group" id="accordion">
-		    <div class="row panel">
-                        <div class="col-md-2">Module / Job</div>
-                        <div class="col-md-4">Description</div>
-                        <div class="col-md-2 text-right">Last Run</div>
-                        <div class="col-md-2">&nbsp;</div>
-                        <div class="col-md-1">Last Status</div>
-                        <div class="col-md-1">Last Results</div>
-                    </div>
+                <table class="table table-hover table-headings reports">
+                    <tr>
+                        <th>Module / Job</th>
+                        <th>Description</th>
+                        <th class="text-right">Last Run</th>
+                        <th style="width: 40px"></th>
+                        <th style="width: 100px">Last Status</th>
+                        <th style="width: 180px">Last Results</th>
+                    </tr>
                     {% for module, module_jobs in jobs %}
-                        <div class="row panel panel-default">
-			    <div class="panel-heading">
-				<h3 class="panel-title">
-				    <a class="accordion-toggle mdi mdi-chevron-down" type="button" data-toggle="collapse" href=".collapse-{{ module|slugify }}" name="module.{{ module }}">
-					{{ module|bettertitle }}
-				    </a>
-				</h3>
-			    </div>
-			</div>
+                        <tr>
+                            <th colspan="6">
+                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down" name="module.{{ module }}" data-toggle="collapse" data-target=".collapseme-{{ module|slugify }}">
+                                    {{ module|bettertitle }}
+                                </button>
+                            </th>
+                        </tr>
                         {% for job in module_jobs %}
                             {% if not job.hidden %}
-                            <div class="row collapse-{{ module|slugify }} collapse in">
-                                <div class="col-md-2">
+                            <tr class="collapseme-{{ module|slugify }} collapse in">
+                                <td>
                                     <a href="{% url 'extras:job' class_path=job.class_path %}"
                                        id="{{ job.class_path }}">
                                         <strong>{{ job }}</strong>
@@ -49,11 +47,9 @@
                                     {% if job.read_only %}
                                         <label class="label label-default">Read-only</label>
                                     {% endif %}
-                                </div>
-				<div class="col-md-4">
-				    {{ job.description_first_line | render_markdown | placeholder }}
-				</div>
-                                <div class="col-md-2 text-right text-nowrap">
+                                </td>
+                                <td>{{ job.description_first_line | render_markdown | placeholder }}</td>
+                                <td class="text-right text-nowrap">
                                     {% if job.result %}
                                         <a href="{% url 'extras:job_jobresult' pk=job.result.pk %}">
                                             {{ job.result.created }} by {{ job.result.user }}
@@ -61,8 +57,8 @@
                                     {% else %}
                                         <span class="text-muted">Never</span>
                                     {% endif %}
-                                </div>
-				<div class="col-md-2">
+                                </td>
+                                <td>
                                     {% if job.result %}
                                         <a class="btn btn-xs btn-default"
                                            href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}"
@@ -70,11 +66,11 @@
                                             <i class="mdi mdi-history"></i>
                                         </a>
                                     {% endif %}
-                                </div>
-                                <div class="col-md-1">
+                                </td>
+                                <td>
                                     {% include 'extras/inc/job_label.html' with result=job.result %}
-				</div>
-                                <div class="col-md-1 text-nowrap report-stats">
+                                </td>
+                                <td class="text-nowrap report-stats">
                                     {% if job.result %}
                                         <label class="label label-success">{{ job.result.data.total.success }}</label>
                                         <label class="label label-info">{{ job.result.data.total.info }}</label>
@@ -97,23 +93,23 @@
                                     {% else %}
                                         —
                                     {% endif %}
-                                </div>
-                            </div>
+                                </td>
+                            </tr>
                             {% for method, stats in job.result.data.items %}
                                 {% if method != "total" and method != "output" %}
-                                    <div class="row {{ job.class_path }} collapse">
-                                        <div class="col-md-8 method">
+                                    <tr class="{{ job.class_path }} collapse">
+                                        <td colspan="5" class="method">
                                             <a href="{% url 'extras:job_jobresult' pk=job.result.pk %}#{{method}}">
                                                 {{ method }}
                                             </a>
-                                        </div>
-                                        <div class="col-md-4 text-nowrap report-stats">
+                                        </td>
+                                        <td class="text-nowrap report-stats">
                                             <label class="label label-success">{{ stats.success }}</label>
                                             <label class="label label-info">{{ stats.info }}</label>
                                             <label class="label label-warning">{{ stats.warning }}</label>
                                             <label class="label label-danger">{{ stats.failure }}</label>
-                                        </div>
-                                    </div>
+                                        </td>
+                                    </tr>
                                 {% endif %}
                             {% endfor %}
                             {% endif %}
