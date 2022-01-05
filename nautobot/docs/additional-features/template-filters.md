@@ -159,7 +159,7 @@ Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value 
 
 Render HTML from a computed boolean value. 
 
-If value is (for example) a non-empty string / True / number < or > 0, this renders `<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>`
+If value is (for example) a non-empty string or True or a non-zero number, this renders `<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>`
 
 If value is (for example) "" or 0 or False, this renders `<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>`
 
