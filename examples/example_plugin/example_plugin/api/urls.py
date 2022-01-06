@@ -8,6 +8,8 @@ router = OrderedDefaultRouter()
 router.register("models", ExampleModelViewSet)
 
 urlpatterns = [
-    path("webhook/", ExampleModelWebhook.as_view(), name="examplemodel_webhook"),  # URL path for testing plugin webhooks
+    path(
+        "webhook/", ExampleModelWebhook.as_view(), name="examplemodel_webhook"
+    ),  # URL path for testing plugin webhooks
     path("", include(router.urls)),
 ]
