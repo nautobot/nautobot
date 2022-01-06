@@ -182,7 +182,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Config context still fails
         self.assertEqual(
             self.browser.find_by_xpath("//tbody/tr")[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick"></i>123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )
         # Device now passes
         self.assertEqual(
@@ -192,5 +192,5 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Virtual machine still fails
         self.assertEqual(
             self.browser.find_by_xpath("//tbody/tr")[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick"></i>123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )
