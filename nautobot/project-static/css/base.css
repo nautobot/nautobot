@@ -512,3 +512,6 @@ span.hover_copy:hover .hover_copy_button {
     padding: 0;
     text-decoration: none;
 }
+#accordion-toggle-all {
+    display: inline;
+}
