@@ -20,4 +20,14 @@ class Migration(migrations.Migration):
             name="last_updated",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
+        migrations.AddField(
+            model_name='customfieldchoice',
+            name='created',
+            field=models.DateField(auto_now_add=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='customfieldchoice',
+            name='last_updated',
+            field=models.DateTimeField(auto_now=True, null=True),
+        ),
     ]
