@@ -90,9 +90,9 @@ class PluginTest(TestCase):
         """
         Check that plugin GraphQL Types are registered.
         """
-        from example_plugin.graphql.types import AnotherExampleType
+        from example_plugin.graphql.types import AnotherExampleModelType
 
-        self.assertIn(AnotherExampleType, registry["plugin_graphql_types"])
+        self.assertIn(AnotherExampleModelType, registry["plugin_graphql_types"])
 
     def test_extras_features_graphql(self):
         """
