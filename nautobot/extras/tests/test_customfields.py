@@ -167,7 +167,6 @@ class CustomFieldManagerTest(TestCase):
 
     def test_get_for_model(self):
         self.assertEqual(CustomField.objects.get_for_model(Site).count(), 2)
-        self.assertEqual(CustomField.objects.get_for_model(Site).count(), 1)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
 
 
