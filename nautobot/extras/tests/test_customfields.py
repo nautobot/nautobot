@@ -166,10 +166,8 @@ class CustomFieldManagerTest(TestCase):
         custom_field.content_types.set([content_type])
 
     def test_get_for_model(self):
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(CustomField.objects.get_for_model(Site).count(), 2)
-        else:
-            self.assertEqual(CustomField.objects.get_for_model(Site).count(), 1)
+        self.assertEqual(CustomField.objects.get_for_model(Site).count(), 2)
+        self.assertEqual(CustomField.objects.get_for_model(Site).count(), 1)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
 
 

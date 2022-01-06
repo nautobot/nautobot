@@ -236,7 +236,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 - [#423](https://github.com/nautobot/nautobot/pull/423) - Clarified reference to `/config_contexts/` folder in Git user guide
 - [#448](https://github.com/nautobot/nautobot/issues/448) - `nautobot-server init`  no longer provides an option to overwrite the existing configuration files.
-- [#474](https://github.com/nautobot/nautobot/pull/474) - The `example_plugin` has been moved to a new `examples` directory in the Git repository and now serves as an example of implementing various plugin features.
+- [#474](https://github.com/nautobot/nautobot/pull/474) - The `dummy_plugin` has been moved to a new `examples` directory in the Git repository and now serves as an example of implementing various plugin features.
 
 ### Fixed
 
