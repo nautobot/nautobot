@@ -89,9 +89,9 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.assertEqual(qs[1], self.site3)
 
 
-class DummyModel(models.Model):
+class ExampleModel(models.Model):
     """
-    Dummy model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
+    Example model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
     """
 
     charfield = models.CharField(max_length=10)
@@ -111,7 +111,7 @@ class BaseFilterSetTest(TestCase):
     Ensure that a BaseFilterSet automatically creates the expected set of filters for each filter type.
     """
 
-    class DummyFilterSet(BaseFilterSet):
+    class ExampleFilterSet(BaseFilterSet):
         charfield = django_filters.CharFilter()
         macaddressfield = MACAddressFilter()
         modelchoicefield = django_filters.ModelChoiceFilter(
@@ -125,10 +125,10 @@ class BaseFilterSetTest(TestCase):
         multiplechoicefield = django_filters.MultipleChoiceFilter(field_name="choicefield")
         multivaluecharfield = MultiValueCharFilter(field_name="charfield")
         tagfield = TagFilter()
-        treeforeignkeyfield = TreeNodeMultipleChoiceFilter(queryset=DummyModel.objects.all())
+        treeforeignkeyfield = TreeNodeMultipleChoiceFilter(queryset=ExampleModel.objects.all())
 
         class Meta:
-            model = DummyModel
+            model = ExampleModel
             fields = (
                 "charfield",
                 "choicefield",
@@ -146,7 +146,7 @@ class BaseFilterSetTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.filters = cls.DummyFilterSet().filters
+        cls.filters = cls.ExampleFilterSet().filters
 
     def test_char_filter(self):
         self.assertIsInstance(self.filters["charfield"], django_filters.CharFilter)

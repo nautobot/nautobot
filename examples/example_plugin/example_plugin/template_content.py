@@ -17,8 +17,8 @@ class SiteContent(PluginTemplateExtension):
         return "SITE CONTENT - BUTTONS"
 
 
-class DummyModelContent(PluginTemplateExtension):
-    model = "example_plugin.dummymodel"
+class ExampleModelContent(PluginTemplateExtension):
+    model = "example_plugin.examplemodel"
     template_name = "example_plugin/panel.html"
 
     def left_page(self):
@@ -64,4 +64,4 @@ class DummyModelContent(PluginTemplateExtension):
 
 
 # Don't forget to register your template extensions!
-template_extensions = [DummyModelContent, SiteContent]
+template_extensions = [ExampleModelContent, SiteContent]

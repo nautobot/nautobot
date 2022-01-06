@@ -8,15 +8,15 @@ from rest_framework.views import APIView
 
 from nautobot.core.api.views import ModelViewSet
 
-from example_plugin.api.serializers import DummyModelSerializer
-from example_plugin.filters import DummyModelFilterSet
-from example_plugin.models import DummyModel
+from example_plugin.api.serializers import ExampleModelSerializer
+from example_plugin.filters import ExampleModelFilterSet
+from example_plugin.models import ExampleModel
 
 
-class DummyViewSet(ModelViewSet):
-    queryset = DummyModel.objects.all()
-    serializer_class = DummyModelSerializer
-    filterset_class = DummyModelFilterSet
+class ExampleModelViewSet(ModelViewSet):
+    queryset = ExampleModel.objects.all()
+    serializer_class = ExampleModelSerializer
+    filterset_class = ExampleModelFilterSet
 
 
 #
@@ -24,9 +24,9 @@ class DummyViewSet(ModelViewSet):
 #
 
 
-class DummyModelWebhook(APIView):
+class ExampleModelWebhook(APIView):
     """
-    Dummy view used in testing webhooks for plugins.
+    Example view used in testing webhooks for plugins.
     """
 
     permission_classes = [AllowAny]

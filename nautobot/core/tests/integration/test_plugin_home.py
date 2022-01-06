@@ -7,7 +7,7 @@ from nautobot.dcim.models import PowerFeed, PowerPanel, Site
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
-from example_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
 @skipIf(
@@ -21,11 +21,11 @@ class PluginHomeTestCase(SeleniumTestCase):
     layout = {
         "Organization": {
             "Sites": {"model": Site, "permission": "dcim.view_site"},
-            "Dummy Models": {"model": DummyModel, "permission": "example_plugin.view_dummymodel"},
+            "Example Models": {"model": ExampleModel, "permission": "example_plugin.view_examplemodel"},
             "Tenants": {"model": Tenant, "permission": "tenancy.view_tenant"},
         },
         "Example Plugin": {
-            "Dummy Models": {"model": DummyModel, "permission": "example_plugin.view_dummymodel"},
+            "Example Models": {"model": ExampleModel, "permission": "example_plugin.view_examplemodel"},
         },
         "Power": {
             "Power Feeds": {"model": PowerFeed, "permission": "dcim.view_powerfeed"},
@@ -37,7 +37,7 @@ class PluginHomeTestCase(SeleniumTestCase):
         },
     }
 
-    custom_panel_dummymodel = {
+    custom_panel_examplemodel = {
         "name": "Custom Example Plugin",
         "items": [
             "Example 1",
@@ -105,7 +105,7 @@ class PluginHomeTestCase(SeleniumTestCase):
                     "mdi mdi-lock" in item_html.find_element_by_xpath("./../span").get_property("innerHTML")
                 )
 
-    def test_dummymodel_custom_panel(self):
+    def test_examplemodel_custom_panel(self):
         """
         Render custom panel.
         """
@@ -115,9 +115,9 @@ class PluginHomeTestCase(SeleniumTestCase):
         self.load_page(self.live_server_url)
 
         columns_html = self.selenium.find_elements_by_class_name("homepage_column")
-        columns_html[0].find_element_by_xpath(f".//strong[text()='{self.custom_panel_dummymodel['name']}']")
+        columns_html[0].find_element_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
 
-        for item_name in self.custom_panel_dummymodel["items"]:
+        for item_name in self.custom_panel_examplemodel["items"]:
             columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
     @override_settings(HIDE_RESTRICTED_UI=False)
@@ -127,7 +127,7 @@ class PluginHomeTestCase(SeleniumTestCase):
         """
         self.add_permissions("dcim.view_site")
         self.add_permissions("circuits.view_circuit")
-        self.add_permissions("example_plugin.view_dummymodel")
+        self.add_permissions("example_plugin.view_examplemodel")
         user_permissions = self.user.get_all_permissions()
 
         self.load_page(self.live_server_url)

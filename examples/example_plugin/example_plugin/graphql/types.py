@@ -1,12 +1,12 @@
 import graphene_django_optimizer as gql_optimizer
 
-from example_plugin.models import AnotherDummyModel
+from example_plugin.models import AnotherExampleModel
 
 
-class AnotherDummyType(gql_optimizer.OptimizedDjangoObjectType):
+class AnotherExampleModelType(gql_optimizer.OptimizedDjangoObjectType):
     class Meta:
-        model = AnotherDummyModel
+        model = AnotherExampleModel
         exclude = ["number"]
 
 
-graphql_types = [AnotherDummyType]
+graphql_types = [AnotherExampleModelType]

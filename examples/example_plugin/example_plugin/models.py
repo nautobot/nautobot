@@ -12,9 +12,9 @@ from nautobot.utilities.utils import serialize_object
     "graphql",
     "webhooks",
 )
-class DummyModel(BaseModel):
-    name = models.CharField(max_length=20, help_text="The name of this Dummy.")
-    number = models.IntegerField(default=100, help_text="The number of this Dummy.")
+class ExampleModel(BaseModel):
+    name = models.CharField(max_length=20, help_text="The name of this Example.")
+    number = models.IntegerField(default=100, help_text="The number of this Example.")
 
     csv_headers = ["name", "number"]
 
@@ -25,7 +25,7 @@ class DummyModel(BaseModel):
         return f"{self.name} - {self.number}"
 
     def get_absolute_url(self):
-        return reverse("plugins:example_plugin:dummymodel", kwargs={"pk": self.pk})
+        return reverse("plugins:example_plugin:examplemodel", kwargs={"pk": self.pk})
 
     def to_objectchange(self, action):
         return ObjectChange(
@@ -46,7 +46,7 @@ class DummyModel(BaseModel):
 @extras_features(
     "custom_fields",
 )
-class AnotherDummyModel(BaseModel, CustomFieldModel):
+class AnotherExampleModel(BaseModel, CustomFieldModel):
     name = models.CharField(max_length=20)
     number = models.IntegerField(default=100)
 
