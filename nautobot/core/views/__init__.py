@@ -158,7 +158,7 @@ class StaticMediaFailureView(View):
 
 def resource_not_found(request, exception):
     if request.path.startswith("/api/"):
-        return JsonResponse({"error": "The resource was not found"}, status=404)
+        return JsonResponse({"detail": "Not found."}, status=404)
     else:
         return page_not_found(request, exception, "404.html")
 
