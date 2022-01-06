@@ -6,7 +6,6 @@ from django import __version__ as DJANGO_VERSION
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -553,7 +552,3 @@ class GraphQLDRFAPIView(APIView):
             return document.execute(**options)
         except Exception as e:
             return ExecutionResult(errors=[e], invalid=True)
-
-
-def json404(request):
-    return JsonResponse({"error": "The resource was not found"}, status=404)
