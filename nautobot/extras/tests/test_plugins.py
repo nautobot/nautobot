@@ -17,9 +17,9 @@ from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
 from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
-from example_plugin import config as dummy_config
+from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files
-from example_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
 @skipIf(
@@ -34,10 +34,10 @@ class PluginTest(TestCase):
         )
 
     def test_models(self):
-        from example_plugin.models import DummyModel
+        from example_plugin.models import ExampleModel
 
         # Test saving an instance
-        instance = DummyModel(name="Instance 1", number=100)
+        instance = ExampleModel(name="Instance 1", number=100)
         instance.save()
         self.assertIsNotNone(instance.pk)
 
@@ -47,8 +47,8 @@ class PluginTest(TestCase):
 
     def test_admin(self):
         # Test admin view URL resolution
-        url = reverse("admin:example_plugin_dummymodel_add")
-        self.assertEqual(url, "/admin/example_plugin/dummymodel/add/")
+        url = reverse("admin:example_plugin_examplemodel_add")
+        self.assertEqual(url, "/admin/example_plugin/examplemodel/add/")
 
     def test_banner_registration(self):
         """
@@ -90,9 +90,9 @@ class PluginTest(TestCase):
         """
         Check that plugin GraphQL Types are registered.
         """
-        from example_plugin.graphql.types import AnotherDummyType
+        from example_plugin.graphql.types import AnotherExampleType
 
-        self.assertIn(AnotherDummyType, registry["plugin_graphql_types"])
+        self.assertIn(AnotherExampleType, registry["plugin_graphql_types"])
 
     def test_extras_features_graphql(self):
         """
@@ -101,22 +101,22 @@ class PluginTest(TestCase):
         registered_models = registry.get("model_features", {}).get("graphql", {})
 
         self.assertIn("example_plugin", registered_models.keys())
-        self.assertIn("dummymodel", registered_models["example_plugin"])
+        self.assertIn("examplemodel", registered_models["example_plugin"])
 
     def test_jobs_registration(self):
         """
         Check that plugin jobs are registered correctly and discoverable.
         """
-        from example_plugin.jobs import DummyJob
+        from example_plugin.jobs import ExampleJob
 
-        self.assertIn(DummyJob, registry.get("plugin_jobs", []))
+        self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
 
         self.assertEqual(
-            DummyJob,
-            get_job("plugins/example_plugin.jobs/DummyJob"),
+            ExampleJob,
+            get_job("plugins/example_plugin.jobs/ExampleJob"),
         )
         self.assertIn(
-            "plugins/example_plugin.jobs/DummyJob",
+            "plugins/example_plugin.jobs/ExampleJob",
             get_job_classpaths(),
         )
         jobs_dict = get_jobs()
@@ -128,12 +128,12 @@ class PluginTest(TestCase):
         )
         self.assertIn("jobs", jobs_dict["plugins"]["example_plugin.jobs"])
         self.assertIn(
-            "DummyJob",
+            "ExampleJob",
             jobs_dict["plugins"]["example_plugin.jobs"]["jobs"],
         )
         self.assertEqual(
-            DummyJob,
-            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"]["DummyJob"],
+            ExampleJob,
+            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"]["ExampleJob"],
         )
 
     def test_git_datasource_contents_registration(self):
@@ -165,17 +165,17 @@ class PluginTest(TestCase):
         Check that plugin middleware is registered.
         """
         self.assertIn(
-            "example_plugin.middleware.DummyMiddleware",
+            "example_plugin.middleware.ExampleMiddleware",
             settings.MIDDLEWARE,
         )
 
-        # Establish dummy config to have invalid middleware (tuple)
-        class DummyConfigWithMiddleware(dummy_config):
+        # Establish example config to have invalid middleware (tuple)
+        class ExampleConfigWithMiddleware(example_config):
             middleware = ()
 
         # Validation should fail when a middleware is not a list
         with self.assertRaises(PluginImproperlyConfigured):
-            DummyConfigWithMiddleware.validate({}, settings.VERSION)
+            ExampleConfigWithMiddleware.validate({}, settings.VERSION)
 
     def test_caching_config(self):
         """
@@ -183,74 +183,74 @@ class PluginTest(TestCase):
         """
         self.assertIn("example_plugin.*", settings.CACHEOPS)
 
-        # Establish dummy config to have invalid cache_config (list)
-        class DummyConfigWithBadCacheConfig(dummy_config):
+        # Establish example config to have invalid cache_config (list)
+        class ExampleConfigWithBadCacheConfig(example_config):
             caching_config = []
 
         # Validation should fail when a caching_config is not a dict
         with self.assertRaises(PluginImproperlyConfigured):
-            DummyConfigWithBadCacheConfig.validate({}, settings.VERSION)
+            ExampleConfigWithBadCacheConfig.validate({}, settings.VERSION)
 
     def test_min_version(self):
         """
         Check enforcement of minimum Nautobot version.
         """
         with self.assertRaises(PluginImproperlyConfigured):
-            dummy_config.validate({}, "0.8")
+            example_config.validate({}, "0.8")
 
     def test_max_version(self):
         """
         Check enforcement of maximum Nautobot version.
         """
         with self.assertRaises(PluginImproperlyConfigured):
-            dummy_config.validate({}, "10.0")
+            example_config.validate({}, "10.0")
 
     def test_required_settings(self):
         """
         Validate enforcement of required settings.
         """
 
-        class DummyConfigWithRequiredSettings(dummy_config):
+        class ExampleConfigWithRequiredSettings(example_config):
             required_settings = ["foo"]
 
         # Validation should pass when all required settings are present
-        DummyConfigWithRequiredSettings.validate({"foo": True}, settings.VERSION)
+        ExampleConfigWithRequiredSettings.validate({"foo": True}, settings.VERSION)
 
         # Validation should fail when a required setting is missing
         with self.assertRaises(PluginImproperlyConfigured):
-            DummyConfigWithRequiredSettings.validate({}, settings.VERSION)
+            ExampleConfigWithRequiredSettings.validate({}, settings.VERSION)
 
-        # Overload dummy config to have invalid required_settings (dict) and
+        # Overload example config to have invalid required_settings (dict) and
         # assert that it should fail validation.
-        DummyConfigWithRequiredSettings.required_settings = {"foo": "bar"}
+        ExampleConfigWithRequiredSettings.required_settings = {"foo": "bar"}
         with self.assertRaises(PluginImproperlyConfigured):
-            DummyConfigWithRequiredSettings.validate({}, settings.VERSION)
+            ExampleConfigWithRequiredSettings.validate({}, settings.VERSION)
 
     def test_default_settings(self):
         """
         Validate population of default config settings.
         """
 
-        class DummyConfigWithDefaultSettings(dummy_config):
+        class ExampleConfigWithDefaultSettings(example_config):
             default_settings = {
                 "bar": 123,
             }
 
         # Populate the default value if setting has not been specified
         user_config = {}
-        DummyConfigWithDefaultSettings.validate(user_config, settings.VERSION)
+        ExampleConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config["bar"], 123)
 
         # Don't overwrite specified values
         user_config = {"bar": 456}
-        DummyConfigWithDefaultSettings.validate(user_config, settings.VERSION)
+        ExampleConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config["bar"], 456)
 
-        # Overload dummy config to have invalid default_settings (list) and
+        # Overload example config to have invalid default_settings (list) and
         # assert that it should fail validation.
-        DummyConfigWithDefaultSettings.required_settings = ["foo"]
+        ExampleConfigWithDefaultSettings.required_settings = ["foo"]
         with self.assertRaises(PluginImproperlyConfigured):
-            DummyConfigWithDefaultSettings.validate({}, settings.VERSION)
+            ExampleConfigWithDefaultSettings.validate({}, settings.VERSION)
 
     def test_installed_apps(self):
         """
@@ -262,23 +262,23 @@ class PluginTest(TestCase):
         )
         self.assertIn("nautobot.extras.tests.example_plugin_dependency", settings.INSTALLED_APPS)
 
-        # Establish dummy config to have invalid installed_apps (tuple)
-        class DummyConfigWithInstalledApps(dummy_config):
+        # Establish example config to have invalid installed_apps (tuple)
+        class ExampleConfigWithInstalledApps(example_config):
             installed_apps = ("foo", "bar")
 
         # Validation should fail when a installed_apps is not a list
         with self.assertRaises(PluginImproperlyConfigured):
-            DummyConfigWithInstalledApps.validate({}, settings.VERSION)
+            ExampleConfigWithInstalledApps.validate({}, settings.VERSION)
 
     def test_registry_nav_menu_dict(self):
         """
         Validate that example plugin is adding new items to `registry["nav_menu"]`.
         """
-        self.assertTrue(registry["nav_menu"]["tabs"].get("Dummy Tab"))
-        self.assertTrue(registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"].get("Dummy Group 1"))
+        self.assertTrue(registry["nav_menu"]["tabs"].get("Example Tab"))
+        self.assertTrue(registry["nav_menu"]["tabs"]["Example Tab"]["groups"].get("Example Group 1"))
         self.assertTrue(
-            registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"]["Dummy Group 1"]["items"].get(
-                "plugins:example_plugin:dummymodel_list"
+            registry["nav_menu"]["tabs"]["Example Tab"]["groups"]["Example Group 1"]["items"].get(
+                "plugins:example_plugin:examplemodel_list"
             )
         )
 
@@ -312,17 +312,17 @@ class PluginTest(TestCase):
     "example_plugin not in settings.PLUGINS",
 )
 class PluginGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
-    model = DummyModel
+    model = ExampleModel
 
     @classmethod
     def setUpTestData(cls):
-        # Dummy objects to test.
-        DummyModel.objects.create(name="Dummy 1", number=1)
-        DummyModel.objects.create(name="Dummy 2", number=2)
-        DummyModel.objects.create(name="Dummy 3", number=3)
+        # Example objects to test.
+        ExampleModel.objects.create(name="Example 1", number=1)
+        ExampleModel.objects.create(name="Example 2", number=2)
+        ExampleModel.objects.create(name="Example 3", number=3)
 
         cls.form_data = {
-            "name": "Dummy 4",
+            "name": "Example 4",
             "number": 42,
         }
 
@@ -387,7 +387,7 @@ class PluginDetailViewTest(TestCase):
     "example_plugin not in settings.PLUGINS",
 )
 class PluginAPITest(APIViewTestCases.APIViewTestCase):
-    model = DummyModel
+    model = ExampleModel
     brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "number": 2600,
@@ -410,20 +410,20 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # Dummy objects to test.
-        DummyModel.objects.create(name="Dummy 1", number=1)
-        DummyModel.objects.create(name="Dummy 2", number=2)
-        DummyModel.objects.create(name="Dummy 3", number=3)
+        # Example objects to test.
+        ExampleModel.objects.create(name="Example 1", number=1)
+        ExampleModel.objects.create(name="Example 2", number=2)
+        ExampleModel.objects.create(name="Example 3", number=3)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_api_urls(self):
         # Test list URL resolution
-        list_url = reverse("plugins-api:example_plugin-api:dummymodel-list")
+        list_url = reverse("plugins-api:example_plugin-api:examplemodel-list")
         self.assertEqual(list_url, self._get_list_url())
 
         # Test detail URL resolution
-        instance = DummyModel.objects.first()
-        detail_url = reverse("plugins-api:example_plugin-api:dummymodel-detail", kwargs={"pk": instance.pk})
+        instance = ExampleModel.objects.first()
+        detail_url = reverse("plugins-api:example_plugin-api:examplemodel-detail", kwargs={"pk": instance.pk})
         self.assertEqual(detail_url, self._get_detail_url(instance))
 
 

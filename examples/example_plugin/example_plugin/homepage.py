@@ -1,15 +1,15 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
 
-from .models import DummyModel
+from .models import ExampleModel
 
 
-def get_dummy_data(request):
-    examples = DummyModel.objects.all()
+def get_example_data(request):
+    examples = ExampleModel.objects.all()
     if not examples:
         examples = (
-            DummyModel.objects.create(name="Example 1", number=100),
-            DummyModel.objects.create(name="Example 2", number=200),
-            DummyModel.objects.create(name="Example 3", number=300),
+            ExampleModel.objects.create(name="Example 1", number=100),
+            ExampleModel.objects.create(name="Example 2", number=200),
+            ExampleModel.objects.create(name="Example 3", number=300),
         )
     return examples
 
@@ -19,12 +19,12 @@ layout = (
         name="Organization",
         items=(
             HomePageItem(
-                name="Dummy Models",
-                model=DummyModel,
+                name="Example Models",
+                model=ExampleModel,
                 weight=150,
-                link="plugins:example_plugin:dummymodel_list",
+                link="plugins:example_plugin:examplemodel_list",
                 description="List example plugin models.",
-                permissions=["example_plugin.view_dummymodel"],
+                permissions=["example_plugin.view_examplemodel"],
             ),
         ),
     ),
@@ -34,18 +34,18 @@ layout = (
         items=(
             HomePageItem(
                 name="Custom Example Plugin",
-                custom_template="item_dummy_example.html",
-                custom_data={"dummy_data": get_dummy_data},
-                permissions=["example_plugin.view_dummymodel"],
+                custom_template="item_example.html",
+                custom_data={"example_data": get_example_data},
+                permissions=["example_plugin.view_examplemodel"],
                 weight=100,
             ),
         ),
     ),
     HomePagePanel(
         name="Custom Example Plugin",
-        custom_template="panel_dummy_example.html",
-        custom_data={"dummy_data": get_dummy_data},
-        permissions=["example_plugin.view_dummymodel"],
+        custom_template="panel_example.html",
+        custom_data={"example_data": get_example_data},
+        permissions=["example_plugin.view_examplemodel"],
         weight=350,
     ),
 )

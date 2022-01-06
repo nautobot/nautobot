@@ -910,7 +910,7 @@ class JobTest(APITestCase):
         # At a minimum, the job provided by the example plugin should be present
         self.assertNotEqual(response.data, [])
         self.assertIn(
-            "plugins/example_plugin.jobs/DummyJob",
+            "plugins/example_plugin.jobs/ExampleJob",
             [job["id"] for job in response.data],
         )
 

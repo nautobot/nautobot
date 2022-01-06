@@ -106,12 +106,12 @@ class RemoteUserBackend(_RemoteUserBackend):
         return False
 
 
-class DummyBackend(BaseBackend):
+class ExampleBackend(BaseBackend):
     """Passthrough backend that does not authenticate or check permissions."""
 
     def has_perm(self, *args, **kwargs):
         """
-        This is only for the fallback dummy backend so that it will passthrough.
+        This is only for the fallback example backend so that it will passthrough.
         If `has_perm()` returns `True` it indicates that the backend has
         authorized the user for a permission, which is what we don't want if
         we're just passing through. This will allow permission checks to fall

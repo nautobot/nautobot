@@ -15,10 +15,10 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     fixtures = ["user-data.json"]
     navbar = {
-        "Dummy Tab": {
-            "Dummy Group 1": {
-                "Dummy Model": {
-                    "permission": "example_plugin.view_dummymodel",
+        "Example Tab": {
+            "Example Group 1": {
+                "Example Model": {
+                    "permission": "example_plugin.view_examplemodel",
                     "buttons": ["Add", "Import"],
                 },
             },
@@ -34,9 +34,9 @@ class PluginNavBarTestCase(SeleniumTestCase):
                     "buttons": ["Add", "Import"],
                 },
             },
-            "Dummy Circuit Group": {
-                "Dummy Model": {
-                    "permission": "example_plugin.view_dummymodel",
+            "Example Circuit Group": {
+                "Example Model": {
+                    "permission": "example_plugin.view_examplemodel",
                     "buttons": ["Add", "Import"],
                 },
             },
@@ -50,11 +50,11 @@ class PluginNavBarTestCase(SeleniumTestCase):
         "Plugins": {
             "Example plugin": {
                 "Models": {
-                    "permission": "example_plugin.view_dummymodel",
-                    "buttons": ["Add a new dummy model", "Import dummy models"],
+                    "permission": "example_plugin.view_examplemodel",
+                    "buttons": ["Add a new example model", "Import example models"],
                 },
                 "Other Models": {
-                    "permission": "example_plugin.view_dummymodel",
+                    "permission": "example_plugin.view_examplemodel",
                     "buttons": [],
                 },
             },
@@ -80,14 +80,14 @@ class PluginNavBarTestCase(SeleniumTestCase):
         # Retrieve home page
         self.load_page(self.live_server_url)
 
-        tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Dummy Tab')]"
+        tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Example Tab')]"
         tab = self.selenium.find_element_by_xpath(tab_xpath)
         tab.click()
         self.assertTrue(bool(tab.get_attribute("aria-expanded")))
 
-        group = tab.find_element_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), 'Dummy Group 1')]")
+        group = tab.find_element_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), 'Example Group 1')]")
 
-        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), 'Dummy Model')]]"
+        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), 'Example Model')]]"
         group.find_element_by_xpath(item_xpath)
 
     def test_plugin_navbar_modify_circuits(self):

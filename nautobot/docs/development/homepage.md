@@ -25,15 +25,15 @@ In the below code example, you can see that the `Example Plugin` panel has a `we
 
 Example of custom code being used in a panel can be seen in the `Custom Example Plugin` panel below. The attribute `custom_template` is used to refer to the filename of a template. Templates need to be stored in the templates `inc` folder for the plugin (`/example_plugin/templates/example_plugin/inc/`).
 
-If additional data is needed to render the custom template, callback functions can be used to collect this data. In the below example, the `Custom Example Plugin` panel is using the callback `get_dummy_data()` to dynamically populate the key `dummy_data` into the rendering context of this panel.
+If additional data is needed to render the custom template, callback functions can be used to collect this data. In the below example, the `Custom Example Plugin` panel is using the callback `get_example_data()` to dynamically populate the key `example_data` into the rendering context of this panel.
 
 ``` python
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from .models import DummyModel
+from .models import ExampleModel
 
 
-def get_dummy_data(request):
-    return DummyModel.objects.all()
+def get_example_data(request):
+    return ExampleModel.objects.all()
 
 
 layout = (
@@ -42,19 +42,19 @@ layout = (
         weight=150,
         items=(
             HomePageItem(
-                name="Dummy Models",
-                link="plugins:example_plugin:dummymodel_list",
+                name="Example Models",
+                link="plugins:example_plugin:examplemodel_list",
                 description="List example plugin models.",
-                permissions=["example_plugin.view_dummymodel"],
+                permissions=["example_plugin.view_examplemodel"],
                 weight=100,
             ),
         ),
     ),
     HomePagePanel(
         name="Custom Example Plugin",
-        custom_template="panel_dummy_example.html",
-        custom_data={"dummy_data": get_dummy_data},
-        permissions=["example_plugin.view_dummymodel"],
+        custom_template="panel_example_example.html",
+        custom_data={"example_data": get_example_data},
+        permissions=["example_plugin.view_examplemodel"],
         weight=350,
     ),
 )

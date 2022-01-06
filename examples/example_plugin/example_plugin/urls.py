@@ -3,7 +3,7 @@ from django.urls import path
 from nautobot.extras.views import ObjectChangeLogView
 
 from example_plugin import views
-from example_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
 app_name = "example_plugin"
@@ -11,38 +11,38 @@ app_name = "example_plugin"
 urlpatterns = [
     path("", views.ExamplePluginHomeView.as_view(), name="home"),
     path("config/", views.ExamplePluginConfigView.as_view(), name="config"),
-    path("models/", views.DummyModelListView.as_view(), name="dummymodel_list"),
-    path("models/add/", views.DummyModelEditView.as_view(), name="dummymodel_add"),
+    path("models/", views.ExampleModelListView.as_view(), name="examplemodel_list"),
+    path("models/add/", views.ExampleModelEditView.as_view(), name="examplemodel_add"),
     path(
         "models/edit/",
-        views.DummyModelBulkEditView.as_view(),
-        name="dummymodel_bulk_edit",
+        views.ExampleModelBulkEditView.as_view(),
+        name="examplemodel_bulk_edit",
     ),
     path(
         "models/delete/",
-        views.DummyModelBulkDeleteView.as_view(),
-        name="dummymodel_bulk_delete",
+        views.ExampleModelBulkDeleteView.as_view(),
+        name="examplemodel_bulk_delete",
     ),
     path(
         "models/import/",
-        views.DummyModelBulkImportView.as_view(),
-        name="dummymodel_import",
+        views.ExampleModelBulkImportView.as_view(),
+        name="examplemodel_import",
     ),
-    path("models/<uuid:pk>/", views.DummyModelView.as_view(), name="dummymodel"),
+    path("models/<uuid:pk>/", views.ExampleModelView.as_view(), name="examplemodel"),
     path(
         "models/<uuid:pk>/edit/",
-        views.DummyModelEditView.as_view(),
-        name="dummymodel_edit",
+        views.ExampleModelEditView.as_view(),
+        name="examplemodel_edit",
     ),
     path(
         "models/<uuid:pk>/delete/",
-        views.DummyModelDeleteView.as_view(),
-        name="dummymodel_delete",
+        views.ExampleModelDeleteView.as_view(),
+        name="examplemodel_delete",
     ),
     path(
         "models/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
-        name="dummymodel_changelog",
-        kwargs={"model": DummyModel},
+        name="examplemodel_changelog",
+        kwargs={"model": ExampleModel},
     ),
 ]

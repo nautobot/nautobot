@@ -2,24 +2,24 @@ from rest_framework import serializers
 
 from nautobot.core.api import ValidatedModelSerializer, WritableNestedSerializer
 
-from example_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
-class DummyModelSerializer(ValidatedModelSerializer):
+class ExampleModelSerializer(ValidatedModelSerializer):
     """Used for normal CRUD operations."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:dummymodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:examplemodel-detail")
 
     class Meta:
-        model = DummyModel
+        model = ExampleModel
         fields = ["url", "id", "name", "number"]
 
 
-class NestedDummyModelSerializer(WritableNestedSerializer):
+class NestedExampleModelSerializer(WritableNestedSerializer):
     """Used for nested representations."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:dummymodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:examplemodel-detail")
 
     class Meta:
-        model = DummyModel
+        model = ExampleModel
         fields = ["url", "id", "name"]

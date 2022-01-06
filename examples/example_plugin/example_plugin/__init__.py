@@ -23,10 +23,10 @@ class ExamplePluginConfig(PluginConfig):
     base_url = "example-plugin"
     min_version = "0.9"
     max_version = "9.0"
-    middleware = ["example_plugin.middleware.DummyMiddleware"]
+    middleware = ["example_plugin.middleware.ExampleMiddleware"]
     installed_apps = ["nautobot.extras.tests.example_plugin_dependency"]
     default_settings = {
-        "dummy_default_key": "dummy_default_value",
+        "example_default_key": "example_default_value",
     }
 
     # URL reverse lookup names

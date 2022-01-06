@@ -4,9 +4,9 @@ from nautobot.extras.jobs import Job
 name = "ExamplePlugin jobs"
 
 
-class DummyJob(Job):
+class ExampleJob(Job):
     class Meta:
-        name = "Dummy job, does nothing"
+        name = "Example job, does nothing"
         description = """
             Markdown Formatting
 
@@ -14,11 +14,11 @@ class DummyJob(Job):
         """
 
 
-class DummyHiddenJob(Job):
+class ExampleHiddenJob(Job):
     class Meta:
         hidden = True
-        name = "Dummy hidden job"
+        name = "Example hidden job"
         description = "I should not show in the UI!"
 
 
-jobs = (DummyJob, DummyHiddenJob)
+jobs = (ExampleJob, ExampleHiddenJob)

@@ -4,7 +4,7 @@
 
 {% block extra_breadcrumb %}
         <li>
-            <a href="{% url 'plugins:example_plugin:dummymodel_list' %}?number={{ object.number }}">{{ object.number }} (Breadcrumbs)</a>
+            <a href="{% url 'plugins:example_plugin:examplemodel_list' %}?number={{ object.number }}">{{ object.number }} (Breadcrumbs)</a>
         </li>
 {% endblock extra_breadcrumb %}
 
@@ -26,7 +26,7 @@
 {% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>DummyModel (Left Page Content)</strong>
+                <strong>ExampleModel (Left Page Content)</strong>
             </div>
 
             <table class="table table-hover panel-body attr-table">

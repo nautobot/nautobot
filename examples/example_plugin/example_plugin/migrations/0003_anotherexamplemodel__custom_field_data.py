@@ -7,12 +7,12 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("example_plugin", "0002_anotherdummymodel"),
+        ("example_plugin", "0002_anotherexamplemodel"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="anotherdummymodel",
+            model_name="anotherexamplemodel",
             name="_custom_field_data",
             field=models.JSONField(
                 blank=True,

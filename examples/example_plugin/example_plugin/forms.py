@@ -6,7 +6,7 @@ from nautobot.utilities.forms import (
     CSVModelForm,
 )
 
-from example_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
 class ExamplePluginConfigForm(BootstrapMixin, forms.Form):
@@ -16,35 +16,35 @@ class ExamplePluginConfigForm(BootstrapMixin, forms.Form):
     maximum_velocity = forms.IntegerField(help_text="Meters per second")
 
 
-class DummyModelForm(BootstrapMixin, forms.ModelForm):
-    """Generic create/update form for `DummyModel` objects."""
+class ExampleModelForm(BootstrapMixin, forms.ModelForm):
+    """Generic create/update form for `ExampleModel` objects."""
 
     class Meta:
-        model = DummyModel
+        model = ExampleModel
         fields = ["name", "number"]
 
 
-class DummyModelCSVForm(CSVModelForm):
-    """Generic CSV bulk import form for `DummyModel` objects."""
+class ExampleModelCSVForm(CSVModelForm):
+    """Generic CSV bulk import form for `ExampleModel` objects."""
 
     class Meta:
-        model = DummyModel
-        fields = DummyModel.csv_headers
+        model = ExampleModel
+        fields = ExampleModel.csv_headers
 
 
-class DummyModelFilterForm(BootstrapMixin, forms.Form):
-    """Filtering/search form for `DummyModel` objects."""
+class ExampleModelFilterForm(BootstrapMixin, forms.Form):
+    """Filtering/search form for `ExampleModel` objects."""
 
-    model = DummyModel
+    model = ExampleModel
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(max_length=20, required=False)
     number = forms.IntegerField(required=False)
 
 
-class DummyModelBulkEditForm(BootstrapMixin, BulkEditForm):
-    """Bulk edit form for `DummyModel` objects."""
+class ExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
+    """Bulk edit form for `ExampleModel` objects."""
 
-    pk = forms.ModelMultipleChoiceField(queryset=DummyModel.objects.all(), widget=forms.MultipleHiddenInput)
+    pk = forms.ModelMultipleChoiceField(queryset=ExampleModel.objects.all(), widget=forms.MultipleHiddenInput)
     name = forms.CharField(max_length=20, required=False)
     number = forms.IntegerField(required=False)
 

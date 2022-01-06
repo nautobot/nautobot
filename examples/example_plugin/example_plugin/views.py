@@ -3,7 +3,7 @@ from django.views.generic import View
 
 from nautobot.core.views import generic
 
-from example_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 from example_plugin import filters, forms, tables
 
 
@@ -30,52 +30,52 @@ class ExamplePluginConfigView(View):
         return render(request, "example_plugin/config.html", {"form": form})
 
 
-class DummyModelListView(generic.ObjectListView):
-    """List `DummyModel` objects."""
+class ExampleModelListView(generic.ObjectListView):
+    """List `ExampleModel` objects."""
 
-    queryset = DummyModel.objects.all()
-    filterset = filters.DummyModelFilterSet
-    filterset_form = forms.DummyModelFilterForm
-    table = tables.DummyModelTable
-
-
-class DummyModelEditView(generic.ObjectEditView):
-    """Edit a single `DummyModel` object."""
-
-    queryset = DummyModel.objects.all()
-    model_form = forms.DummyModelForm
+    queryset = ExampleModel.objects.all()
+    filterset = filters.ExampleModelFilterSet
+    filterset_form = forms.ExampleModelFilterForm
+    table = tables.ExampleModelTable
 
 
-class DummyModelBulkEditView(generic.BulkEditView):
-    """Edit multiple `DummyModel` objects."""
+class ExampleModelEditView(generic.ObjectEditView):
+    """Edit a single `ExampleModel` object."""
 
-    queryset = DummyModel.objects.all()
-    table = tables.DummyModelTable
-    form = forms.DummyModelBulkEditForm
-
-
-class DummyModelBulkDeleteView(generic.BulkDeleteView):
-    """Delete multiple `DummyModek` objects."""
-
-    queryset = DummyModel.objects.all()
-    table = tables.DummyModelTable
+    queryset = ExampleModel.objects.all()
+    model_form = forms.ExampleModelForm
 
 
-class DummyModelDeleteView(generic.ObjectDeleteView):
-    """Delete a single `Dummy` object."""
+class ExampleModelBulkEditView(generic.BulkEditView):
+    """Edit multiple `ExampleModel` objects."""
 
-    queryset = DummyModel.objects.all()
-
-
-class DummyModelBulkImportView(generic.BulkImportView):
-    """Bulk CSV import of multiple `Dummy` objects."""
-
-    queryset = DummyModel.objects.all()
-    model_form = forms.DummyModelCSVForm
-    table = tables.DummyModelTable
+    queryset = ExampleModel.objects.all()
+    table = tables.ExampleModelTable
+    form = forms.ExampleModelBulkEditForm
 
 
-class DummyModelView(generic.ObjectView):
-    """Detail view for a single `Dummy` object."""
+class ExampleModelBulkDeleteView(generic.BulkDeleteView):
+    """Delete multiple `ExampleModek` objects."""
 
-    queryset = DummyModel.objects.all()
+    queryset = ExampleModel.objects.all()
+    table = tables.ExampleModelTable
+
+
+class ExampleModelDeleteView(generic.ObjectDeleteView):
+    """Delete a single `Example` object."""
+
+    queryset = ExampleModel.objects.all()
+
+
+class ExampleModelBulkImportView(generic.BulkImportView):
+    """Bulk CSV import of multiple `Example` objects."""
+
+    queryset = ExampleModel.objects.all()
+    model_form = forms.ExampleModelCSVForm
+    table = tables.ExampleModelTable
+
+
+class ExampleModelView(generic.ObjectView):
+    """Detail view for a single `Example` object."""
+
+    queryset = ExampleModel.objects.all()

@@ -3,11 +3,11 @@ from django.db.models import Q
 
 from nautobot.utilities.filters import BaseFilterSet
 
-from example_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
-class DummyModelFilterSet(BaseFilterSet):
-    """API filter for filtering dummy model objects."""
+class ExampleModelFilterSet(BaseFilterSet):
+    """API filter for filtering example model objects."""
 
     q = django_filters.CharFilter(
         method="search",
@@ -15,7 +15,7 @@ class DummyModelFilterSet(BaseFilterSet):
     )
 
     class Meta:
-        model = DummyModel
+        model = ExampleModel
         fields = [
             "name",
             "number",

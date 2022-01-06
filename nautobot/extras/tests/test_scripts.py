@@ -182,8 +182,8 @@ class ScriptVariablesTest(TestCase):
 
             var1 = FileVar()
 
-        # Dummy file
-        testfile = SimpleUploadedFile(name="test_file.txt", content=b"This is a dummy file for testing")
+        # Example file
+        testfile = SimpleUploadedFile(name="test_file.txt", content=b"This is a example file for testing")
 
         # Validate valid data
         file_data = {"var1": testfile}
