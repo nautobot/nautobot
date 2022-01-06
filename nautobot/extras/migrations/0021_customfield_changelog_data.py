@@ -1,11 +1,7 @@
-from django.contrib.admin.models import LogEntry
-from django.contrib.contenttypes.models import ContentType
 from django.db import migrations
 import uuid
 
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.models.customfields import CustomField
-from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.utilities.utils import serialize_object
 
 
@@ -13,6 +9,10 @@ def migrate_history(apps, schema_editor):
     """
     Migrate Django LogEntry objects to Nautobot ObjectChange objects.
     """
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    CustomField = apps.get_model("extras", "CustomField")
+    LogEntry = apps.get_model("admin", "LogEntry")
+    ObjectChange = apps.get_model("extras", "ObjectChange")
     custom_field_type = ContentType.objects.get_for_model(CustomField)
     for custom_field in CustomField.objects.all():
         for log_entry in LogEntry.objects.filter(content_type=custom_field_type, object_id=custom_field.id).order_by(
