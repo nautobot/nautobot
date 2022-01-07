@@ -3687,7 +3687,7 @@ QUnit.diff = ( function() {
 		this.diffCleanupSemantic( diffs );
 
 		// Rediff any replacement blocks, this time character-by-character.
-		// Add a example entry at the end.
+		// Add a dummy entry at the end.
 		diffs.push( [ DIFF_EQUAL, "" ] );
 		pointer = 0;
 		countDelete = 0;
@@ -3727,7 +3727,7 @@ QUnit.diff = ( function() {
 			}
 			pointer++;
 		}
-		diffs.pop(); // Remove the example entry at the end.
+		diffs.pop(); // Remove the dummy entry at the end.
 
 		return diffs;
 	};
@@ -4182,7 +4182,7 @@ QUnit.diff = ( function() {
 	DiffMatchPatch.prototype.diffCleanupMerge = function( diffs ) {
 		var pointer, countDelete, countInsert, textInsert, textDelete,
 			commonlength, changes, diffPointer, position;
-		diffs.push( [ DIFF_EQUAL, "" ] ); // Add a example entry at the end.
+		diffs.push( [ DIFF_EQUAL, "" ] ); // Add a dummy entry at the end.
 		pointer = 0;
 		countDelete = 0;
 		countInsert = 0;
@@ -4269,7 +4269,7 @@ QUnit.diff = ( function() {
 			}
 		}
 		if ( diffs[ diffs.length - 1 ][ 1 ] === "" ) {
-			diffs.pop(); // Remove the example entry at the end.
+			diffs.pop(); // Remove the dummy entry at the end.
 		}
 
 		// Second pass: look for single edits surrounded on both sides by equalities

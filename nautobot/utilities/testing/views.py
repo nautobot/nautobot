@@ -447,7 +447,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name="Test permission",
-                constraints={"pk": str(uuid.uuid4())},  # Example permission to deny all
+                constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
                 actions=["add"],
             )
             obj_perm.save()
@@ -807,7 +807,7 @@ class ViewTestCases:
             obj_perm = ObjectPermission(
                 name="Test permission",
                 actions=["add"],
-                constraints={"pk": uuid.uuid4()},  # Example constraint to deny all
+                constraints={"pk": uuid.uuid4()},  # Match a non-existent pk (i.e., deny all)
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
@@ -818,7 +818,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update the ObjectPermission to allow creation
-            obj_perm.constraints = {"pk__isnull": False}  # Example constraint to allow all
+            obj_perm.constraints = {"pk__isnull": False}  # Set constraint to allow all
             obj_perm.save()
 
             response = self.client.post(**request)
@@ -890,7 +890,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name="Test permission",
-                constraints={"pk": str(uuid.uuid4())},  # Example permission to deny all
+                constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
                 actions=["add"],
             )
             obj_perm.save()
@@ -902,7 +902,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update permission constraints
-            obj_perm.constraints = {"pk__isnull": False}  # Example permission to allow all
+            obj_perm.constraints = {"pk__isnull": False}  # Set permission to allow all
             obj_perm.save()
 
             # Import permitted objects
@@ -1049,7 +1049,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name="Test permission",
-                constraints={"pk": str(uuid.uuid4())},  # Example permission to deny all
+                constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
                 actions=["delete"],
             )
             obj_perm.save()
@@ -1061,7 +1061,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update permission constraints
-            obj_perm.constraints = {"pk__isnull": False}  # Example permission to allow all
+            obj_perm.constraints = {"pk__isnull": False}  # Match a non-existent pk (i.e., allow all)
             obj_perm.save()
 
             # Bulk delete permitted objects
