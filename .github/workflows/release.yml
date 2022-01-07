@@ -29,16 +29,16 @@ jobs:
       - name: "Upload binaries to release"
         uses: "svenstaro/upload-release-action@v2"
         with:
-          repo_token: "${{ '{{' }} secrets.NTC_GITHUB_TOKEN {{ '}}' }}"
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
           file: "dist/*"
-          tag: "${{ '{{' }} github.ref {{ '}}' }}"
+          tag: "${{ github.ref }}"
           overwrite: true
           file_glob: true
       - name: "Push to PyPI"
         uses: "pypa/gh-action-pypi-publish@release/v1"
         with:
           user: "__token__"
-          password: "${{ '{{' }} secrets.PYPI_API_TOKEN {{ '}}' }}"
+          password: "${{ secrets.PYPI_API_TOKEN }}"
 
   container-publish:
     runs-on: "ubuntu-20.04"
@@ -123,20 +123,20 @@ jobs:
       - "publish_pypi"
     runs-on: "ubuntu-20.04"
     env:
-      SLACK_WEBHOOK_URL: "${{ '{{' }} secrets.SLACK_WEBHOOK_URL {{ '}}' }}"
+      SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
       SLACK_MESSAGE: >-
         *NOTIFICATION: NEW-RELEASE-PUBLISHED*\n
-        Repository: <${{ '{{' }} github.server_url {{ '}}' }}}/${{ '{{' }} github.repository {{ '}}' }}|${{ '{{' }} github.repository {{ '}}' }}>\n
-        Release: <${{ '{{' }} github.server_url {{ '}}' }}/${{ '{{' }} github.repository {{ '}}' }}/releases/tag/${{ '{{' }} github.ref_name {{ '}}' }}|${{ '{{' }} github.ref_name {{ '}}' }}>\n
-        Published by: <${{ '{{' }} github.server_url {{ '}}' }}/${{ '{{' }} github.actor {{ '}}' }}|${{ '{{' }} github.actor {{ '}}' }}>
+        Repository: <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>\n
+        Release: <${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>\n
+        Published by: <${{ github.server_url }}/${{ github.actor }}|${{ github.actor }}>
     steps:
       - name: "Send a notification to Slack"
         # ENVs cannot be used directly in job.if. This is a workaround to check
         # if SLACK_WEBHOOK_URL is present.
-        if: "${{ '{{' }} env.SLACK_WEBHOOK_URL != '' {{ '}}' }}"
+        if: "${{ env.SLACK_WEBHOOK_URL != '' }}"
         uses: "slackapi/slack-github-action@v1.16.0"
         with:
-          payload: { "type": "mrkdwn", "text": "${{ '{{' }} env.SLACK_MESSAGE {{ '}}' }}" } # yamllint disable-line rule:quoted-strings rule:braces rule:comments
+          payload: { "type": "mrkdwn", "text": "${{ env.SLACK_MESSAGE }}" } # yamllint disable-line rule:quoted-strings rule:braces rule:comments
         env:
-          SLACK_WEBHOOK_URL: "${{ '{{' }} secrets.SLACK_WEBHOOK_URL {{ '}}' }}"
+          SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
           SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
