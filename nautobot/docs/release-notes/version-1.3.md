@@ -20,7 +20,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Changed
 
-- [#443](https://github.com/nautobot/nautobot/issues/443) - "Example Plugin" has been renamed to "Example Plugin".
+- [#443](https://github.com/nautobot/nautobot/issues/443) - The provided "Dummy Plugin" has been renamed to "Example Plugin".
 - [#591](https://github.com/nautobot/nautobot/issues/591) - All uses of type() are now refactored to use isinstance() where applicable.
 - [#880](https://github.com/nautobot/nautobot/issues/880) - Jobs menu items now form their own top-level menu instead of a sub-section under the Extensibility menu.
 - [#909](https://github.com/nautobot/nautobot/issues/909) - Device, InventoryItem, and Rack serial numbers can now be up to 255 characters in length.
