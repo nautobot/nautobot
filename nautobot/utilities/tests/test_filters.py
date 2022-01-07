@@ -126,7 +126,6 @@ class BaseFilterSetTest(TestCase):
         multiplechoicefield = django_filters.MultipleChoiceFilter(field_name="choicefield")
         multivaluecharfield = MultiValueCharFilter(field_name="charfield")
         tagfield = TagFilter()
-        textfield = MultiValueCharFilter(field_name="textfield")
         treeforeignkeyfield = TreeNodeMultipleChoiceFilter(queryset=DummyModel.objects.all())
 
         class Meta:
