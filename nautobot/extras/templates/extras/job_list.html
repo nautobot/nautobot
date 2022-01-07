@@ -6,15 +6,43 @@
         $("button.button-toggle").click(function() {
             $(this).children("i").toggleClass("mdi-chevron-right mdi-chevron-down");
         });
-    </script>
+	// Toggle v -. >
+        $("#accordion .accordion-toggle").click(function() {
+            $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+        });
+        // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
+        $('#accordion-toggle-all').on('click', function () {
+
+           if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
+                $('.collapse').collapse('show');
+                $(this).data("lastState", 0);
+
+                $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
+
+                $(this).text("Collapse All");
+           }
+           else {
+                $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
+                .collapse('hide')
+                .removeData('bs.collapse')
+                .collapse({parent: '#accordion', toggle: false});
+
+                $(this).data("lastState", 1);
+                $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
+
+                $(this).text("Expand All");
+            }
+        });
+     </script>
 {% endblock %}
 
 {% block content %}
-    <h1>{% block title %}Jobs{% endblock %}</h1>
+<button type="button" class="btn btn-primary pull-right" id="accordion-toggle-all">Collapse All</button>
+<h1>{% block title %}Jobs{% endblock %}</h1>
     <div class="row">
         <div class="col-md-12">
             {% if jobs %}
-                <table class="table table-hover table-headings reports">
+                <table class="table table-hover table-headings reports", id="accordion">
                     <tr>
                         <th>Module / Job</th>
                         <th>Description</th>
@@ -25,11 +53,15 @@
                     </tr>
                     {% for module, module_jobs in jobs %}
                         <tr>
-                            <th colspan="6"><h3><a name="module.{{ module }}"></a>{{ module|bettertitle }}</h3></th>
+                            <th colspan="6">
+                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down" name="module.{{ module }}" data-toggle="collapse" data-target=".collapseme-{{ module|slugify }}">
+                                    {{ module|bettertitle }}
+                                </button>
+                            </th>
                         </tr>
                         {% for job in module_jobs %}
                             {% if not job.hidden %}
-                            <tr>
+                            <tr class="collapseme-{{ module|slugify }} collapse in" data-parent="#accordion">
                                 <td>
                                     <a href="{% url 'extras:job' class_path=job.class_path %}"
                                        id="{{ job.class_path }}">
