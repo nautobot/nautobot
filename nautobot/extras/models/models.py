@@ -661,7 +661,7 @@ class ImageAttachment(BaseModel):
 @extras_features("job_results")
 class Job(models.Model):
     """
-    Example model used to generate permissions for jobs. Does not exist in the database.
+    Virtual model used to generate permissions for jobs. Does not exist in the database.
     """
 
     class Meta:
