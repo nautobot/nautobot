@@ -65,5 +65,5 @@ if settings.METRICS_ENABLED:
         path("", include("django_prometheus.urls")),
     ]
 
-
+handler404 = "nautobot.core.views.resource_not_found"
 handler500 = "nautobot.core.views.server_error"
