@@ -496,3 +496,22 @@ span.hover_copy:hover .hover_copy_button {
     position: relative;
     top: 2px;
 }
+
+/* Jobs list view accordion styling */
+.accordion-toggle {
+    border: 0;
+    color: black;
+    font-size: 24px;
+    padding: 0;
+    text-decoration: none;
+}
+.accordion-toggle:hover, .accordion-toggle:active, .accordion-toggle:visited, .accordion-toggle:link, .accordion-toggle:focus {
+    border: 0;
+    color: black;
+    outline: 0;
+    padding: 0;
+    text-decoration: none;
+}
+#accordion-toggle-all {
+    display: inline;
+}
