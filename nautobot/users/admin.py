@@ -7,9 +7,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 
+from nautobot.core.admin import BaseAdmin
 from nautobot.extras.admin import order_content_types
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
-from nautobot.utilities.forms.widgets import StaticSelect2Multiple
 
 
 #
@@ -58,7 +58,7 @@ admin.site.unregister(Group)
 
 
 @admin.register(AdminGroup)
-class GroupAdmin(admin.ModelAdmin):
+class GroupAdmin(BaseAdmin):
     fields = ("name",)
     list_display = ("name", "user_count")
     ordering = ("name",)
@@ -99,10 +99,6 @@ class UserAdmin(UserAdmin_):
     filter_horizontal = ("groups",)
     readonly_fields = ("config_data",)
 
-    formfield_overrides = {
-        models.ManyToManyField: {"widget": StaticSelect2Multiple},
-    }
-
     def get_inlines(self, request, obj):
         if obj is not None:
             return (UserObjectPermissionInline,)
@@ -126,7 +122,7 @@ class TokenAdminForm(forms.ModelForm):
 
 
 @admin.register(Token)
-class TokenAdmin(admin.ModelAdmin):
+class TokenAdmin(BaseAdmin):
     form = TokenAdminForm
     list_display = ["key", "user", "created", "expires", "write_enabled", "description"]
 
@@ -236,7 +232,7 @@ class ObjectTypeListFilter(admin.SimpleListFilter):
 
 
 @admin.register(ObjectPermission)
-class ObjectPermissionAdmin(admin.ModelAdmin):
+class ObjectPermissionAdmin(BaseAdmin):
     actions = ("enable", "disable")
     fieldsets = (
         (None, {"fields": ("name", "description", "enabled")}),
@@ -267,10 +263,6 @@ class ObjectPermissionAdmin(admin.ModelAdmin):
     ]
     list_filter = ["enabled", ActionListFilter, ObjectTypeListFilter, "groups", "users"]
     search_fields = ["actions", "constraints", "description", "name"]
-
-    formfield_overrides = {
-        models.ManyToManyField: {"widget": StaticSelect2Multiple},
-    }
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related("object_types", "users", "groups")
