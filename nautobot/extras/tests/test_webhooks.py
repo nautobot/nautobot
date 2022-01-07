@@ -47,7 +47,7 @@ class WebhookTest(APITestCase):
 
         def example_send(_, request, **kwargs):
             """
-            A example implementation of Session.send() to be used for testing.
+            An example implementation of Session.send() to be used for testing.
             Always returns a 200 HTTP response.
             """
             signature = generate_signature(request.body, webhook.secret)
