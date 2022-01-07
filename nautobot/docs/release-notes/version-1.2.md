@@ -140,7 +140,7 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.3 (2021-MM-DD)
+## v1.2.3 (2021-01-07)
 
 ### Added
 
@@ -164,6 +164,16 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Changed
 
 - [#650](https://github.com/nautobot/nautobot/issues/650) - Job Results UI now render job log messages immediately
+
+### Security
+
+!!! danger
+    It is highly recommended that users of Python 3.6 prioritize upgrading to a newer version of Python. **Nautobot will be removing support for Python 3.6 in a future update.**
+
+!!! important
+    For users remaining on Python 3.6, please know that upgrading to Nautobot v1.2.3 **will not resolve this CVE for your installation**. The only remedy at this time is to upgrade your systems utilize Python 3.7 or later.
+
+- [#1238](https://github.com/nautobot/nautobot/issues/1238) - Implemented fix for [CVE-2021-23727](https://github.com/advisories/GHSA-q4xr-rc97-m4xx) to require Celery >=5.2.2 for Python version >=3.7. For Python version <3.7 (e.g. 3.6), it is recommended that you prioritize upgrading your environment to use Python 3.7 or higher. Support for Python 3.6 will be removed in a future update.
 
 ### Fixed
 
