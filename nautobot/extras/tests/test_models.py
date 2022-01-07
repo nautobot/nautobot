@@ -579,21 +579,21 @@ class ExportTemplateTest(TestCase):
 
 class FileProxyTest(TestCase):
     def setUp(self):
-        self.example_file = SimpleUploadedFile(name="example.txt", content=b"I am content.\n")
+        self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.example_file.name, file=self.example_file)
+        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
         # Now refresh it and make sure it was saved and retrieved correctly.
         fp.refresh_from_db()
-        self.example_file.seek(0)  # Reset cursor since it was previously read
-        self.assertEqual(fp.name, self.example_file.name)
-        self.assertEqual(fp.file.read(), self.example_file.read())
+        self.test_file.seek(0)  # Reset cursor since it was previously read
+        self.assertEqual(fp.name, self.test_file.name)
+        self.assertEqual(fp.file.read(), self.test_file.read())
 
     def test_delete_file_proxy(self):
         """Test deletion of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.example_file.name, file=self.example_file)
+        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
         # Assert counts before delete
         self.assertEqual(FileProxy.objects.count(), 1)
@@ -674,7 +674,7 @@ class JobResultTest(TestCase):
     def test_related_object(self):
         """Test that the `related_object` property is computed properly."""
         # Case 1: Job, identified by class_path.
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/test_jobs")):
             job_class = get_job("local/test_pass/TestPass")
             job_result = JobResult(
                 name=job_class.class_path,
@@ -1053,7 +1053,7 @@ class JobLogEntryTest(TestCase):
     """
 
     def test_log_entry_creation(self):
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/test_jobs")):
 
             module = "test_pass"
             name = "TestPass"

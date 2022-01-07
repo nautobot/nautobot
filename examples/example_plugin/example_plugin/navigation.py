@@ -35,7 +35,7 @@ menu_items = (
         permissions=["example_plugin.view_examplemodel"],
     ),
     NavMenuTab(
-        name="Example Tab",
+        name="Example Menu",
         weight=150,
         groups=(
             NavMenuGroup(
