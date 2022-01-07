@@ -18,16 +18,16 @@ class WebRequestContextTestCase(TestCase):
         self.user = User.objects.create_user(username="jacob", email="jacob@example.com", password="top_secret")
 
         site_ct = ContentType.objects.get_for_model(Site)
-        EXAMPLE_URL = "http://localhost/"
-        EXAMPLE_SECRET = "LOOKATMEIMASECRETSTRING"
+        MOCK_URL = "http://localhost/"
+        MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
 
         webhooks = Webhook.objects.bulk_create(
             (
                 Webhook(
                     name="Site Create Webhook",
                     type_create=True,
-                    payload_url=EXAMPLE_URL,
-                    secret=EXAMPLE_SECRET,
+                    payload_url=MOCK_URL,
+                    secret=MOCK_SECRET,
                 ),
             )
         )
