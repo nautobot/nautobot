@@ -11,7 +11,8 @@ ADDITION = 1
 CHANGE = 2
 DELETION = 3
 
-# Redifine get_change_message here as functions are not available with apps.get_model
+
+# Redefine get_change_message here as functions are not available with apps.get_model
 def get_change_message(log_entry):
     """
     If log_entry.change_message is a JSON structure, interpret it as a change

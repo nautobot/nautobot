@@ -68,7 +68,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from nautobot import extras
 
 
 #
