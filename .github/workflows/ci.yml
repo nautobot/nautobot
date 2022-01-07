@@ -1,8 +1,15 @@
 ---
 name: "CI"
 on:  # yamllint disable
-  - "push"
-  - "pull_request"
+  push:
+  pull_request:
+    paths-ignore:
+      - "nautobot/docs/**"
+      - "examples/**"
+      - "**.md"
+      - "development/**"
+      - ".github/**"
+      - ".devcontainer/**"
 
 jobs:
   black:
