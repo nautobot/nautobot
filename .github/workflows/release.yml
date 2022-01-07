@@ -1,8 +1,8 @@
 ---
 name: "Release"
 on:
-  - "release"
-
+  release:
+    types: ["published"]
 
 jobs:
   # Ensure CI has passed
@@ -42,7 +42,6 @@ jobs:
 
   container-publish:
     runs-on: "ubuntu-20.04"
-    if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
     needs:
       - "integration-test"
     strategy:
