@@ -20,15 +20,15 @@ class WebhookTest(APITestCase):
     def setUpTestData(cls):
 
         site_ct = ContentType.objects.get_for_model(Site)
-        EXAMPLE_URL = "http://localhost/"
-        EXAMPLE_SECRET = "LOOKATMEIMASECRETSTRING"
+        MOCK_URL = "http://localhost/"
+        MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
 
         webhooks = (
             Webhook.objects.create(
                 name="Site Create Webhook",
                 type_create=True,
-                payload_url=EXAMPLE_URL,
-                secret=EXAMPLE_SECRET,
+                payload_url=MOCK_URL,
+                secret=MOCK_SECRET,
                 additional_headers="X-Foo: Bar",
             ),
         )
@@ -45,9 +45,9 @@ class WebhookTest(APITestCase):
         webhook = Webhook.objects.get(type_create=True)
         timestamp = str(timezone.now())
 
-        def example_send(_, request, **kwargs):
+        def mock_send(_, request, **kwargs):
             """
-            An example implementation of Session.send() to be used for testing.
+            A mock implementation of Session.send() to be used for testing.
             Always returns a 200 HTTP response.
             """
             signature = generate_signature(request.body, webhook.secret)
@@ -72,8 +72,8 @@ class WebhookTest(APITestCase):
 
             return FakeResponse()
 
-        # Patch the Session object with our example_send() method, then process the webhook for sending
-        with patch.object(Session, "send", example_send):
+        # Patch the Session object with our mock_send() method, then process the webhook for sending
+        with patch.object(Session, "send", mock_send):
             site = Site.objects.create(name="Site 1", slug="site-1")
             serializer_context = {
                 "request": None,

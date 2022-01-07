@@ -271,8 +271,8 @@ class PrefixQuerySet(NetworkQuerySet):
                     )
                 )
                 .order_by()
-                .annotate(example_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("example_group_by")
+                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
+                .values("fake_group_by")
                 .annotate(count=Count("*"))
                 .values("count")[:1],
                 output_field=IntegerField(),
@@ -296,8 +296,8 @@ class PrefixQuerySet(NetworkQuerySet):
                     )
                 )
                 .order_by()
-                .annotate(example_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("example_group_by")
+                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
+                .values("fake_group_by")
                 .annotate(count=Count("*"))
                 .values("count")[:1],
                 output_field=IntegerField(),
