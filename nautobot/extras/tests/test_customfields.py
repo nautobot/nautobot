@@ -1331,7 +1331,7 @@ class CustomFieldTableTest(TestCase):
         custom_column_expected = {
             "text_field": "bar",
             "number_field": "456",
-            "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>',
+            "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             "date_field": "2020-01-02",
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
             "choice_field": '<span class="label label-default">Bar</span>',

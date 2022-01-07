@@ -4,6 +4,7 @@ from unittest import skipIf
 
 from nautobot.utilities.templatetags.helpers import (
     placeholder,
+    render_boolean,
     render_json,
     render_yaml,
     render_markdown,
@@ -140,3 +141,15 @@ class NautobotTemplatetagsHelperTest(TestCase):
         data = {"first": "1st", "second": "2nd"}
         self.assertEqual(get_item(data, "first"), "1st")
         self.assertEqual(get_item(data, "second"), "2nd")
+
+    def test_render_boolean(self):
+        for value in [True, "arbitrary string", 1]:
+            self.assertEqual(
+                render_boolean(value),
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+            )
+        for value in [False, "", 0]:
+            self.assertEqual(
+                render_boolean(value), '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+            )
+        self.assertEqual(render_boolean(None), '<span class="text-muted">&mdash;</span>')
