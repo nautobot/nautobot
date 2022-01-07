@@ -151,6 +151,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#734](https://github.com/nautobot/nautobot/issues/734) - Requests to nonexistent `/api/` URLs now correctly return a JSON 404 response rather than an HTML 404 response.
 - [#1127](https://github.com/nautobot/nautobot/issues/1127) - Fixed incorrect rendering of the navbar at certain browser window sizes.
 - [#1220](https://github.com/nautobot/nautobot/issues/1220) - Fixed an inconsistency in the breadcrumbs seen in various Admin pages.
+- [#1228](https://github.com/nautobot/nautobot/issues/1228) - Fixed a case where a GraphQL query for objects associated by Relationships could potentially throw an exception.
 - [#1229](https://github.com/nautobot/nautobot/pull/1229) - Fixed a template rendering error in the login page.
 
 ## v1.2.2 (2021-12-27)
