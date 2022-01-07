@@ -149,21 +149,14 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Fixed
 
 - [#313](https://github.com/nautobot/nautobot/issues/313) - REST API documentation now correctly shows that `status` is a required field.
+- [#477](https://github.com/nautobot/nautobot/issues/477) - Model `TextField`s are now correctly mapped to `MultiValueCharFilter` in filter classes.
 - [#734](https://github.com/nautobot/nautobot/issues/734) - Requests to nonexistent `/api/` URLs now correctly return a JSON 404 response rather than an HTML 404 response.
 - [#1127](https://github.com/nautobot/nautobot/issues/1127) - Fixed incorrect rendering of the navbar at certain browser window sizes.
+- [#1203](https://github.com/nautobot/nautobot/issues/1203) - Fixed maximum recursion depth error when filtering GraphQL queries by `device_types`.
 - [#1220](https://github.com/nautobot/nautobot/issues/1220) - Fixed an inconsistency in the breadcrumbs seen in various Admin pages.
 - [#1228](https://github.com/nautobot/nautobot/issues/1228) - Fixed a case where a GraphQL query for objects associated by Relationships could potentially throw an exception.
 - [#1229](https://github.com/nautobot/nautobot/pull/1229) - Fixed a template rendering error in the login page.
-
-## v1.2.2 (2021-12-27)
-
-### Added
-
-- [#1152](https://github.com/nautobot/nautobot/pull/1152) - Added REST API and GraphQL for `JobLogEntry` objects.
-
-### Changed
-
-- [#650](https://github.com/nautobot/nautobot/issues/650) - Job Results UI now render job log messages immediately
+- [#1234](https://github.com/nautobot/nautobot/issues/1234) - Fixed missing changelog support for Custom Fields.
 
 ### Security
 
@@ -174,6 +167,16 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
     For users remaining on Python 3.6, please know that upgrading to Nautobot v1.2.3 **will not resolve this CVE for your installation**. The only remedy at this time is to upgrade your systems utilize Python 3.7 or later.
 
 - [#1238](https://github.com/nautobot/nautobot/issues/1238) - Implemented fix for [CVE-2021-23727](https://github.com/advisories/GHSA-q4xr-rc97-m4xx) to require Celery >=5.2.2 for Python version >=3.7. For Python version <3.7 (e.g. 3.6), it is recommended that you prioritize upgrading your environment to use Python 3.7 or higher. Support for Python 3.6 will be removed in a future update.
+
+## v1.2.2 (2021-12-27)
+
+### Added
+
+- [#1152](https://github.com/nautobot/nautobot/pull/1152) - Added REST API and GraphQL for `JobLogEntry` objects.
+
+### Changed
+
+- [#650](https://github.com/nautobot/nautobot/issues/650) - Job Results UI now render job log messages immediately
 
 ### Fixed
 
