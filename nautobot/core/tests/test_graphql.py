@@ -1327,3 +1327,19 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["webhooks"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_device_types(self):
+        """Test querying of device types, specifically checking for issue #1203."""
+        query = """
+        query {
+            device_types {
+                model
+            }
+        }
+        """
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertIsInstance(result.data, dict, result)
+        self.assertIsInstance(result.data["device_types"], list, result)
+        self.assertEqual(result.data["device_types"][0]["model"], self.devicetype.model, result)
