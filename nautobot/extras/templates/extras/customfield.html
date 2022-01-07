@@ -43,13 +43,7 @@
                     </tr>
                     <tr>
                         <td>Required</td>
-                        <td>
-                            {% if object.required %}
-                                <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
-                            {% else %}
-                                <span class="text-danger"><i class="mdi mdi-close"></i></span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.required | render_boolean }}</td>
                     </tr>
                     <tr>
                         <td>Default</td>

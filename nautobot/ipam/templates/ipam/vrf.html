@@ -23,13 +23,7 @@
                 </tr>
                 <tr>
                     <td>Unique IP Space</td>
-                    <td>
-                        {% if object.enforce_unique %}
-                            <i class="mdi mdi-check-bold text-success" title="Yes"></i>
-                        {% else %}
-                            <i class="mdi mdi-close-thick text-danger" title="No"></i>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.enforce_unique | render_boolean }}</td>
                 </tr>
                 <tr>
                     <td>Description</td>

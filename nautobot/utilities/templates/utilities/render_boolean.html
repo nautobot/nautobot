@@ -1,5 +1,2 @@
-{% if value %}
-    <span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>
-{% else %}
-    <span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>
-{% endif %}
+{% load helpers %}
+{{ value | render_boolean }}
