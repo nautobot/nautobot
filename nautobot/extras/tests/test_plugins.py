@@ -274,10 +274,10 @@ class PluginTest(TestCase):
         """
         Validate that example plugin is adding new items to `registry["nav_menu"]`.
         """
-        self.assertTrue(registry["nav_menu"]["tabs"].get("Example Tab"))
-        self.assertTrue(registry["nav_menu"]["tabs"]["Example Tab"]["groups"].get("Example Group 1"))
+        self.assertTrue(registry["nav_menu"]["tabs"].get("Example Menu"))
+        self.assertTrue(registry["nav_menu"]["tabs"]["Example Menu"]["groups"].get("Example Group 1"))
         self.assertTrue(
-            registry["nav_menu"]["tabs"]["Example Tab"]["groups"]["Example Group 1"]["items"].get(
+            registry["nav_menu"]["tabs"]["Example Menu"]["groups"]["Example Group 1"]["items"].get(
                 "plugins:example_plugin:examplemodel_list"
             )
         )
