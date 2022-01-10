@@ -97,6 +97,7 @@ class UserAdmin(UserAdmin_):
         ("User Preferences", {"fields": ("config_data",)}),
     )
     filter_horizontal = ("groups",)
+    formfield_overrides = NautobotModelAdmin.formfield_overrides
     readonly_fields = ("config_data",)
 
     def get_inlines(self, request, obj):
