@@ -1,11 +1,6 @@
-from unittest import skipIf
-
-from django.conf import settings
-
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
-@skipIf("dummy_plugin" not in settings.PLUGINS, "dummy_plugin not in settings.PLUGINS")
 class PluginBannerTestCase(SeleniumTestCase):
     """Integration test for rendering of plugin-injected banner content."""
 

@@ -733,7 +733,7 @@ uritemplate = ">=3.0.0"
 validation = ["swagger-spec-validator (>=2.1.0)"]
 
 [[package]]
-name = "dummy-plugin"
+name = "example-plugin"
 version = "1.0.0"
 description = "Nautobot example plugin that does a whole lot of nothing."
 category = "dev"
@@ -746,7 +746,7 @@ importlib-metadata = {version = "~4.4", markers = "python_version < \"3.10\""}
 
 [package.source]
 type = "directory"
-url = "examples/dummy_plugin"
+url = "examples/example_plugin"
 
 [[package]]
 name = "ecdsa"
@@ -2438,7 +2438,7 @@ drf-yasg = [
     {file = "drf-yasg-1.20.0.tar.gz", hash = "sha256:d50f197c7f02545d0b736df88c6d5cf874f8fea2507ad85ad7de6ae5bf2d9e5a"},
     {file = "drf_yasg-1.20.0-py2.py3-none-any.whl", hash = "sha256:8b72e5b1875931a8d11af407be3a9a5ba8776541492947a0df5bafda6b7f8267"},
 ]
-dummy-plugin = []
+example-plugin = []
 ecdsa = [
     {file = "ecdsa-0.17.0-py2.py3-none-any.whl", hash = "sha256:5cf31d5b33743abe0dfc28999036c849a69d548f994b535e527ee3cb7f3ef676"},
     {file = "ecdsa-0.17.0.tar.gz", hash = "sha256:b9f500bb439e4153d0330610f5d26baaf18d17b8ced1bc54410d189385ea68aa"},
