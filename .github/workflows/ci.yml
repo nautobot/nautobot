@@ -7,7 +7,7 @@ on:  # yamllint disable
       - "nautobot/docs/**"
       - "examples/**"
       # The example plugin should probably trigger CI
-      - "!examples/example_plugin"
+      - "!examples/dummy_plugin"
       - "**.md"
       - "development/**"
       - ".github/**"
