@@ -189,7 +189,7 @@ The default value for this setting defines the queues and instructs RQ to use th
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
 
 !!! note
-    The `check_releases`, `custom_fields`, and `webhooks` are no longer in use by Nautobot but maintained here for backwords compatibility, they will be removed in a future release.
+    The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in a future release.
 
 Default:
 
