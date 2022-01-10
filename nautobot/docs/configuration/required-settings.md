@@ -144,31 +144,11 @@ This setting may also be a dictionary style, but that is not covered here. Pleas
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning
     [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
-
-Example:
-
-```python
-# Set CACHEOPS_REDIS to an empty value
-CACHEOPS_REDIS = False
-
-# If you want to use Sentinel, specify this variable
-CACHEOPS_SENTINEL = {
-    "locations": [("localhost", 26379)],   # Sentinel locations, required
-    "service_name": "nautobot",            # Sentinel service name, required
-    "socket_timeout": 10,                  # Connection timeout in seconds, optional
-    "db": 0,                               # Redis database, default: 0
-    # ...                                  # Everything else is passed to `Sentinel()`
-    # "sentinel_kwargs": {"password": ""}, # If a password is used it must be passed as a sentinel_kwarg
-    # "password": "",                      # and also as directly to cacheops
-}
-```
-
-For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
-setup](https://github.com/Suor/django-cacheops#setup).
 
 ---
 
@@ -207,6 +187,9 @@ CACHES = {
 The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
 
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
+
+!!! note
+    The `check_releases`, `custom_fields`, and `webhooks` are no longer in use by Nautobot but maintained here for backwords compatibility, they will be removed in a future release.
 
 Default:
 
