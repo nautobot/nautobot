@@ -23,6 +23,7 @@ from django.db import transaction
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.functional import classproperty
 import netaddr
@@ -119,6 +120,10 @@ class BaseJob:
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def get_absolute_url(cls):
+        return reverse("extras:job", kwargs={"class_path": cls.class_path})
 
     @classproperty
     def file_path(cls):
