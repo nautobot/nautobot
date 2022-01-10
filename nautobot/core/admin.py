@@ -14,7 +14,7 @@ from social_django.models import Association, Nonce, UserSocialAuth
 from taggit.models import Tag
 
 from nautobot.utilities.forms import BootstrapMixin
-from nautobot.utilities.forms.widgets import StaticSelect2Multiple
+import nautobot.utilities.forms.widgets as widgets
 
 
 # Override default AdminSite attributes so we can avoid creating and
