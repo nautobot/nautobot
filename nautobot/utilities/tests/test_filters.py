@@ -100,6 +100,7 @@ class TestModel(models.Model):
     datetimefield = models.DateTimeField()
     integerfield = models.IntegerField()
     macaddressfield = MACAddressField()
+    textfield = models.TextField()
     timefield = models.TimeField()
     treeforeignkeyfield = TreeForeignKey(to="self", on_delete=models.CASCADE)
 
@@ -140,6 +141,7 @@ class BaseFilterSetTest(TestCase):
                 "modelmultiplechoicefield",
                 "multiplechoicefield",
                 "tagfield",
+                "textfield",
                 "timefield",
                 "treeforeignkeyfield",
             )
@@ -233,6 +235,29 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["multivaluecharfield__iew"].exclude, False)
         self.assertEqual(self.filters["multivaluecharfield__niew"].lookup_expr, "iendswith")
         self.assertEqual(self.filters["multivaluecharfield__niew"].exclude, True)
+
+    def test_textfield_multi_value_char_filter(self):
+        self.assertIsInstance(self.filters["textfield"], MultiValueCharFilter)
+        self.assertEqual(self.filters["textfield"].lookup_expr, "exact")
+        self.assertEqual(self.filters["textfield"].exclude, False)
+        self.assertEqual(self.filters["textfield__n"].lookup_expr, "exact")
+        self.assertEqual(self.filters["textfield__n"].exclude, True)
+        self.assertEqual(self.filters["textfield__ie"].lookup_expr, "iexact")
+        self.assertEqual(self.filters["textfield__ie"].exclude, False)
+        self.assertEqual(self.filters["textfield__nie"].lookup_expr, "iexact")
+        self.assertEqual(self.filters["textfield__nie"].exclude, True)
+        self.assertEqual(self.filters["textfield__ic"].lookup_expr, "icontains")
+        self.assertEqual(self.filters["textfield__ic"].exclude, False)
+        self.assertEqual(self.filters["textfield__nic"].lookup_expr, "icontains")
+        self.assertEqual(self.filters["textfield__nic"].exclude, True)
+        self.assertEqual(self.filters["textfield__isw"].lookup_expr, "istartswith")
+        self.assertEqual(self.filters["textfield__isw"].exclude, False)
+        self.assertEqual(self.filters["textfield__nisw"].lookup_expr, "istartswith")
+        self.assertEqual(self.filters["textfield__nisw"].exclude, True)
+        self.assertEqual(self.filters["textfield__iew"].lookup_expr, "iendswith")
+        self.assertEqual(self.filters["textfield__iew"].exclude, False)
+        self.assertEqual(self.filters["textfield__niew"].lookup_expr, "iendswith")
+        self.assertEqual(self.filters["textfield__niew"].exclude, True)
 
     def test_multi_value_date_filter(self):
         self.assertIsInstance(self.filters["datefield"], MultiValueDateFilter)
@@ -428,6 +453,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 face=DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["active"],
                 local_context_data={"foo": 123},
+                comments="Device 1 comments",
             ),
             Device(
                 name="Device 2",
@@ -441,6 +467,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 position=2,
                 face=DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["staged"],
+                comments="Device 2 comments",
             ),
             Device(
                 name="Device 3",
@@ -454,6 +481,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 position=3,
                 face=DeviceFaceChoices.FACE_REAR,
                 status=device_status_map["failed"],
+                comments="Device 3 comments",
             ),
         )
         Device.objects.bulk_create(devices)
@@ -467,6 +495,13 @@ class DynamicFilterLookupExpressionTest(TestCase):
             Interface(device=devices[2], name="Interface 6", mac_address="cc-00-00-00-00-03"),
         )
         Interface.objects.bulk_create(interfaces)
+
+    class DeviceFilterSetWithComments(DeviceFilterSet):
+        class Meta:
+            model = Device
+            fields = [
+                "comments",
+            ]
 
     def test_site_name_negation(self):
         params = {"name__n": ["Site 1"]}
@@ -579,3 +614,11 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_device_mac_address_icontains_negation(self):
         params = {"mac_address__nic": ["aa:", "bb"]}
         self.assertEqual(DeviceFilterSet(params, self.device_queryset).qs.count(), 1)
+
+    def test_device_comments_multiple_value_charfield(self):
+        params = {"comments": ["Device 1 comments"]}
+        self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 1)
+        params = {"comments": ["Device 1 comments", "Device 2 comments"]}
+        self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 2)
+        params = {"comments": ["Device 1 comments", "Device 2 comments", "Device 3 comments"]}
+        self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 3)

@@ -21,6 +21,7 @@ schema_view = get_schema_view(
     public=True,
 )
 
+
 urlpatterns = [
     # Base views
     path("", APIRootView.as_view(), name="api-root"),

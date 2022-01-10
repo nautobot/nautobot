@@ -606,7 +606,7 @@ class ConstantValueSecretsProvider(SecretsProvider):
 secrets_providers = [ConstantValueSecretsProvider]
 ```
 
-After installing and enabling your plugin, you should now be able to navigate to `Extensibility > Automation > Secrets` and create a new Secret, at which point `"constant-value"` should now be available as a new secrets provider to use.
+After installing and enabling your plugin, you should now be able to navigate to `Secrets > Secrets` and create a new Secret, at which point `"constant-value"` should now be available as a new secrets provider to use.
 
 ## Adding Database Models
 

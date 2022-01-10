@@ -100,7 +100,7 @@ The following documents the lifecycle of work within Nautobot.
    a. Find an item that matches your request? Comment on the corresponding GitHub Issue or GitHub Discussion.
    b. Don't see a match for your request? Continue.
 3. Open a GitHub Issue
-   a. The issue will be reviewed. Based on the request, it will get labeled as `current`, `near-term`, `future`.  
+   a. The issue will be reviewed. Based on the request, it will get labeled as `current`, `near-term`, `future`.
    b. It will likely only stay in _current_ if it is trivial and quick work.
    c. If it gets labeled as _future_, the issue will be closed in the next batch of issues that get migrated and converted to GitHub discussions.
 
@@ -236,9 +236,9 @@ invoke unittest --label nautobot.extras.tests.test_models.ConfigContextTest.test
 
 - All new functionality must include relevant tests where applicable.
 
-- When submitting a pull request, please be sure to work off of the `develop`
-  branch, rather than `main`. The `develop` branch is used for ongoing
-  development, while `main` is used for tagging stable releases.
+- When submitting a pull request, please be sure to work off of the `develop` or `next`
+  branch as appropriate, rather than `main`. The `develop` branch is used for ongoing
+  fixes, and `next` is used for major new feature development, while `main` is used only for tagging stable releases.
 
 - In most cases, it is not necessary to add a changelog entry: A maintainer will take care of this when the PR is merged. (This helps avoid merge conflicts
   resulting from multiple PRs being submitted simultaneously.)
@@ -253,7 +253,7 @@ invoke unittest --label nautobot.extras.tests.test_models.ConfigContextTest.test
 
 ## Project Structure
 
-All development of the current Nautobot release occurs in the `develop` branch; releases are packaged from the `main` branch. The `main` branch should _always_ represent the current stable release in its entirety, such that installing Nautobot by either downloading a packaged release or cloning the `main` branch provides the same code base.
+All bug fixes and minor updates of the current Nautobot release occur in the `develop` branch; major feature development occurs in the `next` branch; and releases are packaged from the `main` branch. The `main` branch should _always_ represent the current stable release in its entirety, such that installing Nautobot by either downloading a packaged release or cloning the `main` branch provides the same code base.
 
 Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
 

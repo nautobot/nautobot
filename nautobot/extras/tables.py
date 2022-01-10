@@ -389,14 +389,16 @@ def log_entry_color_css(record):
 
 
 class JobLogEntryTable(BaseTable):
-    created = tables.DateTimeColumn(verbose_name="Time", format=settings.SHORT_DATETIME_FORMAT)
+    created = tables.DateTimeColumn(verbose_name="Time", format="Y-m-d H:i:s.u")
     grouping = tables.Column()
     log_level = tables.Column(
         verbose_name="Level",
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
     log_object = tables.Column(verbose_name="Object", linkify=log_object_link)
-    message = tables.Column()
+    message = tables.Column(
+        attrs={"td": {"class": "rendered-markdown"}},
+    )
 
     def render_log_level(self, value):
         log_level = value.lower()
@@ -405,6 +407,9 @@ class JobLogEntryTable(BaseTable):
             log_level = "danger"
 
         return format_html('<label class="label label-{}">{}</label>', log_level, value)
+
+    def render_message(self, value):
+        return render_markdown(value)
 
     class Meta(BaseTable.Meta):
         model = JobLogEntry
@@ -480,9 +485,9 @@ class JobResultTable(BaseTable):
             "completed",
             "user",
             "status",
-            "logs",
+            "summary",
         )
-        default_columns = ("pk", "created", "related_object", "user", "status", "logs")
+        default_columns = ("pk", "created", "related_object", "user", "status", "summary")
 
 
 #

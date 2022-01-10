@@ -3,13 +3,13 @@ import platform
 import sys
 
 from django.conf import settings
-from django.http import HttpResponseServerError
+from django.http import HttpResponseServerError, JsonResponse
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
-from django.views.defaults import ERROR_500_TEMPLATE_NAME
+from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
@@ -154,6 +154,13 @@ class StaticMediaFailureView(View):
 
     def get(self, request):
         return render(request, "media_failure.html", {"filename": request.GET.get("filename")})
+
+
+def resource_not_found(request, exception):
+    if request.path.startswith("/api/"):
+        return JsonResponse({"detail": "Not found."}, status=404)
+    else:
+        return page_not_found(request, exception, "404.html")
 
 
 @requires_csrf_token
