@@ -149,11 +149,11 @@ class DeviceType(PrimaryModel):
         super().__init__(*args, **kwargs)
 
         # Save a copy of u_height for validation in clean()
-        self._original_u_height = self.u_height
+        self._original_u_height = self.u_height if self.present_in_database else 1
 
         # Save references to the original front/rear images
-        self._original_front_image = self.front_image
-        self._original_rear_image = self.rear_image
+        self._original_front_image = self.front_image if self.present_in_database else None
+        self._original_rear_image = self.rear_image if self.present_in_database else None
 
     def get_absolute_url(self):
         return reverse("dcim:devicetype", args=[self.pk])
@@ -296,9 +296,9 @@ class DeviceType(PrimaryModel):
         ret = super().save(*args, **kwargs)
 
         # Delete any previously uploaded image files that are no longer in use
-        if self.front_image != self._original_front_image:
+        if self._original_front_image and self.front_image != self._original_front_image:
             self._original_front_image.delete(save=False)
-        if self.rear_image != self._original_rear_image:
+        if self._original_rear_image and self.rear_image != self._original_rear_image:
             self._original_rear_image.delete(save=False)
 
         return ret

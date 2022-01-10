@@ -1,10 +1,11 @@
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Count, F
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device, Interface
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -394,11 +395,48 @@ class RoleBulkDeleteView(generic.BulkDeleteView):
 
 
 class PrefixListView(generic.ObjectListView):
-    queryset = Prefix.objects.annotate_tree()
     filterset = filters.PrefixFilterSet
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
+    # `queryset` is implemented as a property, see below
+
+    def __init__(self, *args, **kwargs):
+        # Set the internal queryset value
+        self._queryset = None
+        super().__init__(*args, **kwargs)
+
+    @property
+    def queryset(self):
+        """
+        Property getter for queryset that acts upon `settings.DISABLE_PREFIX_LIST_HIERARCHY`
+
+        By default we annotate the prefix hierarchy such that child prefixes are indented in the table.
+        When `settings.DISABLE_PREFIX_LIST_HIERARCHY` is True, we do not annotate the queryset, and the
+        table is rendered as a flat list.
+
+        TODO(john): When the base views support a formal `get_queryset()` method, this approach is not needed
+        """
+        if self._queryset:
+            return self._queryset
+
+        if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
+            self._queryset = Prefix.objects.annotate(parents=Count(None)).order_by(
+                F("vrf__name").asc(nulls_first=True),
+                "network",
+                "prefix_length",
+            )
+        else:
+            self._queryset = Prefix.objects.annotate_tree()
+
+        return self._queryset
+
+    @queryset.setter
+    def queryset(self, value):
+        """
+        Property setter for `queryset`
+        """
+        self._queryset = value
 
 
 class PrefixView(generic.ObjectView):

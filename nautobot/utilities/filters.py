@@ -229,6 +229,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.PositiveSmallIntegerField: {"filter_class": MultiValueNumberFilter},
             models.SlugField: {"filter_class": MultiValueCharFilter},
             models.SmallIntegerField: {"filter_class": MultiValueNumberFilter},
+            models.TextField: {"filter_class": MultiValueCharFilter},
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueCharFilter},
