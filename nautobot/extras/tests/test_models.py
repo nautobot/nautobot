@@ -674,7 +674,7 @@ class JobResultTest(TestCase):
     def test_related_object(self):
         """Test that the `related_object` property is computed properly."""
         # Case 1: Job, identified by class_path.
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/test_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             job_class = get_job("local/test_pass/TestPass")
             job_result = JobResult(
                 name=job_class.class_path,
@@ -1053,7 +1053,7 @@ class JobLogEntryTest(TestCase):
     """
 
     def test_log_entry_creation(self):
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/test_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_pass"
             name = "TestPass"

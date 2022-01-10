@@ -53,7 +53,7 @@ from nautobot.utilities.testing.utils import post_data
 User = get_user_model()
 
 THIS_DIRECTORY = os.path.dirname(__file__)
-TEST_JOBS = os.path.join(settings.BASE_DIR, "extras/tests/test_jobs")
+TEST_JOBS = os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")
 
 
 class ComputedFieldTestCase(
