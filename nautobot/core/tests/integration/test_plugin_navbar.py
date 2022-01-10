@@ -15,7 +15,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     fixtures = ["user-data.json"]
     navbar = {
-        "Example Tab": {
+        "Example Menu": {
             "Example Group 1": {
                 "Example Model": {
                     "permission": "example_plugin.view_examplemodel",
@@ -80,7 +80,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
         # Retrieve home page
         self.load_page(self.live_server_url)
 
-        tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Example Tab')]"
+        tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Example Menu')]"
         tab = self.selenium.find_element_by_xpath(tab_xpath)
         tab.click()
         self.assertTrue(bool(tab.get_attribute("aria-expanded")))
