@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 
-from nautobot.core.admin import BaseAdmin
+from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
 
@@ -58,7 +58,7 @@ admin.site.unregister(Group)
 
 
 @admin.register(AdminGroup)
-class GroupAdmin(BaseAdmin):
+class GroupAdmin(NautobotModelAdmin):
     fields = ("name",)
     list_display = ("name", "user_count")
     ordering = ("name",)
@@ -122,7 +122,7 @@ class TokenAdminForm(forms.ModelForm):
 
 
 @admin.register(Token)
-class TokenAdmin(BaseAdmin):
+class TokenAdmin(NautobotModelAdmin):
     form = TokenAdminForm
     list_display = ["key", "user", "created", "expires", "write_enabled", "description"]
 
@@ -232,7 +232,7 @@ class ObjectTypeListFilter(admin.SimpleListFilter):
 
 
 @admin.register(ObjectPermission)
-class ObjectPermissionAdmin(BaseAdmin):
+class ObjectPermissionAdmin(NautobotModelAdmin):
     actions = ("enable", "disable")
     fieldsets = (
         (None, {"fields": ("name", "description", "enabled")}),

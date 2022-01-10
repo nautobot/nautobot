@@ -52,7 +52,7 @@ admin_site.unregister([Config])
 admin_site.register([Config], ConfigAdmin)
 
 
-class BaseAdmin(ModelAdmin):
+class NautobotModelAdmin(ModelAdmin):
     formfield_overrides = {
         models.ManyToManyField: {"widget": StaticSelect2Multiple},
     }
