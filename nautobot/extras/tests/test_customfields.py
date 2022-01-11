@@ -172,11 +172,9 @@ class CustomFieldTest(TestCase):
         # Assign a disallowed value (list) to the first Site
         site = Site.objects.first()
         site.cf[cf.name] = ["I", "am", "a", "list"]
-        try:
+        with self.assertRaises(ValidationError) as context:
             site.validated_save()
-            self.fail("Custom fields with a type of Text should not be able to save a list value")
-        except ValidationError as e:
-            self.assertIn("Value must be a string", str(e))
+        self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (int) to the first Site
         site.cf[cf.name] = 2
