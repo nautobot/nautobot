@@ -1,3 +1,5 @@
+import sys
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -147,6 +149,52 @@ class CustomFieldTest(TestCase):
         # Retrieve the stored value
         site.refresh_from_db()
         self.assertEqual(site.cf[cf.name], ["Option A", "Option B"])
+
+        # Delete the stored value
+        site.cf.pop(cf.name)
+        site.save()
+        site.refresh_from_db()
+        self.assertIsNone(site.cf.get(cf.name))
+
+        # Delete the custom field
+        cf.delete()
+
+    def test_text_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            name="my_text_field",
+            required=False,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        # Assign a disallowed value (list) to the first Site
+        site = Site.objects.first()
+        site.cf[cf.name] = ["I", "am", "a", "list"]
+        try:
+            site.validated_save()
+            self.fail("Custom fields with a type of Text should not be able to save a list value")
+        except ValidationError as e:
+            self.assertIn("Value must be a string", str(e))
+
+        # Assign another disallowed value (int) to the first Site
+        site.cf[cf.name] = 2
+        try:
+            site.validated_save()
+            self.fail("Custom fields with a type of Text should not be able to save an integer value")
+        except ValidationError as e:
+            self.assertIn("Value must be a string", str(e))
+
+        # Assign another disallowed value (bool) to the first Site
+        site.cf[cf.name] = True
+        try:
+            site.validated_save()
+            self.fail("Custom fields with a type of Text should not be able to save a boolean value")
+        except ValidationError as e:
+            self.assertIn("Value must be a string", str(e))
 
         # Delete the stored value
         site.cf.pop(cf.name)

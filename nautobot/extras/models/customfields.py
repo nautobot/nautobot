@@ -423,8 +423,12 @@ class CustomField(BaseModel, ChangeLoggedModel):
         if value not in [None, "", []]:
 
             # Validate text field
-            if self.type == CustomFieldTypeChoices.TYPE_TEXT and self.validation_regex:
-                if not re.match(self.validation_regex, value):
+            if self.type == CustomFieldTypeChoices.TYPE_TEXT:
+
+                if not isinstance(value, str):
+                    raise ValidationError("Value must be a string")
+
+                if self.validation_regex and not re.match(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
             # Validate integer
