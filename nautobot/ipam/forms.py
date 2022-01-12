@@ -736,21 +736,20 @@ class IPAddressForm(
     def save(self, *args, **kwargs):
         ipaddress = super().save(*args, **kwargs)
 
-        # Assign/clear this IPAddress as the primary for the associated Device/VirtualMachine.
-        interface = self.instance.assigned_object
+        interface = ipaddress.assigned_object
+        primary_ip_attr = f"primary_ip{ipaddress.address.version}"  # e.g. `primary_ip4` or `primary_ip6`
+        primary_ip_unset_by_form = getattr(ipaddress, "_primary_ip_unset_by_form", False)
+
+        # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
         if interface and self.cleaned_data["primary_for_parent"]:
-            if ipaddress.address.version == 4:
-                interface.parent.primary_ip4 = ipaddress
-            else:
-                interface.parent.primary_ip6 = ipaddress
+            setattr(interface.parent, primary_ip_attr, ipaddress)
             interface.parent.save()
 
-        # Save the `original_assigned_object.parent` if `_primary_ip_unset_by_form` was set in `clean()`
-        primary_ip_unset_by_form = getattr(self.instance, "_primary_ip_unset_by_form", False)
-        if primary_ip_unset_by_form:
-            ip_version = self.instance.address.version
-            parent = self.instance._original_assigned_object.parent
-            setattr(parent, f"primary_ip{ip_version}", None)  # e.g. `primary_ip4` or `primary_ip6`
+        # Or clear it as the primary, saving the `original_assigned_object.parent` if
+        # `_primary_ip_unset_by_form` was set in `clean()`
+        elif primary_ip_unset_by_form:
+            parent = ipaddress._original_assigned_object.parent
+            setattr(parent, primary_ip_attr, None)
             parent.save()
 
         return ipaddress
