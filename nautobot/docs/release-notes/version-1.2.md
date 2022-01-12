@@ -148,6 +148,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Fixed
 
+- [#1140](https://github.com/nautobot/nautobot/issues/1140) - Fix incorrect UI widgets in the updated Admin UI.
 - [#1253](https://github.com/nautobot/nautobot/issues/1253) - Fixed missing code that prevented switching between tabs in the device-type detail view.
 
 ## v1.2.3 (2022-01-07)
