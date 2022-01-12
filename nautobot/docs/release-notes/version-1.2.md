@@ -244,6 +244,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Fixed
 
 - [#453](https://github.com/nautobot/nautobot/issues/453) - Fixed potential `ValueError` when rendering `JobResult` detail view with non-standard `JobResult.data` contents.
+- [#616](https://github.com/nautobot/nautobot/issues/616) - A CustomField with a type of "text" will only validate if the provided value is a string.
 - [#864](https://github.com/nautobot/nautobot/issues/864) - Fixed inconsistent `JobResult` detail view page templates.
 - [#888](https://github.com/nautobot/nautobot/issues/888) - Addressed FIXME comment in LDAP documentation.
 - [#926](https://github.com/nautobot/nautobot/issues/926) - Fixed inability to pass multiple values for a MultiObjectVar as query parameters.
