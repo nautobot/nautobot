@@ -730,7 +730,7 @@ class IPAddressForm(
         # If `primary_for_parent` is unset, clear the `primary_ip{version}` for the
         # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
         # also checks for the `_primary_ip_unset_by_form` value.
-        if not primary_for_parent and hasattr(self.instance._original_assigned_object, "parent"):
+        if not primary_for_parent and self.instance._original_assigned_object is not None:
             ip_version = self.instance.address.version
             parent = self.instance._original_assigned_object.parent
             setattr(parent, f"primary_ip{ip_version}", None)  # e.g. `primary_ip4` or `primary_ip6`
