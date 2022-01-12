@@ -721,8 +721,13 @@ class CustomFieldAPITest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-    def test_text_value(self):
-        pass
+    # def test_text_type_with_disallowed_values(self):
+    #     """
+    #     Try and create a new site with an invalid value for a text type.
+    #     """
+    #     custom_field_data = {
+    #         "text_field": ["I", "am", "a", "list"],
+    #     }
 
 
 class CustomFieldImportTest(TestCase):
@@ -1179,12 +1184,15 @@ class CustomFieldChoiceTest(TestCase):
         self.choice = CustomFieldChoice(field=self.cf, value="Foo")
         self.choice.save()
 
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+
         self.site = Site(
             name="Site 1",
             slug="site-1",
             _custom_field_data={
                 "cf1": "Foo",
             },
+            status=active_status,
         )
         self.site.validated_save()
 
