@@ -731,9 +731,6 @@ class IPAddressForm(
         # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
         # also checks for the `_primary_ip_unset_by_form` value.
         if not primary_for_parent and self.instance._original_assigned_object is not None:
-            ip_version = self.instance.address.version
-            parent = self.instance._original_assigned_object.parent
-            setattr(parent, f"primary_ip{ip_version}", None)  # e.g. `primary_ip4` or `primary_ip6`
             self.instance._primary_ip_unset_by_form = True
 
     def save(self, *args, **kwargs):
@@ -751,7 +748,10 @@ class IPAddressForm(
         # Save the `original_assigned_object.parent` if `_primary_ip_unset_by_form` was set in `clean()`
         primary_ip_unset_by_form = getattr(self.instance, "_primary_ip_unset_by_form", False)
         if primary_ip_unset_by_form:
-            self.instance._original_assigned_object.parent.save()
+            ip_version = self.instance.address.version
+            parent = self.instance._original_assigned_object.parent
+            setattr(parent, f"primary_ip{ip_version}", None)  # e.g. `primary_ip4` or `primary_ip6`
+            parent.save()
 
         return ipaddress
 
