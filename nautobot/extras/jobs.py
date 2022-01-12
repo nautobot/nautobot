@@ -17,6 +17,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
@@ -323,31 +324,42 @@ class BaseJob:
             except KeyError:
                 continue
 
-            if isinstance(var, MultiObjectVar):
-                queryset = var.field_attrs["queryset"].filter(pk__in=value)
-                if queryset.count() < len(value):
-                    # Not all objects found
-                    not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
-                    raise queryset.model.DoesNotExist(
-                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
-                    )
-                return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
+            # Note: BooleanVar.required is automatically set to False in its constructor after instantiation
+            is_required = var.field_attrs.get("required", False)
+            if is_required and not value:
+                raise ValidationError
 
-            elif isinstance(var, ObjectVar):
-                if isinstance(value, dict):
-                    return_data[field_name] = var.field_attrs["queryset"].get(**value)
+            try:
+                if isinstance(var, MultiObjectVar):
+                    queryset = var.field_attrs["queryset"].filter(pk__in=value)
+                    if queryset.count() < len(value):
+                        # Not all objects found
+                        not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
+                        raise queryset.model.DoesNotExist(
+                            f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
+                        )
+                    return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
+
+                elif isinstance(var, ObjectVar):
+                    if isinstance(value, dict):
+                        return_data[field_name] = var.field_attrs["queryset"].get(**value)
+                    else:
+                        return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
+                elif isinstance(var, FileVar):
+                    return_data[field_name] = cls.load_file(value)
+                # IPAddressVar is a netaddr.IPAddress object
+                elif isinstance(var, IPAddressVar):
+                    return_data[field_name] = netaddr.IPAddress(value)
+                # IPAddressWithMaskVar, IPNetworkVar are netaddr.IPNetwork objects
+                elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
+                    return_data[field_name] = netaddr.IPNetwork(value)
                 else:
-                    return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
-            elif isinstance(var, FileVar):
-                return_data[field_name] = cls.load_file(value)
-            # IPAddressVar is a netaddr.IPAddress object
-            elif isinstance(var, IPAddressVar):
-                return_data[field_name] = netaddr.IPAddress(value)
-            # IPAddressWithMaskVar, IPNetworkVar are netaddr.IPNetwork objects
-            elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
-                return_data[field_name] = netaddr.IPNetwork(value)
-            else:
-                return_data[field_name] = value
+                    return_data[field_name] = value
+            except ObjectDoesNotExist:
+                if is_required:
+                    raise ValidationError(f"Failed to find requested objects for required var {field_name}")
+                else:
+                    return_data[field_name] = None
 
         return return_data
 
