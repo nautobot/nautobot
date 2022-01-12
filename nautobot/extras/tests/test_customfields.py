@@ -721,13 +721,34 @@ class CustomFieldAPITest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-    # def test_text_type_with_disallowed_values(self):
-    #     """
-    #     Try and create a new site with an invalid value for a text type.
-    #     """
-    #     custom_field_data = {
-    #         "text_field": ["I", "am", "a", "list"],
-    #     }
+    def test_text_type_with_invalid_values(self):
+        """
+        Try and create a new site with an invalid value for a text type.
+        """
+        data = {
+            "name": "Site 4",
+            "slug": "site-4",
+            "status": "active",
+            "custom_fields": {
+                "text_field": ["I", "am", "a", "disallowed", "type"],
+            },
+        }
+        url = reverse("dcim-api:site-list")
+        self.add_permissions("dcim.add_site")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Value must be a string", str(response.content))
+
+        data["custom_fields"].update({"text_field": 2})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Value must be a string", str(response.content))
+
+        data["custom_fields"].update({"text_field": True})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Value must be a string", str(response.content))
 
 
 class CustomFieldImportTest(TestCase):
@@ -894,7 +915,7 @@ class CustomFieldModelTest(TestCase):
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
 
     def setUp(self):
-        self.active_status = Status.objects.get_for_model(Site)[0]
+        self.active_status = Status.objects.get_for_model(Site).get(slug="active")
         self.site1 = Site.objects.create(name="NYC")
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
@@ -1224,10 +1245,11 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
         self.clear_worker()
 
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
         site = Site(
             name="Site 1",
             slug="site-1",
-            status=self.active_status,
+            status=active_status,
         )
         site.validated_save()
 
@@ -1253,7 +1275,8 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"}, status=active_status)
         site.validated_save()
 
         cf.delete()
@@ -1280,7 +1303,8 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
 
-        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"})
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"}, status=active_status)
         site.validated_save()
 
         choice.value = "Bar"
