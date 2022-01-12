@@ -18,10 +18,10 @@ from nautobot.virtualization.models import VirtualMachine
 
 class CustomFieldTest(TestCase):
     def setUp(self):
-
-        Site.objects.create(name="Site A", slug="site-a")
-        Site.objects.create(name="Site B", slug="site-b")
-        Site.objects.create(name="Site C", slug="site-c")
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        Site.objects.create(name="Site A", slug="site-a", status=active_status)
+        Site.objects.create(name="Site B", slug="site-b", status=active_status)
+        Site.objects.create(name="Site C", slug="site-c", status=active_status)
 
     def test_simple_fields(self):
         DATA = (
@@ -74,7 +74,7 @@ class CustomFieldTest(TestCase):
             # Assign a value to the first Site
             site = Site.objects.first()
             site.cf[cf.name] = data["field_value"]
-            site.save()
+            site.validated_save()
 
             # Retrieve the stored value
             site.refresh_from_db()
@@ -108,7 +108,7 @@ class CustomFieldTest(TestCase):
         # Assign a value to the first Site
         site = Site.objects.first()
         site.cf[cf.name] = "Option A"
-        site.save()
+        site.validated_save()
 
         # Retrieve the stored value
         site.refresh_from_db()
@@ -142,7 +142,7 @@ class CustomFieldTest(TestCase):
         # Assign a value to the first Site
         site = Site.objects.first()
         site.cf[cf.name] = ["Option A", "Option B"]
-        site.save()
+        site.validated_save()
 
         # Retrieve the stored value
         site.refresh_from_db()
@@ -178,19 +178,15 @@ class CustomFieldTest(TestCase):
 
         # Assign another disallowed value (int) to the first Site
         site.cf[cf.name] = 2
-        try:
+        with self.assertRaises(ValidationError) as context:
             site.validated_save()
-            self.fail("Custom fields with a type of Text should not be able to save an integer value")
-        except ValidationError as e:
-            self.assertIn("Value must be a string", str(e))
+        self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (bool) to the first Site
         site.cf[cf.name] = True
-        try:
+        with self.assertRaises(ValidationError) as context:
             site.validated_save()
-            self.fail("Custom fields with a type of Text should not be able to save a boolean value")
-        except ValidationError as e:
-            self.assertIn("Value must be a string", str(e))
+        self.assertIn("Value must be a string", str(context.exception))
 
         # Delete the stored value
         site.cf.pop(cf.name)
@@ -725,6 +721,9 @@ class CustomFieldAPITest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
+    def test_text_value(self):
+        pass
+
 
 class CustomFieldImportTest(TestCase):
     user_permissions = (
@@ -890,6 +889,7 @@ class CustomFieldModelTest(TestCase):
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
 
     def setUp(self):
+        self.active_status = Status.objects.get_for_model(Site)[0]
         self.site1 = Site.objects.create(name="NYC")
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
@@ -939,14 +939,14 @@ class CustomFieldModelTest(TestCase):
         Check that custom field data is present on the instance immediately after being set and after being fetched
         from the database.
         """
-        site = Site(name="Test Site", slug="test-site")
+        site = Site(name="Test Site", slug="test-site", status=self.active_status)
 
         # Check custom field data on new instance
         site.cf["foo"] = "abc"
         self.assertEqual(site.cf["foo"], "abc")
 
         # Check custom field data from database
-        site.save()
+        site.validated_save()
         site = Site.objects.get(name="Test Site")
         self.assertEqual(site.cf["foo"], "abc")
 
@@ -1186,7 +1186,7 @@ class CustomFieldChoiceTest(TestCase):
                 "cf1": "Foo",
             },
         )
-        self.site.save()
+        self.site.validated_save()
 
     def test_default_value_must_be_valid_choice_sad_path(self):
         self.cf.default = "invalid value"
@@ -1219,8 +1219,9 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         site = Site(
             name="Site 1",
             slug="site-1",
+            status=self.active_status,
         )
-        site.save()
+        site.validated_save()
 
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(name="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
@@ -1245,7 +1246,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         cf.content_types.set([obj_type])
 
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
-        site.save()
+        site.validated_save()
 
         cf.delete()
 
@@ -1272,7 +1273,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         choice.save()
 
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"})
-        site.save()
+        site.validated_save()
 
         choice.value = "Bar"
         choice.save()
@@ -1366,7 +1367,7 @@ class CustomFieldTableTest(TestCase):
             cf_select.name: "Bar",
             cf_multi_select.name: ["Bar", "Baz"],
         }
-        self.site.save()
+        self.site.validated_save()
 
     def test_custom_field_table_render(self):
         queryset = Site.objects.filter(name=self.site.name)
