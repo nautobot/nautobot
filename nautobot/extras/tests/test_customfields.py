@@ -1245,13 +1245,11 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
         self.clear_worker()
 
-        active_status = Status.objects.get_for_model(Site).get(slug="active")
         site = Site(
             name="Site 1",
             slug="site-1",
-            status=active_status,
         )
-        site.validated_save()
+        site.save()
 
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(name="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
@@ -1275,9 +1273,8 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        active_status = Status.objects.get_for_model(Site).get(slug="active")
-        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"}, status=active_status)
-        site.validated_save()
+        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
+        site.save()
 
         cf.delete()
 
@@ -1303,9 +1300,8 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
 
-        active_status = Status.objects.get_for_model(Site).get(slug="active")
-        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"}, status=active_status)
-        site.validated_save()
+        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"})
+        site.save()
 
         choice.value = "Bar"
         choice.save()
