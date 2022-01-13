@@ -9,7 +9,6 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import serialize_object
-from nautobot.utilities.querysets import RestrictedQuerySet
 from .choices import CircuitTerminationSideChoices
 
 

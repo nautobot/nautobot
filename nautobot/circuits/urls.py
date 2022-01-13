@@ -46,11 +46,15 @@ urlpatterns = [
     path("provider-networks/add/", views.ProviderNetworkEditView.as_view(), name="providernetwork_add"),
     path("provider-networks/import/", views.ProviderNetworkBulkImportView.as_view(), name="providernetwork_import"),
     path("provider-networks/edit/", views.ProviderNetworkBulkEditView.as_view(), name="providernetwork_bulk_edit"),
-    path("provider-networks/delete/", views.ProviderNetworkBulkDeleteView.as_view(), name="providernetwork_bulk_delete"),
+    path(
+        "provider-networks/delete/", views.ProviderNetworkBulkDeleteView.as_view(), name="providernetwork_bulk_delete"
+    ),
     path("provider-networks/<slug:slug>/", views.ProviderNetworkView.as_view(), name="providernetwork"),
     path("provider-networks/<slug:slug>/edit/", views.ProviderNetworkEditView.as_view(), name="providernetwork_edit"),
     path(
-        "provider-networks/<slug:slug>/delete/", views.ProviderNetworkDeleteView.as_view(), name="providernetwork_delete"
+        "provider-networks/<slug:slug>/delete/",
+        views.ProviderNetworkDeleteView.as_view(),
+        name="providernetwork_delete",
     ),
     path(
         "provider-networks/<slug:slug>/changelog/",

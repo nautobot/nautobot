@@ -411,19 +411,13 @@ class CircuitTerminationTestCase(TestCase):
                 xconnect_id="PQR",
             ),
             CircuitTermination.objects.create(
-                circuit=circuits[3],
-                provider_network=provider_networks[0],
-                term_side="A"
+                circuit=circuits[3], provider_network=provider_networks[0], term_side="A"
             ),
             CircuitTermination.objects.create(
-                circuit=circuits[4],
-                provider_network=provider_networks[1],
-                term_side="A"
+                circuit=circuits[4], provider_network=provider_networks[1], term_side="A"
             ),
             CircuitTermination.objects.create(
-                circuit=circuits[5],
-                provider_network=provider_networks[2],
-                term_side="A"
+                circuit=circuits[5], provider_network=provider_networks[2], term_side="A"
             ),
         )
 
