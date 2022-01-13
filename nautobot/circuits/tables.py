@@ -11,6 +11,13 @@ from nautobot.utilities.tables import (
 )
 from .models import Circuit, CircuitType, Provider, ProviderNetwork
 
+CIRCUIT_TERMINATION_PARENT = """
+{% if value.provider_network %}
+    <a href="{{ value.provider_network.get_absolute_url }}">{{ value.provider_network }}</a>
+{% elif value.site %}
+    <a href="{{ value.site.get_absolute_url }}">{{ value.site }}</a>
+{% endif %}
+"""
 
 #
 # Provider Network
@@ -90,9 +97,20 @@ class CircuitTable(StatusTableMixin, BaseTable):
     cid = tables.LinkColumn(verbose_name="ID")
     provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__slug")])
     tenant = TenantColumn()
-    termination_a = tables.Column(linkify=True, verbose_name="Side A")
-    termination_z = tables.Column(linkify=True, verbose_name="Side Z")
     tags = TagColumn(url_name="circuits:circuit_list")
+
+    termination_a = tables.TemplateColumn(
+        template_code=CIRCUIT_TERMINATION_PARENT,
+        accessor=Accessor("termination_a"),
+        orderable=False,
+        verbose_name="Side A",
+    )
+    termination_z = tables.TemplateColumn(
+        template_code=CIRCUIT_TERMINATION_PARENT,
+        accessor=Accessor("termination_z"),
+        orderable=False,
+        verbose_name="Side Z",
+    )
 
     class Meta(BaseTable.Meta):
         model = Circuit

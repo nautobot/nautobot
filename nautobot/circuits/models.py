@@ -32,7 +32,8 @@ __all__ = (
     "webhooks",
 )
 class ProviderNetwork(PrimaryModel):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
@@ -40,6 +41,7 @@ class ProviderNetwork(PrimaryModel):
     csv_headers = [
         "provider",
         "name",
+        "slug",
         "description",
         "comments",
     ]
@@ -55,12 +57,13 @@ class ProviderNetwork(PrimaryModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("circuits:providernetwork", args=[self.pk])
+        return reverse("circuits:providernetwork", args=[self.slug])
 
     def to_csv(self):
         return (
             self.provider.name,
             self.name,
+            self.slug,
             self.description,
             self.comments,
         )
@@ -301,9 +304,7 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        if self.site:
-            return str(self.site)
-        return str(self.provider_network)
+        return f"Termination {self.term_side}: {self.site or self.provider_network}"
 
     def get_absolute_url(self):
         if self.site:

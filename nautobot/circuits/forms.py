@@ -111,8 +111,9 @@ class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
 
 class ProviderNetworkForm(BootstrapMixin, CustomFieldModelForm):
+    slug = SlugField()
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
-    comments = CommentField()
+    comments = CommentField(label="Comments")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -120,11 +121,12 @@ class ProviderNetworkForm(BootstrapMixin, CustomFieldModelForm):
         fields = [
             "provider",
             "name",
+            "slug",
             "description",
             "comments",
             "tags",
         ]
-        fieldsets = (("Provider Network", ("provider", "name", "description", "tags")),)
+        fieldsets = (("Provider Network", ("provider", "name", "slug", "description", "comments", "tags")),)
 
 
 class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
@@ -135,6 +137,7 @@ class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
         fields = [
             "provider",
             "name",
+            "slug",
             "description",
             "comments",
         ]
