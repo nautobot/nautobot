@@ -150,6 +150,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Changed
 
 - [#616](https://github.com/nautobot/nautobot/issues/616) - The REST API now no longer permits setting non-string values for text-type custom fields.
+- [#1243](https://github.com/nautobot/nautobot/pull/1243) - Github CI action no longer runs for pull requests that don't impact Nautobot code, such as documentation, examples, etc.
 
 ### Fixed
 
