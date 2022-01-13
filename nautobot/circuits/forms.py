@@ -1,5 +1,3 @@
-from cProfile import label
-
 from django import forms
 
 from nautobot.dcim.models import Region, Site
@@ -281,6 +279,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
         "q",
         "type",
         "provider",
+        "provider_network",
         "status",
         "region",
         "site",
@@ -291,7 +290,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
     q = forms.CharField(required=False, label="Search")
     type = DynamicModelMultipleChoiceField(queryset=CircuitType.objects.all(), to_field_name="slug", required=False)
     provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="slug", required=False)
-    providernetwork = DynamicModelMultipleChoiceField(
+    provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,
         query_params={"provider_id": "$provider"},
@@ -316,7 +315,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
 class CircuitTerminationForm(BootstrapMixin, RelationshipModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region_id": "$region"})
-    providernetwork = DynamicModelChoiceField(
+    provider_network = DynamicModelChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,
         label="Provider Network"
@@ -328,7 +327,7 @@ class CircuitTerminationForm(BootstrapMixin, RelationshipModelForm):
             "term_side",
             "region",
             "site",
-            "providernetwork",
+            "provider_network",
             "port_speed",
             "upstream_speed",
             "xconnect_id",

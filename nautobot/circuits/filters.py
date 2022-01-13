@@ -97,7 +97,11 @@ class ProviderNetworkFilterSet(BaseFilterSet, CustomFieldModelFilterSet, Created
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(description__icontains=value) | Q(comments__icontains=value)).distinct()
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(description__icontains=value) |
+            Q(comments__icontains=value)
+        ).distinct()
 
 
 class CircuitTypeFilterSet(
@@ -132,8 +136,8 @@ class CircuitFilterSet(
         to_field_name="slug",
         label="Provider (slug)",
     )
-    providernetwork_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="terminations__providernetwork",
+    provider_network_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID)",
     )
@@ -210,7 +214,7 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
         label="Site (slug)",
     )
 
-    providernetwork_id = django_filters.ModelMultipleChoiceFilter(
+    provider_network_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID)",
     )

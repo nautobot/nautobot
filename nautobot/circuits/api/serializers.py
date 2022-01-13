@@ -83,7 +83,9 @@ class ProviderNetworkSerializer(TaggedObjectSerializer, CustomFieldModelSerializ
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -115,7 +117,7 @@ class CircuitTypeSerializer(CustomFieldModelSerializer):
 class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
     site = NestedSiteSerializer()
-    providernetwork = NestedProviderNetworkSerializer()
+    provider_network = NestedProviderNetworkSerializer()
     connected_endpoint = NestedInterfaceSerializer()
 
     class Meta:
@@ -124,7 +126,7 @@ class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
             "id",
             "url",
             "site",
-            "providernetwork",
+            "provider_network",
             "connected_endpoint",
             "port_speed",
             "upstream_speed",
@@ -168,8 +170,8 @@ class CircuitSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cust
 class CircuitTerminationSerializer(CableTerminationSerializer, ConnectedEndpointSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
     circuit = NestedCircuitSerializer()
-    site = NestedSiteSerializer(required=False)
-    providernetwork = NestedProviderNetworkSerializer(required=False)
+    site = NestedSiteSerializer(required=False, allow_null=True)
+    provider_network = NestedProviderNetworkSerializer(required=False, allow_null=True)
     cable = NestedCableSerializer(read_only=True)
 
     class Meta:
@@ -180,7 +182,7 @@ class CircuitTerminationSerializer(CableTerminationSerializer, ConnectedEndpoint
             "circuit",
             "term_side",
             "site",
-            "providernetwork",
+            "provider_network",
             "port_speed",
             "upstream_speed",
             "xconnect_id",

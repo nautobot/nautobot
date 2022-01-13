@@ -42,18 +42,18 @@ urlpatterns = [
         name="provider_changelog",
         kwargs={"model": Provider},
     ),
-    path("providernetworks/", views.ProviderNetworkListView.as_view(), name="providernetwork_list"),
-    path("providernetworks/add/", views.ProviderNetworkEditView.as_view(), name="providernetwork_add"),
-    path("providernetworks/import/", views.ProviderNetworkBulkImportView.as_view(), name="providernetwork_import"),
-    path("providernetworks/edit/", views.ProviderNetworkBulkEditView.as_view(), name="providernetwork_bulk_edit"),
-    path("providernetworks/delete/", views.ProviderNetworkBulkDeleteView.as_view(), name="providernetwork_bulk_delete"),
-    path("providernetworks/<uuid:pk>/", views.ProviderNetworkView.as_view(), name="providernetwork"),
-    path("providernetworks/<uuid:pk>/edit/", views.ProviderNetworkEditView.as_view(), name="providernetwork_edit"),
+    path("provider-networks/", views.ProviderNetworkListView.as_view(), name="providernetwork_list"),
+    path("provider-networks/add/", views.ProviderNetworkEditView.as_view(), name="providernetwork_add"),
+    path("provider-networks/import/", views.ProviderNetworkBulkImportView.as_view(), name="providernetwork_import"),
+    path("provider-networks/edit/", views.ProviderNetworkBulkEditView.as_view(), name="providernetwork_bulk_edit"),
+    path("provider-networks/delete/", views.ProviderNetworkBulkDeleteView.as_view(), name="providernetwork_bulk_delete"),
+    path("provider-networks/<uuid:pk>/", views.ProviderNetworkView.as_view(), name="providernetwork"),
+    path("provider-networks/<uuid:pk>/edit/", views.ProviderNetworkEditView.as_view(), name="providernetwork_edit"),
     path(
-        "providernetworks/<uuid:pk>/delete/", views.ProviderNetworkDeleteView.as_view(), name="providernetwork_delete"
+        "provider-networks/<uuid:pk>/delete/", views.ProviderNetworkDeleteView.as_view(), name="providernetwork_delete"
     ),
     path(
-        "providernetworks/<uuid:pk>/changelog/",
+        "provider-networks/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="providernetwork_changelog",
         kwargs={"model": ProviderNetwork},

@@ -22,11 +22,18 @@ __all__ = (
 )
 
 
-
-@extras_features("custom_fields", "custom_links", "export_templates", "webhooks")
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
 class ProviderNetwork(PrimaryModel):
     name = models.CharField(max_length=100)
-    provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="providernetworks")
+    provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
 
@@ -211,8 +218,6 @@ class Circuit(PrimaryModel, StatusModel):
         null=True,
     )
 
-    objects = RestrictedQuerySet.as_manager()
-
     csv_headers = [
         "cid",
         "provider",
@@ -273,7 +278,7 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         blank=True,
         null=True,
     )
-    providernetwork = models.ForeignKey(
+    provider_network = models.ForeignKey(
         to="circuits.ProviderNetwork",
         on_delete=models.PROTECT,
         related_name="circuit_terminations",
@@ -298,20 +303,20 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
     def __str__(self):
         if self.site:
             return str(self.site)
-        return str(self.providernetwork)
+        return str(self.provider_network)
 
     def get_absolute_url(self):
         if self.site:
             return self.site.get_absolute_url()
-        return self.providernetwork.get_absolute_url()
+        return self.provider_network.get_absolute_url()
 
     def clean(self):
         super().clean()
 
         # Must define either site *or* provider network
-        if self.site is None and self.providernetwork is None:
+        if self.site is None and self.provider_network is None:
             raise ValidationError("A circuit termination must attach to either a site or a provider network.")
-        if self.site and self.providernetwork:
+        if self.site and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
 
     def to_objectchange(self, action):

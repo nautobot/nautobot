@@ -8,11 +8,6 @@ import taggit.managers
 import uuid
 
 
-# Functions from the following migrations need manual copying.
-# Move them and any dependencies into this file, then update the
-# RunPython operations to refer to the local versions:
-# nautobot.circuits.migrations.0005_auto_20211209_1421
-
 def cache_circuit_terminations(apps, schema_editor):
     Circuit = apps.get_model("circuits", "Circuit")
     CircuitTermination = apps.get_model("circuits", "CircuitTermination")
@@ -30,8 +25,6 @@ def cache_circuit_terminations(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
-    replaces = [('circuits', '0004_auto_20211209_1420'), ('circuits', '0005_auto_20211209_1421')]
 
     dependencies = [
         ('extras', '0016_secret'),
@@ -65,7 +58,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=100)),
                 ('description', models.CharField(blank=True, max_length=200)),
                 ('comments', models.TextField(blank=True)),
-                ('provider', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='providernetworks', to='circuits.provider')),
+                ('provider', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='provider_networks', to='circuits.provider')),
                 ('tags', taggit.managers.TaggableManager(help_text='A comma-separated list of tags.', through='extras.TaggedItem', to='extras.Tag', verbose_name='Tags')),
             ],
             options={

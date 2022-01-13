@@ -96,7 +96,7 @@ class ProviderNetworkView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         circuits = (
             Circuit.objects.restrict(request.user, "view")
-            .filter(Q(termination_a__providernetwork=instance.pk) | Q(termination_z__providernetwork=instance.pk))
+            .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
             .prefetch_related("type", "tenant", "terminations__site")
         )
 

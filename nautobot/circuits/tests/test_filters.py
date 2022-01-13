@@ -227,9 +227,9 @@ class CircuitTestCase(TestCase):
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[2], site=sites[2], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[3], providernetwork=provider_network[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[4], providernetwork=provider_network[1], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[5], providernetwork=provider_network[2], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[3], provider_network=provider_network[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[4], provider_network=provider_network[1], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[5], provider_network=provider_network[2], term_side="A")
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -254,9 +254,9 @@ class CircuitTestCase(TestCase):
         params = {"provider": [provider.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
-    def test_providernetwork(self):
-        providernetwork = ProviderNetwork.objects.all()[:2]
-        params = {"providernetwork_id": [providernetwork[0].pk, providernetwork[1].pk]}
+    def test_provider_network(self):
+        provider_network = ProviderNetwork.objects.all()[:2]
+        params = {"provider_network_id": [provider_network[0].pk, provider_network[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
@@ -410,9 +410,21 @@ class CircuitTerminationTestCase(TestCase):
                 upstream_speed=3000,
                 xconnect_id="PQR",
             ),
-            CircuitTermination.objects.create(circuit=circuits[3], providernetwork=provider_networks[0], term_side="A"),
-            CircuitTermination.objects.create(circuit=circuits[4], providernetwork=provider_networks[1], term_side="A"),
-            CircuitTermination.objects.create(circuit=circuits[5], providernetwork=provider_networks[2], term_side="A"),
+            CircuitTermination.objects.create(
+                circuit=circuits[3],
+                provider_network=provider_networks[0],
+                term_side="A"
+            ),
+            CircuitTermination.objects.create(
+                circuit=circuits[4],
+                provider_network=provider_networks[1],
+                term_side="A"
+            ),
+            CircuitTermination.objects.create(
+                circuit=circuits[5],
+                provider_network=provider_networks[2],
+                term_side="A"
+            ),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -450,9 +462,9 @@ class CircuitTerminationTestCase(TestCase):
         params = {"circuit_id": [circuits[0].pk, circuits[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
-    def test_providernetwork(self):
-        providernetworks = ProviderNetwork.objects.all()[:2]
-        params = {"providernetwork_id": [providernetworks[0].pk, providernetworks[1].pk]}
+    def test_provider_network(self):
+        provider_networks = ProviderNetwork.objects.all()[:2]
+        params = {"provider_network_id": [provider_networks[0].pk, provider_networks[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
