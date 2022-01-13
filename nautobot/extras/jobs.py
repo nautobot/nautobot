@@ -324,11 +324,6 @@ class BaseJob:
             except KeyError:
                 continue
 
-            # Note: BooleanVar.required is automatically set to False in its constructor after instantiation
-            is_required = var.field_attrs.get("required", False)
-            if is_required and not value:
-                raise ValidationError
-
             try:
                 if isinstance(var, MultiObjectVar):
                     queryset = var.field_attrs["queryset"].filter(pk__in=value)
@@ -355,9 +350,10 @@ class BaseJob:
                     return_data[field_name] = netaddr.IPNetwork(value)
                 else:
                     return_data[field_name] = value
-            except ObjectDoesNotExist:
-                if is_required:
-                    raise ValidationError(f"Failed to find requested objects for required var {field_name}")
+
+            except ObjectDoesNotExist as e:
+                if var.field_attrs.get("required", False):
+                    return_data[field_name] = str(e)
                 else:
                     return_data[field_name] = None
 
