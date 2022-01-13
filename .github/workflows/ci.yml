@@ -1,8 +1,19 @@
 ---
 name: "CI"
 on:  # yamllint disable
-  - "push"
-  - "pull_request"
+  push:
+  pull_request:
+    paths-ignore:
+      - "nautobot/docs/**"
+      - "examples/**"
+      # The example plugin should probably trigger CI
+      - "!examples/example_plugin"
+      - "**.md"
+      - "development/**"
+      - ".github/**"
+      # If the ci.yaml is updated run CI for the PR
+      - "!.github/workflows/ci.yml"
+      - ".devcontainer/**"
 
 jobs:
   black:
