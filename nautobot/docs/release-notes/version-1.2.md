@@ -140,7 +140,35 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.3 (2021-01-07)
+## v1.2.4 (2022-01-13)
+
+### Added
+
+- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../additional-features/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
+- [#1251](https://github.com/nautobot/nautobot/pull/1251) - Added `workflow_call` to the GitHub Actions CI workflow so that it may be called by other GHA workflows.
+
+### Changed
+
+- [#616](https://github.com/nautobot/nautobot/issues/616) - The REST API now no longer permits setting non-string values for text-type custom fields.
+- [#1243](https://github.com/nautobot/nautobot/pull/1243) - Github CI action no longer runs for pull requests that don't impact Nautobot code, such as documentation, examples, etc.
+
+### Fixed
+
+- [#1053](https://github.com/nautobot/nautobot/issues/1053) - Fixed error when removing an IP address from an interface when it was previously the parent device's primary IP.
+- [#1140](https://github.com/nautobot/nautobot/issues/1140) - Fixed incorrect UI widgets in the updated Admin UI.
+- [#1253](https://github.com/nautobot/nautobot/issues/1253) - Fixed missing code that prevented switching between tabs in the device-type detail view.
+
+### Security
+
+!!! danger
+    It is highly recommended that users of Python 3.6 prioritize upgrading to a newer version of Python. **Nautobot will be removing support for Python 3.6 in a future update.**
+
+!!! important
+    For users remaining on Python 3.6, please know that upgrading to Nautobot v1.2.4 **will not resolve these CVEs for your installation**. The only remedy at this time is to upgrade your systems utilize Python 3.7 or later.
+
+- [#1267](https://github.com/nautobot/nautobot/issues/1267) - Implemented fixes for [CVE-2022-22815](https://github.com/advisories/GHSA-xrcv-f9gm-v42c), [CVE-2022-22816](https://github.com/advisories/GHSA-xrcv-f9gm-v42c), and [CVE-2022-22817](https://github.com/advisories/GHSA-8vj2-vxx3-667w) to require Pillow >=9.0.0 for Python version >=3.7. For Python version <3.7 (e.g. 3.6), it is recommended that you prioritize upgrading your environment to use Python 3.7 or higher. Support for Python 3.6 will be removed in a future update.
+
+## v1.2.3 (2022-01-07)
 
 ### Added
 
