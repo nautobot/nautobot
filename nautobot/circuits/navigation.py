@@ -85,7 +85,7 @@ menu_items = (
                     NavMenuItem(
                         link="circuits:providernetwork_list",
                         name="Provider Networks",
-                        weight=100,
+                        weight=200,
                         permissions=[
                             "circuits.view_providernetwork",
                         ],
