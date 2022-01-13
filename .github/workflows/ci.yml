@@ -14,6 +14,7 @@ on:  # yamllint disable
       # If the ci.yaml is updated run CI for the PR
       - "!.github/workflows/ci.yml"
       - ".devcontainer/**"
+  workflow_call:
 
 jobs:
   black:

@@ -1,6 +1,7 @@
 from db_file_storage.form_widgets import DBAdminClearableFileInput
 from django import forms
 from django.contrib import admin
+from nautobot.core.admin import NautobotModelAdmin
 
 from .models import FileProxy, JobResult
 
@@ -28,7 +29,7 @@ class FileProxyForm(forms.ModelForm):
 
 
 @admin.register(FileProxy)
-class FileProxyAdmin(admin.ModelAdmin):
+class FileProxyAdmin(NautobotModelAdmin):
     form = FileProxyForm
     list_display = ["name", "uploaded_at"]
     list_filter = ["uploaded_at"]
@@ -40,7 +41,7 @@ class FileProxyAdmin(admin.ModelAdmin):
 
 
 @admin.register(JobResult)
-class JobResultAdmin(admin.ModelAdmin):
+class JobResultAdmin(NautobotModelAdmin):
     list_display = [
         "obj_type",
         "name",

@@ -144,7 +144,19 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
+- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../additional-features/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
+- [#1251](https://github.com/nautobot/nautobot/pull/1251) - Added `workflow_call` to the GitHub Actions CI workflow so that it may be called by other GHA workflows.
+
+### Changed
+
+- [#616](https://github.com/nautobot/nautobot/issues/616) - The REST API now no longer permits setting non-string values for text-type custom fields.
+- [#1243](https://github.com/nautobot/nautobot/pull/1243) - Github CI action no longer runs for pull requests that don't impact Nautobot code, such as documentation, examples, etc.
+
 ### Fixed
+
+- [#1053](https://github.com/nautobot/nautobot/issues/1053) - Fixed error when removing an IP address from an interface when it was previously the parent device's primary IP.
+- [#1140](https://github.com/nautobot/nautobot/issues/1140) - Fixed incorrect UI widgets in the updated Admin UI.
+- [#1253](https://github.com/nautobot/nautobot/issues/1253) - Fixed missing code that prevented switching between tabs in the device-type detail view.
 
 ## v1.2.3 (2022-01-07)
 
@@ -239,6 +251,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Fixed
 
 - [#453](https://github.com/nautobot/nautobot/issues/453) - Fixed potential `ValueError` when rendering `JobResult` detail view with non-standard `JobResult.data` contents.
+- [#616](https://github.com/nautobot/nautobot/issues/616) - A CustomField with a type of "text" will only validate if the provided value is a string.
 - [#864](https://github.com/nautobot/nautobot/issues/864) - Fixed inconsistent `JobResult` detail view page templates.
 - [#888](https://github.com/nautobot/nautobot/issues/888) - Addressed FIXME comment in LDAP documentation.
 - [#926](https://github.com/nautobot/nautobot/issues/926) - Fixed inability to pass multiple values for a MultiObjectVar as query parameters.
