@@ -324,38 +324,35 @@ class BaseJob:
             except KeyError:
                 continue
 
-            try:
-                if isinstance(var, MultiObjectVar):
-                    queryset = var.field_attrs["queryset"].filter(pk__in=value)
-                    if queryset.count() < len(value):
-                        # Not all objects found
-                        not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
-                        raise queryset.model.DoesNotExist(
-                            f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
-                        )
-                    return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
+            if value is None and not var.field_attrs.get("required", False):
+                return_data[field_name] = value
+                continue
 
-                elif isinstance(var, ObjectVar):
-                    if isinstance(value, dict):
-                        return_data[field_name] = var.field_attrs["queryset"].get(**value)
-                    else:
-                        return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
-                elif isinstance(var, FileVar):
-                    return_data[field_name] = cls.load_file(value)
-                # IPAddressVar is a netaddr.IPAddress object
-                elif isinstance(var, IPAddressVar):
-                    return_data[field_name] = netaddr.IPAddress(value)
-                # IPAddressWithMaskVar, IPNetworkVar are netaddr.IPNetwork objects
-                elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
-                    return_data[field_name] = netaddr.IPNetwork(value)
-                else:
-                    return_data[field_name] = value
+            if isinstance(var, MultiObjectVar):
+                queryset = var.field_attrs["queryset"].filter(pk__in=value)
+                if queryset.count() < len(value):
+                    # Not all objects found
+                    not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
+                    raise queryset.model.DoesNotExist(
+                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
+                    )
+                return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
-            except ObjectDoesNotExist as e:
-                if var.field_attrs.get("required", False):
-                    return_data[field_name] = str(e)
+            elif isinstance(var, ObjectVar):
+                if isinstance(value, dict):
+                    return_data[field_name] = var.field_attrs["queryset"].get(**value)
                 else:
-                    return_data[field_name] = None
+                    return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
+            elif isinstance(var, FileVar):
+                return_data[field_name] = cls.load_file(value)
+            # IPAddressVar is a netaddr.IPAddress object
+            elif isinstance(var, IPAddressVar):
+                return_data[field_name] = netaddr.IPAddress(value)
+            # IPAddressWithMaskVar, IPNetworkVar are netaddr.IPNetwork objects
+            elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
+                return_data[field_name] = netaddr.IPNetwork(value)
+            else:
+                return_data[field_name] = value
 
         return return_data
 

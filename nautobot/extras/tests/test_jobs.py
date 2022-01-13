@@ -335,43 +335,6 @@ class JobTest(TestCase):
             self.assertEqual(info_log.message, "The Region if any that the user provided.")
             self.assertEqual(job_result.data["output"], "\nNice Region (or not), sis.")
 
-            region = Region.objects.create(name="London", slug="london")
-            data = {
-                "region": region.pk,
-            }
-            # Run the job with the optional var provided
-            run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
-            job_result.refresh_from_db()
-
-            info_log.delete()
-            info_log = JobLogEntry.objects.filter(
-                job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
-            ).first()
-
-            # Assert stuff
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
-            self.assertEqual(info_log.log_object, "London")
-            self.assertEqual(info_log.message, "The Region if any that the user provided.")
-            self.assertEqual(job_result.data["output"], "\nNice Region (or not), sis.")
-
-            # Run the job with a non-existent region
-            data = {
-                "region": uuid.uuid4(),
-            }
-            run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
-            job_result.refresh_from_db()
-
-            info_log.delete()
-            info_log = JobLogEntry.objects.filter(
-                job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
-            ).first()
-
-            # Assert stuff
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
-            self.assertEqual(info_log.log_object, None)
-            self.assertEqual(info_log.message, "The Region if any that the user provided.")
-            self.assertEqual(job_result.data["output"], "\nNice Region (or not), sis.")
-
     def test_job_data_as_string(self):
         """
         Test that job doesn't error when not a dictionary.
