@@ -153,6 +153,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Fixed
 
+- [#1053](https://github.com/nautobot/nautobot/issues/1053) - Fixed error when removing an IP address from an interface when it was previously the parent device's primary IP.
 - [#1140](https://github.com/nautobot/nautobot/issues/1140) - Fixed incorrect UI widgets in the updated Admin UI.
 - [#1253](https://github.com/nautobot/nautobot/issues/1253) - Fixed missing code that prevented switching between tabs in the device-type detail view.
 
