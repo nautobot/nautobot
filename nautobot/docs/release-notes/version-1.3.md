@@ -10,6 +10,10 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Changed
 
+#### Docker images now default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
+
+As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
+
 ### Fixed
 
 ### Removed
@@ -30,6 +34,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 - [#909](https://github.com/nautobot/nautobot/issues/909) - Device, InventoryItem, and Rack serial numbers can now be up to 255 characters in length.
 - [#916](https://github.com/nautobot/nautobot/issues/916) - A Job.Meta.description can now contain markdown-formatted multi-line text.
 - [#1107](https://github.com/nautobot/nautobot/issues/1107) - Circuit Provider account numbers can now be up to 100 characters in length.
+- [#1252](https://github.com/nautobot/nautobot/pull/1252) - As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
 
 ### Fixed
 
