@@ -199,6 +199,7 @@
 {% endblock content_full_width_page %}
 
 {% block javascript %}
+{{ block.super }}
 <script type="text/javascript">
     // Redirect user to appropriate components tab if specified
     var hash = document.location.hash;

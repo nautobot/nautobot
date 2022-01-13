@@ -545,7 +545,7 @@ class JobLogEntryTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_message(self):
-        params = {"message": "I am a success log."}
+        params = {"message": ["I am a success log."]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_search(self):
