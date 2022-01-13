@@ -173,9 +173,9 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
-            "name": "Cloud X",
+            "name": "ProviderNetwork X",
             "provider": providers[1].pk,
-            "description": "A new cloud",
+            "description": "A new ProviderNetwork",
             "comments": "Longer description goes here",
             "tags": [t.pk for t in tags],
         }

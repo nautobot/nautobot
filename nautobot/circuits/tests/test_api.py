@@ -58,12 +58,12 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
         )
         Provider.objects.bulk_create(providers)
 
-        clouds = (
+        provider_networks = (
             ProviderNetwork(name="Provider Network 1", provider=providers[0]),
             ProviderNetwork(name="Provider Network 2", provider=providers[0]),
             ProviderNetwork(name="Provider Network 3", provider=providers[0]),
         )
-        ProviderNetwork.objects.bulk_create(clouds)
+        ProviderNetwork.objects.bulk_create(provider_networks)
 
         cls.create_data = [
             {

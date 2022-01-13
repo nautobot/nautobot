@@ -544,9 +544,9 @@ class CableTestCase(TestCase):
         with self.assertRaises(ValidationError):
             cable.clean()
 
-    def test_cable_cannot_terminate_to_a_cloud_circuittermination(self):
+    def test_cable_cannot_terminate_to_a_providernetwork_circuittermination(self):
         """
-        Neither side of a cable can be terminated to a CircuitTermination which is attached to a Cloud
+        Neither side of a cable can be terminated to a CircuitTermination which is attached to a Provider Network
         """
         cable = Cable(termination_a=self.interface3, termination_b=self.circuittermination3)
         with self.assertRaises(ValidationError):

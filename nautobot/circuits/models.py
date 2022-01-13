@@ -9,6 +9,7 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.querysets import RestrictedQuerySet
 from .choices import CircuitTerminationSideChoices
 
 
@@ -20,7 +21,6 @@ __all__ = (
     "ProviderNetwork",
 )
 
-from ..utilities.querysets import RestrictedQuerySet
 
 
 @extras_features("custom_fields", "custom_links", "export_templates", "webhooks")
