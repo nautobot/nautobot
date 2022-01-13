@@ -144,6 +144,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
+- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../additional-features/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
 - [#1251](https://github.com/nautobot/nautobot/pull/1251) - Added `workflow_call` to the GitHub Actions CI workflow so that it may be called by other GHA workflows.
 
 ### Changed

@@ -65,18 +65,18 @@ Finally, calling it with the `all` argument will force invalidation of the entir
 $ nautobot-server invalidate all
 ```
 
-# High Availability Caching
+## High Availability Caching
 
 [Redis](https://redis.io/) provides two different methods to achieve high availability, the first is [Redis Sentinel](https://redis.io/topics/sentinel) and the second is the newer [Redis Clustering](https://redis.io/topics/cluster-tutorial) feature.  Unfortunately, due to an [issue](https://github.com/Suor/django-cacheops/issues/35) with django-cacheops Nautobot is unable to support Redis Clustering at this time.  Nautobot can however support Redis Sentinel.
 
-## Using Redis Sentinel
+### Using Redis Sentinel
 
 The installation/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary
 to configure Nautobot to connect to a Sentinel cluster.
 
 We need to configure `django-redis`, `django-cacheops`, and `celery` to use Sentinel, of course each library is configured differently so pay close attention to the details:
 
-### `django-redis` Sentinel Configuration
+#### `django-redis` Sentinel Configuration
 
 Notable settings:
 
@@ -115,7 +115,7 @@ CACHES = {
 
 For more details on configuring django-redis with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
 
-### `django-cacheops` Sentinel Configuration
+#### `django-cacheops` Sentinel Configuration
 
 Notable settings:
 
@@ -152,7 +152,7 @@ CACHEOPS_SENTINEL = {
 
 For more details on how to configure Cacheops to use Redis Sentinel see the documentation for [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
 
-### `celery` Sentinel Configuration
+#### `celery` Sentinel Configuration
 
 Celery Sentinel configuration is controlled by 4 variables `BROKER_URL`, `BROKER_TRANSPORT_OPTIONS`, `RESULT_BACKEND`, and `RESULT_BACKEND_TRANSPORT_OPTIONS`.  These parameters can
 be specified in the django settings in `nautobot_config.py` by prefixing these variable names with `CELERY_`.  By default Nautobot configures the celery broker and results backend with the
