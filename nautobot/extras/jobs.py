@@ -330,10 +330,6 @@ class BaseJob:
                     return_data[field_name] = value
                     continue
 
-            # if value is None and not var.field_attrs.get("required"):
-            #     return_data[field_name] = value
-            #     continue
-
             if isinstance(var, MultiObjectVar):
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)
                 if queryset.count() < len(value):
