@@ -140,6 +140,13 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.5 (2022-??-??)
+
+### Fixed
+
+- [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is
+  provided with a value of None
+
 ## v1.2.4 (2022-??-??)
 
 ### Added
@@ -171,7 +178,6 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1220](https://github.com/nautobot/nautobot/issues/1220) - Fixed an inconsistency in the breadcrumbs seen in various Admin pages.
 - [#1228](https://github.com/nautobot/nautobot/issues/1228) - Fixed a case where a GraphQL query for objects associated by Relationships could potentially throw an exception.
 - [#1229](https://github.com/nautobot/nautobot/pull/1229) - Fixed a template rendering error in the login page.
-- [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is provided with a value of None
 - [#1234](https://github.com/nautobot/nautobot/issues/1234) - Fixed missing changelog support for Custom Fields.
 
 ### Security
