@@ -140,6 +140,12 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.5 (2022-??-??)
+
+### Fixed
+
+- [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is provided with a value of None
+
 ## v1.2.4 (2022-01-13)
 
 ### Added
