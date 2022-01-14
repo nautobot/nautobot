@@ -17,7 +17,6 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
@@ -324,9 +323,16 @@ class BaseJob:
             except KeyError:
                 continue
 
-            if value is None and not var.field_attrs.get("required", False):
-                return_data[field_name] = value
-                continue
+            if value is None:
+                if var.field_attrs.get("required"):
+                    raise ValidationError(f"{field_name} is a required field")
+                else:
+                    return_data[field_name] = value
+                    continue
+
+            # if value is None and not var.field_attrs.get("required"):
+            #     return_data[field_name] = value
+            #     continue
 
             if isinstance(var, MultiObjectVar):
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)

@@ -11,4 +11,4 @@ class TestOptionalObjectVar(Job):
 
     def run(self, data, commit):
         self.log_info(obj=data["region"], message="The Region if any that the user provided.")
-        return "Nice Region (or not), sis."
+        return "Nice Region (or not)!"
