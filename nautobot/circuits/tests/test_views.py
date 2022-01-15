@@ -164,9 +164,10 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         ProviderNetwork.objects.bulk_create(
             [
-                ProviderNetwork(name="Provider Network 1", provider=providers[0]),
-                ProviderNetwork(name="Provider Network 2", provider=providers[0]),
-                ProviderNetwork(name="Provider Network 3", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 8", provider=providers[0]),
             ]
         )
 
@@ -174,6 +175,7 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "name": "ProviderNetwork X",
+            "slug": "provider-network-x",
             "provider": providers[1].pk,
             "description": "A new ProviderNetwork",
             "comments": "Longer description goes here",
@@ -181,10 +183,11 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,provider,description",
-            "Provider Network 4,Provider 1,Foo",
-            "Provider Network 5,Provider 1,Bar",
-            "Provider Network 6,Provider 1,Baz",
+            "name,slug,provider,description",
+            "Provider Network 4,provider-network-4,Provider 1,Foo",
+            "Provider Network 5,provider-network-5,Provider 1,Bar",
+            "Provider Network 6,provider-network-6,Provider 1,Baz",
+            "Provider Network 7,,Provider 1,Baz",
         )
 
         cls.bulk_edit_data = {
@@ -192,3 +195,6 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
             "comments": "New comments",
         }
+
+        cls.slug_test_object = "Provider Network 8"
+        cls.slug_source = "name"

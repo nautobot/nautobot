@@ -21,7 +21,7 @@ class NestedProviderNetworkSerializer(WritableNestedSerializer):
 
     class Meta:
         model = ProviderNetwork
-        fields = ["id", "url", "display", "name"]
+        fields = ["id", "url", "name", "slug"]
 
 
 #

@@ -31,7 +31,7 @@ __all__ = (
     "webhooks",
 )
 class ProviderNetwork(PrimaryModel):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     slug = AutoSlugField(populate_from="name")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
     description = models.CharField(max_length=200, blank=True)
@@ -66,6 +66,10 @@ class ProviderNetwork(PrimaryModel):
             self.description,
             self.comments,
         )
+
+    @property
+    def display(self):
+        return f"{self.provider} {self.name}"
 
 
 @extras_features(

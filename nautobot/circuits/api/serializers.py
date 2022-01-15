@@ -24,8 +24,8 @@ from .nested_serializers import (  # noqa: F401
     NestedCircuitSerializer,
     NestedCircuitTerminationSerializer,
     NestedCircuitTypeSerializer,
-    NestedProviderSerializer,
     NestedProviderNetworkSerializer,
+    NestedProviderSerializer,
 )
 
 #
@@ -74,9 +74,9 @@ class ProviderNetworkSerializer(TaggedObjectSerializer, CustomFieldModelSerializ
         fields = [
             "id",
             "url",
-            "display",
             "provider",
             "name",
+            "slug",
             "description",
             "comments",
             "tags",

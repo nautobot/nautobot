@@ -92,7 +92,7 @@ class ProviderNetworkFilterSet(BaseFilterSet, CustomFieldModelFilterSet, Created
 
     class Meta:
         model = ProviderNetwork
-        fields = ["id", "name"]
+        fields = ["id", "name", "slug"]
 
     def search(self, queryset, name, value):
         if not value.strip():

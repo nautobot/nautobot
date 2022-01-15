@@ -158,9 +158,9 @@ class CircuitTestCase(TestCase):
         )
 
         provider_network = (
-            ProviderNetwork(name="Provider Network 1", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 2", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 3", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[1]),
         )
         ProviderNetwork.objects.bulk_create(provider_network)
 
@@ -344,9 +344,9 @@ class CircuitTerminationTestCase(TestCase):
         )
 
         provider_networks = (
-            ProviderNetwork(name="Provider Network 1", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 2", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 3", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[1]),
         )
         ProviderNetwork.objects.bulk_create(provider_networks)
 
@@ -494,9 +494,9 @@ class ProviderNetworkTestCase(TestCase):
         Provider.objects.bulk_create(providers)
 
         provider_networks = (
-            ProviderNetwork(name="Provider Network 1", provider=providers[0]),
-            ProviderNetwork(name="Provider Network 2", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 3", provider=providers[2]),
+            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
+            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[2]),
         )
         ProviderNetwork.objects.bulk_create(provider_networks)
 
