@@ -242,6 +242,9 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
     def __str__(self):
         return "Side {}".format(self.get_term_side_display())
 
+    def get_absolute_url(self):
+        return reverse("circuits:circuit", args=[self.circuit.pk])
+
     def to_objectchange(self, action):
         # Annotate the parent Circuit
         try:
