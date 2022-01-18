@@ -240,7 +240,7 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return "{} - Side {}".format(self.circuit.cid, self.get_term_side_display())
+        return "{} - Side {}".format(self.circuit.cid, self.term_side)
 
     def get_absolute_url(self):
         return reverse("circuits:circuit", args=[self.circuit.pk])
