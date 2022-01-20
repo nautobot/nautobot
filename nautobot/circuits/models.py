@@ -310,6 +310,10 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         return f"Termination {self.term_side}: {self.site or self.provider_network}"
 
     def get_absolute_url(self):
+
+        # Circuit terminations can terminate on a site or a provider network.
+        # There is no separate view for Circuit Terminations,
+        # so we return the absolute URL of the corresponding terminal here.
         if self.site:
             return self.site.get_absolute_url()
         return self.provider_network.get_absolute_url()

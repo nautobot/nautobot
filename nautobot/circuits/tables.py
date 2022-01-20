@@ -12,11 +12,13 @@ from nautobot.utilities.tables import (
 from .models import Circuit, CircuitType, Provider, ProviderNetwork
 
 CIRCUIT_TERMINATION_PARENT = """
+<a href="{{ value.provider_network.get_absolute_url }}">
 {% if value.provider_network %}
-    <a href="{{ value.provider_network.get_absolute_url }}">{{ value.provider_network }}</a>
+    {{ value.provider_network }}
 {% elif value.site %}
-    <a href="{{ value.site.get_absolute_url }}">{{ value.site }}</a>
+    {{ value.site }}
 {% endif %}
+</a>
 """
 
 #
