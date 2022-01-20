@@ -33,6 +33,7 @@ from nautobot.utilities.forms import (
     TagFilterField,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.utils import get_dynamicgroupmap_for_model
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
     CustomFieldFilterLogicChoices,
@@ -50,6 +51,7 @@ from .models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -630,6 +632,93 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Content Type",
     )
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
+    """Dynamic Group Form."""
+
+    slug = SlugField()
+
+    class Meta:
+        """Nautobot Resource Manager Group Meta."""
+
+        model = DynamicGroup
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "content_type",
+            # "filter",
+        ]
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        self.filter_field_names = []
+        self._append_filters()
+
+    def _append_filters(self):
+        """Dynamically add the fields from the associated DynamicGroupMap to the form."""
+        # Do not present the list of filter options until the object has been created and has a content type
+        if not self.instance.present_in_database or not self.instance.content_type:
+            return
+
+        # Get the model from the instance and the DynamicGroupMap from the model
+        model = self.instance.content_type.model_class()
+        dynamicgroupmap_class = get_dynamicgroupmap_for_model(model)
+
+        if not dynamicgroupmap_class:
+            return
+
+        # Add all fields defined in the DynamicGroupMap to the form and populate the default value
+        for field_name, field in dynamicgroupmap_class.fields().items():
+            if self.instance.present_in_database:
+                if field_name in self.instance.filter:
+                    field.initial = self.instance.filter[field_name]
+
+            self.fields[field_name] = field
+            self.filter_field_names.append(field_name)
+
+    def _save_filters(self):
+        """Extract all data from the fields associated with the filter."""
+        filter = dict()
+        for field_name in self.filter_field_names:
+            field = self.fields[field_name]
+
+            if isinstance(field, forms.ModelMultipleChoiceField):
+                qs = self.cleaned_data[field_name]
+                field_to_query = field.to_field_name or "pk"
+                print(f"{self.cleaned_data[field_name]} - {field_to_query}")
+                values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
+                filter[field_name] = values or []
+
+            elif isinstance(field, forms.ModelChoiceField):
+                field_to_query = field.to_field_name or "pk"
+                value = getattr(self.cleaned_data[field_name], field_to_query)
+                filter[field_name] = value or None
+
+            elif isinstance(field, forms.NullBooleanField):
+                filter[field_name] = self.cleaned_data[field_name]
+
+            else:
+                filter[field_name] = self.cleaned_data[field_name]
+                print(f"{field_name}: {self.cleaned_data[field_name]}")
+
+        self.instance.filter = filter
+        self.instance.save()
+
+    def save(self, commit=True):
+
+        obj = super().save(commit)
+        if commit:
+            self._save_filters()
+
+        return obj
 
 
 #
