@@ -365,7 +365,7 @@ class DeviceBayTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return DeviceBay(device=device, name=self.name, label=self.label)
+        return DeviceBay(device=device, name=self.name, label=self.label, description=self.description)
 
     def clean(self):
         if self.device_type and self.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT:
