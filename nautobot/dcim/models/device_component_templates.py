@@ -98,7 +98,13 @@ class ConsolePortTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return ConsolePort(device=device, name=self.name, label=self.label, type=self.type)
+        return ConsolePort(
+            device=device,
+            name=self.name,
+            label=self.label,
+            type=self.type,
+            description=self.description
+        )
 
 
 @extras_features(
@@ -118,7 +124,13 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return ConsoleServerPort(device=device, name=self.name, label=self.label, type=self.type)
+        return ConsoleServerPort(
+            device=device,
+            name=self.name,
+            label=self.label,
+            type=self.type,
+            description=self.description
+        )
 
 
 @extras_features(
@@ -157,6 +169,7 @@ class PowerPortTemplate(ComponentTemplateModel):
             type=self.type,
             maximum_draw=self.maximum_draw,
             allocated_draw=self.allocated_draw,
+            description=self.description
         )
 
     def clean(self):
@@ -217,6 +230,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
             type=self.type,
             power_port=power_port,
             feed_leg=self.feed_leg,
+            description=self.description
         )
 
 
@@ -251,6 +265,7 @@ class InterfaceTemplate(ComponentTemplateModel):
             label=self.label,
             type=self.type,
             mgmt_only=self.mgmt_only,
+            description=self.description
         )
 
 
@@ -314,6 +329,7 @@ class FrontPortTemplate(ComponentTemplateModel):
             type=self.type,
             rear_port=rear_port,
             rear_port_position=self.rear_port_position,
+            description=self.description
         )
 
 
@@ -347,6 +363,7 @@ class RearPortTemplate(ComponentTemplateModel):
             label=self.label,
             type=self.type,
             positions=self.positions,
+            description=self.description
         )
 
 
