@@ -23,7 +23,7 @@ def cache_circuit_terminations(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('circuits', '0005_providernetwork'),
+        ("circuits", "0005_providernetwork"),
     ]
 
     operations = [
