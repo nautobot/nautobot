@@ -120,7 +120,7 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        self.instantiate_return(model=ConsoleServerPort, device=device, type=self.type)
+        return self.instantiate_return(model=ConsoleServerPort, device=device, type=self.type)
 
 
 @extras_features(
