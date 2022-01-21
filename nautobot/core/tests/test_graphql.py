@@ -1343,3 +1343,33 @@ query {
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device_types"], list, result)
         self.assertEqual(result.data["device_types"][0]["model"], self.devicetype.model, result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interface_pagination(self):
+
+        query_pagination = """\
+query {
+    interfaces(first: 2, offset: 3) {
+        id
+        device {
+          name
+        }
+    }
+}"""
+        query_all = """\
+query {
+    interfaces {
+        id
+        device {
+          name
+        }
+    }
+}"""
+
+        result_1 = self.execute_query(query_pagination)
+        self.assertEqual(len(result_1.data.get("interfaces", [])), 2)
+        interface_names = [item["device"]["name"] for item in result_1.data.get("interfaces", [])]
+        self.assertEqual(sorted(interface_names), ["Device 2", "Device 3"])
+
+        result_2 = self.execute_query(query_all)
+        self.assertEqual(len(result_2.data.get("interfaces", [])), 6)
