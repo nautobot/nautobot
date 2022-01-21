@@ -2,6 +2,14 @@
 {% load admin_list static i18n %}
 {% load helpers %}
 
+{% block breadcrumbs %}
+  <ol class="breadcrumb">
+    <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
+    <li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    <li>{{ opts.verbose_name_plural|capfirst }}</li>
+  </ol>
+{% endblock %}
+
 {% block content %}
     <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
         {% csrf_token %}

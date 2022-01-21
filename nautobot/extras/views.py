@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -55,7 +55,6 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     ObjectChange,
-    JobLogEntry,
     JobResult,
     Relationship,
     RelationshipAssociation,
@@ -338,6 +337,11 @@ class CustomFieldListView(generic.ObjectListView):
 
 class CustomFieldView(generic.ObjectView):
     queryset = CustomField.objects.all()
+
+    def get_changelog_url(self, instance):
+        """Return the changelog URL."""
+        route = "extras:customfield_changelog"
+        return reverse(route, kwargs={"name": getattr(instance, "name")})
 
 
 class CustomFieldEditView(generic.ObjectEditView):
@@ -643,12 +647,8 @@ class GitRepositoryResultView(generic.ObjectView):
             .first()
         )
 
-        logs = JobLogEntry.objects.restrict(request.user, "view").filter(job_result=job_result)
-        log_table = tables.JobLogEntryTable(data=logs, user=request.user)
-
         return {
             "result": job_result,
-            "log_table": log_table,
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
@@ -1107,15 +1107,25 @@ class JobResultView(generic.ObjectView):
         elif related_object:
             associated_record = related_object
 
-        logs = JobLogEntry.objects.restrict(request.user, "view").filter(job_result=instance)
-        log_table = tables.JobLogEntryTable(data=logs, user=request.user)
-
         return {
             "job": job,
             "associated_record": associated_record,
             "result": instance,
-            "log_table": log_table,
         }
+
+
+class JobLogEntryTableView(View):
+    """
+    Display a table of `JobLogEntry` objects for a given `JobResult` instance.
+    """
+
+    queryset = JobResult.objects.all()
+
+    def get(self, request, pk=None):
+        instance = self.queryset.get(pk=pk)
+        log_table = tables.JobLogEntryTable(data=instance.logs.all(), user=request.user)
+        RequestConfig(request).configure(log_table)
+        return HttpResponse(log_table.as_html(request))
 
 
 #

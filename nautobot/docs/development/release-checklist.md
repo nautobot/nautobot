@@ -71,10 +71,6 @@ Commit any necessary changes to the documentation before proceeding with the rel
 
 Close the release milestone on GitHub after ensuring there are no remaining open issues associated with it.
 
-### Merge the Release Branch
-
-Submit a pull request to merge the `feature` branch into the `develop` branch in preparation for its release.
-
 ---
 
 ## All Releases

@@ -1,0 +1,142 @@
+---
+name: "Release"
+on:
+  release:
+    types: ["published"]
+
+jobs:
+  # Ensure CI has passed
+  ci:
+    uses: nautobot/nautobot/.github/workflows/ci.yml@main
+
+  # Publish to GitHub followed by pypi
+  publish_python:
+    needs:
+      - "ci"
+    name: "Publish Python Packages"
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Set up Python"
+        uses: "actions/setup-python@v2"
+        with:
+          python-version: "3.9"
+      - name: "Install Python Packages"
+        run: "pip install poetry"
+      - name: "Run Poetry Build"
+        run: "poetry build"
+      - name: "Upload binaries to release"
+        uses: "svenstaro/upload-release-action@v2"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          file: "dist/*"
+          tag: "${{ github.ref }}"
+          overwrite: true
+          file_glob: true
+      - name: "Push to PyPI"
+        uses: "pypa/gh-action-pypi-publish@release/v1"
+        with:
+          user: "__token__"
+          password: "${{ secrets.PYPI_API_TOKEN }}"
+
+  container-publish:
+    runs-on: "ubuntu-20.04"
+    needs:
+      - "integration-test"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.6", "3.7", "3.8", "3.9" ]
+    env:
+      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: "gitbranch"
+      - name: "Set up Docker Buildx"
+        uses: "docker/setup-buildx-action@v1"
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: "Docker Metadata"
+        id: "dockermeta"
+        uses: "docker/metadata-action@v3"
+        with:
+          images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value={{version}}-py${{ matrix.python-version }}
+            type=raw,value={{version}},enable=${{ matrix.python-version == 3.6 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
+            type=raw,value=stable-py${{ matrix.python-version }}
+      - name: "Build"
+        uses: "docker/build-push-action@v2"
+        with:
+          push: true
+          target: final
+          file: "docker/Dockerfile"
+          tags: "${{ steps.dockermeta.outputs.tags }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          context: "."
+          build-args: |
+            PYTHON_VER=${{ matrix.python-version }}
+      - name: "Docker Dev Metadata"
+        id: "dockerdevmeta"
+        uses: "docker/metadata-action@v3"
+        with:
+          images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value={{version}}-py${{ matrix.python-version }}
+            type=raw,value={{version}},enable=${{ matrix.python-version == 3.6 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
+            type=raw,value=stable-py${{ matrix.python-version }}
+      - name: "Build Dev Containers"
+        uses: "docker/build-push-action@v2"
+        with:
+          push: true
+          target: final-dev
+          file: "docker/Dockerfile"
+          tags: "${{ steps.dockerdevmeta.outputs.tags }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          context: "."
+          build-args: |
+            PYTHON_VER=${{ matrix.python-version }}
+
+  slack-notify:
+    needs:
+      - "publish_gh"
+      - "publish_pypi"
+    runs-on: "ubuntu-20.04"
+    env:
+      SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
+      SLACK_MESSAGE: >-
+        *NOTIFICATION: NEW-RELEASE-PUBLISHED*\n
+        Repository: <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>\n
+        Release: <${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>\n
+        Published by: <${{ github.server_url }}/${{ github.actor }}|${{ github.actor }}>
+    steps:
+      - name: "Send a notification to Slack"
+        # ENVs cannot be used directly in job.if. This is a workaround to check
+        # if SLACK_WEBHOOK_URL is present.
+        if: "${{ env.SLACK_WEBHOOK_URL != '' }}"
+        uses: "slackapi/slack-github-action@v1.16.0"
+        with:
+          payload: { "type": "mrkdwn", "text": "${{ env.SLACK_MESSAGE }}" } # yamllint disable-line rule:quoted-strings rule:braces rule:comments
+        env:
+          SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
+          SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
