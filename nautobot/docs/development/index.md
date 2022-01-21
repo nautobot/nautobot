@@ -27,6 +27,7 @@ Nautobot components are arranged into functional subsections called _apps_ (a ca
 - `users`: Authentication and user preferences
 - `utilities`: Resources which are not user-facing (extendable classes, etc.)
 - `virtualization`: Virtual machines and clusters
+
 ## Release Management
 
 ### Roadmap
@@ -86,7 +87,7 @@ Here is what you need to know about Nautobot releases:
 
 ### Long Term Support (LTS)
 
-The core team is currently evaluating publishing Long Term Support (LTS) version of Nautobot. At this time there is no formal target for this initial release. Our goal is to collect feedback from installations of Nautobot to help identify a maintainable and reliable LTS model. If you have interest in deploying an LTS version of Nautobot, or useful information to help inform the final LTS model, please contribute to the [GitHub Discussion thread](https://github.com/nautobot/nautobot/discussions/1291) around LTS.
+The core team is currently evaluating the possibility of publishing a Long Term Support (LTS) version of Nautobot. At this time there is no formal target for this initial release. Our goal is to collect feedback from users of Nautobot to help identify a maintainable and reliable LTS model. If you have interest in deploying an LTS version of Nautobot, or useful information to help inform the final LTS model, please contribute to the [GitHub Discussion thread](https://github.com/nautobot/nautobot/discussions/1291) around LTS.
 
 ### Deprecation Policy
 
@@ -122,7 +123,7 @@ categories for discussions:
 
 ## Contributing
 
-We welcome many forms of contributions to Nautobot. While we understand most contributions will commonly come from developers, we encourage others to contribute in the form of docs, tutorials, and user guides. If you have other ideas for contributing, don't hesitate to open an issue or have a discussion in one of the forums below.
+We welcome many forms of contributions to Nautobot. While we understand most contributions will commonly come from developers, we encourage others to contribute in the form of docs, tutorials, and user guides. If you have other ideas for contributing, don't hesitate to open an issue or have a discussion in one of the forums above.
 
 Please also take a chance to look at our [Wiki on GitHub](https://github.com/nautobot/nautobot/wiki/Work-Intake-&-Issue-Management) to review any specifics as to how we define and scope work as a community.
 
@@ -157,7 +158,7 @@ Please also take a chance to look at our [Wiki on GitHub](https://github.com/nau
 
 Bugs will follow our published workflow from inbound triage to ultimate terminal state, whether accepted or closed:
 
-![Bug Workflow State Diagram](imgs/bug-wf.jpg)
+![Bug Workflow State Diagram](../media/development/index_bug_wf.jpg)
 
 ### Opening Feature Requests
 
@@ -195,7 +196,7 @@ labels will be applied for categorization.
 
 Feature requests will follow our published workflow from inbound triage to ultimate terminal state, whether accepted or closed:
 
-![Feature Request Workflow State Diagram](imgs/feature-request-wf.jpg)
+![Feature Request Workflow State Diagram](../media/development/index_feature_request_wf.jpg)
 
 ### Submitting Pull Requests
 
