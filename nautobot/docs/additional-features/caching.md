@@ -167,6 +167,7 @@ sentinel_password = ""
 CELERY_BROKER_URL = (
     f"sentinel://:{redis_password}@mysentinel.redis.example.com:26379;"
     f"sentinel://:{redis_password}@othersentinel.redis.example.com:26379;"
+    # The final entry must not have the `;` delimiter
     f"sentinel://:{redis_password}@thirdsentinel.redis.example.com:26379"
 )
 CELERY_BROKER_TRANSPORT_OPTIONS = {
