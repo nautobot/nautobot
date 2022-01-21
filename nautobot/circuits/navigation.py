@@ -82,6 +82,28 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="circuits:providernetwork_list",
+                        name="Provider Networks",
+                        weight=200,
+                        permissions=[
+                            "circuits.view_providernetwork",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="circuits:providernetwork_add",
+                                permissions=[
+                                    "circuits.add_providernetwork",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="circuits:providernetwork_import",
+                                permissions=[
+                                    "circuits.add_providernetwork",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
         ),
