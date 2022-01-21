@@ -824,7 +824,7 @@ class JobResult(BaseModel, CustomFieldModel):
         user: User object to link to the JobResult instance
         args: additional args passed to the callable
         schedule: Optional ScheduledJob instance to link to the JobResult
-        celery_kwargs: Dictionary of options to pass as kwargs to Celery `apply_async` method
+        celery_kwargs: Dictionary of options to pass as **kwargs to Celery `apply_async` method
         kwargs: additional kwargs passed to the `func` callable
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
