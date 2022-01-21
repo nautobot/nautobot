@@ -15,6 +15,18 @@ The following individuals are on the Nautobot Core Team:
 - Jathan McCollum
 - Jason Edelman
 
+## Project Structure
+
+Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
+
+- `circuits`: Communications circuits and providers (not to be confused with power circuits)
+- `dcim`: Datacenter infrastructure management (sites, racks, and devices)
+- `extras`: Additional features not considered part of the core data model
+- `ipam`: IP address management (VRFs, prefixes, IP addresses, and VLANs)
+- `tenancy`: Tenants (such as customers) to which Nautobot objects may be assigned
+- `users`: Authentication and user preferences
+- `utilities`: Resources which are not user-facing (extendable classes, etc.)
+- `virtualization`: Virtual machines and clusters
 ## Release Management
 
 ### Roadmap
@@ -72,11 +84,9 @@ Here is what you need to know about Nautobot releases:
   - The final notification will be provided 3-5 days before the release drops.
 - The dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
 
-For 2021, the team estimates there will be three more releases with no more than one of them being a major release.
-
 ### Long Term Support (LTS)
 
-The core team is currently evaluating publishing Long Term Support (LTS) version of Nautobot. At this time there is no formal target for this initial release. Our goal is to collect feedback from installations of Nautobot to help identify a maintainable and reliable LTS model. If you have interest in deploying an LTS version of Nautobot, or useful information to help inform the final LTS model, please contribute to the [GitHub Discussion thread](###TODO_ADD_LINK) around LTS.
+The core team is currently evaluating publishing Long Term Support (LTS) version of Nautobot. At this time there is no formal target for this initial release. Our goal is to collect feedback from installations of Nautobot to help identify a maintainable and reliable LTS model. If you have interest in deploying an LTS version of Nautobot, or useful information to help inform the final LTS model, please contribute to the [GitHub Discussion thread](https://github.com/nautobot/nautobot/discussions/1291) around LTS.
 
 ### Deprecation Policy
 
@@ -114,13 +124,15 @@ categories for discussions:
 
 We welcome many forms of contributions to Nautobot. While we understand most contributions will commonly come from developers, we encourage others to contribute in the form of docs, tutorials, and user guides. If you have other ideas for contributing, don't hesitate to open an issue or have a discussion in one of the forums below.
 
+Please also take a chance to look at our [Wiki on GitHub](https://github.com/nautobot/nautobot/wiki/Work-Intake-&-Issue-Management) to review any specifics as to how we define and scope work as a community.
+
 ### Reporting Bugs
 
 - First, ensure that you're running the [latest stable version](https://github.com/nautobot/nautobot/releases)
   of Nautobot. If you're running an older version, it's possible that the bug has
   already been fixed.
 
-- Next, check the GitHub [issues list](https://github.com/nautobot/nautobot/issues) 
+- Next, check the GitHub [issues list](https://github.com/nautobot/nautobot/issues)
   to see if the bug you've found has already been reported. If you think you may
   be experiencing a reported issue that hasn't already been resolved, please
   click "add a reaction" in the top right corner of the issue and add a thumbs
@@ -129,14 +141,14 @@ We welcome many forms of contributions to Nautobot. While we understand most con
 - When submitting an issue, please be as descriptive as possible. Be sure to
   provide all information request in the issue template, including:
 
-      * The environment in which Nautobot is running  
+      * The environment in which Nautobot is running
       * The exact steps that can be taken to reproduce the issue
       * Expected and observed behavior
       * Any error messages generated
       * Screenshots (if applicable)
 
 - Please avoid prepending any sort of tag (e.g. "[Bug]") to the issue title.
-  The issue will be reviewed by a maintainer aft  er submission and the appropriate
+  The issue will be reviewed by a maintainer after submission and the appropriate
   labels will be applied for categorization.
 
 - Keep in mind that bugs are prioritized based on their severity and how much
@@ -207,17 +219,3 @@ Feature requests will follow our published workflow from inbound triage to ultim
       * PEP 8 compliance is enforced, with the exception that lines may be
         greater than 80 characters in length
 
-## Project Structure
-
-All bug fixes and minor updates of the current Nautobot release occur in the `develop` branch; major feature development occurs in the `next` branch; and releases are packaged from the `main` branch. The `main` branch should _always_ represent the current stable release in its entirety, such that installing Nautobot by either downloading a packaged release or cloning the `main` branch provides the same code base.
-
-Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
-
-- `circuits`: Communications circuits and providers (not to be confused with power circuits)
-- `dcim`: Datacenter infrastructure management (sites, racks, and devices)
-- `extras`: Additional features not considered part of the core data model
-- `ipam`: IP address management (VRFs, prefixes, IP addresses, and VLANs)
-- `tenancy`: Tenants (such as customers) to which Nautobot objects may be assigned
-- `users`: Authentication and user preferences
-- `utilities`: Resources which are not user-facing (extendable classes, etc.)
-- `virtualization`: Virtual machines and clusters
