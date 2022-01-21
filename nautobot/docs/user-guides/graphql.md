@@ -251,7 +251,7 @@ query {
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="../images/graphql/11-graphql-query-05.png">
+    <img src="../images/graphql/11-graphql-query-06.png">
   </details>
 </div>
 
