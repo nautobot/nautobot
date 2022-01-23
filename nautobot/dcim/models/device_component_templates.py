@@ -80,6 +80,9 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         )
 
     def instantiate_return(self, model, **kwargs):
+        """Simplifies the instantiating of component on the specified Device by
+        predefining common arguments like name, label and description
+        """
         return model(name=self.name, label=self.label, description=self.description, **kwargs)
 
 
