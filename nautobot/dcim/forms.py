@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import Q
 from django.utils.safestring import mark_safe
 from netaddr import EUI
@@ -567,7 +567,6 @@ class RackCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
@@ -764,7 +763,6 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit rack_group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -1133,7 +1131,6 @@ class PowerOutletTemplateForm(BootstrapMixin, CustomFieldModelForm, Relationship
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         # Limit power_port choices to current DeviceType
@@ -1269,7 +1266,6 @@ class FrontPortTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipMo
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         # Limit rear_port choices to current DeviceType
@@ -1858,7 +1854,6 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit device type queryset by manufacturer
             params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
@@ -1904,7 +1899,6 @@ class DeviceCSVForm(BaseDeviceCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit rack_group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -1946,7 +1940,6 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit device bay queryset by parent device
             params = {f"device__{self.fields['parent'].to_field_name}": data.get("parent")}
             self.fields["device_bay"].queryset = self.fields["device_bay"].queryset.filter(**params)
@@ -3118,7 +3111,6 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
     )
 
     def __init__(self, device_bay, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.fields["installed_device"].queryset = Device.objects.filter(
@@ -3633,6 +3625,22 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         length_unit = self.cleaned_data.get("length_unit", None)
         return length_unit if length_unit is not None else ""
 
+    def add_error(self, field, error):
+        # Edge Case: some fields in error are not properties in this instance
+        #   e.g: termination_a_id not an property in CableCSVForm, This would raise a ValueError Exception
+        # Solution: convert those fields to its equivalent in CableCSVForm
+        #   e.g: termination_a_id > side_a_type
+
+        error_dict = error.error_dict
+        termination_keys = [key for key in error_dict.keys() if key.startswith("termination")]
+        for error_field in termination_keys:
+            side_value = error_field.split("_")[1]
+            error_msg = error_dict.pop(error_field)
+            error_dict["side_%s_type" % side_value] = error_msg
+
+        final_error = ValidationError(error_dict)
+        super().add_error(field, final_error)
+
 
 class CableBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Cable.objects.all(), widget=forms.MultipleHiddenInput)
@@ -4020,7 +4028,6 @@ class PowerPanelCSVForm(CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -4146,7 +4153,6 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit power_panel queryset by site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["power_panel"].queryset = self.fields["power_panel"].queryset.filter(**params)
