@@ -144,6 +144,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Fixed
 
+- [#1161](https://github.com/nautobot/nautobot/issues/1161) - The `description` field for device component templates is now correctly propagated to device components created from these templates.
 - [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is provided with a value of None
 
 ## v1.2.4 (2022-01-13)
