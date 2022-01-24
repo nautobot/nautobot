@@ -1,9 +1,9 @@
 from django.test import TestCase
 
-from nautobot.dcim.forms import DeviceForm, InterfaceCreateForm
+from nautobot.dcim.forms import DeviceForm, InterfaceCreateForm, CableCSVForm
 from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Rack, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Rack, Site, Interface
 from nautobot.extras.models import SecretsGroup, Status
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
@@ -181,3 +181,62 @@ class LabelTestCase(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("label_pattern", form.errors)
+
+
+class TestCableCSVForm(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        site = Site.objects.create(name="Site 2", slug="site-2")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
+        cls.device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Device Type 1",
+            slug="device-type-1",
+            u_height=1,
+        )
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ffff00")
+        cls.device = Device.objects.create(
+            name="Device 1",
+            device_type=cls.device_type,
+            device_role=device_role,
+            site=site,
+        )
+        cls.device_two = Device.objects.create(
+            name="Device 2",
+            device_type=cls.device_type,
+            device_role=device_role,
+            site=site,
+        )
+        cls.interface = Interface.objects.create(
+            device=cls.device,
+            name="Interface 1",
+            type=InterfaceTypeChoices.TYPE_LAG,
+        )
+        cls.interface_two = Interface.objects.create(
+            device=cls.device_two,
+            name="Interface 2",
+            type=InterfaceTypeChoices.TYPE_LAG,
+        )
+
+    def test_add_error_method_converts_error_fields_to_equivalent_in_CableCSVForm(self):
+        data = {
+            "side_a_device": "Device 1",
+            "side_a_type": "dcim.interface",
+            "side_a_name": "Interface 1",
+            "side_b_device": "Device 2",
+            "side_b_type": "dcim.interface",
+            "side_b_name": "Interface 2",
+            "status": "connected",
+        }
+        headers = {
+            "side_a_device": None,
+            "side_a_type": None,
+            "side_a_name": None,
+            "side_b_device": None,
+            "side_b_type": None,
+            "side_b_name": None,
+            "status": None,
+        }
+        form = CableCSVForm(data, headers=headers)
+        self.assertFalse(form.is_valid())
+        self.assertIn("side_a_type", form.errors)
