@@ -2,7 +2,7 @@
 
 ## Security Announcements
 
-Join the #nautobot channel in the Network to Code slack for messages about security and release announcements.
+Join the #nautobot channel in the Network to Code Slack for messages about security and release announcements.
 
 ## Report a Vulnerability
 
@@ -12,7 +12,7 @@ If you feel your report is safe for public disclosure (a CVE related to a depend
 
 If you are unsure of the severity of your report or you feel it should not be publicly disclosed until a fix has been release, you can also email [security@networktocode.com](mailto:security@networktocode.com) with the security details.
 
-You may encrypt your email with the  of the security response members. While accepted, encryption using GPG is NOT mandatory to make a disclosure.
+You may encrypt your email with the GPG keys of the security response members below. While accepted, encryption using GPG is NOT mandatory to make a disclosure.
 
 ## When Should I Report a Vulnerability?
 
