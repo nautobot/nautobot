@@ -97,6 +97,8 @@ class BaseJob:
         - field_order (list)
         - read_only (bool)
         - approval_required (bool)
+        - soft_time_limit (int)
+        - time_limit (int)
         """
 
         pass

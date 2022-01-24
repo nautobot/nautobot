@@ -11,7 +11,7 @@ from django.core.management.base import CommandError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test.client import RequestFactory
+from django.test.client import Client, RequestFactory
 
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
@@ -19,6 +19,7 @@ from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, JobResult, Status
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import CeleryTestCase, TestCase
+from nautobot.utilities.utils import copy_safe_request
 
 
 # Use the proper swappable User model
@@ -421,6 +422,59 @@ class JobFileUploadTest(TestCase):
 
             # Assert that FileProxy was cleaned up
             self.assertEqual(FileProxy.objects.count(), 0)
+
+
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
+class CeleryWorkerJobTests(CeleryTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser")
+
+        # Initialize the test client
+        self.client = Client()
+
+        # Force login explicitly with the first-available backend
+        self.client.force_login(self.user)
+
+        # Initialize fake request that will be required to execute Webhooks (in jobs.)
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+    def test_job_soft_time_limit_exceeded(self):
+        """
+        Job test with code with takes longer than specified soft_time_limit to run.
+        """
+        self.clear_worker()
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+            module = "test_soft_time_limit_exceeded"
+            name = "TestSoftTimeLimitExceeded"
+            job_content_type = ContentType.objects.get(app_label="extras", model="job")
+            job_result = JobResult.enqueue_job(
+                run_job,
+                f"local/{module}/{name}",
+                job_content_type,
+                self.user,
+                schedule=None,
+                data={},
+                request=copy_safe_request(self.request),
+            )
+            import time
+
+            # Wait on the job to finish
+            while job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+                time.sleep(1)
+                job_result = JobResult.objects.get(pk=job_result.pk)
+            job_result.refresh_from_db()
+            # failure_log = JobLogEntry.objects.filter(
+            #     job_result=job_result, grouping="run"
+            # ).first()
+            log_count = JobLogEntry.objects.filter(job_result=job_result, grouping="run").count()
+            self.assertEqual(log_count, 0)
+            # self.assertIn("SoftTimeLimitExceeded", failure_log.message)
 
 
 @mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
