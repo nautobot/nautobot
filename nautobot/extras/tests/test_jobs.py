@@ -458,7 +458,6 @@ class CeleryWorkerJobTests(CeleryTestCase):
                 f"local/{module}/{name}",
                 job_content_type,
                 self.user,
-                schedule=None,
                 data={},
                 request=copy_safe_request(self.request),
             )
