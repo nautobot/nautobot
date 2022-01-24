@@ -6,11 +6,11 @@ Join the #nautobot channel in the Network to Code Slack for messages about secur
 
 ## Report a Vulnerability
 
-We're appreciate the time security researchers and users contribute to reporting vulnerabilities to the Nautobot Community.
+We appreciate the time security researchers and users contribute to reporting vulnerabilities to the Nautobot Community.
 
 If you feel your report is safe for public disclosure (a CVE related to a dependency, or a low-risk bug) please feel free to open a bug [issue on GitHub](https://github.com/nautobot/nautobot/issues/new/choose). 
 
-If you are unsure of the severity of your report or you feel it should not be publicly disclosed until a fix has been release, you can also email [security@networktocode.com](mailto:security@networktocode.com) with the security details.
+If you are unsure of the severity of your report or you feel it should not be publicly disclosed until a fix has been released, you can also email [security@networktocode.com](mailto:security@networktocode.com) with the security details.
 
 You may encrypt your email with the GPG keys of the security response members below. While accepted, encryption using GPG is NOT mandatory to make a disclosure.
 
@@ -30,7 +30,7 @@ You may encrypt your email with the GPG keys of the security response members be
 
 Each report is acknowledged and analyzed by security response members within five (5) working days.
 
-Any vulnerability information shared with security response members stays within Nautobot project and will not be disseminated to other projects unless it is necessary to get the issue fixed.
+Any vulnerability information shared with security response members stays within the Nautobot project and will not be disseminated to other projects unless it is necessary to get the issue fixed.
 
 As the security issue moves from triage, to identified fix, to release planning we will keep the reporter updated.
 
