@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0015_scheduled_job"),
+        ("extras", "0021_customfield_changelog_data"),
     ]
 
     operations = [
