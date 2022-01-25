@@ -19,7 +19,6 @@ from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, JobResult, Status
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import CeleryTestCase, TestCase
-from nautobot.utilities.utils import copy_safe_request
 
 
 # Use the proper swappable User model
