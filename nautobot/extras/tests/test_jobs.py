@@ -444,39 +444,6 @@ class CeleryWorkerJobTests(CeleryTestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
-    def test_job_soft_time_limit_exceeded(self):
-        """
-        Job test with code with takes longer than specified soft_time_limit to run.
-        """
-        self.clear_worker()
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
-            module = "test_soft_time_limit_exceeded"
-            name = "TestSoftTimeLimitExceeded"
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
-            job_result = JobResult.enqueue_job(
-                run_job,
-                f"local/{module}/{name}",
-                job_content_type,
-                self.user,
-                data={},
-                request=copy_safe_request(self.request),
-            )
-            import time
-
-            # Wait on the job to finish
-            while job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-                time.sleep(1)
-                job_result = JobResult.objects.get(pk=job_result.pk)
-            job_result.refresh_from_db()
-            failure_log = JobLogEntry.objects.filter(
-                job_result=job_result, grouping="run"
-            ).first()
-            log_count = JobLogEntry.objects.filter(
-                job_result=job_result
-            ).count()
-            self.assertEqual(log_count, 1)
-            self.assertIn("SoftTimeLimitExceeded", failure_log.message)
-
 
 @mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class RunJobManagementCommandTest(CeleryTestCase):
@@ -505,6 +472,15 @@ class RunJobManagementCommandTest(CeleryTestCase):
             self.assertIn("info: Database changes have been reverted automatically.", out)
             self.assertIn("local/test_pass/TestPass: SUCCESS", out)
             self.assertEqual("", err)
+
+    def test_runjob_soft_time_limit(self):
+        """Testing a soft_time_limit works as expected"""
+        # I'm using the same philosophy as the above test case (test_runjob_nochange_successful)
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+            out, err = self.run_command("local/test_soft_time_limit_exceeded/TestSoftTimeLimitExceeded")
+            self.assertIn("Running local/test_soft_time_limit_exceeded/TestSoftTimeLimitExceeded...", out)
+            self.assertIn("Soft time limit exceeded", out)
+            self.assertNotIn("This message should never be seen!", out)
 
     def test_runjob_db_change_no_commit(self):
         """A job that changes the DB, when run with commit=False, doesn't modify the database."""
