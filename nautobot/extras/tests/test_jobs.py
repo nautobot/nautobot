@@ -425,27 +425,6 @@ class JobFileUploadTest(TestCase):
 
 
 @mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
-class CeleryWorkerJobTests(CeleryTestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
-
-    def setUp(self):
-        self.user = User.objects.create_user(username="testuser")
-
-        # Initialize the test client
-        self.client = Client()
-
-        # Force login explicitly with the first-available backend
-        self.client.force_login(self.user)
-
-        # Initialize fake request that will be required to execute Webhooks (in jobs.)
-        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
-        self.request.id = uuid.uuid4()
-        self.request.user = self.user
-
-
-@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class RunJobManagementCommandTest(CeleryTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
 
