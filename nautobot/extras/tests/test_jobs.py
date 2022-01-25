@@ -302,6 +302,66 @@ class JobTest(TestCase):
             self.assertEqual(info_log.log_object, "Role: role")
             self.assertEqual(job_result.data["output"], "\nNice Roles, bro.")
 
+    def test_optional_object_var(self):
+        """
+        Test that an optional Object variable field behaves as expected.
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+            module = "test_object_var_optional"
+            name = "TestOptionalObjectVar"
+            job_class = get_job(f"local/{module}/{name}")
+
+            # Prepare the job data
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+
+            data = {"region": None}
+
+            # Run the job without the optional var provided
+            run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+
+            info_log = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
+            ).first()
+
+            # Assert stuff
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+            self.assertEqual(info_log.log_object, None)
+            self.assertEqual(info_log.message, "The Region if any that the user provided.")
+            self.assertEqual(job_result.data["output"], "\nNice Region (or not)!")
+
+    def test_required_object_var(self):
+        """
+        Test that a required Object variable field behaves as expected.
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+            module = "test_object_var_required"
+            name = "TestRequiredObjectVar"
+            job_class = get_job(f"local/{module}/{name}")
+
+            # Prepare the job data
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+            data = {"region": None}
+            run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+
+            # Assert stuff
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+            log_failure = JobLogEntry.objects.filter(
+                grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
+            ).first()
+            self.assertIn("region is a required field", log_failure.message)
+
     def test_job_data_as_string(self):
         """
         Test that job doesn't error when not a dictionary.

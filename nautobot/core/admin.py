@@ -55,8 +55,6 @@ admin_site.register([Config], ConfigAdmin)
 class NautobotModelAdmin(ModelAdmin):
     formfield_overrides = {
         models.DateField: {"widget": widgets.DatePicker},
-        models.DateTimeField: {"widget": widgets.DateTimePicker},
         models.ForeignKey: {"widget": widgets.StaticSelect2},
         models.ManyToManyField: {"widget": widgets.StaticSelect2Multiple},
-        models.TimeField: {"widget": widgets.TimePicker},
     }
