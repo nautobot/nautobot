@@ -3637,7 +3637,7 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         # Edge Case: some fields in error are not properties in this instance
         #   e.g: termination_a_id not an property in CableCSVForm, This would raise a ValueError Exception
         # Solution: convert those fields to its equivalent in CableCSVForm
-        #   e.g: termination_a_id > side_a_type
+        #   e.g: termination_a_id > side_a_name
 
         error_dict = error.error_dict
         termination_keys = [key for key in error_dict.keys() if key.startswith("termination")]

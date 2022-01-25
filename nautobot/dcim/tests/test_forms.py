@@ -240,3 +240,4 @@ class TestCableCSVForm(TestCase):
         form = CableCSVForm(data, headers=headers)
         self.assertFalse(form.is_valid())
         self.assertIn("side_a_name", form.errors)
+        self.assertNotIn("termination_a_id", form.errors)
