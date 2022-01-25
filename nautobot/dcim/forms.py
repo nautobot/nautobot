@@ -3644,7 +3644,7 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         for error_field in termination_keys:
             side_value = error_field.split("_")[1]
             error_msg = error_dict.pop(error_field)
-            error_dict["side_%s_type" % side_value] = error_msg
+            error_dict["side_%s_name" % side_value] = error_msg
 
         final_error = ValidationError(error_dict)
         super().add_error(field, final_error)

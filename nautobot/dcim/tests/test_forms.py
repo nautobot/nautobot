@@ -239,4 +239,4 @@ class TestCableCSVForm(TestCase):
         }
         form = CableCSVForm(data, headers=headers)
         self.assertFalse(form.is_valid())
-        self.assertIn("side_a_type", form.errors)
+        self.assertIn("side_a_name", form.errors)
