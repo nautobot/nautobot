@@ -468,12 +468,14 @@ class CeleryWorkerJobTests(CeleryTestCase):
                 time.sleep(1)
                 job_result = JobResult.objects.get(pk=job_result.pk)
             job_result.refresh_from_db()
-            # failure_log = JobLogEntry.objects.filter(
-            #     job_result=job_result, grouping="run"
-            # ).first()
-            log_count = JobLogEntry.objects.filter(job_result=job_result, grouping="run").count()
-            self.assertEqual(log_count, 0)
-            # self.assertIn("SoftTimeLimitExceeded", failure_log.message)
+            failure_log = JobLogEntry.objects.filter(
+                job_result=job_result, grouping="run"
+            ).first()
+            log_count = JobLogEntry.objects.filter(
+                job_result=job_result
+            ).count()
+            self.assertEqual(log_count, 1)
+            self.assertIn("SoftTimeLimitExceeded", failure_log.message)
 
 
 @mock.patch("nautobot.extras.models.models.JOB_LOGS", None)

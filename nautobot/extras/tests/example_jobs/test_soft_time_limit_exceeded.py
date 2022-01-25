@@ -9,6 +9,6 @@ class TestSoftTimeLimitExceeded(Job):
         soft_time_limit = 1
 
     def run(self, data, commit):
-        time.sleep(1.5)
+        time.sleep(3)
         self.log_debug("This message should never be seen!")
         return "Soft time limit exceeded"
