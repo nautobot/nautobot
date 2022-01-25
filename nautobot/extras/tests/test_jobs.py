@@ -11,7 +11,7 @@ from django.core.management.base import CommandError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test.client import Client, RequestFactory
+from django.test.client import RequestFactory
 
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
