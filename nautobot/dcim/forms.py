@@ -3639,14 +3639,16 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         # Solution: convert those fields to its equivalent in CableCSVForm
         #   e.g: termination_a_id > side_a_name
 
-        error_dict = error.error_dict
-        termination_keys = [key for key in error_dict.keys() if key.startswith("termination")]
-        for error_field in termination_keys:
-            side_value = error_field.split("_")[1]
-            error_msg = error_dict.pop(error_field)
-            error_dict["side_%s_name" % side_value] = error_msg
+        final_error = error
+        if hasattr(error, "error_dict"):
+            error_dict = error.error_dict
+            termination_keys = [key for key in error_dict.keys() if key.startswith("termination")]
+            for error_field in termination_keys:
+                side_value = error_field.split("_")[1]
+                error_msg = error_dict.pop(error_field)
+                error_dict["side_%s_name" % side_value] = error_msg
 
-        final_error = ValidationError(error_dict)
+            final_error = ValidationError(error_dict)
         super().add_error(field, final_error)
 
 
