@@ -28,6 +28,10 @@ class ChangeLoggedModel(models.Model):
     class Meta:
         abstract = True
 
+    def snapshot(self):
+        """Save a snapshot of the object's current state."""
+        self._prechange_snapshot = serialize_object(self)
+
     def to_objectchange(self, action):
         """
         Return a new ObjectChange representing a change made to this object. This will typically be called automatically
