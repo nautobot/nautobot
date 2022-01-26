@@ -64,7 +64,8 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["model"], "site")
             self.assertEqual(body["username"], "testuser")
             self.assertEqual(body["request_id"], str(request_id))
-            self.assertEqual(body["data"]["name"], "Site 1")
+            self.assertEqual(body["data"]["name"], "Site Update")
+            self.assertEqual(body["snapshot"]["name"], "Site 1")
 
             class FakeResponse:
                 ok = True
@@ -75,11 +76,15 @@ class WebhookTest(APITestCase):
         # Patch the Session object with our dummy_send() method, then process the webhook for sending
         with patch.object(Session, "send", dummy_send):
             site = Site.objects.create(name="Site 1", slug="site-1")
+            site.snapshot()  # Save a snapshot of object current state
+            site.name = "Site Update"
+            site.save()
+
             serializer_context = {
                 "request": None,
             }
             serializer = SiteSerializer(site, context=serializer_context)
-            snapshot = None
+            snapshot = getattr(site, "_prechange_snapshot", None)
 
             process_webhook(
                 webhook.pk,
