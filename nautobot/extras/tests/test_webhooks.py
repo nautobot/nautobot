@@ -79,10 +79,12 @@ class WebhookTest(APITestCase):
                 "request": None,
             }
             serializer = SiteSerializer(site, context=serializer_context)
+            snapshot = None
 
             process_webhook(
                 webhook.pk,
                 serializer.data,
+                snapshot,
                 Site._meta.model_name,
                 ObjectChangeActionChoices.ACTION_CREATE,
                 timestamp,
