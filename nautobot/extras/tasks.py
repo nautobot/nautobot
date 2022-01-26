@@ -113,7 +113,7 @@ def process_webhook(webhook_pk, data, snapshot, model_name, event, timestamp, us
         "username": username,
         "request_id": request_id,
         "data": data,
-        "snapshot": snapshot
+        "snapshot": snapshot,
     }
 
     # Build the headers for the HTTP request

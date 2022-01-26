@@ -35,7 +35,7 @@ def enqueue_webhooks(instance, user, request_id, action):
             "request": None,
         }
         serializer = serializer_class(instance, context=serializer_context)
-        snapshot = getattr(instance, '_prechange_snapshot', None)
+        snapshot = getattr(instance, "_prechange_snapshot", None)
 
         # Enqueue the webhooks
         for webhook in webhooks:
