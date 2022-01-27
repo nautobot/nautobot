@@ -77,8 +77,8 @@ jobs:
             latest=false
           tags: |
             type=raw,value={{version}}-py${{ matrix.python-version }}
-            type=raw,value={{version}},enable=${{ matrix.python-version == 3.6 }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
+            type=raw,value={{version}},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.7 }}
             type=raw,value=stable-py${{ matrix.python-version }}
       - name: "Build"
         uses: "docker/build-push-action@v2"
@@ -101,8 +101,8 @@ jobs:
             latest=false
           tags: |
             type=raw,value={{version}}-py${{ matrix.python-version }}
-            type=raw,value={{version}},enable=${{ matrix.python-version == 3.6 }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
+            type=raw,value={{version}},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.7 }}
             type=raw,value=stable-py${{ matrix.python-version }}
       - name: "Build Dev Containers"
         uses: "docker/build-push-action@v2"

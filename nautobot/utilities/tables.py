@@ -15,6 +15,8 @@ from django_tables2.utils import Accessor
 from nautobot.extras.models import CustomField
 from nautobot.extras.choices import CustomFieldTypeChoices
 
+from .templatetags.helpers import render_boolean
+
 
 class BaseTable(tables.Table):
     """
@@ -145,13 +147,7 @@ class BooleanColumn(tables.Column):
     """
 
     def render(self, value):
-        if value:
-            rendered = '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
-        elif value is None:
-            rendered = '<span class="text-muted">&mdash;</span>'
-        else:
-            rendered = '<span class="text-danger"><i class="mdi mdi-close-thick"></i></span>'
-        return mark_safe(rendered)
+        return render_boolean(value)
 
 
 class ButtonsColumn(tables.TemplateColumn):
@@ -352,10 +348,7 @@ class CustomFieldColumn(tables.Column):
             return self.default
 
         if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-            if value is True:
-                template = '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
-            else:
-                template = '<span class="text-danger"><i class="mdi mdi-close-thick"></i></span>'
+            template = render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
             if value:
                 template = ""

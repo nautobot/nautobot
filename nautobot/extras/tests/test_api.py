@@ -899,8 +899,8 @@ class JobTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     @skipIf(
-        "dummy_plugin" not in settings.PLUGINS,
-        "dummy_plugin not in settings.PLUGINS",
+        "example_plugin" not in settings.PLUGINS,
+        "example_plugin not in settings.PLUGINS",
     )
     def test_list_jobs_with_permission(self):
         self.add_permissions("extras.view_job")
@@ -908,10 +908,10 @@ class JobTest(APITestCase):
         response = self.client.get(url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        # At a minimum, the job provided by the dummy plugin should be present
+        # At a minimum, the job provided by the example plugin should be present
         self.assertNotEqual(response.data, [])
         self.assertIn(
-            "plugins/dummy_plugin.jobs/DummyJob",
+            "plugins/example_plugin.jobs/ExampleJob",
             [job["id"] for job in response.data],
         )
 

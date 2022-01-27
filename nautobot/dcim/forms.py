@@ -588,7 +588,7 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     role = DynamicModelChoiceField(queryset=RackRole.objects.all(), required=False)
-    serial = forms.CharField(max_length=50, required=False, label="Serial Number")
+    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     asset_tag = forms.CharField(max_length=50, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(RackTypeChoices),
@@ -1982,7 +1982,7 @@ class DeviceBulkEditForm(
     device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    serial = forms.CharField(max_length=50, required=False, label="Serial Number")
+    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
 
     class Meta:
@@ -3229,7 +3229,7 @@ class InventoryItemCreateForm(ComponentCreateForm):
     )
     part_id = forms.CharField(max_length=50, required=False, label="Part ID")
     serial = forms.CharField(
-        max_length=50,
+        max_length=255,
         required=False,
     )
     asset_tag = forms.CharField(

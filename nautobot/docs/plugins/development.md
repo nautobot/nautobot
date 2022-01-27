@@ -684,13 +684,13 @@ Plugins can optionally expose their models via Django's built-in [administrative
 
 ```python
 # admin.py
-from django.contrib import admin
+from nautobot.core.admin import NautobotModelAdmin
 
 from .models import Animal
 
 
 @admin.register(Animal)
-class AnimalAdmin(admin.ModelAdmin):
+class AnimalAdmin(NautobotModelAdmin):
     list_display = ('name', 'sound')
 ```
 

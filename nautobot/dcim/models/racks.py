@@ -203,7 +203,7 @@ class Rack(PrimaryModel, StatusModel):
         null=True,
         help_text="Functional role",
     )
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number")
     asset_tag = models.CharField(
         max_length=50,
         blank=True,

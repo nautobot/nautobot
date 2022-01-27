@@ -13,12 +13,12 @@ from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
 from nautobot.utilities.testing.integration import SplinterTestCase
 
-from dummy_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class PluginWebhookTest(SplinterTestCase):
     """
@@ -37,10 +37,10 @@ class PluginWebhookTest(SplinterTestCase):
                 os.remove(os.path.join("/tmp", f))
 
         self.url = f"http://localhost:{self.server_thread.port}" + reverse(
-            "plugins-api:dummy_plugin-api:dummymodel_webhook"
+            "plugins-api:example_plugin-api:examplemodel_webhook"
         )
         self.webhook = Webhook.objects.create(
-            name="DummyModel",
+            name="ExampleModel",
             type_create=True,
             type_update=True,
             type_delete=True,
@@ -48,8 +48,8 @@ class PluginWebhookTest(SplinterTestCase):
             http_method=WebhookHttpMethodChoices.METHOD_GET,
             http_content_type="application/json",
         )
-        self.dummy_ct = ContentType.objects.get_for_model(DummyModel)
-        self.webhook.content_types.set([self.dummy_ct])
+        self.example_ct = ContentType.objects.get_for_model(ExampleModel)
+        self.webhook.content_types.set([self.example_ct])
 
     def update_headers(self, new_header):
         """
@@ -67,7 +67,7 @@ class PluginWebhookTest(SplinterTestCase):
         self.update_headers("test_plugin_webhook_create")
         # Make change to model
         with web_request_context(self.user):
-            DummyModel.objects.create(name="foo", number=100)
+            ExampleModel.objects.create(name="foo", number=100)
         self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create"))
@@ -78,7 +78,7 @@ class PluginWebhookTest(SplinterTestCase):
         """
         self.clear_worker()
         self.update_headers("test_plugin_webhook_update")
-        obj = DummyModel.objects.create(name="foo", number=100)
+        obj = ExampleModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
@@ -94,7 +94,7 @@ class PluginWebhookTest(SplinterTestCase):
         """
         self.clear_worker()
         self.update_headers(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
-        obj = DummyModel.objects.create(name="foo", number=100)
+        obj = ExampleModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
@@ -115,7 +115,7 @@ class PluginWebhookTest(SplinterTestCase):
 
         # Make change to model
         with web_request_context(self.user):
-            DummyModel.objects.create(name="bar", number=100)
+            ExampleModel.objects.create(name="bar", number=100)
 
         self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body")))

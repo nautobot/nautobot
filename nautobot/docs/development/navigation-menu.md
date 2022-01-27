@@ -19,26 +19,26 @@ menu_tabs = (
         name="Circuits",
         groups=(
             NavMenuGroup(
-                name="Dummy Circuit Group",
+                name="Example Circuit Group",
                 weight=150,
                 items=(
                     NavMenuItem(
-                        link="plugins:dummy_plugin:dummymodel_list",
-                        name="Dummy Model",
+                        link="plugins:example_plugin:examplemodel_list",
+                        name="Example Model",
                         permissions=[
-                            "dummy_plugin.view_dummymodel"
+                            "example_plugin.view_examplemodel"
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:dummy_plugin:dummymodel_add",
+                                link="plugins:example_plugin:examplemodel_add",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel",
+                                    "example_plugin.add_examplemodel",
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="plugins:dummy_plugin:dummymodel_import",
+                                link="plugins:example_plugin:examplemodel_import",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel"
+                                    "example_plugin.add_examplemodel"
                                 ],
                             ),
                         ),
@@ -56,37 +56,37 @@ The code below shows how to add a new tab to the navbar. A tab is defined by a `
 
 The position in the navigation menu is defined by the weight. The lower the weight the closer to the start of the menus the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
 
-Below you can see `Dummy Tab` has a weight value of `150`. This means the tab will appear between `Organization` and `Devices`.
+Below you can see `Example Tab` has a weight value of `150`. This means the tab will appear between `Organization` and `Devices`.
 
 ``` python
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 menu_items = (
     NavMenuTab(
-        name="Dummy Tab",
+        name="Example Tab",
         weight=150,
         groups=(
             NavMenuGroup(
-                name="Dummy Group 1",
+                name="Example Group 1",
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="plugins:dummy_plugin:dummymodel_list",
-                        link_text="Dummy Model",
+                        link="plugins:example_plugin:examplemodel_list",
+                        link_text="Example Model",
                         permissions=[
-                            "dummy_plugin.view_dummymodel"
+                            "example_plugin.view_examplemodel"
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:dummy_plugin:dummymodel_add",
+                                link="plugins:example_plugin:examplemodel_add",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel",
+                                    "example_plugin.add_examplemodel",
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="plugins:dummy_plugin:dummymodel_import",
+                                link="plugins:example_plugin:examplemodel_import",
                                 permissions=[
-                                    "dummy_plugin.add_dummymodel"
+                                    "example_plugin.add_examplemodel"
                                 ],
                             ),
                         ),

@@ -7,6 +7,7 @@ import os
 import pkgutil
 import sys
 import shutil
+from textwrap import dedent
 import traceback
 import warnings
 
@@ -92,6 +93,7 @@ class BaseJob:
         - name (str)
         - description (str)
         - commit_default (bool)
+        - hidden (bool)
         - field_order (list)
         - read_only (bool)
         - approval_required (bool)
@@ -170,12 +172,22 @@ class BaseJob:
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
+    def hidden(cls):
+        return getattr(cls.Meta, "hidden", False)
+
+    @classproperty
     def name(cls):
         return getattr(cls.Meta, "name", cls.__name__)
 
     @classproperty
     def description(cls):
-        return getattr(cls.Meta, "description", "")
+        return dedent(getattr(cls.Meta, "description", "")).strip()
+
+    @classproperty
+    def description_first_line(cls):
+        if cls.description:
+            return cls.description.splitlines()[0]
+        return ""
 
     @classproperty
     def read_only(cls):
@@ -322,6 +334,13 @@ class BaseJob:
                 var = vars[field_name]
             except KeyError:
                 continue
+
+            if value is None:
+                if var.field_attrs.get("required"):
+                    raise ValidationError(f"{field_name} is a required field")
+                else:
+                    return_data[field_name] = value
+                    continue
 
             if isinstance(var, MultiObjectVar):
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)

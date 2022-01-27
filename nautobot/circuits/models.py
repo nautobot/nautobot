@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -9,7 +10,6 @@ from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import serialize_object
 from .choices import CircuitTerminationSideChoices
-from .querysets import CircuitQuerySet
 
 
 __all__ = (
@@ -17,7 +17,59 @@ __all__ = (
     "CircuitTermination",
     "CircuitType",
     "Provider",
+    "ProviderNetwork",
 )
+
+
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class ProviderNetwork(PrimaryModel):
+    name = models.CharField(max_length=100)
+    slug = AutoSlugField(populate_from="name")
+    provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
+    description = models.CharField(max_length=200, blank=True)
+    comments = models.TextField(blank=True)
+
+    csv_headers = [
+        "provider",
+        "name",
+        "slug",
+        "description",
+        "comments",
+    ]
+
+    class Meta:
+        ordering = ("provider", "name")
+        constraints = (
+            models.UniqueConstraint(fields=("provider", "name"), name="circuits_providernetwork_provider_name"),
+        )
+        unique_together = ("provider", "name")
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("circuits:providernetwork", args=[self.slug])
+
+    def to_csv(self):
+        return (
+            self.provider.name,
+            self.name,
+            self.slug,
+            self.description,
+            self.comments,
+        )
+
+    @property
+    def display(self):
+        return f"{self.provider} {self.name}"
 
 
 @extras_features(
@@ -43,7 +95,7 @@ class Provider(PrimaryModel):
         verbose_name="ASN",
         help_text="32-bit autonomous system number",
     )
-    account = models.CharField(max_length=30, blank=True, verbose_name="Account number")
+    account = models.CharField(max_length=100, blank=True, verbose_name="Account number")
     portal_url = models.URLField(blank=True, verbose_name="Portal URL")
     noc_contact = models.TextField(blank=True, verbose_name="NOC contact")
     admin_contact = models.TextField(blank=True, verbose_name="Admin contact")
@@ -154,7 +206,23 @@ class Circuit(PrimaryModel, StatusModel):
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
 
-    objects = CircuitQuerySet.as_manager()
+    # Cache associated CircuitTerminations
+    termination_a = models.ForeignKey(
+        to="circuits.CircuitTermination",
+        on_delete=models.SET_NULL,
+        related_name="+",
+        editable=False,
+        blank=True,
+        null=True,
+    )
+    termination_z = models.ForeignKey(
+        to="circuits.CircuitTermination",
+        on_delete=models.SET_NULL,
+        related_name="+",
+        editable=False,
+        blank=True,
+        null=True,
+    )
 
     csv_headers = [
         "cid",
@@ -200,20 +268,6 @@ class Circuit(PrimaryModel, StatusModel):
             self.comments,
         )
 
-    def _get_termination(self, side):
-        for ct in self.terminations.all():
-            if ct.term_side == side:
-                return ct
-        return None
-
-    @property
-    def termination_a(self):
-        return self._get_termination("A")
-
-    @property
-    def termination_z(self):
-        return self._get_termination("Z")
-
 
 @extras_features(
     "custom_validators",
@@ -223,7 +277,20 @@ class Circuit(PrimaryModel, StatusModel):
 class CircuitTermination(BaseModel, PathEndpoint, CableTermination, RelationshipModel):
     circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="circuit_terminations")
+    site = models.ForeignKey(
+        to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="circuit_terminations",
+        blank=True,
+        null=True,
+    )
+    provider_network = models.ForeignKey(
+        to="circuits.ProviderNetwork",
+        on_delete=models.PROTECT,
+        related_name="circuit_terminations",
+        blank=True,
+        null=True,
+    )
     port_speed = models.PositiveIntegerField(verbose_name="Port speed (Kbps)", blank=True, null=True)
     upstream_speed = models.PositiveIntegerField(
         blank=True,
@@ -240,7 +307,25 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return "Side {}".format(self.get_term_side_display())
+        return f"Termination {self.term_side}: {self.site or self.provider_network}"
+
+    def get_absolute_url(self):
+
+        # Circuit terminations can terminate on a site or a provider network.
+        # There is no separate view for Circuit Terminations,
+        # so we return the absolute URL of the corresponding terminal here.
+        if self.site:
+            return self.site.get_absolute_url()
+        return self.provider_network.get_absolute_url()
+
+    def clean(self):
+        super().clean()
+
+        # Must define either site *or* provider network
+        if self.site is None and self.provider_network is None:
+            raise ValidationError("A circuit termination must attach to either a site or a provider network.")
+        if self.site and self.provider_network:
+            raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
 
     def to_objectchange(self, action):
         # Annotate the parent Circuit

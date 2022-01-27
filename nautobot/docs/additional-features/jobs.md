@@ -78,7 +78,22 @@ This is the human-friendly name of your job, as will be displayed in the Nautobo
 
 #### `description`
 
-A human-friendly description of what this job does.
+An optional human-friendly description of what this job does.
+This can accept either plain text or markdown-formatted text. It can also be multiple lines:
+
+```python
+class ExampleJob(Job):
+    class Meta:
+        description = """
+            This job does a number of interesting things.
+            
+             1. It hacks the Gibson
+             2. It immanentizes the eschaton
+             3. It's a floor wax *and* a dessert topping
+        """
+```
+
+If you code a multi-line description, the first line only will be used in the description column of the jobs list, while the full description will be displayed in the job submission, approval, and results pages.
 
 #### `approval_required`
 
@@ -97,6 +112,21 @@ class MyJob(Job):
 #### `field_order`
 
 A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
+
+#### `hidden`
+
+Default: `False`
+
+A Boolean that if set to `True` will prevent the job from being displayed in the list of jobs in the Nautobot UI.
+
+Since the jobs execution framework is designed to be generic, there may be several technical jobs defined by users which interact with or are invoked by external systems. In such cases, these jobs are not meant to be executed by a human and likely do not make sense to expose to end users for execution, and thus having them exposed in the UI at all is extraneous.
+
+Important notes about hidden jobs: 
+
+- This is merely hiding them from the web interface. It is NOT a security feature.
+- While the job will not be shown in the list of jobs on the main Jobs page it will still be able to be executed using the
+REST API or through the UI if a user knows the detail URL for that job.
+- Results for hidden jobs will still appear in the Job Results list after they are run.
 
 #### `read_only`
 
