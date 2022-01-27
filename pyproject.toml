@@ -113,7 +113,7 @@ Pillow = [
     {version = "~8.3.2", python = "<3.7"},
 ]
 # PostgreSQL database adapter
-psycopg2-binary = "~2.8.6"
+psycopg2-binary = "~2.9.3"
 # Cryptographic library
 pycryptodome = "~3.10.1"
 # The uWSGI WSGI HTTP server as a Python module
