@@ -132,6 +132,31 @@ REST API or through the UI if a user knows the detail URL for that job.
 
 A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
+#### `soft_time_limit`
+
+An int or float value which can be used to implement a soft time limit in seconds for a job task to complete. 
+
+The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the hard time limit (10 minutes by default) is reached:
+
+```python
+from celery.exceptions import SoftTimeLimitExceeded
+from nautobot.extras.jobs import Job
+
+class ExampleJobWithSoftTimeLimit(Job):
+    class Meta:
+        name = "Soft Time Limit"
+        description = "Set a soft time limit of 10 seconds`"
+        soft_time_limit = 10
+
+    def run(self, data, commit):
+        try:
+            # code which might take longer than 10 seconds to run
+            job_code()
+        except SoftTimeLimitExceeded:
+            # any clean up code
+            cleanup_in_a_hurry()
+```
+
 ### Variables
 
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
