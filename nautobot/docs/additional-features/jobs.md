@@ -157,6 +157,28 @@ class ExampleJobWithSoftTimeLimit(Job):
             cleanup_in_a_hurry()
 ```
 
+#### `time_limit`
+
+An int or float value, in seconds, which can be used to override the
+default [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
+
+Unlike the `soft_time_limit` above, no exceptions are raised when a `time_limit` is exceeded. The task will just terminate silently:
+
+```python
+from nautobot.extras.jobs import Job
+
+class ExampleJobWithHardTimeLimit(Job):
+    class Meta:
+        name = "Hard Time Limit"
+        description = "Set a hard time limit of 10 seconds`"
+        time_limit = 10
+
+    def run(self, data, commit):
+        # code which might take longer than 10 seconds to run
+        # this code will fail silently if the time_limit is exceeded
+        job_code()
+```
+
 ### Variables
 
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
