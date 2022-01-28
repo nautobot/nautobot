@@ -38,19 +38,20 @@ celery = [
     {version = "~5.1.2", python = "<3.7"},
 ]
 # Fundamental web framework for Nautobot
-Django = "~3.1.12"
+# NOTE: some of our dependencies do not have releases compatible with Django 3.2's DEFAULT_AUTO_FIELD setting
+Django = "~3.1.14"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~3.0.0", optional = true}
+django-auth-ldap = {version = "~4.0.0", optional = true}
 # Caching with Redis
-django-cacheops = "~5.1"
+django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
-django-celery-beat = "^2.2.0"
+django-celery-beat = "~2.2.1"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.8.0", extras = ["database"]}
 # Permit cross-domain API requests
-django-cors-headers = "~3.7.0"
+django-cors-headers = "~3.10.1"
 # Support for encrypted database fields
 django-cryptography = "~1.0"
 # Store files in the database for background tasks
@@ -58,51 +59,59 @@ django-db-file-storage = "~0.5.5"
 # AutoSlugField and shell_plus
 django-extensions = "~3.1.5"
 # Advanced query filters
-django-filter = "~2.4.0"
+django-filter = "~21.1"
 # Health check endpoint
-django-health-check = "^3.16.4"
+django-health-check = "~3.16.5"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
+# NOTE: Newer versions of django-jinja are available but depend on jinja2 3.x
 django-jinja = "<2.8.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
-django-mptt = "~0.11.0"
+django-mptt = "~0.13.4"
 # Prometheus metrics for Django
-django-prometheus = "~2.1.0"
+django-prometheus = "~2.2.0"
 # Redis cache for Django used for distributed locking
-django-redis = "~5.1.0"
+django-redis = "~5.2.0"
 # RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
-django-rq = "~2.4.1"
+django-rq = "~2.5.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
-django-tables2 = "~2.3.4"
+django-tables2 = "~2.4.1"
 # Tags
-django-taggit = "~1.3.0"
+# NOTE: django-taggit 2.x is available but has breaking API changes
+django-taggit = "~1.5.1"
 # Represent time zones in Django
+# NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~4.1.2"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.12.4"
+djangorestframework = "~3.13.1"
 # Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
+# NOTE: GitPython 3.1.23 and later drop support for Python 3.6
+# NOTE: GitPython 3.1.19 through 3.1.23 are yanked from PyPI
 GitPython = "3.1.18"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
+# NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~4.4", python = "<3.10"}
 # Template rendering engine
+# NOTE: Jinja2 3.x is available
 Jinja2 = "~2.11.3"
 # Optional data validation of config contexts
+# NOTE: jsonschema 4.x drops support for Python 3.6
 jsonschema = "~3.2.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.6"
 # MySQL database adapter
-mysqlclient = {version = "~2.0.3", optional = true}
+mysqlclient = {version = "~2.1.0", optional = true}
 # NAPALM automation library
-napalm = {version = "^3.3.1", optional = true}
+napalm = {version = "~3.3.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
@@ -113,17 +122,18 @@ Pillow = [
     {version = "~8.3.2", python = "<3.7"},
 ]
 # PostgreSQL database adapter
+# NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.3"
 # Cryptographic library
-pycryptodome = "~3.10.1"
+pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.19.1.post0"
+pyuwsgi = "~2.0.20"
 # YAML parsing and rendering
-PyYAML = "~5.4.1"
+PyYAML = "~6.0"
 # Social authentication core
-social-auth-core = {extras = ["openidconnect", "saml"], version = "~4.1.0", optional = true}
+social-auth-core = {version = "~4.2.0", optional = true, extras = ["openidconnect", "saml"]}
 # Social authentication/registration with support for many auth providers
-social-auth-app-django = "^4.0.0"
+social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
 
