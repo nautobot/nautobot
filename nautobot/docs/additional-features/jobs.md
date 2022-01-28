@@ -136,7 +136,7 @@ A boolean that designates whether the job is able to make changes to data in the
 
 An int or float value, in seconds, which can be used to override the default [soft time limit](../configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete. 
 
-The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the hard time limit (10 minutes by default) is reached:
+The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) is reached:
 
 ```python
 from celery.exceptions import SoftTimeLimitExceeded
