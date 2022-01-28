@@ -260,7 +260,7 @@ You can also paginate the results returned to you when the data set gets larger.
 
 ```graphql
 query {
-  devices(site: "ams01", , first: 1, offset: 1) {
+  devices(site: "ams01", , limit: 1, offset: 1) {
     name
   }
 }
