@@ -1349,8 +1349,9 @@ query {
 
         query_pagination = """\
 query {
-    interfaces(first: 2, offset: 3) {
+    interfaces(limit: 2, offset: 3) {
         id
+        name
         device {
           name
         }
@@ -1360,6 +1361,7 @@ query {
 query {
     interfaces {
         id
+        name
         device {
           name
         }
@@ -1368,8 +1370,13 @@ query {
 
         result_1 = self.execute_query(query_pagination)
         self.assertEqual(len(result_1.data.get("interfaces", [])), 2)
-        interface_names = [item["device"]["name"] for item in result_1.data.get("interfaces", [])]
-        self.assertEqual(sorted(interface_names), ["Device 2", "Device 3"])
+
+        # With the limit and skip implemented in the GQL query, this should return Device 2 (Int1) and
+        # Device 3 (Int2). This test will validate that the correct device/interface combinations are returned.
+        device_names = [item["device"]["name"] for item in result_1.data.get("interfaces", [])]
+        self.assertEqual(sorted(device_names), ["Device 2", "Device 3"])
+        interface_names = [item["name"] for item in result_1.data.get("interfaces", [])]
+        self.assertEqual(interface_names, ["Int2", "Int1"])
 
         result_2 = self.execute_query(query_all)
         self.assertEqual(len(result_2.data.get("interfaces", [])), 6)

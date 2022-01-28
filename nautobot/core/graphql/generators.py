@@ -245,7 +245,7 @@ def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
     search_params = {
-        "first": graphene.Int(),
+        "limit": graphene.Int(),
         "offset": graphene.Int(),
     }
     if schema_type._meta.filterset_class is not None:
@@ -300,7 +300,7 @@ def generate_list_resolver(schema_type, resolver_name):
     """
     model = schema_type._meta.model
 
-    def list_resolver(self, info, first=None, offset=None, **kwargs):
+    def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
@@ -324,8 +324,8 @@ def generate_list_resolver(schema_type, resolver_name):
         if offset:
             qs = qs[offset:]
 
-        if first:
-            qs = qs[:first]
+        if limit:
+            qs = qs[:limit]
 
         return gql_optimizer.query(qs, info)
 
