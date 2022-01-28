@@ -256,11 +256,11 @@ query {
 </div>
 
 <br />
-You can also paginate the results back to you when the data set gets larger. To paginate results back, use the keywords "first" and "offset". The "first" keyword will return the count of results back after the "offset". If no "offset" is specified, then the default offset is zero.
+You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
 
 ```graphql
 query {
-  devices(site: "ams01", , first: 1, offset: 1) {
+  devices(site: "ams01", , limit: 1, offset: 1) {
     name
   }
 }
