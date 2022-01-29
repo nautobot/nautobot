@@ -851,13 +851,10 @@ class JobResult(BaseModel, CustomFieldModel):
 
         job = get_job(name)
         if job is not None:
-            try:
-                if getattr(job.Meta, "soft_time_limit", ""):
-                    celery_kwargs["soft_time_limit"] = job.Meta.soft_time_limit
-                if getattr(job.Meta, "time_limit", ""):
-                    celery_kwargs["time_limit"] = job.Meta.time_limit
-            except AttributeError:
-                pass
+            if hasattr(job.Meta, "soft_time_limit"):
+                celery_kwargs["soft_time_limit"] = job.Meta.soft_time_limit
+            if hasattr(job.Meta, "time_limit"):
+                celery_kwargs["time_limit"] = job.Meta.time_limit
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 
