@@ -451,15 +451,6 @@ class RunJobManagementCommandTest(CeleryTestCase):
             self.assertIn("local/test_pass/TestPass: SUCCESS", out)
             self.assertEqual("", err)
 
-    def test_runjob_soft_time_limit(self):
-        """Testing a soft_time_limit works as expected"""
-        # I'm using the same philosophy as the above test case (test_runjob_nochange_successful)
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
-            out, err = self.run_command("local/test_soft_time_limit_exceeded/TestSoftTimeLimitExceeded")
-            self.assertIn("Running local/test_soft_time_limit_exceeded/TestSoftTimeLimitExceeded...", out)
-            self.assertIn("Soft time limit exceeded", out)
-            self.assertNotIn("This message should never be seen!", out)
-
     def test_runjob_db_change_no_commit(self):
         """A job that changes the DB, when run with commit=False, doesn't modify the database."""
         with self.assertRaises(ObjectDoesNotExist):
