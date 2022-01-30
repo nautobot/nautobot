@@ -21,6 +21,7 @@ GIT_STATUS_MAP = {
     "X": "Unknown",
 }
 
+
 class BranchDoesNotExist(Exception):
     pass
 
@@ -88,7 +89,7 @@ class GitRepo:
         logger.info(f"Latest commit on branch `{branch}` is `{commit_hexsha}`")
         return commit_hexsha
 
-    def diff_remote(self, ):
+    def diff_remote(self):
         logger.debug("Fetching from remote.")
         self.fetch()
 
@@ -99,5 +100,3 @@ class GitRepo:
             return [replace_status_initials(line.split("\t")) for line in diff.split("\n")]
         logger.debug("No Difference")
         return None
-
-

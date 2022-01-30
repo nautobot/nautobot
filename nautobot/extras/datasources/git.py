@@ -49,7 +49,7 @@ def enqueue_git_repository_helper(repository, request, func):
     """
     enqueues = {
         "pull_git_repository_and_refresh_data": pull_git_repository_and_refresh_data,
-        "git_repository_diff_origin_and_local": git_repository_diff_origin_and_local
+        "git_repository_diff_origin_and_local": git_repository_diff_origin_and_local,
     }
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
     JobResult.enqueue_job(
@@ -121,7 +121,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
     """
     job_result_and_repository_record = get_job_result_and_repository_record(
-       repository_pk= repository_pk,
+        repository_pk=repository_pk,
         job_result_pk=job_result_pk,
         logger=logger,
         log_message="Creating/refreshing local copy of Git repository",
@@ -157,7 +157,6 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
 
     finally:
         log_job_result_status(job_result, "synchronization")
-
 
 
 @nautobot_task
