@@ -22,6 +22,11 @@ GIT_STATUS_MAP = {
 }
 
 
+def swap_status_initials(x):
+    """Swap github status initials with its equivalent"""
+    return GIT_STATUS_MAP.get(x[0]) + " - " + x[1]
+
+
 class BranchDoesNotExist(Exception):
     pass
 
@@ -94,9 +99,8 @@ class GitRepo:
         self.fetch()
 
         logger.debug("Getting diff between local branch and remote branch")
-        replace_status_initials = lambda x: GIT_STATUS_MAP.get(x[0]) + " - " + x[1]
         diff = self.repo.git.diff("--name-status", f"origin/{self.repo.active_branch}")
         if diff:  # if diff is not empty
-            return [replace_status_initials(line.split("\t")) for line in diff.split("\n")]
+            return [swap_status_initials(line.split("\t")) for line in diff.split("\n")]
         logger.debug("No Difference")
         return None
