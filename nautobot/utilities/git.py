@@ -8,6 +8,18 @@ from git import Repo
 
 logger = logging.getLogger("nautobot.utilities.git")
 
+# 'A' and 'D' status are swapped because of the way the repo.git.diff was implemented
+# e.g. 'A' actually stands for Addition but in this case is Deletion
+GIT_STATUS_MAP = {
+    "A": "Deletion",
+    "M": "Modification",
+    "C": "Copy",
+    "D": "Addition",
+    "R": "Renaming",
+    "T": "File Type Changed",
+    "U": "File Unmerged",
+    "X": "Unknown",
+}
 
 class BranchDoesNotExist(Exception):
     pass
@@ -81,9 +93,10 @@ class GitRepo:
         self.fetch()
 
         logger.debug("Getting diff between local branch and remote branch")
+        replace_status_initials = lambda x: GIT_STATUS_MAP.get(x[0]) + " - " + x[1]
         diff = self.repo.git.diff("--name-status", f"origin/{self.repo.active_branch}")
         if diff:  # if diff is not empty
-            return diff.replace("\t", " - ").split("\n")
+            return [replace_status_initials(line.split("\t")) for line in diff.split("\n")]
         logger.debug("No Difference")
         return None
 
