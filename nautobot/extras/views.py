@@ -43,6 +43,7 @@ from .datasources import (
     get_datasource_contents,
     enqueue_pull_git_repository_and_refresh_data,
 )
+from .datasources.git import enqueue_git_repository_diff_origin_and_local
 from .jobs import get_job, get_jobs, run_job, Job
 from .models import (
     ComputedField,
@@ -612,18 +613,53 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
+def check_permission_and_workers(request, slug, func):
+    """Helper function for checking permissions, worker availability and running enqueue_pull_git_repository function
+
+    :param request:
+        request object
+
+    :param slug:
+        slug filed
+
+    :param func:
+        Enqueue git repo function
+
+
+    :return:
+        code 0: all good,
+        code 1: no worker process not running,
+        code 2: 403 Error
+    """
+    if not request.user.has_perm("extras.change_gitrepository"):
+        return 2
+
+    # Allow execution only if a worker process is running.
+    if not get_worker_count(request):
+        messages.error(request, "Unable to run job: Celery worker process not running.")
+        return 1
+
+    repository = get_object_or_404(GitRepository, slug=slug)
+
+    func(repository, request)
+
+    return 0
+
+
 class GitRepositorySyncView(View):
     def post(self, request, slug):
-        if not request.user.has_perm("extras.change_gitrepository"):
+        status = check_permission_and_workers(request, slug, enqueue_pull_git_repository_and_refresh_data)
+        if status == 2:
             return HttpResponseForbidden()
 
-        repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
+        return redirect("extras:gitrepository_result", slug=slug)
 
-        # Allow execution only if a worker process is running.
-        if not get_worker_count(request):
-            messages.error(request, "Unable to run job: Celery worker process not running.")
-        else:
-            enqueue_pull_git_repository_and_refresh_data(repository, request)
+
+class GitRepositoryDryRunView(View):
+    def post(self, request, slug):
+        status = check_permission_and_workers(request, slug, enqueue_git_repository_diff_origin_and_local)
+        if status == 2:
+            return HttpResponseForbidden()
 
         return redirect("extras:gitrepository_result", slug=slug)
 
