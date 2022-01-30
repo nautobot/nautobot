@@ -78,7 +78,6 @@ class GitRepo:
 
     def diff_remote(self, ):
         logger.debug("Fetching from remote.")
-        logger.debug("[HEAD] {}".format(self.repo.active_branch))
         self.fetch()
 
         logger.debug("Getting diff between local branch and remote branch")
