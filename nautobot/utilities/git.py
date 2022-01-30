@@ -75,3 +75,17 @@ class GitRepo:
         commit_hexsha = self.repo.head.reference.commit.hexsha
         logger.info(f"Latest commit on branch `{branch}` is `{commit_hexsha}`")
         return commit_hexsha
+
+    def diff_remote(self, ):
+        logger.debug("Fetching from remote.")
+        logger.debug("[HEAD] {}".format(self.repo.active_branch))
+        self.fetch()
+
+        logger.debug("Getting diff between local branch and remote branch")
+        diff = self.repo.git.diff("--name-status", f"origin/{self.repo.active_branch}")
+        if diff:  # if diff is not empty
+            return diff.replace("\t", " - ").split("\n")
+        logger.debug("No Difference")
+        return None
+
+

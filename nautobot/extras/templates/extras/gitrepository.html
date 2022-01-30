@@ -4,6 +4,13 @@
 {% block extra_buttons %}
         {% if perms.extras.change_gitrepository %}
             <form class="form-inline" style="display: inline-block"
+                  method="post" action="{% url 'extras:gitrepository_dryrun' slug=object.slug %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-info">
+                    <i class="mdi mdi-book-refresh" aria-hidden="true"></i> Dry-Run
+                </button>
+            </form>
+            <form class="form-inline" style="display: inline-block"
                   method="post" action="{% url 'extras:gitrepository_sync' slug=object.slug %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-primary">
