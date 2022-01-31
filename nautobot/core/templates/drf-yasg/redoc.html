@@ -12,9 +12,6 @@
           href="{% static 'jquery-ui-1.12.1/jquery-ui.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.css'">
     <link rel="stylesheet"
-          href="{% static 'flatpickr-4.6.3/themes/light.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.3/themes/light.css'">
-    <link rel="stylesheet"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
