@@ -613,55 +613,38 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
-def check_permission_and_workers(request, slug, func):
+def process_post_query(request, slug, func):
     """Helper function for checking permissions, worker availability and running enqueue_pull_git_repository function
 
-    :param request:
-        request object
+    Args:
+        request: request object.
+        slug (str): slug filed.
+        func (function): Enqueue git repo function.
 
-    :param slug:
-        slug filed
-
-    :param func:
-        Enqueue git repo function
-
-
-    :return:
-        code 0: all good,
-        code 1: no worker process not running,
-        code 2: 403 Error
+    Returns:
+        HttpResponseForbidden or a redirect
     """
     if not request.user.has_perm("extras.change_gitrepository"):
-        return 2
+        return HttpResponseForbidden()
 
     # Allow execution only if a worker process is running.
     if not get_worker_count(request):
         messages.error(request, "Unable to run job: Celery worker process not running.")
-        return 1
+    else:
+        repository = get_object_or_404(GitRepository, slug=slug)
+        func(repository, request)
 
-    repository = get_object_or_404(GitRepository, slug=slug)
-
-    func(repository, request)
-
-    return 0
+    return redirect("extras:gitrepository_result", slug=slug)
 
 
 class GitRepositorySyncView(View):
     def post(self, request, slug):
-        status = check_permission_and_workers(request, slug, enqueue_pull_git_repository_and_refresh_data)
-        if status == 2:
-            return HttpResponseForbidden()
-
-        return redirect("extras:gitrepository_result", slug=slug)
+        return process_post_query(request, slug, enqueue_pull_git_repository_and_refresh_data)
 
 
 class GitRepositoryDryRunView(View):
     def post(self, request, slug):
-        status = check_permission_and_workers(request, slug, enqueue_git_repository_diff_origin_and_local)
-        if status == 2:
-            return HttpResponseForbidden()
-
-        return redirect("extras:gitrepository_result", slug=slug)
+        return process_post_query(request, slug, enqueue_git_repository_diff_origin_and_local)
 
 
 class GitRepositoryResultView(generic.ObjectView):

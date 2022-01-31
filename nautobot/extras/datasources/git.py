@@ -47,13 +47,9 @@ def enqueue_git_repository_helper(repository, request, func):
     """
     GIt repository enqueue helper function
     """
-    enqueues = {
-        "pull_git_repository_and_refresh_data": pull_git_repository_and_refresh_data,
-        "git_repository_diff_origin_and_local": git_repository_diff_origin_and_local,
-    }
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
     JobResult.enqueue_job(
-        enqueues.get(func),
+        func,
         repository.name,
         git_repository_content_type,
         request.user,
@@ -64,17 +60,17 @@ def enqueue_git_repository_helper(repository, request, func):
 
 def enqueue_git_repository_diff_origin_and_local(repository, request):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    enqueue_git_repository_helper(repository, request, "git_repository_diff_origin_and_local")
+    enqueue_git_repository_helper(repository, request, git_repository_diff_origin_and_local)
 
 
 def enqueue_pull_git_repository_and_refresh_data(repository, request):
     """
     Convenience wrapper for JobResult.enqueue_job() to enqueue the pull_git_repository_and_refresh_data job.
     """
-    enqueue_git_repository_helper(repository, request, "pull_git_repository_and_refresh_data")
+    enqueue_git_repository_helper(repository, request, pull_git_repository_and_refresh_data)
 
 
-def get_job_result_and_repository_record(repository_pk, job_result_pk, logger, log_message):
+def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):
     """Get JobResult Instance and GItRepository Instance"""
     job_result = JobResult.objects.get(pk=job_result_pk)
     repository_record = GitRepository.objects.get(pk=repository_pk)
@@ -86,11 +82,6 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger, l
         )
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.save()
-        return
-
-    job_result.log(f'{log_message} "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
-    job_result.save()
 
     return job_result, repository_record
 
@@ -98,8 +89,8 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger, l
 def log_job_result_status(job_result, job_type):
     """Check Job status and save log to DB
 
-    :params:
-        job_result (JobLogEntry): JobLogEntry Instance
+    Args:
+        job_result (JobResult): JobResult Instance
         job_type (str): job type which is used in log message, e.g dry run/synchronization etc.
     """
     if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
@@ -120,15 +111,18 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
     """
-    job_result_and_repository_record = get_job_result_and_repository_record(
+    job_result, repository_record = get_job_result_and_repository_record(
         repository_pk=repository_pk,
         job_result_pk=job_result_pk,
         logger=logger,
-        log_message="Creating/refreshing local copy of Git repository",
     )
-    if not job_result_and_repository_record:
+
+    if not repository_record:
         return
-    job_result, repository_record = job_result_and_repository_record
+
+    job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
+    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.save()
 
     try:
         if not os.path.exists(settings.GIT_ROOT):
@@ -164,15 +158,17 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk):
     """
     Worker function to run a dry run on a Git repository.
     """
-    job_result_and_repository_record = get_job_result_and_repository_record(
+    job_result, repository_record = get_job_result_and_repository_record(
         repository_pk,
         job_result_pk,
         logger=logger,
-        log_message="Running a Dry Run on Git repository",
     )
-    if not job_result_and_repository_record:
+    if not repository_record:
         return
-    job_result, repository_record = job_result_and_repository_record
+
+    job_result.log(f'Running a Dry Run on Git repository "{repository_record.name}"...', logger=logger)
+    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.save()
     try:
         if not os.path.exists(settings.GIT_ROOT):
             os.makedirs(settings.GIT_ROOT)
@@ -306,10 +302,8 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):
             # Log each modified files
             for item in modified_files:
                 job_result.log(item, level_choice=LogLevelChoices.LOG_INFO, logger=logger)
-                job_result.save()
         else:
             job_result.log("Repository has no changes", level_choice=LogLevelChoices.LOG_INFO, logger=logger)
-            job_result.save()
 
     except Exception as exc:
         if job_result:
@@ -322,9 +316,8 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):
 
     if job_result:
         job_result.log("Repository Dry Run successful", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
-        job_result.save()
     elif logger:
-        logger.info("Repository successfully refreshed")
+        logger.info("Repository dry run successful")
 
 
 #
