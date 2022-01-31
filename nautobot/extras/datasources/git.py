@@ -82,6 +82,7 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):
         )
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.save()
+        return job_result, None
 
     return job_result, repository_record
 
