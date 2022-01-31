@@ -40,10 +40,10 @@ from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
-    get_datasource_contents,
+    enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
+    get_datasource_contents,
 )
-from .datasources.git import enqueue_git_repository_diff_origin_and_local
 from .jobs import get_job, get_jobs, run_job, Job
 from .models import (
     ComputedField,
