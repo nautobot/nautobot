@@ -995,12 +995,15 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     if hasattr(job.Meta, "time_limit"):
         time_limit = job.Meta.time_limit
     else:
-        time_limit = job.Meta.CELERY_TASK_TIME_LIMIT
+        time_limit = settings.CELERY_TASK_TIME_LIMIT
     if time_limit <= soft_time_limit:
-        job.log_warning(
+        job_result.log(
             f"The hard time limit of {time_limit} seconds is less than "
             f"or equal to the soft time limit of {soft_time_limit} seconds. "
-            f"This job will fail silently after {time_limit} seconds."
+            f"This job will fail silently after {time_limit} seconds.",
+            level_choice=LogLevelChoices.LOG_WARNING,
+            grouping="initialization",
+            logger=logger,
         )
 
     try:
