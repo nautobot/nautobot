@@ -105,7 +105,11 @@ def docker_compose(context, command, **kwargs):
         compose_command += f" {service}"
 
     print(f'Running docker-compose command "{command}"')
-    return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver, "DOCKER_DEFAULT_PLATFORM": "linux/amd64"}, **kwargs)
+    return context.run(
+        compose_command,
+        env={"PYTHON_VER": context.nautobot.python_ver, "DOCKER_DEFAULT_PLATFORM": "linux/amd64"},
+        **kwargs,
+    )
 
 
 def run_command(context, command, **kwargs):
