@@ -414,16 +414,16 @@ def get_filterset_for_model(model):
     return None
 
 
-def get_dynamicgroupmap_for_model(model):
-    """Return the DynamicGroupMap class associated with a given model.
+def get_filterform_for_model(model):
+    """Return the FilterForm class associated with a given model.
 
-    The DynamicGroupMap class is expected to be in the groups module within the application
-    associated with the model and its name is expected to be {ModelName}DynamicGroupMap
+    The FilterForm class is expected to be in the filters module within the application
+    associated with the model and its name is expected to be {ModelName}FilterForm
 
-    Not all models have a DynamicGroupMap defined so this function can return None as well
+    Not all models have a FilterForm defined so this function can return None as well
 
     Returns:
-        either the DynamicGroupMap class or none
+        either the filter form class or none
     """
     if not inspect.isclass(model):
         raise TypeError(f"model class {model} was passes as an instance!")
@@ -431,11 +431,11 @@ def get_dynamicgroupmap_for_model(model):
         raise TypeError(f"{model} is not a subclass of Django Model class")
 
     try:
-        dgm_name = f"{model.__name__}DynamicGroupMap"
+        filterform_name = f"{model.__name__}FilterForm"
         if model._meta.app_label in settings.PLUGINS:
-            return getattr(import_module(f"{model._meta.app_label}.groups"), dgm_name)
+            return getattr(import_module(f"{model._meta.app_label}.forms"), filterform_name)
         else:
-            return getattr(import_module(f"nautobot.{model._meta.app_label}.groups"), dgm_name)
+            return getattr(import_module(f"nautobot.{model._meta.app_label}.forms"), filterform_name)
     except ModuleNotFoundError:
         # The name of the module is not correct
         pass
