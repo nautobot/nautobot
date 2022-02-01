@@ -8,6 +8,14 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
+
+A [data model](../models/circuits/providernetwork.md) has been added to support representing the termination of a circuit to an external provider's network.
+
+#### Python 3.10 Support ([#1255](https://github.com/nautobot/nautobot/pull/1255))
+
+Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
+
 ### Changed
 
 #### Docker images now default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
@@ -22,10 +30,12 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 
 ### Added
 
+- [#724](https://github.com/nautobot/nautobot/issues/724) - Added Provider Network data model. (Partially based on [NetBox #5986](https://github.com/netbox-community/netbox/issues/5986).)
 - [#803](https://github.com/nautobot/nautobot/issues/803) - There is now a *render_boolean* template filter in helpers, which renders computed boolean values as HTML in a consistent manner.
 - [#863](https://github.com/nautobot/nautobot/issues/863) - Added the ability to hide a job in the UI by setting `hidden = True` in the Job's inner `Meta` class
 - [#881](https://github.com/nautobot/nautobot/issues/881) - Improved the UX of the main Jobs by adding accordion style interface that can collapse/expand jobs provided by each module
 - [#885](https://github.com/nautobot/nautobot/issues/885) - Added the ability to define a `soft_time_limit` and `time_limit` in seconds as attributes of a Job's `Meta`.
+- [#1255](https://github.com/nautobot/nautobot/pull/1255) - Added Python 3.10 support.
 
 ### Changed
 
@@ -36,6 +46,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#916](https://github.com/nautobot/nautobot/issues/916) - A Job.Meta.description can now contain markdown-formatted multi-line text.
 - [#1107](https://github.com/nautobot/nautobot/issues/1107) - Circuit Provider account numbers can now be up to 100 characters in length.
 - [#1252](https://github.com/nautobot/nautobot/pull/1252) - As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
+- [#1307](https://github.com/nautobot/nautobot/pull/1307) - Updated various Python package dependencies to their latest compatible versions.
 
 ### Fixed
 
