@@ -1,5 +1,4 @@
 from collections import defaultdict
-from django.db.models import Q
 from django.core.management.base import BaseCommand
 
 from nautobot.extras.models import DynamicGroup
@@ -49,10 +48,10 @@ class Command(BaseCommand):
                 if wrong_groups or missing_groups:
                     print(f">> {item} - {item.pk}")
                     if wrong_groups:
-                        print(f"  In get_for_object but not from Group")
+                        print("  In get_for_object but not from Group")
                         for group in wrong_groups:
                             print(f"    {groups[group].slug} ({group})")
                     if missing_groups:
-                        print(f"  In Group but not get_for_object")
+                        print("  In Group but not get_for_object")
                         for group in missing_groups:
                             print(f"    {groups[group].slug} ({group})")

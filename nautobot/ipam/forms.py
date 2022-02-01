@@ -498,7 +498,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
         "is_pool",
         "expand",
     ]
-    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput())
+    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
     within_include = forms.CharField(
         required=False,

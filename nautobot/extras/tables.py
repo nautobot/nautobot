@@ -269,6 +269,7 @@ class DynamicGroupTable(BaseTable):
     name = tables.LinkColumn(viewname="extras:dynamicgroup_edit", args=[Accessor("id")])
     members = tables.Column(accessor="count", verbose_name="Group members")
     # actions = ButtonsColumn(Group, buttons=("edit", "delete"))
+
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         """Resource Manager Meta."""
 
@@ -282,7 +283,7 @@ class DynamicGroupTable(BaseTable):
         )
 
     def render_members(self, value, record):
-        return format_html(f'<a href="{record.get_url_to_group_members()}">{value}</a>')
+        return format_html(f'<a href="{record.get_group_members_url()}">{value}</a>')
 
 
 class ExportTemplateTable(BaseTable):
