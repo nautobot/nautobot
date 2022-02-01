@@ -179,6 +179,9 @@ class ExampleJobWithHardTimeLimit(Job):
         job_code()
 ```
 
+!!! note
+    If the time_limit is less than or equal to the soft_time_limit, a warning log is generated to inform the user that this job will fail silently after the time_limit.
+
 ### Variables
 
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
