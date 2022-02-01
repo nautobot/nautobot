@@ -48,6 +48,32 @@ class JobTest(TestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
+    def test_job_hard_time_limit_less_than_soft_time_limit(self):
+        """
+        Job test which produces a log_warning because the time_limit is less than the soft_time_limit.
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+
+            module = "test_soft_time_limit_greater_than_time_limit"
+            name = "TestSoftTimeLimitGreaterThanHardTimeLimit"
+            job_class = get_job(f"local/{module}/{name}")
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+            run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
+            log_warning = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="initialization"
+            ).first()
+            self.assertEqual(
+                log_warning.message,
+                "The hard time limit of 5 seconds is less than "
+                "or equal to the soft time limit of 10 seconds. "
+                "This job will fail silently after 5 seconds.",
+            )
+
     def test_job_pass(self):
         """
         Job test with pass result.
