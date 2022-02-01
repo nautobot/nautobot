@@ -33,7 +33,6 @@ from nautobot.utilities.forms import (
     TagFilterField,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.utilities.utils import get_dynamicgroupmap_for_model
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
     CustomFieldFilterLogicChoices,
@@ -668,29 +667,16 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
 
     def _append_filters(self):
         """Dynamically add the fields from the associated DynamicGroupMap to the form."""
-        # Do not present the list of filter options until the object has been created and has a content type
-        if not self.instance.present_in_database or not self.instance.content_type:
+        filter_fields = self.instance.get_filter_fields()
+        if filter_fields is None:
             return
 
-        # Get the model from the instance and the DynamicGroupMap from the model
-        model = self.instance.content_type.model_class()
-        dynamicgroupmap_class = get_dynamicgroupmap_for_model(model)
-
-        if not dynamicgroupmap_class:
-            return
-
-        # Add all fields defined in the DynamicGroupMap to the form and populate the default value
-        for field_name, field in dynamicgroupmap_class.fields().items():
-            if self.instance.present_in_database:
-                if field_name in self.instance.filter:
-                    field.initial = self.instance.filter[field_name]
-
-            self.fields[field_name] = field
-            self.filter_field_names.append(field_name)
+        self.fields.update(filter_fields)
+        self.filter_field_names = list(filter_fields)
 
     def _save_filters(self):
         """Extract all data from the fields associated with the filter."""
-        filter = dict()
+        filter = {}
         for field_name in self.filter_field_names:
             field = self.fields[field_name]
 
@@ -703,7 +689,7 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
 
             elif isinstance(field, forms.ModelChoiceField):
                 field_to_query = field.to_field_name or "pk"
-                value = getattr(self.cleaned_data[field_name], field_to_query)
+                value = getattr(self.cleaned_data[field_name], field_to_query, None)
                 filter[field_name] = value or None
 
             elif isinstance(field, forms.NullBooleanField):

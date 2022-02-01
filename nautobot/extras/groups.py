@@ -1,4 +1,3 @@
-import inspect
 from collections import OrderedDict
 
 import django_filters
@@ -25,6 +24,7 @@ def extract_value_from_object_from_queryset(obj, attrs_list):
 
 
 class BaseDynamicGroupMap:
+    """Dynamic Group mapping used to generate mappings for each model class."""
 
     model = None
     filterset = None
@@ -38,8 +38,11 @@ class BaseDynamicGroupMap:
         """Return all fields in a dictionnary."""
         _fields = OrderedDict()
 
+        # TODO(jathan): If we want to keep field_order and not just use what is
+        # defined in the FilterSet, we need to do it here.
         filterform = cls.filterform()
-        for field_name in cls.field_order:
+        # for field_name in cls.field_order:
+        for field_name in filterform.fields:
             _fields[field_name] = filterform.fields[field_name]
 
         return _fields
@@ -82,12 +85,13 @@ class BaseDynamicGroupMap:
 
         queryset_filter = Q()
 
-        for field_name in cls.field_order:
-            class_name = f"get_queryset_filter_default"
+        # for field_name in cls.field_order:
+        for field_name in cls.fields():
+            method_name = "get_queryset_filter_default"
             if hasattr(cls, f"get_queryset_filter_{field_name}"):
-                class_name = f"get_queryset_filter_{field_name}"
+                method_name = f"get_queryset_filter_{field_name}"
 
-            queryset_filter_item = getattr(cls, class_name)(field_name, obj)
+            queryset_filter_item = getattr(cls, method_name)(field_name, obj)
 
             if queryset_filter_item:
                 queryset_filter &= queryset_filter_item
