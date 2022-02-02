@@ -56,6 +56,7 @@ class BaseDynamicGroupMap:
         filterset = cls.filterset(cls.get_filterset_params(filter), cls.model.objects.all())
         return filterset.qs
 
+    # TODO(jathan): Consider removing this method now that map classes are automatically generated.
     @classmethod
     def get_filterset_params(cls, filter):
         return filter
