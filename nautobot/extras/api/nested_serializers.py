@@ -61,6 +61,17 @@ class NestedCustomLinkSerializer(WritableNestedSerializer):
         fields = ["content_type", "id", "name", "url"]
 
 
+class NestedDynamicGroupSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.all(),
+    )
+
+    class Meta:
+        model = models.DynamicGroup
+        fields = ["id", "name", "slug", "content_type", "url"]
+
+
 class NestedExportTemplateSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:exporttemplate-detail")
 
