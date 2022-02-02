@@ -27,6 +27,8 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         model = obj._meta.model
         dynamicgroupmap = dynamicgroup_map_factory(model)
 
+        # If there's not a map just return an unfiltered queryset?
+        # TODO(jathan): Are we sure that's what we want?
         if not dynamicgroupmap:
             return self
 
@@ -35,7 +37,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
 
 
 def dynamicgroup_map_factory(model):
-    """Generate a `FooDynamicGroupMap` class."""
+    """Generate a `FooDynamicGroupMap` class for a given `model`."""
 
     filterset = get_filterset_for_model(model)
     filterform = get_filterform_for_model(model)
@@ -65,9 +67,10 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
 
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
+        editable=False,
         blank=True,
         null=True,
-        help_text="",
+        help_text="A JSON-encoded dictionary of filter parameters for group membership",
     )
 
     objects = DynamicGroupQuerySet.as_manager()
@@ -159,6 +162,41 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
                 # print(f"{field_name}: {self.cleaned_data[field_name]}")
 
         self.filter = filter
+
+    def save_filters(self, form):
+        """
+        Extract all data from `form` fields into `filter` dictionary and call `save()`.
+
+        This is called from `DynamicGroupForm.save()`.
+
+        :param form:
+            A validated instance of `DynamicGroupForm`
+        """
+        filter = {}
+        for field_name in form.filter_field_names:
+            field = form.fields[field_name]
+
+            if isinstance(field, forms.ModelMultipleChoiceField):
+                qs = form.cleaned_data[field_name]
+                field_to_query = field.to_field_name or "pk"
+                print(f"{form.cleaned_data[field_name]} - {field_to_query}")
+                values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
+                filter[field_name] = values or []
+
+            elif isinstance(field, forms.ModelChoiceField):
+                field_to_query = field.to_field_name or "pk"
+                value = getattr(form.cleaned_data[field_name], field_to_query, None)
+                filter[field_name] = value or None
+
+            elif isinstance(field, forms.NullBooleanField):
+                filter[field_name] = form.cleaned_data[field_name]
+
+            else:
+                filter[field_name] = form.cleaned_data[field_name]
+                print(f"{field_name}: {form.cleaned_data[field_name]}")
+
+        self.filter = filter
+        self.save()
 
     """
     def clean(self):

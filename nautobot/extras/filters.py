@@ -28,6 +28,7 @@ from .models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -55,6 +56,7 @@ __all__ = (
     "CustomFieldFilter",
     "CustomFieldModelFilterSet",
     "CustomLinkFilterSet",
+    "DynamicGroup",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
@@ -420,6 +422,35 @@ class CustomLinkFilterSet(BaseFilterSet):
             Q(name__icontains=value)
             | Q(target_url__icontains=value)
             | Q(text__icontains=value)
+            | Q(content_type__app_label__icontains=value)
+            | Q(content_type__model__icontains=value)
+        )
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupFilterSet(
+    BaseFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+):
+    q = django_filters.CharFilter(method="search", label="Search")
+    content_type = ContentTypeFilter()
+
+    class Meta:
+        model = DynamicGroup
+        fields = ("id", "name", "slug", "description", "content_type", "created", "last_updated")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(description__icontains=value)
             | Q(content_type__app_label__icontains=value)
             | Q(content_type__model__icontains=value)
         )
