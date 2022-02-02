@@ -194,6 +194,11 @@ class CSVContentTypeField(CSVModelChoiceField):
     STATIC_CHOICES = True
 
     def prepare_value(self, value):
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+
         return f"{value.app_label}.{value.model}"
 
     def to_python(self, value):

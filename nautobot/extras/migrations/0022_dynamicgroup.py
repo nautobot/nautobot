@@ -30,7 +30,9 @@ class Migration(migrations.Migration):
                 ("description", models.CharField(blank=True, max_length=200)),
                 (
                     "filter",
-                    models.JSONField(blank=True, encoder=django.core.serializers.json.DjangoJSONEncoder, null=True),
+                    models.JSONField(
+                        blank=True, editable=False, encoder=django.core.serializers.json.DjangoJSONEncoder, null=True
+                    ),
                 ),
                 (
                     "content_type",
