@@ -18,6 +18,7 @@ from nautobot.utilities.forms import (
     BulkEditForm,
     BulkEditNullBooleanSelect,
     ColorSelect,
+    CSVContentTypeField,
     CSVModelChoiceField,
     CSVModelForm,
     CSVMultipleChoiceField,
@@ -300,7 +301,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
 class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
     model = ComputedField
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
+    content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content Type",
@@ -630,7 +631,7 @@ class CustomLinkForm(BootstrapMixin, forms.ModelForm):
 class CustomLinkFilterForm(BootstrapMixin, forms.Form):
     model = CustomLink
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
+    content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content Type",
@@ -643,21 +644,18 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 
 
 class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
-    """Dynamic Group Form."""
+    """DynamicGroup model form."""
 
     slug = SlugField()
+    content_type = forms.ModelChoiceField(
+        # queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by(
+        queryset=ContentType.objects.order_by("app_label", "model"),
+        label="Content Type",
+    )
 
     class Meta:
-        """Nautobot Resource Manager Group Meta."""
-
         model = DynamicGroup
-        fields = [
-            "name",
-            "slug",
-            "description",
-            "content_type",
-            # "filter",
-        ]
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
 
@@ -675,32 +673,7 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
         self.filter_field_names = list(filter_fields)
 
     def _save_filters(self):
-        """Extract all data from the fields associated with the filter."""
-        filter = {}
-        for field_name in self.filter_field_names:
-            field = self.fields[field_name]
-
-            if isinstance(field, forms.ModelMultipleChoiceField):
-                qs = self.cleaned_data[field_name]
-                field_to_query = field.to_field_name or "pk"
-                print(f"{self.cleaned_data[field_name]} - {field_to_query}")
-                values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
-                filter[field_name] = values or []
-
-            elif isinstance(field, forms.ModelChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                value = getattr(self.cleaned_data[field_name], field_to_query, None)
-                filter[field_name] = value or None
-
-            elif isinstance(field, forms.NullBooleanField):
-                filter[field_name] = self.cleaned_data[field_name]
-
-            else:
-                filter[field_name] = self.cleaned_data[field_name]
-                print(f"{field_name}: {self.cleaned_data[field_name]}")
-
-        self.instance.filter = filter
-        self.instance.save()
+        self.instance.save_filters(self)
 
     def save(self, commit=True):
 
@@ -709,6 +682,19 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
             self._save_filters()
 
         return obj
+
+
+class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
+    """DynamicGroup filter form."""
+
+    model = DynamicGroup
+    q = forms.CharField(required=False, label="Search")
+    content_type = CSVContentTypeField(
+        # queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+        queryset=ContentType.objects.order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
 
 
 #
@@ -739,7 +725,7 @@ class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
 class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
     model = ExportTemplate
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
+    content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
             "app_label", "model"
         ),

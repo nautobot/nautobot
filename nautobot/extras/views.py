@@ -493,7 +493,9 @@ class DynamicGroupListView(generic.ObjectListView):
 
     queryset = DynamicGroup.objects.all()
     table = tables.DynamicGroupTable
-    action_buttons = "add"
+    filterset = filters.DynamicGroupFilterSet
+    filterset_form = forms.DynamicGroupFilterForm
+    action_buttons = ("add",)
 
 
 class DynamicGroupEditView(generic.ObjectEditView):
