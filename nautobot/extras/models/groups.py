@@ -1,14 +1,14 @@
 """Dynamic Groups Models."""
 
 from django import forms
-from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
+from django.urls import reverse
 
+from nautobot.core.models import BaseModel
 from nautobot.extras.groups import BaseDynamicGroupMap
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.core.models import BaseModel
 from nautobot.utilities.utils import get_filterform_for_model, get_filterset_for_model
 from nautobot.utilities.querysets import RestrictedQuerySet
 
@@ -87,7 +87,13 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
         if not self.filter:
             return model.objects.none()
 
-        return self.map.get_queryset(self.filter)
+        qs = self.map.get_queryset(self.filter)
+
+        # Make sure that this instance can't be a member of its own group
+        if self.present_in_database and model == self.__class__:
+            qs = qs.exclude(pk=self.pk)
+
+        return qs
 
     @property
     def members(self):
@@ -142,36 +148,6 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
 
         return fields
 
-    # TODO(jathan): This is not working because it can't get the filtered queryset from the incoming
-    # request/form data
-    def clean_filter(self):
-        filter_fields = self.get_filter_fields()
-        filter = {}
-        for field_name, field in filter_fields.items():
-
-            if isinstance(field, forms.ModelMultipleChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                qs = field.queryset.filter(**{field_to_query: field.initial})
-                # print(f"{field} - {field_to_query}")
-                values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
-                filter[field_name] = values or []
-
-            elif isinstance(field, forms.ModelChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                # value = getattr(self, field_to_query, None)
-                # filter[field_name] = value or None  # None is bad for related fields
-                value = getattr(self, field_to_query, "")
-                filter[field_name] = value
-
-            elif isinstance(field, forms.NullBooleanField):
-                filter[field_name] = getattr(self, field_name, None)
-
-            else:
-                filter[field_name] = getattr(self, field_name, None)
-                # print(f"{field_name}: {self.cleaned_data[field_name]}")
-
-        self.filter = filter
-
     def save_filters(self, form):
         """
         Extract all data from `form` fields into `filter` dictionary and call `save()`.
@@ -182,7 +158,8 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
             A validated instance of `DynamicGroupForm`
         """
         filter = {}
-        for field_name in form.filter_field_names:
+        filter_fields = self.get_filter_fields()
+        for field_name in filter_fields:
             field = form.fields[field_name]
 
             if isinstance(field, forms.ModelMultipleChoiceField):
@@ -206,12 +183,6 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
 
         self.filter = filter
         self.save()
-
-    """
-    def clean(self):
-        super().clean()
-        self.clean_filter()
-    """
 
     # def clean(self):
     #     """Group Model clean method."""
