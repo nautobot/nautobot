@@ -92,6 +92,9 @@ COPY nautobot /source/nautobot
 RUN poetry build && \
     poetry install --no-ansi --extras all
 
+# Convert poetry.lock to a requirements.txt file for use in the cleaninstall container
+RUN poetry export --extras all --format requirements.txt --output /tmp/locked_requirements.txt
+
 ################################ Stage: cleaninstall
 # Build an image with required dependencies to pull the installation from
 FROM base as cleaninstall
@@ -104,7 +107,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y build-essential
 RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi
 
 COPY --from=dev /source/dist/*.whl /tmp
+COPY --from=dev /tmp/locked_requirements.txt /tmp
 
+RUN pip install --no-cache-dir -r /tmp/locked_requirements.txt
 # hadolint ignore=DL3013,SC2102
 RUN for whl in /tmp/nautobot*.whl; do pip install --no-cache-dir ${whl}[all]; done
 
