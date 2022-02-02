@@ -142,6 +142,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ## v1.2.5 (2022-??-??)
 
+### Changed
+
+- [#1293](https://github.com/nautobot/nautobot/pull/1293) - Reorganized the developer documents somewhat to reduce duplication of information, added diagrams for issue intake process.
+
 ### Fixed
 
 - [#371](https://github.com/nautobot/nautobot/issues/371) - Fixed a server error that could occur when importing cables via CSV.
