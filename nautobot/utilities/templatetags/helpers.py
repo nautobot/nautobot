@@ -611,4 +611,4 @@ def gitrepo_button_tag(model):
 
     if model.__class__ == GitRepository:
         return mark_safe('<button type="submit" name="_dryrun" class="btn btn-warning">Update & Dry Run</button>')
-    return
+    return ""
