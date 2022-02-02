@@ -244,10 +244,15 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
 def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
-    search_params = {}
+    search_params = {
+        "limit": graphene.Int(),
+        "offset": graphene.Int(),
+    }
     if schema_type._meta.filterset_class is not None:
-        search_params = get_filtering_args_from_filterset(
-            schema_type._meta.filterset_class,
+        search_params.update(
+            get_filtering_args_from_filterset(
+                schema_type._meta.filterset_class,
+            )
         )
 
     return search_params
@@ -295,7 +300,7 @@ def generate_list_resolver(schema_type, resolver_name):
     """
     model = schema_type._meta.model
 
-    def list_resolver(self, info, **kwargs):
+    def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
@@ -311,10 +316,18 @@ def generate_list_resolver(schema_type, resolver_name):
 
                 # Raising this exception will send the error message in the response of the GraphQL request
                 raise GraphQLError(errors)
+            qs = resolved_obj.qs.all()
 
-            return gql_optimizer.query(resolved_obj.qs.all(), info)
+        else:
+            qs = model.objects.restrict(info.context.user, "view").all()
 
-        return gql_optimizer.query(model.objects.restrict(info.context.user, "view").all(), info)
+        if offset:
+            qs = qs[offset:]
+
+        if limit:
+            qs = qs[:limit]
+
+        return gql_optimizer.query(qs, info)
 
     list_resolver.__name__ = resolver_name
     return list_resolver

@@ -839,6 +839,8 @@ class JobResult(BaseModel, CustomFieldModel):
         schedule: Optional ScheduledJob instance to link to the JobResult
         kwargs: additional kwargs passed to the callable
         """
+        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
         kwargs["job_result_pk"] = job_result.pk
@@ -846,6 +848,13 @@ class JobResult(BaseModel, CustomFieldModel):
         # Prepare kwargs that will be sent to Celery
         if celery_kwargs is None:
             celery_kwargs = {}
+
+        job = get_job(name)
+        if job is not None:
+            if hasattr(job.Meta, "soft_time_limit"):
+                celery_kwargs["soft_time_limit"] = job.Meta.soft_time_limit
+            if hasattr(job.Meta, "time_limit"):
+                celery_kwargs["time_limit"] = job.Meta.time_limit
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 

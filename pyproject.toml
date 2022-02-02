@@ -152,27 +152,32 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = {version="^21.10b0", python="^3.6.2"}
+# NOTE: black 22.1.0 stable is out, but it requires click 8.0, and celery 5.1.2 requires click 7.x.
+# NOTE: adding different Blacks as conditional on Python version fails: https://github.com/python-poetry/poetry/issues/4947
+black = {version = "~21.12b0", python = ">3.6.2"}
 # Test code coverage measurement
-coverage = "~5.4"
+# NOTE: coverage 6.3 drops support for python 3.6
+coverage = "~6.2"
 # Tool for debugging Django
-django-debug-toolbar = "~3.2.1"
+django-debug-toolbar = "~3.2.4"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Code style checking and limited static analysis
+# NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~1.5.0"
+invoke = "~1.6.0"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.0.1"
+mkdocs-include-markdown-plugin = "~3.2.3"
 # Rendering docs to HTML
 mkdocs = "~1.2.3"
 # Integration Tests
-requests = "~2.25.1"
+requests = "~2.27.1"
 # Selenium web drivers for live integration testing
+# NOTE: selenium 4.x drops support for python 3.6
 selenium = "~3.141.0"
 # Abstraction layer for working with Selenium
-splinter = "~0.14.0"
+splinter = "~0.17.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

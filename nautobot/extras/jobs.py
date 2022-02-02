@@ -97,6 +97,8 @@ class BaseJob:
         - field_order (list)
         - read_only (bool)
         - approval_required (bool)
+        - soft_time_limit (int)
+        - time_limit (int)
         """
 
         pass
@@ -992,6 +994,24 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         return False
+
+    if hasattr(job.Meta, "soft_time_limit"):
+        soft_time_limit = job.Meta.soft_time_limit
+    else:
+        soft_time_limit = settings.CELERY_TASK_SOFT_TIME_LIMIT
+    if hasattr(job.Meta, "time_limit"):
+        time_limit = job.Meta.time_limit
+    else:
+        time_limit = settings.CELERY_TASK_TIME_LIMIT
+    if time_limit <= soft_time_limit:
+        job_result.log(
+            f"The hard time limit of {time_limit} seconds is less than "
+            f"or equal to the soft time limit of {soft_time_limit} seconds. "
+            f"This job will fail silently after {time_limit} seconds.",
+            level_choice=LogLevelChoices.LOG_WARNING,
+            grouping="initialization",
+            logger=logger,
+        )
 
     try:
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.

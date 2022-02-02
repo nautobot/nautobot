@@ -132,6 +132,56 @@ REST API or through the UI if a user knows the detail URL for that job.
 
 A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
+#### `soft_time_limit`
+
+An int or float value, in seconds, which can be used to override the default [soft time limit](../configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete. 
+
+The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) is reached:
+
+```python
+from celery.exceptions import SoftTimeLimitExceeded
+from nautobot.extras.jobs import Job
+
+class ExampleJobWithSoftTimeLimit(Job):
+    class Meta:
+        name = "Soft Time Limit"
+        description = "Set a soft time limit of 10 seconds`"
+        soft_time_limit = 10
+
+    def run(self, data, commit):
+        try:
+            # code which might take longer than 10 seconds to run
+            job_code()
+        except SoftTimeLimitExceeded:
+            # any clean up code
+            cleanup_in_a_hurry()
+```
+
+#### `time_limit`
+
+An int or float value, in seconds, which can be used to override the
+default [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
+
+Unlike the `soft_time_limit` above, no exceptions are raised when a `time_limit` is exceeded. The task will just terminate silently:
+
+```python
+from nautobot.extras.jobs import Job
+
+class ExampleJobWithHardTimeLimit(Job):
+    class Meta:
+        name = "Hard Time Limit"
+        description = "Set a hard time limit of 10 seconds`"
+        time_limit = 10
+
+    def run(self, data, commit):
+        # code which might take longer than 10 seconds to run
+        # this code will fail silently if the time_limit is exceeded
+        job_code()
+```
+
+!!! note
+    If the time_limit is less than or equal to the soft_time_limit, a warning log is generated to inform the user that this job will fail silently after the time_limit.
+
 ### Variables
 
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
