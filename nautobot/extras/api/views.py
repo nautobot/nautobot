@@ -26,6 +26,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -196,6 +197,21 @@ class CustomLinkViewSet(ModelViewSet):
     queryset = CustomLink.objects.all()
     serializer_class = serializers.CustomLinkSerializer
     filterset_class = filters.CustomLinkFilterSet
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupViewSet(ModelViewSet):
+    """
+    Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = DynamicGroup.objects.prefetch_related("content_type")
+    serializer_class = serializers.DynamicGroupSerializer
+    filterset_class = filters.DynamicGroupFilterSet
 
 
 #
