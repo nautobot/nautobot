@@ -144,6 +144,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Changed
 
+- [#792](https://github.com/nautobot/nautobot/issues/792) - `final` Docker images now are built with the same (non-development-exclusive) installed Python dependencies as the `dev` images.
 - [#1293](https://github.com/nautobot/nautobot/pull/1293) - Reorganized the developer documents somewhat to reduce duplication of information, added diagrams for issue intake process.
 
 ### Fixed
