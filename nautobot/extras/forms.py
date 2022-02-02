@@ -670,7 +670,6 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
             return
 
         self.fields.update(filter_fields)
-        self.filter_field_names = list(filter_fields)
 
     def _save_filters(self):
         self.instance.save_filters(self)
