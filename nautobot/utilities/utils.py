@@ -446,5 +446,37 @@ def get_filterform_for_model(model):
     return None
 
 
+def get_table_for_model(model):
+    """Return the Table class associated with a given model.
+
+    The Table class is expected to be in the filters module within the application
+    associated with the model and its name is expected to be {ModelName}Table
+
+    Not all models have a Table defined so this function can return None as well
+
+    Returns:
+        either the table class or None
+    """
+    if not inspect.isclass(model):
+        raise TypeError(f"model class {model} was passes as an instance!")
+    if not issubclass(model, Model):
+        raise TypeError(f"{model} is not a subclass of Django Model class")
+
+    try:
+        table_name = f"{model.__name__}Table"
+        if model._meta.app_label in settings.PLUGINS:
+            return getattr(import_module(f"{model._meta.app_label}.tables"), table_name)
+        else:
+            return getattr(import_module(f"nautobot.{model._meta.app_label}.tables"), table_name)
+    except ModuleNotFoundError:
+        # The name of the module is not correct
+        pass
+    except AttributeError:
+        # Unable to find a filterset for this model
+        pass
+
+    return None
+
+
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])

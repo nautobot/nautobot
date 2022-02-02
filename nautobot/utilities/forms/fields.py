@@ -198,6 +198,8 @@ class CSVContentTypeField(CSVModelChoiceField):
             return ""
         if isinstance(value, str):
             return value
+        if isinstance(value, int):
+            value = self.queryset.get(pk=value)
 
         return f"{value.app_label}.{value.model}"
 

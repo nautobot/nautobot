@@ -54,17 +54,15 @@ def dynamicgroup_map_factory(model):
 class DynamicGroup(BaseModel, ChangeLoggedModel):
     """Dynamic Group Model."""
 
-    name = models.CharField(max_length=100, unique=True, help_text="Internal Dynamic Group name")
-    slug = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
+    slug = models.SlugField(max_length=100, unique=True, help_text="Unique slug")
     description = models.CharField(max_length=200, blank=True)
-
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
         verbose_name="Object Type",
         help_text="The type of object for this group.",
     )
-
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
         editable=False,
@@ -75,9 +73,11 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
 
     objects = DynamicGroupQuerySet.as_manager()
 
+    class Meta:
+        ordering = ["name"]
+
     def __str__(self):
-        """Group Model string return."""
-        return self.name.capitalize()
+        return self.name
 
     def get_queryset(self):
         """Define custom queryset for group model."""
@@ -88,6 +88,10 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
             return model.objects.none()
 
         return self.map.get_queryset(self.filter)
+
+    @property
+    def members(self):
+        return self.get_queryset()
 
     def count(self):
         """Return the number of objects in the group."""
@@ -105,6 +109,9 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
             self._map = dynamicgroupmap_class
 
         return self._map
+
+    def get_absolute_url(self):
+        return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
     def get_group_members_url(self):
         """Get url to group members."""
@@ -151,8 +158,10 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
 
             elif isinstance(field, forms.ModelChoiceField):
                 field_to_query = field.to_field_name or "pk"
-                value = getattr(self, field_to_query, None)
-                filter[field_name] = value or None
+                # value = getattr(self, field_to_query, None)
+                # filter[field_name] = value or None  # None is bad for related fields
+                value = getattr(self, field_to_query, "")
+                filter[field_name] = value
 
             elif isinstance(field, forms.NullBooleanField):
                 filter[field_name] = getattr(self, field_name, None)

@@ -29,6 +29,7 @@ from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
+    get_table_for_model,
     prepare_cloned_fields,
     shallow_compare_dict,
 )
@@ -486,6 +487,8 @@ class CustomLinkBulkDeleteView(generic.BulkDeleteView):
 #
 # Dynamic Groups
 #
+
+
 class DynamicGroupListView(generic.ObjectListView):
     """Dynamic Group List."""
 
@@ -494,6 +497,24 @@ class DynamicGroupListView(generic.ObjectListView):
     filterset = filters.DynamicGroupFilterSet
     filterset_form = forms.DynamicGroupFilterForm
     action_buttons = ("add",)
+
+
+class DynamicGroupView(generic.ObjectView):
+    """Dynamic Group Detail."""
+
+    queryset = DynamicGroup.objects.all()
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        model = instance.content_type.model_class()
+        table_class = get_table_for_model(model)
+
+        if table_class is not None:
+            members = instance.get_queryset()
+            members_table = table_class(members, orderable=False)
+            context["members_table"] = members_table
+
+        return context
 
 
 class DynamicGroupEditView(generic.ObjectEditView):

@@ -266,20 +266,21 @@ class CustomLinkTable(BaseTable):
 class DynamicGroupTable(BaseTable):
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:dynamicgroup_edit", args=[Accessor("id")])
-    members = tables.Column(accessor="count", verbose_name="Group members")
-    # actions = ButtonsColumn(Group, buttons=("edit", "delete"))
+    name = tables.LinkColumn(args=[Accessor("slug")])
+    members = tables.Column(accessor="count", verbose_name="Group Members")
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug")
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         """Resource Manager Meta."""
 
         model = DynamicGroup
         fields = (
+            "pk",
             "name",
             "description",
             "content_type",
             "members",
-            # "actions",
+            "actions",
         )
 
     def render_members(self, value, record):
