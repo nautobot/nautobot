@@ -15,12 +15,22 @@ The following individuals are on the Nautobot Core Team:
 - Jathan McCollum
 - Jason Edelman
 
-## Contributing
+## Project Structure
 
-We welcome many forms of contributions to Nautobot. While we understand most contributions will commonly come from developers, we encourage others to contribute in the form of docs, tutorials, and user guides. If you have other ideas for contributing, don't hesitate to open an issue or have a discussion in one of the forums below.
+Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
 
-### Release Management
+- `circuits`: Communications circuits and providers (not to be confused with power circuits)
+- `dcim`: Datacenter infrastructure management (sites, racks, and devices)
+- `extras`: Additional features not considered part of the core data model
+- `ipam`: IP address management (VRFs, prefixes, IP addresses, and VLANs)
+- `tenancy`: Tenants (such as customers) to which Nautobot objects may be assigned
+- `users`: Authentication and user preferences
+- `utilities`: Resources which are not user-facing (extendable classes, etc.)
+- `virtualization`: Virtual machines and clusters
 
+## Release Management
+
+### Roadmap
 In order to best understand how to contribute and where to open an issue or discussion, you should understand how work moves from idea to feature and how the roadmap is structured.
 
 There are three major "buckets" of work to be aware of within the lifecycle of getting contributions committed and released:
@@ -75,11 +85,9 @@ Here is what you need to know about Nautobot releases:
   - The final notification will be provided 3-5 days before the release drops.
 - The dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
 
-For 2021, the team estimates there will be three more releases with no more than one of them being a major release.
-
 ### Long Term Support (LTS)
 
-It is the core team’s intention to have a Long Term Support (LTS) version of Nautobot. The initial target release for the LTS version is the end of 2021, which will be the third or fourth release of Nautobot. Being that Nautobot is a new and open source community-based project, the goal is to collect as much feedback as possible within the first 3-6 months that will help finalize the correct LTS model.
+The core team is currently evaluating the possibility of publishing a Long Term Support (LTS) version of Nautobot. At this time there is no formal target for this initial release. Our goal is to collect feedback from users of Nautobot to help identify a maintainable and reliable LTS model. If you have interest in deploying an LTS version of Nautobot, or useful information to help inform the final LTS model, please contribute to the [GitHub Discussion thread](https://github.com/nautobot/nautobot/discussions/1291) around LTS.
 
 ### Deprecation Policy
 
@@ -89,36 +97,15 @@ The deprecation policy will be such that there will be at least one release that
 
 Semantic Versioning ([SemVer](https://semver.org/)) is used for Nautobot versioning.
 
-### Contributor Workflow
-
-The following documents the lifecycle of work within Nautobot.
-
-1. Open/request a feature enhancement or file a bug
-   a. If bug, see [here](#reporting-bugs)
-   b. If feature request or enhancement, continue.
-2. Review the [Nautobot Roadmap](https://www.networktocode.com/nautobot/roadmap)
-   a. Find an item that matches your request? Comment on the corresponding GitHub Issue or GitHub Discussion.
-   b. Don't see a match for your request? Continue.
-3. Open a GitHub Issue
-   a. The issue will be reviewed. Based on the request, it will get labeled as `current`, `near-term`, `future`.
-   b. It will likely only stay in _current_ if it is trivial and quick work.
-   c. If it gets labeled as _future_, the issue will be closed in the next batch of issues that get migrated and converted to GitHub discussions.
-
-For any issue that receives a label of `current` or `near-term`, it will also receive a label of `status: accepted` or `status: blocked`.
-
-If you follow these steps, there **will** be a GitHub Issue opened prior to submitting a Pull Request (PR). However, we're quite aware that a PR may come in without ever being discussed in an Issue or Discussion. While we do not advocate for this, you should be aware of the process that will be followed for those circumstances.
-
-Should this happen and if you followed the project guidelines, have ample tests, code quality, you will first be acknowledged for your work. So, thank you in advance! After that, the PR will be quickly reviewed to ensure that it makes sense as a contribution to the project, and to gauge the work effort or issues with merging into _current_. If the effort required by the core team isn’t trivial, it’ll likely still be a few weeks before it gets thoroughly reviewed and merged, thus it won't be uncommon to move it to _near term_ with a `near-term` label. It will just depend on the current backlog.
-
-### Communication
+## Communication
 
 Communication among the contributors should always occur via public channels. The following outlines the best ways to communicate and engage on all things Nautobot.
 
-#### Slack
+### Slack
 
 - [**#nautobot** on Network to Code Slack](http://slack.networktocode.com/) - Good for quick chats. Avoid any discussion that might need to be referenced later on, as the chat history is not retained long.
 
-#### GitHub
+### GitHub
 
 - [GitHub issues](https://github.com/nautobot/nautobot/issues) - All feature requests, bug reports, and other substantial changes should be documented in an issue.
 - [GitHub discussions](https://github.com/nautobot/nautobot/discussions) - The preferred forum for general discussion and support issues. Ideal for shaping a feature request prior to submitting an issue.
@@ -133,9 +120,14 @@ categories for discussions:
   feature request. These ideas are what will be in scope to review when moving work from _Future_ to _Near Term_ as stated in the previous section.
 - **Q&A** - Request help with installing or using Nautobot.
 
-### Contributing to Nautobot
 
-#### Reporting Bugs
+## Contributing
+
+We welcome many forms of contributions to Nautobot. While we understand most contributions will commonly come from developers, we encourage others to contribute in the form of docs, tutorials, and user guides. If you have other ideas for contributing, don't hesitate to open an issue or have a discussion in one of the forums above.
+
+Please also take a chance to look at our [Wiki on GitHub](https://github.com/nautobot/nautobot/wiki/Work-Intake-&-Issue-Management) to review any specifics as to how we define and scope work as a community.
+
+### Reporting Bugs
 
 - First, ensure that you're running the [latest stable version](https://github.com/nautobot/nautobot/releases)
   of Nautobot. If you're running an older version, it's possible that the bug has
@@ -164,7 +156,11 @@ categories for discussions:
   work is required to resolve them. It may take some time for someone to address
   your issue.
 
-#### Feature Requests
+Bugs will follow our published workflow from inbound triage to ultimate terminal state, whether accepted or closed:
+
+![Bug Workflow State Diagram](../media/development/index_bug_wf.jpg)
+
+### Opening Feature Requests
 
 - First, check the GitHub [issues
   list](https://github.com/nautobot/nautobot/issues) and
@@ -198,31 +194,11 @@ categories for discussions:
 The issue will be reviewed by a moderator after submission and the appropriate
 labels will be applied for categorization.
 
-#### Executing Tests
+Feature requests will follow our published workflow from inbound triage to ultimate terminal state, whether accepted or closed:
 
-To test individual unit tests, the syntax is `invoke unittest --label <label>`.
+![Feature Request Workflow State Diagram](../media/development/index_feature_request_wf.jpg)
 
-##### Examples
-
-###### All Tests In the nautobot.extras.tests Module
-
-```
-invoke unittest --label nautobot.extras.tests
-```
-
-###### ConfigContextTest Class Within nautobot.extras.tests.test_models Module
-
-```
-invoke unittest --label nautobot.extras.tests.test_models.ConfigContextTest
-```
-
-###### Specific Test Case Within That Class
-
-```
-invoke unittest --label nautobot.extras.tests.test_models.ConfigContextTest.test_name_uniqueness
-```
-
-#### Submitting Pull Requests
+### Submitting Pull Requests
 
 - If you're interested in contributing to Nautobot, be sure to check out our
   [getting started](getting-started)
@@ -234,14 +210,7 @@ invoke unittest --label nautobot.extras.tests.test_models.ConfigContextTest.test
   be assigned to you so that others are aware it's being worked on. A maintainer
   will then mark the issue as "accepted."
 
-- All new functionality must include relevant tests where applicable.
-
-- When submitting a pull request, please be sure to work off of the `develop` or `next`
-  branch as appropriate, rather than `main`. The `develop` branch is used for ongoing
-  fixes, and `next` is used for major new feature development, while `main` is used only for tagging stable releases.
-
-- In most cases, it is not necessary to add a changelog entry: A maintainer will take care of this when the PR is merged. (This helps avoid merge conflicts
-  resulting from multiple PRs being submitted simultaneously.)
+- If you followed the project guidelines, have ample tests, code quality, you will first be acknowledged for your work. So, thank you in advance! After that, the PR will be quickly reviewed to ensure that it makes sense as a contribution to the project, and to gauge the work effort or issues with merging into _current_. If the effort required by the core team isn’t trivial, it’ll likely still be a few weeks before it gets thoroughly reviewed and merged, thus it won't be uncommon to move it to _near term_ with a `near-term` label. It will just depend on the current backlog.
 
 - All code submissions should meet the following criteria (CI will enforce
   these checks):
@@ -251,17 +220,3 @@ invoke unittest --label nautobot.extras.tests.test_models.ConfigContextTest.test
       * PEP 8 compliance is enforced, with the exception that lines may be
         greater than 80 characters in length
 
-## Project Structure
-
-All bug fixes and minor updates of the current Nautobot release occur in the `develop` branch; major feature development occurs in the `next` branch; and releases are packaged from the `main` branch. The `main` branch should _always_ represent the current stable release in its entirety, such that installing Nautobot by either downloading a packaged release or cloning the `main` branch provides the same code base.
-
-Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
-
-- `circuits`: Communications circuits and providers (not to be confused with power circuits)
-- `dcim`: Datacenter infrastructure management (sites, racks, and devices)
-- `extras`: Additional features not considered part of the core data model
-- `ipam`: IP address management (VRFs, prefixes, IP addresses, and VLANs)
-- `tenancy`: Tenants (such as customers) to which Nautobot objects may be assigned
-- `users`: Authentication and user preferences
-- `utilities`: Resources which are not user-facing (extendable classes, etc.)
-- `virtualization`: Virtual machines and clusters
