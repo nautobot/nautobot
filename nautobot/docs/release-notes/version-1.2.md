@@ -153,6 +153,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is provided with a value of None
 - [#1272](https://github.com/nautobot/nautobot/pull/1272) - Fixed GitHub Actions syntax and Slack payload for `release` CI workflow
 - [#1282](https://github.com/nautobot/nautobot/issues/1282) - Fixed a server error when editing User accounts.
+- [#1308](https://github.com/nautobot/nautobot/pull/1308) - Fixed another server error that could occur when importing cables via CSV.
 
 ## v1.2.4 (2022-01-13)
 
