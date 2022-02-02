@@ -94,12 +94,23 @@ class GitRepo:
         logger.info(f"Latest commit on branch `{branch}` is `{commit_hexsha}`")
         return commit_hexsha
 
-    def diff_remote(self):
+    def diff_remote(self, branch):
         logger.debug("Fetching from remote.")
         self.fetch()
 
+        try:
+            self.repo.remotes.origin.refs[branch]
+        except IndexError as git_error:
+            logger.error(
+                "Branch %s does not exist at %s. %s", branch, list(self.repo.remotes.origin.urls)[0], git_error
+            )
+            raise BranchDoesNotExist(
+                f"Please create branch '{branch}' in upstream and try again."
+                f" If this is a new repo, please add a commit before syncing. {git_error}"
+            )
+
         logger.debug("Getting diff between local branch and remote branch")
-        diff = self.repo.git.diff("--name-status", f"origin/{self.repo.active_branch}")
+        diff = self.repo.git.diff("--name-status", f"origin/{branch}")
         if diff:  # if diff is not empty
             return [swap_status_initials(line.split("\t")) for line in diff.split("\n")]
         logger.debug("No Difference")

@@ -345,6 +345,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
+                    if "_dryrun" in request.POST and hasattr(form.instance, "set_dryrun"):
+                        form.instance.set_dryrun()
                     obj = form.save()
 
                     # Check that the new object conforms with any assigned object-level permissions

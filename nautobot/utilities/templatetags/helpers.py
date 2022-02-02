@@ -602,3 +602,13 @@ def custom_branding_or_static(branding_asset, static_asset):
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
     return StaticNode.handle_simple(static_asset)
+
+
+@register.simple_tag
+def gitrepo_button_tag(model):
+    # Returns an update button if the model is a GitRepository
+    from nautobot.extras.models import GitRepository
+
+    if model.__class__ == GitRepository:
+        return mark_safe('<button type="submit" name="_dryrun" class="btn btn-warning">Update & Dry Run</button>')
+    return

@@ -297,8 +297,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):
     try:
         repo_helper = GitRepo(to_path, from_url)
         logger.info("Fetching from origin")
-        modified_files = repo_helper.diff_remote()
-
+        modified_files = repo_helper.diff_remote(from_branch)
         if modified_files:
             # Log each modified files
             for item in modified_files:
