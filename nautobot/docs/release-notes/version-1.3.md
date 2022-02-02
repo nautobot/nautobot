@@ -8,6 +8,10 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
+
+GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [user guide](../user-guides/graphql.md#filtering-queries) for examples.
+
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
 A [data model](../models/circuits/providernetwork.md) has been added to support representing the termination of a circuit to an external provider's network.
@@ -35,6 +39,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#863](https://github.com/nautobot/nautobot/issues/863) - Added the ability to hide a job in the UI by setting `hidden = True` in the Job's inner `Meta` class
 - [#881](https://github.com/nautobot/nautobot/issues/881) - Improved the UX of the main Jobs by adding accordion style interface that can collapse/expand jobs provided by each module
 - [#885](https://github.com/nautobot/nautobot/issues/885) - Added the ability to define a `soft_time_limit` and `time_limit` in seconds as attributes of a Job's `Meta`.
+- [#1109](https://github.com/nautobot/nautobot/issues/1109) - Added pagination support for GraphQL list queries.
 - [#1255](https://github.com/nautobot/nautobot/pull/1255) - Added Python 3.10 support.
 
 ### Changed
