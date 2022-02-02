@@ -140,6 +140,21 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.5 (2022-02-02)
+
+### Changed
+
+- [#1293](https://github.com/nautobot/nautobot/pull/1293) - Reorganized the developer documents somewhat to reduce duplication of information, added diagrams for issue intake process.
+
+### Fixed
+
+- [#371](https://github.com/nautobot/nautobot/issues/371) - Fixed a server error that could occur when importing cables via CSV.
+- [#1161](https://github.com/nautobot/nautobot/issues/1161) - The `description` field for device component templates is now correctly propagated to device components created from these templates.
+- [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is provided with a value of None
+- [#1272](https://github.com/nautobot/nautobot/pull/1272) - Fixed GitHub Actions syntax and Slack payload for `release` CI workflow
+- [#1282](https://github.com/nautobot/nautobot/issues/1282) - Fixed a server error when editing User accounts.
+- [#1308](https://github.com/nautobot/nautobot/pull/1308) - Fixed another server error that could occur when importing cables via CSV.
+
 ## v1.2.4 (2022-01-13)
 
 ### Added

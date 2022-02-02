@@ -31,7 +31,6 @@ from .device_components import (
     RearPort,
 )
 
-
 __all__ = (
     "ConsolePortTemplate",
     "ConsoleServerPortTemplate",
@@ -80,6 +79,12 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
             object_data=serialize_object(self),
         )
 
+    def instantiate_model(self, model, device, **kwargs):
+        """
+        Helper method to self.instantiate().
+        """
+        return model(device=device, name=self.name, label=self.label, description=self.description, **kwargs)
+
 
 @extras_features(
     "custom_fields",
@@ -98,7 +103,7 @@ class ConsolePortTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return ConsolePort(device=device, name=self.name, label=self.label, type=self.type)
+        return self.instantiate_model(model=ConsolePort, device=device, type=self.type)
 
 
 @extras_features(
@@ -118,7 +123,7 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return ConsoleServerPort(device=device, name=self.name, label=self.label, type=self.type)
+        return self.instantiate_model(model=ConsoleServerPort, device=device, type=self.type)
 
 
 @extras_features(
@@ -150,10 +155,9 @@ class PowerPortTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return PowerPort(
+        return self.instantiate_model(
+            model=PowerPort,
             device=device,
-            name=self.name,
-            label=self.label,
             type=self.type,
             maximum_draw=self.maximum_draw,
             allocated_draw=self.allocated_draw,
@@ -210,10 +214,9 @@ class PowerOutletTemplate(ComponentTemplateModel):
             power_port = PowerPort.objects.get(device=device, name=self.power_port.name)
         else:
             power_port = None
-        return PowerOutlet(
+        return self.instantiate_model(
+            model=PowerOutlet,
             device=device,
-            name=self.name,
-            label=self.label,
             type=self.type,
             power_port=power_port,
             feed_leg=self.feed_leg,
@@ -245,10 +248,9 @@ class InterfaceTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return Interface(
+        return self.instantiate_model(
+            model=Interface,
             device=device,
-            name=self.name,
-            label=self.label,
             type=self.type,
             mgmt_only=self.mgmt_only,
         )
@@ -307,10 +309,9 @@ class FrontPortTemplate(ComponentTemplateModel):
             rear_port = RearPort.objects.get(device=device, name=self.rear_port.name)
         else:
             rear_port = None
-        return FrontPort(
+        return self.instantiate_model(
+            model=FrontPort,
             device=device,
-            name=self.name,
-            label=self.label,
             type=self.type,
             rear_port=rear_port,
             rear_port_position=self.rear_port_position,
@@ -341,10 +342,9 @@ class RearPortTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return RearPort(
+        return self.instantiate_model(
+            model=RearPort,
             device=device,
-            name=self.name,
-            label=self.label,
             type=self.type,
             positions=self.positions,
         )
@@ -365,7 +365,7 @@ class DeviceBayTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return DeviceBay(device=device, name=self.name, label=self.label)
+        return self.instantiate_model(model=DeviceBay, device=device)
 
     def clean(self):
         if self.device_type and self.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT:
