@@ -43,7 +43,7 @@ jobs:
   container-publish:
     runs-on: "ubuntu-20.04"
     needs:
-      - "integration-test"
+      - "publish_python"
     strategy:
       fail-fast: true
       matrix:
@@ -119,8 +119,8 @@ jobs:
 
   slack-notify:
     needs:
-      - "publish_gh"
-      - "publish_pypi"
+      - "publish_python"
+      - "container-publish"
     runs-on: "ubuntu-20.04"
     env:
       SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
