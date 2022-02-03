@@ -344,7 +344,7 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
 It is a key concept to understand the 3 `class_path` elements:
 
-- `grouping_name`: which can be one of `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `grouping_name`: which can be one of `local`, `git`, or `plugins` - depending on where the `Job` has been defined.
 - `module_name`: which is the Python path to the job definition file, for a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename` or `nautobot_golden_config.jobs` and is the importable Python path name (which would not include the `.py` extension, as per Python syntax standards).
 - `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
 
