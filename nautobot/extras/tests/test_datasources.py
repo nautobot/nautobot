@@ -166,6 +166,75 @@ class GitTest(TestCase):
         os.remove(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"))
         return mock.DEFAULT
 
+    def assert_config_context_schema_record_exists(self, name):
+        """Helper Func to assert ConfigContextSchema with name=name exists"""
+        config_context_schema_record = ConfigContextSchema.objects.get(
+            name=name,
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+        )
+        config_context_schema = self.config_context_schema
+        config_context_schema_metadata = config_context_schema["_metadata"]
+        self.assertIsNotNone(config_context_schema_record)
+        self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
+        self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
+
+    def assert_device_exists(self, name):
+        """Helper function to assert device exists"""
+        device = Device.objects.get(name=name)
+        self.assertIsNotNone(device.local_context_data)
+        self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
+        self.assertEqual(device.local_context_data_owner, self.repo)
+
+    def assert_export_template_device(self, name):
+        export_template_device = ExportTemplate.objects.get(
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+            content_type=ContentType.objects.get_for_model(Device),
+            name=name,
+        )
+        self.assertIsNotNone(export_template_device)
+        self.assertEqual(export_template_device.mime_type, "text/plain")
+
+    def assert_config_context_exists(self, name):
+        """Helper function to assert ConfigContext exists"""
+        config_context = ConfigContext.objects.get(
+            name=name,
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+        )
+        self.assertIsNotNone(config_context)
+        self.assertEqual(1500, config_context.weight)
+        self.assertEqual("NTP servers for Frobozz 1000 devices **only**", config_context.description)
+        self.assertTrue(config_context.is_active)
+        self.assertEqual(list(config_context.device_types.all()), [self.device_type])
+        self.assertEqual(
+            {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
+            config_context.data,
+        )
+        self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
+
+    def assert_export_template_html_exist(self, name):
+        """Helper function to assert ExportTemplate exists"""
+        export_template_html = ExportTemplate.objects.get(
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+            content_type=ContentType.objects.get_for_model(Device),
+            name=name,
+        )
+        self.assertIsNotNone(export_template_html)
+        self.assertEqual(export_template_html.mime_type, "text/html")
+
+    def assert_export_template_vlan_exists(self, name):
+        """Helper function to assert ExportTemplate exists"""
+        export_template_vlan = ExportTemplate.objects.get(
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+            content_type=ContentType.objects.get_for_model(VLAN),
+            name=name,
+        )
+        self.assertIsNotNone(export_template_vlan)
+
     def test_pull_git_repository_and_refresh_data_with_no_data(self, MockGitRepo):
         """
         The pull_git_repository_and_refresh_data job should succeed if the given repo is empty.
@@ -363,68 +432,22 @@ class GitTest(TestCase):
                 )
 
                 # Make sure ConfigContext was successfully loaded from file
-                config_context = ConfigContext.objects.get(
-                    name="Frobozz 1000 NTP servers",
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                )
-                self.assertIsNotNone(config_context)
-                self.assertEqual(1500, config_context.weight)
-                self.assertEqual("NTP servers for Frobozz 1000 devices **only**", config_context.description)
-                self.assertTrue(config_context.is_active)
-                self.assertEqual(list(config_context.device_types.all()), [self.device_type])
-                self.assertEqual(
-                    {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
-                    config_context.data,
-                )
-                self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
+                self.assert_config_context_exists("Frobozz 1000 NTP servers")
 
                 # Make sure ConfigContextSchema was successfully loaded from file
-                config_context_schema_record = ConfigContextSchema.objects.get(
-                    name="Config Context Schema 1",
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                )
-                config_context_schema = self.config_context_schema
-                config_context_schema_metadata = config_context_schema["_metadata"]
-                self.assertIsNotNone(config_context_schema_record)
-                self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
-                self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
+                self.assert_config_context_schema_record_exists("Config Context Schema 1")
 
                 # Make sure Device local config context was successfully populated from file
-                device = Device.objects.get(name=self.device.name)
-                self.assertIsNotNone(device.local_context_data)
-                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
-                self.assertEqual(device.local_context_data_owner, self.repo)
+                self.assert_device_exists(self.device.name)
 
                 # Make sure ExportTemplate was successfully loaded from file
-                export_template_device = ExportTemplate.objects.get(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(Device),
-                    name="template.j2",
-                )
-                self.assertIsNotNone(export_template_device)
-                self.assertEqual(export_template_device.mime_type, "text/plain")
+                self.assert_export_template_device("template.j2")
 
-                export_template_html = ExportTemplate.objects.get(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(Device),
-                    name="template2.html",
-                )
-                self.assertIsNotNone(export_template_html)
-                self.assertEqual(export_template_html.mime_type, "text/html")
+                self.assert_export_template_html_exist("template2.html")
 
                 # Make sure ExportTemplate was successfully loaded from file
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
-                export_template_vlan = ExportTemplate.objects.get(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(VLAN),
-                    name="template.j2",
-                )
-                self.assertIsNotNone(export_template_vlan)
+                self.assert_export_template_vlan_exists("template.j2")
 
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 MockGitRepo.side_effect = self.empty_repo
@@ -739,66 +762,10 @@ class GitTest(TestCase):
 
                 self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
 
-                # Make sure no file / data was updated
-                config_context = ConfigContext.objects.get(
-                    name="Frobozz 1000 NTP servers",
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                )
-                self.assertIsNotNone(config_context)
-                self.assertEqual(1500, config_context.weight)
-                self.assertEqual("NTP servers for Frobozz 1000 devices **only**", config_context.description)
-                self.assertTrue(config_context.is_active)
-                self.assertEqual(list(config_context.device_types.all()), [self.device_type])
-                self.assertEqual(
-                    {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
-                    config_context.data,
-                )
-                self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
-
-                # Make sure ConfigContextSchema was successfully loaded from file
-                config_context_schema_record = ConfigContextSchema.objects.get(
-                    name="Config Context Schema 1",
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                )
-                config_context_schema = self.config_context_schema
-                config_context_schema_metadata = config_context_schema["_metadata"]
-                self.assertIsNotNone(config_context_schema_record)
-                self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
-                self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
-
-                # Make sure Device local config context was successfully populated from file
-                device = Device.objects.get(name=self.device.name)
-                self.assertIsNotNone(device.local_context_data)
-                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
-                self.assertEqual(device.local_context_data_owner, self.repo)
-
-                # Make sure ExportTemplate was successfully loaded from file
-                export_template_device = ExportTemplate.objects.get(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(Device),
-                    name="template.j2",
-                )
-                self.assertIsNotNone(export_template_device)
-                self.assertEqual(export_template_device.mime_type, "text/plain")
-
-                export_template_html = ExportTemplate.objects.get(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(Device),
-                    name="template2.html",
-                )
-                self.assertIsNotNone(export_template_html)
-                self.assertEqual(export_template_html.mime_type, "text/html")
-
-                # Make sure ExportTemplate was successfully loaded from file
-                # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
-                export_template_vlan = ExportTemplate.objects.get(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(VLAN),
-                    name="template.j2",
-                )
-                self.assertIsNotNone(export_template_vlan)
+                # Make sure no data was updated
+                self.assert_config_context_exists("Frobozz 1000 NTP servers")
+                self.assert_config_context_schema_record_exists("Config Context Schema 1")
+                self.assert_device_exists(self.device.name)
+                self.assert_export_template_device("template.j2")
+                self.assert_export_template_html_exist("template2.html")
+                self.assert_export_template_vlan_exists("template.j2")
