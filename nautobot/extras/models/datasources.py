@@ -120,8 +120,14 @@ class GitRepository(PrimaryModel):
     def filesystem_path(self):
         return os.path.join(settings.GIT_ROOT, self.slug)
 
-    def set_dryrun(self):
-        setattr(self, "_dryrun", True)
+    def set_dryrun(self, mode):
+        """
+        Add _dryrun to self
+
+        Args:
+            mode (str): Mode of dry run either create/update
+        """
+        setattr(self, "_dryrun", mode)
 
     def save(self, *args, trigger_resync=True, **kwargs):
         if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:

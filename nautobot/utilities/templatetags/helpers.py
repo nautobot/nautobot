@@ -605,10 +605,17 @@ def custom_branding_or_static(branding_asset, static_asset):
 
 
 @register.simple_tag
-def gitrepo_button_tag(model):
-    # Returns an update button if the model is a GitRepository
+def gitrepo_dryrun_button_tag(obj_type, name):
+    # Returns an update/create button if obj_type is GitRepository verbose_name
     from nautobot.extras.models import GitRepository
 
-    if model.__class__ == GitRepository:
-        return mark_safe('<button type="submit" name="_dryrun" class="btn btn-warning">Update & Dry Run</button>')
+    if GitRepository._meta.verbose_name == obj_type:
+        if name == "update":
+            return mark_safe(
+                '<button type="submit" name="_dryrun_update" class="btn btn-warning">Update & Dry Run</button>'
+            )
+        else:
+            return mark_safe(
+                '<button type="submit" name="_dryrun_create" class="btn btn-info">Create & Dry Run</button>'
+            )
     return ""

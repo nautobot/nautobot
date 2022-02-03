@@ -43,7 +43,7 @@ from .utils import files_from_contenttype_directories
 logger = logging.getLogger("nautobot.datasources.git")
 
 
-def enqueue_git_repository_helper(repository, request, func):
+def enqueue_git_repository_helper(repository, request, func, **kwargs):
     """
     GIt repository enqueue helper function
     """
@@ -55,12 +55,15 @@ def enqueue_git_repository_helper(repository, request, func):
         request.user,
         repository_pk=repository.pk,
         request=copy_safe_request(request),
+        **kwargs,
     )
 
 
 def enqueue_git_repository_diff_origin_and_local(repository, request):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    enqueue_git_repository_helper(repository, request, git_repository_diff_origin_and_local)
+    dryrun_mode = getattr(repository, "_dryrun", None)
+    kwargs = {"dryrun_mode": dryrun_mode} if dryrun_mode else {}
+    enqueue_git_repository_helper(repository, request, git_repository_diff_origin_and_local, **kwargs)
 
 
 def enqueue_pull_git_repository_and_refresh_data(repository, request):
@@ -155,7 +158,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
 
 
 @nautobot_task
-def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk):
+def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, **kwargs):
     """
     Worker function to run a dry run on a Git repository.
     """
@@ -174,7 +177,12 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk):
         if not os.path.exists(settings.GIT_ROOT):
             os.makedirs(settings.GIT_ROOT)
 
-        git_repository_dry_run(repository_record, job_result=job_result, logger=logger)
+        git_repository_dry_run(
+            repository_record,
+            job_result=job_result,
+            logger=logger,
+            dryrun_mode=kwargs.get("dryrun_mode"),
+        )
 
     except Exception as exc:
         job_result.log(
@@ -284,7 +292,7 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
         logger.info("Repository successfully refreshed")
 
 
-def git_repository_dry_run(repository_record, job_result=None, logger=None):
+def git_repository_dry_run(repository_record, job_result=None, logger=None, dryrun_mode=None):
     """Log the difference between local branch and remote branch files.
 
     Args:
@@ -295,7 +303,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
 
     try:
-        repo_helper = GitRepo(to_path, from_url)
+        repo_helper = GitRepo(to_path, from_url, dryrun_mode)
         logger.info("Fetching from origin")
         modified_files = repo_helper.diff_remote(from_branch)
         if modified_files:
