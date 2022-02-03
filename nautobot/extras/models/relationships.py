@@ -191,6 +191,12 @@ class RelationshipModel(models.Model):
 
         return resp
 
+    def get_absolute_url(self):
+        """
+        This is here to be overridden if needed and to keep things like django-tables2 happy.
+        """
+        return None
+
 
 class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
