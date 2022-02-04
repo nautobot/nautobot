@@ -90,7 +90,7 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):
     return job_result, repository_record
 
 
-def log_job_result_status(job_result, job_type):
+def log_job_result_final_status(job_result, job_type):
     """Check Job status and save log to DB
 
     Args:
@@ -154,7 +154,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
     finally:
-        log_job_result_status(job_result, "synchronization")
+        log_job_result_final_status(job_result, "synchronization")
 
 
 @nautobot_task
@@ -192,7 +192,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
     finally:
-        log_job_result_status(job_result, "dry run")
+        log_job_result_final_status(job_result, "dry run")
 
 
 def get_repo_from_url_to_path_and_from_branch(repository_record):
