@@ -191,14 +191,6 @@ class RelationshipModel(models.Model):
 
         return resp
 
-    def get_absolute_url(self):
-        """
-        This keeps django-tables2 happy if it's not defined elsewhere in the inheritance tree.
-        """
-        if hasattr(self, "get_absolute_url"):
-            return self.get_absolute_url()
-        return None
-
 
 class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
