@@ -122,3 +122,35 @@ def get_worker_count(request=None):
             messages.warning(request, "RQ workers are deprecated. Please migrate your workers to Celery.")
 
     return celery_count
+
+
+def get_instance_snapshot(instance):
+    from nautobot.extras.models import ObjectChange
+    from nautobot.utilities.utils import shallow_compare_dict
+
+    content_object_type = ContentType.objects.get_for_model(instance)
+    changed_object_id = instance.id
+    objectchanges = ObjectChange.objects.filter(
+        changed_object_type=content_object_type, changed_object_id=changed_object_id
+    ).order_by("-time")[:2]
+
+    prev_change = None
+    next_change = objectchanges[0]
+    if objectchanges.count() > 1:
+        prev_change = objectchanges[1]
+
+    if prev_change:
+        diff_added = shallow_compare_dict(
+            prev_change.object_data,
+            next_change.object_data,
+            exclude=["last_updated"],
+        )
+        diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
+    else:
+        diff_added = diff_removed = next_change.object_data
+
+    return {
+        "prev_change": prev_change.object_data if prev_change else None,
+        "post_change": next_change.object_data,
+        "differences": {"removed": diff_removed, "added": diff_added},
+    }
