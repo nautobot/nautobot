@@ -144,6 +144,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Fixed
 
+- [#1280](https://github.com/nautobot/nautobot/pull/1280) - Added missing `get_absolute_url` method to the `CircuitTermination` model, fixing a UI error that could occur when relationships involve CircuitTerminations.
 - [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../additional-features/jobs.md#jobs-and-class_path).
 - [#1332](https://github.com/nautobot/nautobot/pull/1332) - Fixed a regression in which the REST API did not default to pagination based on the configured `PAGINATE_COUNT` setting but instead defaulted to full unpaginated results.
 
