@@ -125,6 +125,12 @@ def get_worker_count(request=None):
 
 
 def get_instance_snapshot(instance):
+    """
+    Returns the snapshot of a model instance
+
+    Args:
+        instance (Model):
+    """
     from nautobot.extras.models import ObjectChange
     from nautobot.utilities.utils import shallow_compare_dict
 
