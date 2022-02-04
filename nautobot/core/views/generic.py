@@ -345,11 +345,6 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
-                    if hasattr(form.instance, "set_dryrun"):
-                        if "_dryrun_create" in request.POST:
-                            form.instance.set_dryrun(mode="create")
-                        elif "_dryrun_update" in request.POST:
-                            form.instance.set_dryrun(mode="update")
 
                     obj = form.save()
 

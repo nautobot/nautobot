@@ -556,6 +556,7 @@ class GitRepositoryView(generic.ObjectView):
 class GitRepositoryEditView(generic.ObjectEditView):
     queryset = GitRepository.objects.all()
     model_form = forms.GitRepositoryForm
+    template_name = "extras/gitrepository_object_edit.html"
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
@@ -613,8 +614,8 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
-def process_post_query(request, slug, func):
-    """Helper function for checking permissions, worker availability and running enqueue_pull_git_repository function
+def process_job_enqueue_func(request, slug, func):
+    """Helper function for checking permissions, worker availability and running the provided job enqueuing function
 
     Args:
         request: request object.
@@ -639,12 +640,12 @@ def process_post_query(request, slug, func):
 
 class GitRepositorySyncView(View):
     def post(self, request, slug):
-        return process_post_query(request, slug, enqueue_pull_git_repository_and_refresh_data)
+        return process_job_enqueue_func(request, slug, enqueue_pull_git_repository_and_refresh_data)
 
 
 class GitRepositoryDryRunView(View):
     def post(self, request, slug):
-        return process_post_query(request, slug, enqueue_git_repository_diff_origin_and_local)
+        return process_job_enqueue_func(request, slug, enqueue_git_repository_diff_origin_and_local)
 
 
 class GitRepositoryResultView(generic.ObjectView):

@@ -61,8 +61,8 @@ def enqueue_git_repository_helper(repository, request, func, **kwargs):
 
 def enqueue_git_repository_diff_origin_and_local(repository, request):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    dryrun_mode = getattr(repository, "_dryrun", None)
-    kwargs = {"dryrun_mode": dryrun_mode} if dryrun_mode else {}
+    init_repo = getattr(repository, "_init_repo", False)
+    kwargs = {"init_repo": init_repo} if init_repo else {}
     enqueue_git_repository_helper(repository, request, git_repository_diff_origin_and_local, **kwargs)
 
 
@@ -181,7 +181,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
             repository_record,
             job_result=job_result,
             logger=logger,
-            dryrun_mode=kwargs.get("dryrun_mode"),
+            init_repo=kwargs.get("init_repo"),
         )
 
     except Exception as exc:
@@ -292,18 +292,19 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
         logger.info("Repository successfully refreshed")
 
 
-def git_repository_dry_run(repository_record, job_result=None, logger=None, dryrun_mode=None):
+def git_repository_dry_run(repository_record, job_result=None, logger=None, init_repo=False):
     """Log the difference between local branch and remote branch files.
 
     Args:
         repository_record (GitRepository)
         job_result (JobResult): Optional JobResult to store results into.
         logger (logging.Logger): Optional Logger to additionally log results to.
+        init_repo (boll): Optional Bool which determines if a git repository should be initialized
     """
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
 
     try:
-        repo_helper = GitRepo(to_path, from_url, dryrun_mode)
+        repo_helper = GitRepo(to_path, from_url, init_repo)
         logger.info("Fetching from origin")
         modified_files = repo_helper.diff_remote(from_branch)
         if modified_files:
@@ -323,7 +324,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None, dryr
         raise
 
     if job_result:
-        job_result.log("Repository Dry Run successful", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
+        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
     elif logger:
         logger.info("Repository dry run successful")
 

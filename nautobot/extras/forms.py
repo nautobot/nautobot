@@ -740,6 +740,15 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "tags",
         ]
 
+    def clean(self):
+        super().clean()
+
+        # set dryrun after a successful clean
+        if "_dryrun_create" in self.data:
+            self.instance.set_dryrun(init_repo=True)
+        elif "_dryrun_update" in self.data:
+            self.instance.set_dryrun()
+
 
 class GitRepositoryCSVForm(CSVModelForm):
     secrets_group = CSVModelChoiceField(

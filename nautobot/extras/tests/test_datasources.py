@@ -693,7 +693,7 @@ class GitTest(TestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
                 MockGitRepo.return_value.diff_remote.return_value = []
 
-                self.repo.set_dryrun("create")
+                self.repo.set_dryrun(init_repo=True)
 
                 git_repository_diff_origin_and_local(
                     self.repo.pk, self.dummy_request, self.job_result.pk, dryrun_mode="create"
@@ -755,7 +755,7 @@ class GitTest(TestCase):
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
-                self.repo.set_dryrun("update")
+                self.repo.set_dryrun()
 
                 git_repository_diff_origin_and_local(self.repo.pk, self.dummy_request, self.job_result.pk)
                 self.job_result.refresh_from_db()

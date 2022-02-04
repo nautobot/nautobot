@@ -32,11 +32,16 @@ class BranchDoesNotExist(Exception):
 
 
 class GitRepo:
-    def __init__(self, path, url, dryrun_mode=None):
+    def __init__(self, path, url, init_repo=False):
         """
         Ensure that we have a clone of the given remote Git repository URL at the given local directory path.
+
+        Args:
+            path (str): path to git repo
+            url (str): git repo url
+            init_repo (bool): determines if a local git repository should be initialized or not
         """
-        if dryrun_mode == "create":
+        if init_repo:
             self.repo = Repo.init(path)
             self.repo.create_remote("origin", url=url)
         elif os.path.isdir(path):
@@ -117,4 +122,4 @@ class GitRepo:
         if diff:  # if diff is not empty
             return [swap_status_initials(line.split("\t")) for line in diff.split("\n")]
         logger.debug("No Difference")
-        return None
+        return []
