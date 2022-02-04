@@ -62,10 +62,7 @@ def enqueue_git_repository_helper(repository, request, func, **kwargs):
 def enqueue_git_repository_diff_origin_and_local(repository, request):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
     enqueue_git_repository_helper(
-        repository,
-        request,
-        git_repository_diff_origin_and_local,
-        init_repo=getattr(repository, "_init_repo", False)
+        repository, request, git_repository_diff_origin_and_local, init_repo=getattr(repository, "_init_repo", False)
     )
 
 
