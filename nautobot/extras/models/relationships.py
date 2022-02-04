@@ -193,8 +193,10 @@ class RelationshipModel(models.Model):
 
     def get_absolute_url(self):
         """
-        This is here to be overridden if needed and to keep things like django-tables2 happy.
+        This keeps django-tables2 happy if it's not defined elsewhere in the inheritance tree.
         """
+        if hasattr(self, "get_absolute_url"):
+            return self.get_absolute_url()
         return None
 
 
