@@ -1,8 +1,8 @@
 import json
 
 from django.conf import settings
-from django.urls import reverse
 from django.test import override_settings
+from django.urls import reverse
 
 from constance import config
 from constance.test import override_config
