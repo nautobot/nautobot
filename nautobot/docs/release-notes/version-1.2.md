@@ -145,6 +145,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Fixed
 
 - [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../additional-features/jobs.md#jobs-and-class_path).
+- [#1332](https://github.com/nautobot/nautobot/pull/1332) - Fixed a regression in which the REST API did not default to pagination based on the configured `PAGINATE_COUNT` setting but instead defaulted to full unpaginated results.
 
 ## v1.2.5 (2022-02-02)
 
