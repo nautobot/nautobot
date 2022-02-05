@@ -105,7 +105,6 @@ class RelationshipsTestCase(SplinterTestCase):
         """
         Navigate to the circuit created in setUp() and check that the relationships are showing on the page
         """
-        # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Circuits")[0].click()
         self.browser.links.find_by_partial_text("Circuits")[1].click()
