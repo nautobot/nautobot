@@ -110,5 +110,5 @@ class RelationshipsTestCase(SplinterTestCase):
         self.browser.links.find_by_partial_text("Circuits")[1].click()
         self.browser.links.find_by_partial_text("1234").click()
         self.assertTrue(self.browser.is_text_present("Power Panel"))
-        self.assertTrue(self.browser.is_text_present("2 prov2iders"))
+        self.assertTrue(self.browser.is_text_present("2 providers"))
         self.assertTrue(self.browser.is_text_present("1 site"))
