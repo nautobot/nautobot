@@ -56,8 +56,8 @@ class RelationshipsTestCase(SplinterTestCase):
             name="Test Power Panel",
         )
         m2m = Relationship.objects.create(
-            name="Termination 2 Provider",
-            slug="termination-2-provider",
+            name="Termination 2 Provider m2m",
+            slug="termination-2-provider-m2m",
             source_type=circuit_termination_ct,
             destination_type=provider_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -73,8 +73,8 @@ class RelationshipsTestCase(SplinterTestCase):
             destination=provider2,
         )
         o2m = Relationship.objects.create(
-            name="Termination 2 Site",
-            slug="termination-2-provider",
+            name="Termination 2 Site o2m",
+            slug="termination-2-provider-o2m",
             source_type=circuit_termination_ct,
             destination_type=site_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -85,8 +85,8 @@ class RelationshipsTestCase(SplinterTestCase):
             destination=site,
         )
         o2o = Relationship.objects.create(
-            name="Termination 2 Power Panel",
-            slug="termination-2-power-panel",
+            name="Termination 2 Power Panel o2o",
+            slug="termination-2-power-panel-o2o",
             source_type=circuit_termination_ct,
             destination_type=power_panel_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
