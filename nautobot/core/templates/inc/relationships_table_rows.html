@@ -11,7 +11,7 @@
                     </td>
                 {% elif value.has_many and value.queryset.count %}
                     <td>
-                        <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.slug}}&{{side}}_id={{termination.id}}">
+                        <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.slug}}&{{side}}_id={{object.id}}">
                             {{ value.queryset.count }}
                             {% if value.queryset.count > 1 %}
                                 {{ value.peer_type.model_class|meta:"verbose_name_plural" }}
