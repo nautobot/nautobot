@@ -32,18 +32,18 @@ class BranchDoesNotExist(Exception):
 
 
 class GitRepo:
-    def __init__(self, path, url, init_repo=False):
+    def __init__(self, path, url, clone_initially=True):
         """
         Ensure that we have a clone of the given remote Git repository URL at the given local directory path.
 
         Args:
             path (str): path to git repo
             url (str): git repo url
-            init_repo (bool): True if the repo needs to be initialized as empty
+            clone_initially (bool): True if the repo needs to be cloned
         """
         if os.path.isdir(path):
             self.repo = Repo(path=path)
-        elif not init_repo:
+        elif clone_initially:
             self.repo = Repo.clone_from(url, to_path=path)
         else:
             self.repo = Repo.init(path)

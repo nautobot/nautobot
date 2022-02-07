@@ -120,16 +120,13 @@ class GitRepository(PrimaryModel):
     def filesystem_path(self):
         return os.path.join(settings.GIT_ROOT, self.slug)
 
-    def set_dryrun(self, init_repo=False):
+    def set_dryrun(self):
         """
-        Add _init_repo flag.
+        Add _dryrun flag.
 
         The existence of this flag indicates that the next sync of this repo (on save()) should be a dry-run only;
-        the value of this flag indicates whether the repo will need to be initialized as empty before the dry-run
-        Args:
-            init_repo (bool): True if the repo needs to be initialized as empty
         """
-        setattr(self, "_init_repo", init_repo)
+        self._dryrun = True
 
     def save(self, *args, trigger_resync=True, **kwargs):
         if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:
@@ -152,7 +149,7 @@ class GitRepository(PrimaryModel):
                         self.filesystem_path,
                     )
 
-            dry_run = hasattr(self, "_init_repo")
+            dry_run = hasattr(self, "_dryrun")
             if trigger_resync or dry_run:
                 assert self.request is not None, "No HTTP request associated with this update!"
                 from nautobot.extras.datasources import (

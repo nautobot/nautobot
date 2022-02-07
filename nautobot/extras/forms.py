@@ -744,9 +744,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         super().clean()
 
         # set dryrun after a successful clean
-        if "_dryrun_create" in self.data:
-            self.instance.set_dryrun(init_repo=True)
-        elif "_dryrun_update" in self.data:
+        if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
             self.instance.set_dryrun()
 
 

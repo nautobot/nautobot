@@ -693,7 +693,7 @@ class GitTest(TestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
                 MockGitRepo.return_value.diff_remote.return_value = []
 
-                self.repo.set_dryrun(init_repo=True)
+                self.repo.set_dryrun()
 
                 git_repository_diff_origin_and_local(
                     self.repo.pk, self.dummy_request, self.job_result.pk, dryrun_mode="create"

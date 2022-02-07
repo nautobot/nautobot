@@ -55,15 +55,12 @@ def enqueue_git_repository_helper(repository, request, func, **kwargs):
         request.user,
         repository_pk=repository.pk,
         request=copy_safe_request(request),
-        **kwargs,
     )
 
 
 def enqueue_git_repository_diff_origin_and_local(repository, request):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    enqueue_git_repository_helper(
-        repository, request, git_repository_diff_origin_and_local, init_repo=getattr(repository, "_init_repo", False)
-    )
+    enqueue_git_repository_helper(repository, request, git_repository_diff_origin_and_local)
 
 
 def enqueue_pull_git_repository_and_refresh_data(repository, request):
@@ -177,12 +174,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
         if not os.path.exists(settings.GIT_ROOT):
             os.makedirs(settings.GIT_ROOT)
 
-        git_repository_dry_run(
-            repository_record,
-            job_result=job_result,
-            logger=logger,
-            init_repo=kwargs.get("init_repo"),
-        )
+        git_repository_dry_run(repository_record, job_result=job_result, logger=logger)
 
     except Exception as exc:
         job_result.log(
@@ -292,19 +284,18 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
         logger.info("Repository successfully refreshed")
 
 
-def git_repository_dry_run(repository_record, job_result=None, logger=None, init_repo=False):
+def git_repository_dry_run(repository_record, job_result=None, logger=None):
     """Log the difference between local branch and remote branch files.
 
     Args:
         repository_record (GitRepository)
         job_result (JobResult): Optional JobResult to store results into.
         logger (logging.Logger): Optional Logger to additionally log results to.
-        init_repo (boll): Optional Bool which determines if a git repository should be initialized
     """
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
 
     try:
-        repo_helper = GitRepo(to_path, from_url, init_repo)
+        repo_helper = GitRepo(to_path, from_url, clone_initially=False)
         logger.info("Fetching from origin")
         modified_files = repo_helper.diff_remote(from_branch)
         if modified_files:
