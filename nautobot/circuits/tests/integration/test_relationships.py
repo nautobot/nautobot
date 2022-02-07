@@ -106,9 +106,17 @@ class RelationshipsTestCase(SplinterTestCase):
         Navigate to the circuit created in setUp() and check that the relationships are showing on the page
         """
         self.browser.visit(self.live_server_url)
+
+        # Click Circuits dropdown button
         self.browser.links.find_by_partial_text("Circuits")[0].click()
+
+        # Click Circuits link
         self.browser.links.find_by_partial_text("Circuits")[1].click()
+
+        # Click on the circuit link (circuit created in setUp)
         self.browser.links.find_by_partial_text("1234").click()
+
+        # Verify custom relationships are visible
         self.assertTrue(self.browser.is_text_present("Power Panel"))
         self.assertTrue(self.browser.is_text_present("2 providers"))
         self.assertTrue(self.browser.is_text_present("1 site"))
