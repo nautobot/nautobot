@@ -695,9 +695,7 @@ class GitTest(TestCase):
 
                 self.repo.set_dryrun()
 
-                git_repository_diff_origin_and_local(
-                    self.repo.pk, self.dummy_request, self.job_result.pk, dryrun_mode="create"
-                )
+                git_repository_diff_origin_and_local(self.repo.pk, self.dummy_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
