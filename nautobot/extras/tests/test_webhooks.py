@@ -11,7 +11,7 @@ from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import Webhook
 from nautobot.extras.tasks import process_webhook
-from nautobot.extras.utils import generate_signature
+from nautobot.extras.utils import generate_signature, get_instance_snapshot
 from nautobot.utilities.testing import APITestCase
 
 
@@ -64,7 +64,9 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["model"], "site")
             self.assertEqual(body["username"], "testuser")
             self.assertEqual(body["request_id"], str(request_id))
-            self.assertEqual(body["data"]["name"], "Site 1")
+            self.assertEqual(body["data"]["name"], "Site Update")
+            self.assertEqual(body["snapshot"]["differences"]["removed"]["name"], "Site 1")
+            self.assertEqual(body["snapshot"]["differences"]["added"]["name"], "Site Update")
 
             class FakeResponse:
                 ok = True
@@ -75,14 +77,19 @@ class WebhookTest(APITestCase):
         # Patch the Session object with our dummy_send() method, then process the webhook for sending
         with patch.object(Session, "send", dummy_send):
             site = Site.objects.create(name="Site 1", slug="site-1")
+            # make an update
+            site.name = "Site Update"
+            site.save()
             serializer_context = {
                 "request": None,
             }
             serializer = SiteSerializer(site, context=serializer_context)
+            snapshot = get_instance_snapshot(site)
 
             process_webhook(
                 webhook.pk,
                 serializer.data,
+                snapshot,
                 Site._meta.model_name,
                 ObjectChangeActionChoices.ACTION_CREATE,
                 timestamp,
