@@ -45,7 +45,7 @@ logger = logging.getLogger("nautobot.datasources.git")
 
 def enqueue_git_repository_helper(repository, request, func, **kwargs):
     """
-    GIt repository enqueue helper function
+    Wrapper for JobResult.enqueue_job() to enqueue one of several possible Git repository functions.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
     JobResult.enqueue_job(

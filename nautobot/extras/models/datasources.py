@@ -122,10 +122,12 @@ class GitRepository(PrimaryModel):
 
     def set_dryrun(self, init_repo=False):
         """
-        Add _init_repo to self
+        Add _init_repo flag.
 
+        The existence of this flag indicates that the next sync of this repo (on save()) should be a dry-run only;
+        the value of this flag indicates whether the repo will need to be initialized as empty before the dry-run
         Args:
-            init_repo (str): Mode of dry run either create/update
+            init_repo (bool): True if the repo needs to be initialized as empty
         """
         setattr(self, "_init_repo", init_repo)
 

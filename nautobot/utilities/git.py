@@ -39,15 +39,15 @@ class GitRepo:
         Args:
             path (str): path to git repo
             url (str): git repo url
-            init_repo (bool): determines if a local git repository should be initialized or not
+            init_repo (bool): True if the repo needs to be initialized as empty
         """
-        if init_repo:
+        if os.path.isdir(path):
+            self.repo = Repo(path=path)
+        elif not init_repo:
+            self.repo = Repo.clone_from(url, to_path=path)
+        else:
             self.repo = Repo.init(path)
             self.repo.create_remote("origin", url=url)
-        elif os.path.isdir(path):
-            self.repo = Repo(path=path)
-        else:
-            self.repo = Repo.clone_from(url, to_path=path)
 
         if url not in self.repo.remotes.origin.urls:
             self.repo.remotes.origin.set_url(url)
