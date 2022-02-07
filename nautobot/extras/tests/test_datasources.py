@@ -686,84 +686,28 @@ class GitTest(TestCase):
                 self.assertIsNone(device.local_context_data)
                 self.assertIsNone(device.local_context_data_owner)
 
-    def test_git_create_and_dry_run(self, MockGitRepo):
+    def test_git_dry_run(self, MockGitRepo):
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
-                MockGitRepo.side_effect = self.populate_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
-                MockGitRepo.return_value.diff_remote.return_value = []
 
-                self.repo.set_dryrun()
+                def create_empty_repo(path, url, clone_initially=False):
+                    os.makedirs(path, exist_ok=True)
+                    return mock.DEFAULT
 
-                git_repository_diff_origin_and_local(self.repo.pk, self.dummy_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
-                self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
-
-                config_context = ConfigContext.objects.filter(
-                    name="Frobozz 1000 NTP servers",
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                ).first()
-
-                self.assertIsNone(config_context)
-
-                export_template_device = ExportTemplate.objects.filter(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(Device),
-                    name="template.j2",
-                ).first()
-                self.assertIsNone(export_template_device)
-
-                export_template_html = ExportTemplate.objects.filter(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(Device),
-                    name="template2.html",
-                ).first()
-                self.assertIsNone(export_template_html)
-
-                export_template_vlan = ExportTemplate.objects.filter(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(VLAN),
-                    name="template.j2",
-                ).first()
-                self.assertIsNone(export_template_vlan)
-
-                device = Device.objects.get(name=self.device.name)
-                self.assertIsNone(device.local_context_data)
-
-    def test_git_update_and_dry_run(self, MockGitRepo):
-        with tempfile.TemporaryDirectory() as tempdir:
-            with self.settings(GIT_ROOT=tempdir):
-                MockGitRepo.side_effect = self.populate_repo
+                MockGitRepo.side_effect = create_empty_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
-                # Now "resync" the repository, but now those files no longer exist in the repository
-                MockGitRepo.side_effect = self.empty_repo
-                # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
-                self.repo.set_dryrun()
 
                 git_repository_diff_origin_and_local(self.repo.pk, self.dummy_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
 
-                # Make sure no data was updated
-                self.assert_config_context_exists("Frobozz 1000 NTP servers")
-                self.assert_config_context_schema_record_exists("Config Context Schema 1")
-                self.assert_device_exists(self.device.name)
-                self.assert_export_template_device("template.j2")
-                self.assert_export_template_html_exist("template2.html")
-                self.assert_export_template_vlan_exists("template.j2")
+                MockGitRepo.return_value.checkout.assert_not_called()
+                MockGitRepo.return_value.diff_remote.assert_called()
