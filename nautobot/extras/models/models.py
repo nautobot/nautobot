@@ -668,10 +668,13 @@ class Job(models.Model):
         managed = False
 
 
+@extras_features(
+    "graphql",
+)
 class JobLogEntry(BaseModel):
     """Stores each log entry for the JobResult."""
 
-    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE)
+    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="logs")
     log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT)
     grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
@@ -685,6 +688,11 @@ class JobLogEntry(BaseModel):
 
     def __str__(self):
         return self.message
+
+    class Meta:
+        ordering = ["created"]
+        get_latest_by = "created"
+        verbose_name_plural = "job log entries"
 
 
 #

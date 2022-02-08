@@ -39,6 +39,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
@@ -658,6 +659,24 @@ class JobInputSerializer(serializers.Serializer):
     schedule = NestedScheduledJobSerializer(required=False)
 
 
+class JobLogEntrySerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
+
+    class Meta:
+        model = JobLogEntry
+        fields = [
+            "id",
+            "url",
+            "absolute_url",
+            "created",
+            "grouping",
+            "job_result",
+            "log_level",
+            "log_object",
+            "message",
+        ]
+
+
 #
 # Change logging
 #
@@ -871,9 +890,9 @@ class StatusSerializer(CustomFieldModelSerializer):
 
 
 class StatusModelSerializerMixin(serializers.Serializer):
-    """Mixin to add non-required `status` choice field to model serializers."""
+    """Mixin to add `status` choice field to model serializers."""
 
-    status = StatusSerializerField(required=False, queryset=Status.objects.all())
+    status = StatusSerializerField(queryset=Status.objects.all())
 
 
 #
