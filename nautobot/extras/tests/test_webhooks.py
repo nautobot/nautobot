@@ -11,7 +11,7 @@ from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import Webhook
 from nautobot.extras.tasks import process_webhook
-from nautobot.extras.utils import generate_signature, get_instance_snapshot
+from nautobot.extras.utils import generate_signature
 from nautobot.utilities.testing import APITestCase
 
 
@@ -65,6 +65,8 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["username"], "testuser")
             self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Site Update")
+            self.assertEqual(body["snapshot"]["prev_change"]["name"], "Site 1")
+            self.assertEqual(body["snapshot"]["post_change"]["name"], "Site Update")
             self.assertEqual(body["snapshot"]["differences"]["removed"]["name"], "Site 1")
             self.assertEqual(body["snapshot"]["differences"]["added"]["name"], "Site Update")
 
@@ -84,7 +86,11 @@ class WebhookTest(APITestCase):
                 "request": None,
             }
             serializer = SiteSerializer(site, context=serializer_context)
-            snapshot = get_instance_snapshot(site)
+            snapshot = {
+                "prev_change": {"id": site.id, "name": "Site 1", "slug": site.slug},
+                "post_change": {"id": site.id, "name": site.name, "slug": site.slug},
+                "differences": {"removed": {"name": "Site 1"}, "added": {"name": "Site Update"}},
+            }
 
             process_webhook(
                 webhook.pk,
