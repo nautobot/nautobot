@@ -614,12 +614,12 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
-def process_job_enqueue_func(request, slug, func):
-    """Helper function for checking permissions, worker availability and running the provided job enqueuing function
+def check_and_call_git_repository_function(request, slug, func):
+    """Helper for checking Git permissions and worker availability, then calling provided function if all is well
 
     Args:
         request: request object.
-        slug (str): slug filed.
+        slug (str): GitRepository slug value.
         func (function): Enqueue git repo function.
 
     Returns:
@@ -640,12 +640,12 @@ def process_job_enqueue_func(request, slug, func):
 
 class GitRepositorySyncView(View):
     def post(self, request, slug):
-        return process_job_enqueue_func(request, slug, enqueue_pull_git_repository_and_refresh_data)
+        return check_and_call_git_repository_function(request, slug, enqueue_pull_git_repository_and_refresh_data)
 
 
 class GitRepositoryDryRunView(View):
     def post(self, request, slug):
-        return process_job_enqueue_func(request, slug, enqueue_git_repository_diff_origin_and_local)
+        return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
 
 
 class GitRepositoryResultView(generic.ObjectView):

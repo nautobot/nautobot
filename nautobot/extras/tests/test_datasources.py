@@ -695,7 +695,6 @@ class GitTest(TestCase):
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 self.dummy_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
@@ -710,4 +709,9 @@ class GitTest(TestCase):
                 self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
 
                 MockGitRepo.return_value.checkout.assert_not_called()
+                MockGitRepo.assert_called_with(
+                    os.path.join(tempdir, self.repo.slug),
+                    "http://localhost/git.git",
+                    clone_initially=False,
+                )
                 MockGitRepo.return_value.diff_remote.assert_called()
