@@ -711,7 +711,7 @@ class GitTest(TestCase):
                 MockGitRepo.return_value.checkout.assert_not_called()
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
-                    "http://localhost/git.git",
+                    self.repo.remote_url,
                     clone_initially=False,
                 )
                 MockGitRepo.return_value.diff_remote.assert_called()
