@@ -2,15 +2,14 @@ from django import forms
 
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldModelForm,
-    RelationshipModelForm,
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
 )
 from nautobot.extras.models import Tag
 from nautobot.utilities.forms import (
-    BootstrapMixin,
+    BaseModelForm,
+    BMixin as BMixin,
     CommentField,
     CSVModelChoiceField,
     DynamicModelChoiceField,
@@ -26,7 +25,7 @@ from .models import Tenant, TenantGroup
 #
 
 
-class TenantGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class TenantGroupForm(BaseModelForm):
     parent = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
     slug = SlugField()
 
@@ -58,7 +57,7 @@ class TenantGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class TenantForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class TenantForm(BaseModelForm):
     slug = SlugField()
     group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
     comments = CommentField()
@@ -89,7 +88,7 @@ class TenantCSVForm(CustomFieldModelCSVForm):
         fields = Tenant.csv_headers
 
 
-class TenantBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class TenantBulkEditForm(BMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Tenant.objects.all(), widget=forms.MultipleHiddenInput())
     group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
 
@@ -99,7 +98,7 @@ class TenantBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditF
         ]
 
 
-class TenantFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class TenantFilterForm(BMixin, CustomFieldFilterForm):
     model = Tenant
     q = forms.CharField(required=False, label="Search")
     group = DynamicModelMultipleChoiceField(

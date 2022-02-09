@@ -4,6 +4,8 @@ import re
 import yaml
 from django import forms
 
+
+from nautobot.extras.forms import CustomFieldModelForm, RelationshipModelForm
 from nautobot.ipam.formfields import IPNetworkFormField
 
 __all__ = (
@@ -229,3 +231,7 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
+
+
+class BaseModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    pass
