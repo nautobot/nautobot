@@ -1,5 +1,4 @@
 from django import forms
-from django.core.exceptions import ValidationError
 
 from nautobot.dcim.models import Device, Interface, Rack, Region, Site
 from nautobot.extras.forms import (
@@ -554,18 +553,6 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
 #
 # IP addresses
 #
-class IPAddressRelationshipModelForm(RelationshipModelForm):
-    def clean(self):
-        super().clean()
-
-        prefix = self.cleaned_data.get("cr_test-relationship__source")
-        if prefix:
-            prefix_host_range = prefix.prefix.iter_hosts()
-            destination = self.cleaned_data["address"].ip
-            if destination not in prefix_host_range:
-                raise ValidationError(
-                    {"address": f"Gateway IP is not a valid IP inside the host range of the defined prefix"}
-                )
 
 
 class IPAddressForm(
@@ -574,7 +561,7 @@ class IPAddressForm(
     ReturnURLForm,
     AddressFieldMixin,
     CustomFieldModelForm,
-    IPAddressRelationshipModelForm,
+    RelationshipModelForm,
 ):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),

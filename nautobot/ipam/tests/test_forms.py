@@ -1,11 +1,7 @@
 """Test IPAM forms."""
-import netaddr
 
-from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from nautobot.extras.choices import RelationshipTypeChoices
-from nautobot.extras.models import Relationship
 from nautobot.extras.models.statuses import Status
 from nautobot.ipam import forms, models
 
@@ -84,32 +80,3 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.get(slug="slaac")})
         self.assertFalse(form.is_valid())
         self.assertEqual("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])
-
-    def test_invalid_relationship_between_ipaddress_and_prefix(self):
-        status_active = Status.objects.get(slug="active")
-        # ipaddress = IPAddress.objects.create(address="192.0.2.0/24", status=status_active)
-        prefix = models.Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
-
-        relationship = Relationship(
-            name="Test Relationship",
-            slug="test-relationship",
-            source_type=ContentType.objects.get_for_model(models.Prefix),
-            destination_type=ContentType.objects.get_for_model(models.IPAddress),
-            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
-        )
-        relationship.validated_save()
-
-        ipaddress_form_base_data = {"address": "192.168.22.0/24", "status": status_active.pk}
-        form = forms.IPAddressForm(
-            data={
-                "address": "192.168.22.0/24",
-                "status": status_active.pk,
-                f"cr_{relationship.slug}__source": prefix.pk,
-            }
-        )
-
-        self.assertFalse(form.is_valid())
-
-        errors = dict(form.errors)
-        self.assertIn("address", errors)
-        self.assertIn("Gateway IP is not a valid IP inside the host range of the defined prefix", errors["address"])
