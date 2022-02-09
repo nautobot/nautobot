@@ -696,14 +696,14 @@ class GitTest(TestCase):
 
                 MockGitRepo.side_effect = create_empty_repo
 
-                self.dummy_request.id = uuid.uuid4()
+                self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
 
-                git_repository_diff_origin_and_local(self.repo.pk, self.dummy_request, self.job_result.pk)
+                git_repository_diff_origin_and_local(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
