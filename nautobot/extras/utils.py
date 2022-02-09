@@ -129,8 +129,9 @@ def swap_status_id_with_status_value_and_label(obj):
     """Swap the status value in obj with a dict containing the status value and label"""
     from nautobot.extras.models import Status
 
-    status_instance = Status.objects.get(id=obj["status"])
-    obj["status"] = {"value": status_instance.slug, "label": status_instance.name}
+    status_instance = Status.objects.filter(id=obj["status"]).first()
+    if status_instance:
+        obj["status"] = {"value": status_instance.slug, "label": status_instance.name}
 
     return obj
 
