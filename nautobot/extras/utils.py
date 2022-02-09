@@ -138,8 +138,6 @@ def get_instance_snapshot(instance, action):
         changed_object_type=content_object_type, changed_object_id=changed_object_id
     ).order_by("-time")[:2]
 
-    # if action is delete or create set prechange to None
-
     post_change = objectchanges[0] if action != ObjectChangeActionChoices.ACTION_DELETE else None
     prev_change = objectchanges[1] if action != ObjectChangeActionChoices.ACTION_CREATE else None
 
@@ -147,7 +145,6 @@ def get_instance_snapshot(instance, action):
         diff_added = shallow_compare_dict(prev_change.object_data, post_change.object_data, exclude=["last_updated"])
         diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
     elif prev_change and not post_change:
-        # pre_change and not post_change, means action was a delete
         diff_added, diff_removed = None, prev_change.object_data
     else:
         diff_added, diff_removed = post_change.object_data, None
