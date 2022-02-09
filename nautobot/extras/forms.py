@@ -116,7 +116,6 @@ class RelationshipModelForm(forms.ModelForm):
     def clean(self):
         """
         Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
-
         - For TYPE_ONE_TO_MANY and TYPE_ONE_TO_ONE relations, if the form's object is on the "source" side of
           the relationship, verify that the requested "destination" object(s) do not already have any existing
           RelationshipAssociation to a different source object.
@@ -739,6 +738,13 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "provided_contents",
             "tags",
         ]
+
+    def clean(self):
+        super().clean()
+
+        # set dryrun after a successful clean
+        if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
+            self.instance.set_dryrun()
 
 
 class GitRepositoryCSVForm(CSVModelForm):
