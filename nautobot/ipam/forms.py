@@ -564,7 +564,7 @@ class IPAddressRelationshipModelForm(RelationshipModelForm):
             destination = self.cleaned_data["address"].ip
             if destination not in prefix_host_range:
                 raise ValidationError(
-                    {"address": "Gateway IP is not a valid IP inside the host range of the defined prefix"}
+                    {"address": f"Gateway IP is not a valid IP inside the host range of the defined prefix"}
                 )
 
 
