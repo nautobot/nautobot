@@ -21,4 +21,20 @@ class SiteCustomValidator(PluginCustomValidator):
             self.validation_error({"name": "Site name must be something valid"})
 
 
-custom_validators = [SiteCustomValidator]
+class RelationshipAssociationCustomValidator(PluginCustomValidator):
+    model = "extras.relationshipassociation"
+
+    def clean(self):
+        """
+        Custom validator for RelationshipAssociation to enforce that an IP Address(destination) must be
+        within the host range of a Prefix(source)
+        """
+        obj = self.context["object"]
+        prefix_host_range = obj.source.prefix.iter_hosts()
+        if obj.destination.address.ip not in prefix_host_range:
+            self.validation_error(
+                {"address": "Gateway IP is not a valid IP inside the host range of the defined prefix"}
+            )
+
+
+custom_validators = [SiteCustomValidator, RelationshipAssociationCustomValidator]
