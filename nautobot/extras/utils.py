@@ -124,10 +124,11 @@ def get_worker_count(request=None):
     return celery_count
 
 
-def get_instance_snapshot(instance):
+def get_instance_snapshot(instance, action):
     """
     Returns the snapshot(prev change, post change and its differences) of a model instance
     """
+    from nautobot.extras.choices import ObjectChangeActionChoices
     from nautobot.extras.models import ObjectChange
     from nautobot.utilities.utils import shallow_compare_dict
 
@@ -137,23 +138,22 @@ def get_instance_snapshot(instance):
         changed_object_type=content_object_type, changed_object_id=changed_object_id
     ).order_by("-time")[:2]
 
-    prev_change = None
-    next_change = objectchanges[0]
-    if objectchanges.count() > 1:
-        prev_change = objectchanges[1]
+    # if action is delete or create set prechange to None
 
-    if prev_change:
-        diff_added = shallow_compare_dict(
-            prev_change.object_data,
-            next_change.object_data,
-            exclude=["last_updated"],
-        )
+    post_change = objectchanges[0] if action != ObjectChangeActionChoices.ACTION_DELETE else None
+    prev_change = objectchanges[1] if action != ObjectChangeActionChoices.ACTION_CREATE else None
+
+    if prev_change and post_change:
+        diff_added = shallow_compare_dict(prev_change.object_data, post_change.object_data, exclude=["last_updated"])
         diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
+    elif prev_change and not post_change:
+        # pre_change and not post_change, means action was a delete
+        diff_added, diff_removed = None, prev_change.object_data
     else:
-        diff_added = diff_removed = next_change.object_data
+        diff_added, diff_removed = post_change.object_data, None
 
     return {
         "prev_change": prev_change.object_data if prev_change else None,
-        "post_change": next_change.object_data,
+        "post_change": post_change.object_data if post_change else None,
         "differences": {"removed": diff_removed, "added": diff_added},
     }
