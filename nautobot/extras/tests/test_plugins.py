@@ -72,10 +72,7 @@ class PluginTest(TestCase):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from example_plugin.custom_validators import (
-            SiteCustomValidator, RelationshipAssociationCustomValidator
-        )
-
+        from example_plugin.custom_validators import SiteCustomValidator, RelationshipAssociationCustomValidator
 
         self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
         self.assertIn(
