@@ -99,6 +99,7 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         )
         relationship.validated_save()
 
+        ipaddress_form_base_data = {"address": "192.168.22.0/24", "status": status_active.pk}
         form = forms.IPAddressForm(
             data={
                 "address": "192.168.22.0/24",
