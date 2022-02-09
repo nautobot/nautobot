@@ -139,7 +139,10 @@ def get_instance_snapshot(instance, action):
     ).order_by("-time")[:2]
 
     post_change = objectchanges[0] if action != ObjectChangeActionChoices.ACTION_DELETE else None
-    prev_change = objectchanges[1] if action != ObjectChangeActionChoices.ACTION_CREATE else None
+    if action != ObjectChangeActionChoices.ACTION_CREATE and objectchanges.count() > 1:
+        prev_change = objectchanges[1]
+    else:
+        prev_change = None
 
     if prev_change and post_change:
         diff_added = shallow_compare_dict(prev_change.object_data, post_change.object_data, exclude=["last_updated"])
