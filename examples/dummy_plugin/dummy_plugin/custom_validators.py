@@ -33,12 +33,14 @@ class RelationshipAssociationCustomValidator(PluginCustomValidator):
         within the host range of a Prefix(source)
         """
         obj = self.context["object"]
-        if ContentType.objects.get_for_model(obj.source) == ContentType.objects.get_for_model(Prefix):
-            prefix_host_range = obj.source.prefix.iter_hosts()
-            if obj.destination.address.ip not in prefix_host_range:
-                self.validation_error(
-                    {"address": "Gateway IP is not a valid IP inside the host range of the defined prefix"}
-                )
+        if obj.relationship.slug != "test-relationship":
+            # Not a relationship we have an interest in validating
+            return
+        prefix_host_range = obj.source.prefix.iter_hosts()
+        if obj.destination.address.ip not in prefix_host_range:
+            self.validation_error(
+                {"address": "Gateway IP is not a valid IP inside the host range of the defined prefix"}
+            )
 
 
 custom_validators = [SiteCustomValidator, RelationshipAssociationCustomValidator]
