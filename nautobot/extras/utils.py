@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import EXTRAS_FEATURES
 from nautobot.extras.registry import registry
 
@@ -128,7 +129,6 @@ def get_instance_snapshot(instance, action):
     """
     Returns the snapshot(prev change, post change and its differences) of a model instance
     """
-    from nautobot.extras.choices import ObjectChangeActionChoices
     from nautobot.extras.models import ObjectChange
     from nautobot.utilities.utils import shallow_compare_dict
 
