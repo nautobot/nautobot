@@ -1,4 +1,7 @@
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.extras.plugins import PluginCustomValidator
+from nautobot.ipam.models import Prefix
 
 
 class SiteCustomValidator(PluginCustomValidator):
@@ -30,11 +33,12 @@ class RelationshipAssociationCustomValidator(PluginCustomValidator):
         within the host range of a Prefix(source)
         """
         obj = self.context["object"]
-        prefix_host_range = obj.source.prefix.iter_hosts()
-        if obj.destination.address.ip not in prefix_host_range:
-            self.validation_error(
-                {"address": "Gateway IP is not a valid IP inside the host range of the defined prefix"}
-            )
+        if ContentType.objects.get_for_model(obj.source) == ContentType.objects.get_for_model(Prefix):
+            prefix_host_range = obj.source.prefix.iter_hosts()
+            if obj.destination.address.ip not in prefix_host_range:
+                self.validation_error(
+                    {"address": "Gateway IP is not a valid IP inside the host range of the defined prefix"}
+                )
 
 
 custom_validators = [SiteCustomValidator, RelationshipAssociationCustomValidator]
