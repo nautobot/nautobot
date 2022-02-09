@@ -12,11 +12,9 @@ from nautobot.extras.forms import (
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
-    CustomFieldModelForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
-    RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -27,6 +25,7 @@ from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
     add_blank_choice,
+    BaseModelForm,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     BulkRenameForm,
@@ -52,7 +51,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 #
 
 
-class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ClusterTypeForm(BaseModelForm):
     slug = SlugField()
 
     class Meta:
@@ -75,7 +74,7 @@ class ClusterTypeCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ClusterGroupForm(BaseModelForm):
     slug = SlugField()
 
     class Meta:
@@ -98,7 +97,7 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class ClusterForm(BaseModelForm, TenancyForm):
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
@@ -257,9 +256,7 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 #
 
 
-class VirtualMachineForm(
-    BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm
-):
+class VirtualMachineForm(BaseModelForm, TenancyForm, LocalContextModelForm):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -474,7 +471,7 @@ class VirtualMachineFilterForm(
 #
 
 
-class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm, RelationshipModelForm):
+class VMInterfaceForm(BaseModelForm, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,

@@ -28,6 +28,7 @@ from .fields import (
 )
 from .forms import (
     AddressFieldMixin,
+    BaseModelForm,
     BootstrapMixin,
     BulkEditForm,
     BulkRenameForm,
@@ -70,6 +71,7 @@ __all__ = (
     "ALPHANUMERIC_EXPANSION_PATTERN",
     "APISelect",
     "APISelectMultiple",
+    "BaseModelForm",
     "BOOLEAN_WITH_BLANK_CHOICES",
     "BootstrapMixin",
     "BulkEditForm",

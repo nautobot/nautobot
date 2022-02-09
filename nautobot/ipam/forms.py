@@ -7,7 +7,6 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
-    RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -18,6 +17,7 @@ from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
     add_blank_choice,
     AddressFieldMixin,
+    BaseModelForm,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     CSVChoiceField,
@@ -70,7 +70,7 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 #
 
 
-class VRFForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VRFForm(BaseModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
@@ -142,7 +142,7 @@ class VRFFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
 #
 
 
-class RouteTargetForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class RouteTargetForm(BaseModelForm, TenancyForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -206,7 +206,7 @@ class RouteTargetFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilter
 #
 
 
-class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RIRForm(BaseModelForm):
     slug = SlugField()
 
     class Meta:
@@ -242,7 +242,7 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldModelForm, RelationshipModelForm):
+class AggregateForm(BaseModelForm, TenancyForm, PrefixFieldMixin):
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -320,7 +320,7 @@ class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
 #
 
 
-class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RoleForm(BaseModelForm):
     slug = SlugField()
 
     class Meta:
@@ -344,7 +344,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(BootstrapMixin, PrefixFieldMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class PrefixForm(BaseModelForm, PrefixFieldMixin, TenancyForm):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -555,14 +555,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
 #
 
 
-class IPAddressForm(
-    BootstrapMixin,
-    TenancyForm,
-    ReturnURLForm,
-    AddressFieldMixin,
-    CustomFieldModelForm,
-    RelationshipModelForm,
-):
+class IPAddressForm(BaseModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -984,7 +977,7 @@ class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMix
 #
 
 
-class VLANGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class VLANGroupForm(BaseModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -1034,7 +1027,7 @@ class VLANGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VLANForm(BaseModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -1183,7 +1176,7 @@ class VLANFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
 #
 
 
-class ServiceForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ServiceForm(BaseModelForm):
     ports = NumericArrayField(
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",

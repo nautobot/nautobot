@@ -2,14 +2,13 @@ from django import forms
 
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldModelForm,
-    RelationshipModelForm,
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
 )
 from nautobot.extras.models import Tag
 from nautobot.utilities.forms import (
+    BaseModelForm,
     BootstrapMixin,
     CommentField,
     CSVModelChoiceField,
@@ -26,7 +25,7 @@ from .models import Tenant, TenantGroup
 #
 
 
-class TenantGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class TenantGroupForm(BaseModelForm):
     parent = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
     slug = SlugField()
 
@@ -58,7 +57,7 @@ class TenantGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class TenantForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class TenantForm(BaseModelForm):
     slug = SlugField()
     group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
     comments = CommentField()

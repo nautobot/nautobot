@@ -16,6 +16,7 @@ from nautobot.extras.models import Tag
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
+    BaseModelForm,
     BootstrapMixin,
     CommentField,
     CSVModelChoiceField,
@@ -34,7 +35,7 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 #
 
 
-class ProviderForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ProviderForm(BaseModelForm):
     slug = SlugField()
     comments = CommentField()
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
@@ -169,7 +170,7 @@ class ProviderNetworkFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class CircuitTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class CircuitTypeForm(BaseModelForm):
     slug = SlugField()
 
     class Meta:
@@ -195,7 +196,7 @@ class CircuitTypeCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class CircuitForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class CircuitForm(BaseModelForm, TenancyForm):
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
     type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
     comments = CommentField()
