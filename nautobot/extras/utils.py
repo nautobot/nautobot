@@ -125,6 +125,16 @@ def get_worker_count(request=None):
     return celery_count
 
 
+def swap_status_id_with_status_value_and_label(obj):
+    """Swap the status value in obj with a dict containing the status value and label"""
+    from nautobot.extras.models import Status
+
+    status_instance = Status.objects.get(id=obj["status"])
+    obj["status"] = {"value": status_instance.slug, "label": status_instance.name}
+
+    return obj
+
+
 def get_instance_snapshot(instance, action):
     """
     Returns the snapshot(prev change, post change and its differences) of a model instance
@@ -137,23 +147,29 @@ def get_instance_snapshot(instance, action):
     objectchanges = ObjectChange.objects.filter(
         changed_object_type=content_object_type, changed_object_id=changed_object_id
     ).order_by("-time")[:2]
+    objectchanges_count = objectchanges.count()
 
-    post_change = objectchanges[0] if action != ObjectChangeActionChoices.ACTION_DELETE else None
-    if action != ObjectChangeActionChoices.ACTION_CREATE and objectchanges.count() > 1:
-        prev_change = objectchanges[1]
-    else:
-        prev_change = None
+    post_change = (
+        swap_status_id_with_status_value_and_label(objectchanges[0].object_data)
+        if action != ObjectChangeActionChoices.ACTION_DELETE and objectchanges_count > 0
+        else None
+    )
+    prev_change = (
+        swap_status_id_with_status_value_and_label(objectchanges[1].object_data)
+        if action != ObjectChangeActionChoices.ACTION_CREATE and objectchanges_count > 1
+        else None
+    )
 
     if prev_change and post_change:
-        diff_added = shallow_compare_dict(prev_change.object_data, post_change.object_data, exclude=["last_updated"])
-        diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
+        diff_added = shallow_compare_dict(prev_change, post_change, exclude=["last_updated"])
+        diff_removed = {x: prev_change.get(x) for x in diff_added}
     elif prev_change and not post_change:
-        diff_added, diff_removed = None, prev_change.object_data
+        diff_added, diff_removed = None, prev_change
     else:
-        diff_added, diff_removed = post_change.object_data, None
+        diff_added, diff_removed = post_change, None
 
     return {
-        "prev_change": prev_change.object_data if prev_change else None,
-        "post_change": post_change.object_data if post_change else None,
+        "prev_change": prev_change if prev_change else None,
+        "post_change": post_change if post_change else None,
         "differences": {"removed": diff_removed, "added": diff_added},
     }
