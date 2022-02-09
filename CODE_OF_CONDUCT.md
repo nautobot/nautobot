@@ -1,11 +1,21 @@
-# Code of Conduct
+# Contributor Covenant Code of Conduct
 
-## Community Code of Conduct
+## Our Pledge
 
-### Topics
+We as members, contributors, and leaders pledge to make participation in our
+community a harassment-free experience for everyone, regardless of age, body
+size, visible or invisible disability, ethnicity, sex characteristics, gender
+identity and expression, level of experience, education, socio-economic status,
+nationality, personal appearance, race, caste, color, religion, or sexual
+identity and orientation.
+
+We pledge to act and interact in ways that contribute to an open, welcoming,
+diverse, inclusive, and healthy community.
+
+## Topics
 
 Every community can be strengthened by a diverse variety of viewpoints, insights,
-opinions, skillsets, and skill levels. However, with diversity comes the potential for
+opinions, skill sets, and skill levels. However, with diversity comes the potential for
 disagreement and miscommunication. The purpose of this Code of Conduct is to ensure that
 disagreements and differences of opinion are conducted respectfully and on their own
 merits, without personal attacks or other behavior that might create an unsafe or
@@ -16,23 +26,31 @@ that you treat your fellow community members with respect and courtesy, and in g
 Don't Be A Jerk. This Code of Conduct is meant to be followed in spirit as much as in
 letter and is not exhaustive.
 
-All Network to Code events and participants therein are governed by this Code of Conduct and
-anti-harassment policy. We expect organizers to enforce these guidelines throughout all events,
-and we expect attendees, speakers, sponsors, and volunteers to help ensure a safe
-environment for our whole community. Specifically, this Code of Conduct covers
-participation in all Network to Code-related forums and mailing lists, code and documentation
-contributions, public IRC channels, private correspondence, and public meetings.
+## Our Standards
 
-Network to Code community members are...
+Examples of behavior that contributes to a positive environment for our
+community include:
 
-#### Considerate
+* Demonstrating empathy and kindness toward other people
+* Being respectful of differing opinions, viewpoints, and experiences
+* Giving and gracefully accepting constructive feedback
+* Accepting responsibility and apologizing to those affected by our mistakes,
+  and learning from the experience
+* Focusing on what is best not just for us as individuals, but for the overall
+  community
 
-Contributions of every kind have far-ranging consequences. Just as your work depends on
-the work of others, decisions you make surrounding your contributions to the Network to Code
-community will affect your fellow community members. You are strongly encouraged to take
-those consequences into account while making decisions.
+Examples of unacceptable behavior include:
 
-#### Patient
+* The use of sexualized language or imagery, and sexual attention or advances of
+  any kind
+* Trolling, insulting or derogatory comments, and personal or political attacks
+* Public or private harassment
+* Publishing others' private information, such as a physical or email address,
+  without their explicit permission
+* Other conduct which could reasonably be considered inappropriate in a
+  professional setting
+
+## Patient
 
 Asynchronous communication can come with its own frustrations, even in the most responsive
 of communities. Please remember that our community is largely built on volunteered time,
@@ -42,37 +60,19 @@ patience. Additionally, it is considered poor manners to ping a specific person 
 general questions. Pose your question to the community as a whole, and wait patiently for
 a response.
 
-#### Respectful
+## Inquisitive
 
-Every community inevitably has disagreements, but remember that it is
-possible to disagree respectfully and courteously. Disagreements are never an excuse for
-rudeness, hostility, threatening behavior, abuse (verbal or physical), or personal attacks.
+There are no stupid questions. We encourage our users to ask early and ask often.
+Rather than asking whether you can ask a question (the answer is always yes!),
+instead, simply ask your question. You are encouraged to provide as many specifics as
+possible. Code snippets in the form of Gists or other paste site links are almost always
+needed in order to get the most helpful answers. Refrain from pasting multiple lines of
+code directly into the Slack channels - instead use gist.github.com or another paste site
+to provide code snippets.
 
-#### Kind
+## Helpful
 
-Everyone should feel welcome in the Network to Code community, regardless of their background.
-Please be courteous, respectful and polite to fellow community members. Do not make or
-post offensive comments related to skill level, gender, gender identity or expression,
-sexual orientation, disability, physical appearance, body size, race, or religion.
-Sexualized images or imagery, real or implied violence, intimidation, oppression,
-stalking, sustained disruption of activities, publishing the personal information of
-others without explicit permission to do so, unwanted physical contact, and unwelcome
-sexual attention are all strictly prohibited.  Additionally, you are encouraged not to
-make assumptions about the background or identity of your fellow community members.
-
-#### Inquisitive
-
-The only stupid question is the one that does not get asked. We
-encourage our users to ask early and ask often. Rather than asking whether you can ask a
-question (the answer is always yes!), instead, simply ask your question. You are
-encouraged to provide as many specifics as possible. Code snippets in the form of Gists or
-other paste site links are almost always needed in order to get the most helpful answers.
-Refrain from pasting multiple lines of code directly into the IRC channels - instead use
-gist.github.com or another paste site to provide code snippets.
-
-#### Helpful
-
-The Network to Code community is committed to being a welcoming environment for all users,
+The Nautobot community is committed to being a welcoming environment for all users,
 regardless of skill level. We were all beginners once upon a time, and our community
 cannot grow without an environment where new users feel safe and comfortable asking questions.
 It can become frustrating to answer the same questions repeatedly; however, community
@@ -82,62 +82,103 @@ useful information. At the same time, everyone is expected to read the provided
 documentation thoroughly. We are happy to answer questions, provide strategic guidance,
 and suggest effective workflows, but we are not here to do your job for you.
 
-## Anti-harassment policy
+## Enforcement Responsibilities
 
-Harassment includes (but is not limited to) all of the following behaviors:
+Community leaders are responsible for clarifying and enforcing our standards of
+acceptable behavior and will take appropriate and fair corrective action in
+response to any behavior that they deem inappropriate, threatening, offensive,
+or harmful.
 
-- Offensive comments related to gender (including gender expression and identity), age, sexual orientation, disability, physical appearance, body size, race, and religion
-- Derogatory terminology including words commonly known to be slurs
-- Posting sexualized images or imagery in public spaces
-- Deliberate intimidation
-- Stalking
-- Posting others' personal information without explicit permission
-- Sustained disruption of talks or other events
-- Inappropriate physical contact
-- Unwelcome sexual attention
+Community leaders have the right and responsibility to remove, edit, or reject
+comments, commits, code, wiki edits, issues, and other contributions that are
+not aligned to this Code of Conduct, and will communicate reasons for moderation
+decisions when appropriate.
 
-Participants asked to stop any harassing behavior are expected to comply immediately.
-Sponsors are also subject to the anti-harassment policy. In particular, sponsors should
-not use sexualized images, activities, or other material. Meetup organizing staff and
-other volunteer organizers should not use sexualized attire or otherwise create a
-sexualized environment at community events.
+## Scope
 
-In addition to the behaviors outlined above, continuing to behave a certain way after you
-have been asked to stop also constitutes harassment, even if that behavior is not
-specifically outlined in this policy. It is considerate and respectful to stop doing
-something after you have been asked to stop, and all community members are expected to
-comply with such requests immediately.
+This Code of Conduct applies within all community spaces, and also applies when
+an individual is officially representing the community in public spaces.
+Examples of representing our community include using an official e-mail address,
+posting via an official social media account, or acting as an appointed
+representative at an online or offline event.
 
-## Policy violations
+All Nautobot events and participants therein are governed by this Code of Conduct and
+anti-harassment policy. We expect organizers to enforce these guidelines throughout all events,
+and we expect attendees, speakers, sponsors, and volunteers to help ensure a safe
+environment for our whole community. Specifically, this Code of Conduct covers
+participation in all Nautobot-related forums and mailing lists, code and documentation
+contributions, public Slack channels, private correspondence, and public meetings.
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by
-contacting `community@networktocode.com <mailto:community@networktocode.com>`_, to any channel
-operator in the community IRC channels, or to the local organizers of an event. Meetup
-organizers are encouraged to prominently display points of contact for reporting unacceptable
-behavior at local events.
+Where our community participation happens in joint with another community or organization,
+for example the Network to Code Slack, vendor-hosted conferences, etc., we expect strict
+adherence with their community policies as well, as we are guests of their spaces.
 
-If a participant engages in harassing behavior, the meetup organizers may take any action
-they deem appropriate. These actions may include but are not limited to warning the
-offender, expelling the offender from the event, and barring the offender from future
-community events.
+## Enforcement
 
-Organizers will be happy to help participants contact security or local law enforcement,
-provide escorts to an alternate location, or otherwise assist those experiencing
-harassment to feel safe for the duration of the meetup. We value the safety and well-being
-of our community members and want everyone to feel welcome at our events, both online and
-offline.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be
+reported to the community leaders responsible for enforcement at
+community@networktocode.com.
 
-We expect all participants, organizers, speakers, and attendees to follow these policies at
-all of our event venues and event-related social events.
+All complaints will be reviewed and investigated promptly and fairly.
 
-The Network to Code Community Code of Conduct is licensed under the Creative Commons
-Attribution-Share Alike 3.0 license. Our Code of Conduct was adapted from Codes of Conduct
-of other open source projects, including:
+All community leaders are obligated to respect the privacy and security of the
+reporter of any incident.
 
-* Contributor Covenant
-* Elastic
-* The Fedora Project
-* OpenStack
-* Puppet Labs
-* Ubuntu
-* Ansible
+## Enforcement Guidelines
+
+Community leaders will follow these Community Impact Guidelines in determining
+the consequences for any action they deem in violation of this Code of Conduct:
+
+### 1. Correction
+
+**Community Impact**: Use of inappropriate language or other behavior deemed
+unprofessional or unwelcome in the community.
+
+**Consequence**: A private, written warning from community leaders, providing
+clarity around the nature of the violation and an explanation of why the
+behavior was inappropriate. A public apology may be requested.
+
+### 2. Warning
+
+**Community Impact**: A violation through a single incident or series of
+actions.
+
+**Consequence**: A warning with consequences for continued behavior. No
+interaction with the people involved, including unsolicited interaction with
+those enforcing the Code of Conduct, for a specified period of time. This
+includes avoiding interactions in community spaces as well as external channels
+like social media. Violating these terms may lead to a temporary or permanent
+ban.
+
+### 3. Temporary Ban
+
+**Community Impact**: A serious violation of community standards, including
+sustained inappropriate behavior.
+
+**Consequence**: A temporary ban from any sort of interaction or public
+communication with the community for a specified period of time. No public or
+private interaction with the people involved, including unsolicited interaction
+with those enforcing the Code of Conduct, is allowed during this period.
+Violating these terms may lead to a permanent ban.
+
+### 4. Permanent Ban
+
+**Community Impact**: Demonstrating a pattern of violation of community
+standards, including sustained inappropriate behavior, harassment of an
+individual, or aggression toward or disparagement of classes of individuals.
+
+**Consequence**: A permanent ban from any sort of public interaction within the
+community.
+
+## Attribution
+
+The Nautobot Community Code of Conduct is adapted from the [Contributor Covenant][homepage],
+version 2.1, available at
+[https://www.contributor-covenant.org/version/2/1/code_of_conduct.html][v2.1].
+
+Community Impact Guidelines were inspired by
+[Mozilla's code of conduct enforcement ladder][Mozilla CoC].
+
+For answers to common questions about this code of conduct, see the FAQ at
+[https://www.contributor-covenant.org/faq][FAQ]. Translations are available at
+[https://www.contributor-covenant.org/translations][translations].
