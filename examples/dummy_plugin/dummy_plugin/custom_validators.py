@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.extras.plugins import PluginCustomValidator
-from nautobot.ipam.models import Prefix
 
 
 class SiteCustomValidator(PluginCustomValidator):
