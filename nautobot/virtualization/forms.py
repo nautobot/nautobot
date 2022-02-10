@@ -13,6 +13,7 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
+    GenericBaseModelForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -52,7 +53,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 #
 
 
-class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ClusterTypeForm(GenericBaseModelForm):
     slug = SlugField()
 
     class Meta:
@@ -75,7 +76,7 @@ class ClusterTypeCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ClusterGroupForm(GenericBaseModelForm):
     slug = SlugField()
 
     class Meta:
@@ -98,7 +99,7 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class ClusterForm(GenericBaseModelForm, TenancyForm):
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
@@ -257,9 +258,7 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 #
 
 
-class VirtualMachineForm(
-    BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm
-):
+class VirtualMachineForm(GenericBaseModelForm, TenancyForm, LocalContextModelForm):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -474,7 +473,7 @@ class VirtualMachineFilterForm(
 #
 
 
-class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm, RelationshipModelForm):
+class VMInterfaceForm(GenericBaseModelForm, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
