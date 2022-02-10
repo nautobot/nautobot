@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import Q
 from django.utils.safestring import mark_safe
 from netaddr import EUI
@@ -879,8 +879,12 @@ class DeviceTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm
         widgets = {
             "subdevice_role": StaticSelect2(),
             # Exclude SVG images (unsupported by PIL)
-            "front_image": forms.FileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
-            "rear_image": forms.FileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+            "front_image": forms.ClearableFileInput(
+                attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}
+            ),
+            "rear_image": forms.ClearableFileInput(
+                attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}
+            ),
         }
 
 
@@ -3632,6 +3636,24 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         # Avoid trying to save as NULL
         length_unit = self.cleaned_data.get("length_unit", None)
         return length_unit if length_unit is not None else ""
+
+    def add_error(self, field, error):
+        # Edge Case: some fields in error are not properties in this instance
+        #   e.g: termination_a_id not an property in CableCSVForm, This would raise a ValueError Exception
+        # Solution: convert those fields to its equivalent in CableCSVForm
+        #   e.g: termination_a_id > side_a_name
+
+        final_error = error
+        if hasattr(error, "error_dict"):
+            error_dict = error.error_dict
+            termination_keys = [key for key in error_dict.keys() if key.startswith("termination")]
+            for error_field in termination_keys:
+                side_value = error_field.split("_")[1]
+                error_msg = error_dict.pop(error_field)
+                error_dict["side_%s_name" % side_value] = error_msg
+
+            final_error = ValidationError(error_dict)
+        super().add_error(field, final_error)
 
 
 class CableBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):

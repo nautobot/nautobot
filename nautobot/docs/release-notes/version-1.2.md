@@ -140,13 +140,37 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.5 (2022-??-??)
+## v1.2.6 (2022-MM-DD)
+
+### Added
+
+- [#1353](https://github.com/nautobot/nautobot/issues/1353) - Added UI for deleting previously uploaded images when editing a DeviceType.
 
 ### Fixed
 
+- [#1279](https://github.com/nautobot/nautobot/issues/1279) - Circuit terminations now render custom relationships on the circuit detail page.
+- [#1280](https://github.com/nautobot/nautobot/pull/1280) - Added missing `get_absolute_url` method to the `CircuitTermination` model, fixing a UI error that could occur when relationships involve CircuitTerminations.
+- [#1283](https://github.com/nautobot/nautobot/pull/1283) - Update Sentinel docs to have 3 hosts (minimum per Redis docs), and change `CELERY_BROKER_URL` to a multiline string instead of a Tuple (tuple is invalid, and raises an exception when job completes).
+- [#1327](https://github.com/nautobot/nautobot/pull/1327) - Fixes the broken dependencies from the Release action.
+- [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../additional-features/jobs.md#jobs-and-class_path).
+- [#1332](https://github.com/nautobot/nautobot/pull/1332) - Fixed a regression in which the REST API did not default to pagination based on the configured `PAGINATE_COUNT` setting but instead defaulted to full unpaginated results.
+- [#1335](https://github.com/nautobot/nautobot/issues/1335) - Fixed an issue with the Secret create/edit form that caused problems when defining AWS secrets using the `nautobot-secrets-providers` plugin.
+- [#1360](https://github.com/nautobot/nautobot/issues/1360) - Fixed an issue in the development environment that could cause Selenium integration tests to error out.
+
+## v1.2.5 (2022-02-02)
+
+### Changed
+
+- [#1293](https://github.com/nautobot/nautobot/pull/1293) - Reorganized the developer documents somewhat to reduce duplication of information, added diagrams for issue intake process.
+
+### Fixed
+
+- [#371](https://github.com/nautobot/nautobot/issues/371) - Fixed a server error that could occur when importing cables via CSV.
 - [#1161](https://github.com/nautobot/nautobot/issues/1161) - The `description` field for device component templates is now correctly propagated to device components created from these templates.
 - [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is provided with a value of None
+- [#1272](https://github.com/nautobot/nautobot/pull/1272) - Fixed GitHub Actions syntax and Slack payload for `release` CI workflow
 - [#1282](https://github.com/nautobot/nautobot/issues/1282) - Fixed a server error when editing User accounts.
+- [#1308](https://github.com/nautobot/nautobot/pull/1308) - Fixed another server error that could occur when importing cables via CSV.
 
 ## v1.2.4 (2022-01-13)
 
