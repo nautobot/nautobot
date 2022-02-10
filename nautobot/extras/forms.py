@@ -534,10 +534,6 @@ class CustomFieldModelForm(forms.ModelForm):
         return super().clean()
 
 
-class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
-    pass
-
-
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
     def _append_customfield_fields(self):
 
@@ -680,6 +676,10 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
 
 def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
+
+
+class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    pass
 
 
 class PasswordInputWithPlaceholder(forms.PasswordInput):
