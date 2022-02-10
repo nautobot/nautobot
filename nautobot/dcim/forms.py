@@ -23,7 +23,6 @@ from nautobot.extras.forms import (
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
-    RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
