@@ -156,22 +156,22 @@ def get_instance_snapshot(instance, action):
         if action != ObjectChangeActionChoices.ACTION_DELETE and objectchanges_count > 0
         else None
     )
-    prev_change = (
+    pre_change = (
         swap_status_id_with_status_value_and_label(objectchanges[1].object_data)
         if action != ObjectChangeActionChoices.ACTION_CREATE and objectchanges_count > 1
         else None
     )
 
-    if prev_change and post_change:
-        diff_added = shallow_compare_dict(prev_change, post_change, exclude=["last_updated"])
-        diff_removed = {x: prev_change.get(x) for x in diff_added}
-    elif prev_change and not post_change:
-        diff_added, diff_removed = None, prev_change
+    if pre_change and post_change:
+        diff_added = shallow_compare_dict(pre_change, post_change, exclude=["last_updated"])
+        diff_removed = {x: pre_change.get(x) for x in diff_added}
+    elif pre_change and not post_change:
+        diff_added, diff_removed = None, pre_change
     else:
         diff_added, diff_removed = post_change, None
 
     return {
-        "prev_change": prev_change if prev_change else None,
+        "pre_change": pre_change if pre_change else None,
         "post_change": post_change if post_change else None,
         "differences": {"removed": diff_removed, "added": diff_added},
     }

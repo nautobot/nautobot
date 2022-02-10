@@ -69,7 +69,7 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["username"], "testuser")
             self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Site Update")
-            self.assertEqual(body["snapshot"]["prev_change"]["name"], "Site 1")
+            self.assertEqual(body["snapshot"]["pre_change"]["name"], "Site 1")
             self.assertEqual(body["snapshot"]["post_change"]["name"], "Site Update")
             self.assertEqual(body["snapshot"]["differences"]["removed"]["name"], "Site 1")
             self.assertEqual(body["snapshot"]["differences"]["added"]["name"], "Site Update")
