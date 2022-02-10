@@ -534,7 +534,7 @@ class CustomFieldModelForm(forms.ModelForm):
         return super().clean()
 
 
-class GenericBaseModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     pass
 
 
@@ -1071,7 +1071,7 @@ def provider_choices():
     return sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()])
 
 
-class SecretForm(GenericBaseModelForm):
+class SecretForm(NautobotModelForm):
     """Create/update form for `Secret` objects."""
 
     slug = SlugField()
@@ -1127,7 +1127,7 @@ SecretsGroupAssociationFormSet = inlineformset_factory(
 )
 
 
-class SecretsGroupForm(GenericBaseModelForm):
+class SecretsGroupForm(NautobotModelForm):
     """Create/update form for `SecretsGroup` objects."""
 
     slug = SlugField()
@@ -1151,7 +1151,7 @@ class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class StatusForm(GenericBaseModelForm):
+class StatusForm(NautobotModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
@@ -1251,7 +1251,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 #
 
 
-class TagForm(GenericBaseModelForm):
+class TagForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:

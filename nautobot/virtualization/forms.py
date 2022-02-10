@@ -12,7 +12,7 @@ from nautobot.extras.forms import (
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
-    GenericBaseModelForm,
+    NautobotModelForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -51,7 +51,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 #
 
 
-class ClusterTypeForm(GenericBaseModelForm):
+class ClusterTypeForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -74,7 +74,7 @@ class ClusterTypeCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterGroupForm(GenericBaseModelForm):
+class ClusterGroupForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -97,7 +97,7 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterForm(GenericBaseModelForm, TenancyForm):
+class ClusterForm(NautobotModelForm, TenancyForm):
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
@@ -256,7 +256,7 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 #
 
 
-class VirtualMachineForm(GenericBaseModelForm, TenancyForm, LocalContextModelForm):
+class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -471,7 +471,7 @@ class VirtualMachineFilterForm(
 #
 
 
-class VMInterfaceForm(GenericBaseModelForm, InterfaceCommonForm):
+class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,

@@ -7,7 +7,7 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelForm,
     CustomFieldModelCSVForm,
-    GenericBaseModelForm,
+    NautobotModelForm,
     RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
@@ -35,7 +35,7 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 #
 
 
-class ProviderForm(GenericBaseModelForm):
+class ProviderForm(NautobotModelForm):
     slug = SlugField()
     comments = CommentField()
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
@@ -170,7 +170,7 @@ class ProviderNetworkFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class CircuitTypeForm(GenericBaseModelForm):
+class CircuitTypeForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -196,7 +196,7 @@ class CircuitTypeCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class CircuitForm(GenericBaseModelForm, TenancyForm):
+class CircuitForm(NautobotModelForm, TenancyForm):
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
     type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
     comments = CommentField()
