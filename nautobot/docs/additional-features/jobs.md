@@ -16,12 +16,18 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 
 ## Writing Jobs
 
-Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+Jobs may be installed in one of three ways:
 
-!!! warning
-    The jobs path must include a file named `__init__.py`, which registers the path as a Python module. Do not delete this file.
+- Manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
+  - The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
+  - Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
+- Imported from an external [Git repository](../models/extras/gitrepository.md).
+  - The repository's `jobs/` directory *must* contain a file named `__init__.py`.
+  - Each Job file in the repository is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
+- Packaged as part of a [plugin](../plugins/development.md#including-jobs).
+  - Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
 
-As an alternative to manually managing job files, you can store job files in an external [Git repository](../models/extras/gitrepository.md). The actual content of the files will be the same either way.
+In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
@@ -329,7 +335,7 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 The `run()` method, if you choose to implement it, should accept two arguments:
 
 1. `data` - A dictionary which will contain all of the variable data passed in by the user (via the web UI or REST API)
-2. `commit` - A boolean indicating whether database changes should be committed.
+2. `commit` - A boolean indicating whether database changes should be committed. If this is false, even if your Job attempts to make database changes, they will be automatically rolled back when the Job completes.
 
 ```python
 from nautobot.extras.jobs import Job, StringVar, IntegerVar, ObjectVar
@@ -495,6 +501,51 @@ Provision of user input (`data` values) via the CLI is not supported at this tim
     The `--username <username>` parameter can be used to specify the user that will be identified as the requester of the job. It is optional if the job will not be modifying the database, but is mandatory if you are running with `--commit`, as the specified user will own any resulting database changes.
 
     Note that `nautobot-server` commands, like all management commands and other direct interactions with the Django database, are not gated by the usual Nautobot user authentication flow. It is possible to specify any existing `--username` with the `nautobot-server runjob` command in order to impersonate any defined user in Nautobot. Use this power wisely and be cautious who you allow to access it.
+
+## Testing Jobs
+
+Jobs are Python code and can be tested as such, usually via [Django unit-test features](https://docs.djangoproject.com/en/stable/topics/testing/). That said, there are a few useful tricks specific to testing Jobs.
+
+While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job. The simplest way to do so is via calling the `nautobot.extras.jobs.run_job()` method, as this is the same function used to execute a Job via Nautobot's Celery worker process. As part of your test, you can call `run_job` directly rather than enqueuing it for the worker to handle; this is simpler and generally quite sufficient for testing.
+
+Because of the way `run_job()` works, which is somewhat complex behind the scenes, there are a few things you'll need to do in your test code:
+
+1. Inherit from `django.test.TransactionTestCase` instead of `django.test.TestCase`.
+2. Set your test class's `databases` attribute to `("default", "job_logs")`. (`job_logs` is a proxy connection to the same (`default`) database that's used exclusively for Job logging.)
+
+A simple example of a Job test case might look like the following:
+
+```python
+import uuid
+
+from django.test import TransactionTestCase
+from django.contrib.contenttypes.models import ContentType
+
+from nautoabot.extras.jobs import get_job, run_job
+from nautobot.extras.models import JobResult, JobLogEntry
+
+class MyJobTestCase(TransactionTestCase):
+    databases = ("default", "job_logs")
+
+    def test_my_job(self):
+        # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
+        job_class = get_job("local/my_job_file/MyJob")
+        job_result = JobResult.objects.create(
+            name=job_class.class_path,
+            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            job_id=uuid.uuid4(),
+        )
+        run_job(data={"my_variable": "my_value"}, request=None, commit=False, job_result_pk=job_result.pk)
+
+        # Since we ran with commit=False, any database changes made by the job won't persist,
+        # but we can still inspect the logs created by running the job
+        log_entries = JobLogEntry.objects.filter(job_result=job_result)
+        for log_entry in log_entries:
+            self.assertEqual(log_entry.message, "...")
+```
+
+!!! tip
+    For more advanced examples (such as testing jobs executed with `commit=True`, for example) refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
 
 ## Example Jobs
 
