@@ -160,7 +160,7 @@ def buildx(
     cache=False,
     cache_dir="",
     platforms="linux/amd64",
-    tag="networktocode/nautobot-dev-py3.6:local",
+    tag="networktocode/nautobot-dev-py3.7:local",
     target="dev",
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
@@ -203,7 +203,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.6":
+    if context.nautobot.python_ver == "3.7":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main

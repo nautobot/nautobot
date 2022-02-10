@@ -376,11 +376,11 @@ class PluginMenuItem:
         self.link = link
         self.link_text = link_text
         if permissions is not None:
-            if type(permissions) not in (list, tuple):
+            if not isinstance(permissions, (list, tuple)):
                 raise TypeError("Permissions must be passed as a tuple or list.")
             self.permissions = permissions
         if buttons is not None:
-            if type(buttons) not in (list, tuple):
+            if not isinstance(buttons, (list, tuple)):
                 raise TypeError("Buttons must be passed as a tuple or list.")
             self.buttons = buttons
 
@@ -399,7 +399,7 @@ class PluginMenuButton:
         self.title = title
         self.icon_class = icon_class
         if permissions is not None:
-            if type(permissions) not in (list, tuple):
+            if not isinstance(permissions, (list, tuple)):
                 raise TypeError("Permissions must be passed as a tuple or list.")
             self.permissions = permissions
         if color is not None:

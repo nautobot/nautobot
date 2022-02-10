@@ -29,7 +29,7 @@ class RestrictedQuerySet(QuerySet):
         else:
             attrs = Q()
             for perm_attrs in user._object_perm_cache[permission_required]:
-                if type(perm_attrs) is list:
+                if isinstance(perm_attrs, list):
                     for p in perm_attrs:
                         attrs |= Q(**p)
                 elif perm_attrs:

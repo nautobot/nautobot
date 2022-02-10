@@ -69,9 +69,9 @@ class GetReleasesTestCase(SimpleTestCase):
     @patch.object(requests, "get")
     @patch.object(RedisCache, "set")
     @patch.object(RedisCache, "get")
-    def test_pre_releases(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
-        dummy_cache_get.side_effect = CacheMiss()
-        dummy_request_get.side_effect = successful_github_response
+    def test_pre_releases(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
+        mock_cache_get.side_effect = CacheMiss()
+        mock_request_get.side_effect = successful_github_response
 
         releases = get_releases(pre_releases=True)
 
@@ -95,7 +95,7 @@ class GetReleasesTestCase(SimpleTestCase):
         )
 
         # Check if correct request is made
-        dummy_request_get.assert_called_once_with(
+        mock_request_get.assert_called_once_with(
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
@@ -104,14 +104,14 @@ class GetReleasesTestCase(SimpleTestCase):
         # Check if result is put in cache
         expected_version_str, expected_url = max(releases)
         expected_version = version.parse(expected_version_str)
-        dummy_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
+        mock_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
 
     @patch.object(requests, "get")
     @patch.object(RedisCache, "set")
     @patch.object(RedisCache, "get")
-    def test_no_pre_releases(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
-        dummy_cache_get.side_effect = CacheMiss()
-        dummy_request_get.side_effect = successful_github_response
+    def test_no_pre_releases(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
+        mock_cache_get.side_effect = CacheMiss()
+        mock_request_get.side_effect = successful_github_response
 
         releases = get_releases(pre_releases=False)
 
@@ -131,7 +131,7 @@ class GetReleasesTestCase(SimpleTestCase):
         )
 
         # Check if correct request is made
-        dummy_request_get.assert_called_once_with(
+        mock_request_get.assert_called_once_with(
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
@@ -140,14 +140,14 @@ class GetReleasesTestCase(SimpleTestCase):
         # Check if result is put in cache
         expected_version_str, expected_url = max(releases)
         expected_version = version.parse(expected_version_str)
-        dummy_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
+        mock_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
 
     @patch.object(requests, "get")
     @patch.object(RedisCache, "set")
     @patch.object(RedisCache, "get")
-    def test_failed_request(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
-        dummy_cache_get.side_effect = CacheMiss()
-        dummy_request_get.side_effect = unsuccessful_github_response
+    def test_failed_request(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
+        mock_cache_get.side_effect = CacheMiss()
+        mock_request_get.side_effect = unsuccessful_github_response
 
         with self.assertLogs(level=ERROR) as cm:
             releases = get_releases()
@@ -162,21 +162,21 @@ class GetReleasesTestCase(SimpleTestCase):
         self.assertListEqual(releases, [])
 
         # Check if correct request is made
-        dummy_request_get.assert_called_once_with(
+        mock_request_get.assert_called_once_with(
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
         )
 
         # Check if failure is put in cache
-        dummy_cache_set.assert_called_once_with("latest_release_no_retry", "https://localhost/unittest/releases", 900)
+        mock_cache_set.assert_called_once_with("latest_release_no_retry", "https://localhost/unittest/releases", 900)
 
     @patch.object(requests, "get")
     @patch.object(RedisCache, "set")
     @patch.object(RedisCache, "get")
-    def test_blocked_retry(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
-        dummy_cache_get.return_value = "https://localhost/unittest/releases"
-        dummy_request_get.side_effect = successful_github_response
+    def test_blocked_retry(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
+        mock_cache_get.return_value = "https://localhost/unittest/releases"
+        mock_request_get.side_effect = successful_github_response
 
         releases = get_releases()
 
@@ -184,7 +184,7 @@ class GetReleasesTestCase(SimpleTestCase):
         self.assertListEqual(releases, [])
 
         # Check if request is NOT made
-        dummy_request_get.assert_not_called()
+        mock_request_get.assert_not_called()
 
         # Check if cache is not updated
-        dummy_cache_set.assert_not_called()
+        mock_cache_set.assert_not_called()

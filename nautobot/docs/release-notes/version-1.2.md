@@ -142,6 +142,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ## v1.2.6 (2022-MM-DD)
 
+### Added
+
+- [#1353](https://github.com/nautobot/nautobot/issues/1353) - Added UI for deleting previously uploaded images when editing a DeviceType.
+
 ### Fixed
 
 - [#1279](https://github.com/nautobot/nautobot/issues/1279) - Circuit terminations now render custom relationships on the circuit detail page.
@@ -151,6 +155,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../additional-features/jobs.md#jobs-and-class_path).
 - [#1332](https://github.com/nautobot/nautobot/pull/1332) - Fixed a regression in which the REST API did not default to pagination based on the configured `PAGINATE_COUNT` setting but instead defaulted to full unpaginated results.
 - [#1335](https://github.com/nautobot/nautobot/issues/1335) - Fixed an issue with the Secret create/edit form that caused problems when defining AWS secrets using the `nautobot-secrets-providers` plugin.
+- [#1360](https://github.com/nautobot/nautobot/issues/1360) - Fixed an issue in the development environment that could cause Selenium integration tests to error out.
 
 ## v1.2.5 (2022-02-02)
 

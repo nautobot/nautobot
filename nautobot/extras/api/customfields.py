@@ -78,7 +78,7 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
             fields = CustomField.objects.filter(content_types=content_type)
 
             # Populate CustomFieldValues for each instance from database
-            if type(self.instance) in (list, tuple):
+            if isinstance(self.instance, (list, tuple)):
                 for obj in self.instance:
                     self._populate_custom_fields(obj, fields)
             else:

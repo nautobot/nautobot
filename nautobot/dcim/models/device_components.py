@@ -896,7 +896,7 @@ class InventoryItem(MPTTModel, ComponentModel):
         blank=True,
         help_text="Manufacturer-assigned part identifier",
     )
-    serial = models.CharField(max_length=50, verbose_name="Serial number", blank=True)
+    serial = models.CharField(max_length=255, verbose_name="Serial number", blank=True)
     asset_tag = models.CharField(
         max_length=50,
         unique=True,

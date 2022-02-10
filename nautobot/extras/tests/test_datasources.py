@@ -49,10 +49,10 @@ class GitTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser")
         self.factory = RequestFactory()
-        self.dummy_request = self.factory.get("/no-op/")
-        self.dummy_request.user = self.user
+        self.mock_request = self.factory.get("/no-op/")
+        self.mock_request.user = self.user
         # Needed for use with the change_logging decorator
-        self.dummy_request.id = uuid.uuid4()
+        self.mock_request.id = uuid.uuid4()
 
         self.site = Site.objects.create(name="Test Site", slug="test-site")
         self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
@@ -125,7 +125,7 @@ class GitTest(TestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
@@ -156,7 +156,7 @@ class GitTest(TestCase):
                 self.repo._token = "1:3@/?=ab@"
                 self.repo.save()
                 # For verisimilitude, don't re-use the old request and job_result
-                self.dummy_request.id = uuid.uuid4()
+                self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
@@ -164,7 +164,7 @@ class GitTest(TestCase):
                 )
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
@@ -195,7 +195,7 @@ class GitTest(TestCase):
                 self.repo._token = "1:3@/?=ab@"
                 self.repo.save()
                 # For verisimilitude, don't re-use the old request and job_result
-                self.dummy_request.id = uuid.uuid4()
+                self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
@@ -203,7 +203,7 @@ class GitTest(TestCase):
                 )
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
@@ -265,7 +265,7 @@ class GitTest(TestCase):
                 self.repo.secrets_group = secrets_group
                 self.repo.validated_save()
 
-                self.dummy_request.id = uuid.uuid4()
+                self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
@@ -273,7 +273,7 @@ class GitTest(TestCase):
                 )
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
@@ -344,7 +344,7 @@ class GitTest(TestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
@@ -429,7 +429,7 @@ class GitTest(TestCase):
 
                 MockGitRepo.side_effect = empty_repo
                 # For verisimilitude, don't re-use the old request and job_result
-                self.dummy_request.id = uuid.uuid4()
+                self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
@@ -437,7 +437,7 @@ class GitTest(TestCase):
                 )
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
@@ -530,7 +530,7 @@ class GitTest(TestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
@@ -585,7 +585,7 @@ class GitTest(TestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(

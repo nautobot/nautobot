@@ -191,7 +191,7 @@ class ImportForm(BootstrapMixin, forms.Form):
             try:
                 self.cleaned_data["data"] = json.loads(data)
                 # Check for multiple JSON objects
-                if type(self.cleaned_data["data"]) is not dict:
+                if not isinstance(self.cleaned_data["data"], dict):
                     raise forms.ValidationError({"data": "Import is limited to one object at a time."})
             except json.decoder.JSONDecodeError as err:
                 raise forms.ValidationError({"data": "Invalid JSON data: {}".format(err)})

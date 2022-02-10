@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block header %}
+    <h1>{% block title %}Example Plugin Home{% endblock %}</h1>
+{% endblock header %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Cool Stuff</strong></div>
+                <div class="panel-body">
+                    <p>
+                        This is an example of what a plugin might provide as a "home" page or "dashboard".
+                    </p>
+                    <p>
+                        Plugins are never required to provide this, but if your plugin is particularly complex,
+                        it may be useful to provide a dashboard that's separate from Nautobot's main home page view.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>More Cool Stuff</strong></div>
+                <div class="panel-body">
+                    <p>
+                        A home page like this could be a great place to put some fancy charts, graphs, and gauges
+                        to really wow your users.
+                        Check out this cool logo!
+                    </p>
+                    <img src="{% static 'img/nautobot_icon_192x192.png' %}">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Wider Cool Stuff</strong></div>
+                <div class="panel-body">
+                    <p>
+                        You can use whatever page layout makes the most sense for your own plugin of course!
+                        This is just an example.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}
