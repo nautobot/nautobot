@@ -2,6 +2,7 @@ import json
 import uuid
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from requests import Session
@@ -9,10 +10,13 @@ from requests import Session
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.models import Webhook
+from nautobot.extras.models import Webhook, ObjectChange
 from nautobot.extras.tasks import process_webhook
-from nautobot.extras.utils import generate_signature
+from nautobot.extras.utils import generate_signature, get_instance_snapshot
 from nautobot.utilities.testing import APITestCase
+
+
+User = get_user_model()
 
 
 class WebhookTest(APITestCase):
@@ -78,19 +82,38 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our dummy_send() method, then process the webhook for sending
         with patch.object(Session, "send", dummy_send):
-            site = Site.objects.create(name="Site 1", slug="site-1")
-            # make an update
+            users = User.objects.create(username="user1")
+
+            site_name = "Site 1"
+            site = Site.objects.create(name=site_name, slug="site-1")
+            # store object changes
+            ObjectChange.objects.create(
+                user=users,
+                user_name=users.username,
+                request_id=uuid.uuid4(),
+                action=ObjectChangeActionChoices.ACTION_CREATE,
+                changed_object=site,
+                object_repr=str(site),
+                object_data={"name": site_name, "slug": site.slug},
+            )
+
+            # make an update to site
             site.name = "Site Update"
             site.save()
-            serializer_context = {
-                "request": None,
-            }
+            # store object changes
+            ObjectChange.objects.create(
+                user=users,
+                user_name=users.username,
+                request_id=uuid.uuid4(),
+                action=ObjectChangeActionChoices.ACTION_UPDATE,
+                changed_object=site,
+                object_repr=str(site),
+                object_data={"name": site.name, "slug": site.slug},
+            )
+
+            serializer_context = {"request": None}
             serializer = SiteSerializer(site, context=serializer_context)
-            snapshot = {
-                "prev_change": {"id": site.id, "name": "Site 1", "slug": site.slug},
-                "post_change": {"id": site.id, "name": site.name, "slug": site.slug},
-                "differences": {"removed": {"name": "Site 1"}, "added": {"name": "Site Update"}},
-            }
+            snapshot = get_instance_snapshot(site, ObjectChangeActionChoices.ACTION_UPDATE)
 
             process_webhook(
                 webhook.pk,
