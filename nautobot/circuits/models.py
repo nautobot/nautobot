@@ -216,11 +216,16 @@ class Circuit(PrimaryModel, StatusModel):
 
 
 @extras_features(
+    "custom_fields",
+    "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
     "relationships",
+    "statuses",
+    "webhooks",
 )
-class CircuitTermination(BaseModel, PathEndpoint, CableTermination, RelationshipModel):
+class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="circuit_terminations")
@@ -243,7 +248,7 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         return f"Termination {self.term_side}: {self.site}"
 
     def get_absolute_url(self):
-        return self.site.get_absolute_url()
+        return reverse("circuits:circuittermination", args=[self.pk])
 
     def to_objectchange(self, action):
         # Annotate the parent Circuit
