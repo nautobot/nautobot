@@ -1,5 +1,6 @@
 import json
 import uuid
+from unittest import mock
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -10,6 +11,7 @@ from requests import Session
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.context_managers import change_logging
 from nautobot.extras.models import Webhook, ObjectChange
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature, get_instance_snapshot
@@ -84,32 +86,16 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", dummy_send):
             users = User.objects.create(username="user1")
 
-            site_name = "Site 1"
-            site = Site.objects.create(name=site_name, slug="site-1")
-            # store object changes
-            ObjectChange.objects.create(
-                user=users,
-                user_name=users.username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_CREATE,
-                changed_object=site,
-                object_repr=str(site),
-                object_data={"name": site_name, "slug": site.slug},
-            )
+            self.client.force_login(users)
+            request = mock.MagicMock()
+            request.user = users
+            request.id = uuid.uuid4()
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1")
+                site.save()
 
-            # make an update to site
-            site.name = "Site Update"
-            site.save()
-            # store object changes
-            ObjectChange.objects.create(
-                user=users,
-                user_name=users.username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_UPDATE,
-                changed_object=site,
-                object_repr=str(site),
-                object_data={"name": site.name, "slug": site.slug},
-            )
+                site.name = "Site Update"
+                site.save()
 
             serializer_context = {"request": None}
             serializer = SiteSerializer(site, context=serializer_context)
