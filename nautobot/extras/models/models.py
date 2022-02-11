@@ -152,7 +152,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         super().clean()
 
         # Verify that JSON data is provided as an object
-        if type(self.data) is not dict:
+        if not isinstance(self.data, dict):
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
         # Validate data against schema
@@ -227,7 +227,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         super().clean()
 
         # Verify that JSON data is provided as an object
-        if self.local_context_data and type(self.local_context_data) is not dict:
+        if self.local_context_data and not isinstance(self.local_context_data, dict):
             raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
         if self.local_context_schema and not self.local_context_data:
@@ -289,7 +289,7 @@ class ConfigContextSchema(OrganizationalModel):
             raise ValidationError({"data_schema": e.message})
 
         if (
-            type(self.data_schema) is not dict
+            not isinstance(self.data_schema, dict)
             or "properties" not in self.data_schema
             or self.data_schema.get("type") != "object"
         ):
@@ -661,7 +661,7 @@ class ImageAttachment(BaseModel):
 @extras_features("job_results")
 class Job(models.Model):
     """
-    Dummy model used to generate permissions for jobs. Does not exist in the database.
+    Virtual model used to generate permissions for jobs. Does not exist in the database.
     """
 
     class Meta:
@@ -839,6 +839,8 @@ class JobResult(BaseModel, CustomFieldModel):
         schedule: Optional ScheduledJob instance to link to the JobResult
         kwargs: additional kwargs passed to the callable
         """
+        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
         kwargs["job_result_pk"] = job_result.pk
@@ -846,6 +848,13 @@ class JobResult(BaseModel, CustomFieldModel):
         # Prepare kwargs that will be sent to Celery
         if celery_kwargs is None:
             celery_kwargs = {}
+
+        job = get_job(name)
+        if job is not None:
+            if hasattr(job.Meta, "soft_time_limit"):
+                celery_kwargs["soft_time_limit"] = job.Meta.soft_time_limit
+            if hasattr(job.Meta, "time_limit"):
+                celery_kwargs["time_limit"] = job.Meta.time_limit
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 

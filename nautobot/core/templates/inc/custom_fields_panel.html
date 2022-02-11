@@ -1,3 +1,4 @@
+{% load helpers %}
 {% with custom_fields=object.get_custom_fields %}
     {% if custom_fields %}
         <div class="panel panel-default">
@@ -9,10 +10,8 @@
                     <tr>
                         <td><span title="{{ field.description }}">{{ field }}</span></td>
                         <td>
-                            {% if field.type == 'boolean' and value == True %}
-                                <i class="mdi mdi-check-bold text-success" title="True"></i>
-                            {% elif field.type == 'boolean' and value == False %}
-                                <i class="mdi mdi-close-thick text-danger" title="False"></i>
+                            {% if field.type == 'boolean' %}
+                                {{ value | render_boolean }}
                             {% elif field.type == 'url' and value %}
                                 <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
                             {% elif field.type == 'multi-select' and value %}

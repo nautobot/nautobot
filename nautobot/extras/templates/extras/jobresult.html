@@ -47,7 +47,7 @@
         {% custom_links result %}
     </div>
     {% if job %}
-        <p>{{ job.description }}</p>
+        <p>{{ job.description | render_markdown }}</p>
     {% endif %}
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">

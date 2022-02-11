@@ -15,13 +15,14 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from .models import Circuit, CircuitTermination, CircuitType, Provider
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 __all__ = (
     "CircuitFilterSet",
     "CircuitTerminationFilterSet",
     "CircuitTypeFilterSet",
     "ProviderFilterSet",
+    "ProviderNetworkFilterSet",
 )
 
 
@@ -72,6 +73,35 @@ class ProviderFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdated
         )
 
 
+class ProviderNetworkFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    provider_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Provider.objects.all(),
+        label="Provider (ID)",
+    )
+    provider = django_filters.ModelMultipleChoiceFilter(
+        field_name="provider__slug",
+        queryset=Provider.objects.all(),
+        to_field_name="slug",
+        label="Provider (slug)",
+    )
+    tag = TagFilter()
+
+    class Meta:
+        model = ProviderNetwork
+        fields = ["id", "name", "slug"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) | Q(description__icontains=value) | Q(comments__icontains=value)
+        ).distinct()
+
+
 class CircuitTypeFilterSet(
     BaseFilterSet,
     CustomFieldModelFilterSet,
@@ -103,6 +133,11 @@ class CircuitFilterSet(
         queryset=Provider.objects.all(),
         to_field_name="slug",
         label="Provider (slug)",
+    )
+    provider_network_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="terminations__provider_network",
+        queryset=ProviderNetwork.objects.all(),
+        label="Provider Network (ID)",
     )
     type_id = django_filters.ModelMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
@@ -175,6 +210,11 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+
+    provider_network_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=ProviderNetwork.objects.all(),
+        label="Provider Network (ID)",
     )
 
     class Meta:

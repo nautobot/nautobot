@@ -48,11 +48,37 @@ class JobTest(TestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
+    def test_job_hard_time_limit_less_than_soft_time_limit(self):
+        """
+        Job test which produces a log_warning because the time_limit is less than the soft_time_limit.
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+
+            module = "test_soft_time_limit_greater_than_time_limit"
+            name = "TestSoftTimeLimitGreaterThanHardTimeLimit"
+            job_class = get_job(f"local/{module}/{name}")
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+            run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
+            log_warning = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="initialization"
+            ).first()
+            self.assertEqual(
+                log_warning.message,
+                "The hard time limit of 5 seconds is less than "
+                "or equal to the soft time limit of 10 seconds. "
+                "This job will fail silently after 5 seconds.",
+            )
+
     def test_job_pass(self):
         """
         Job test with pass result.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_pass"
             name = "TestPass"
@@ -73,7 +99,7 @@ class JobTest(TestCase):
         """
         Job test with fail result.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_fail"
             name = "TestFail"
@@ -92,7 +118,7 @@ class JobTest(TestCase):
         """
         Job test with field order.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_field_order"
             name = "TestFieldOrder"
@@ -120,7 +146,7 @@ class JobTest(TestCase):
         """
         Job test without field_order.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_no_field_order"
             name = "TestNoFieldOrder"
@@ -145,7 +171,7 @@ class JobTest(TestCase):
         """
         Job read only test with pass result.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_read_only_pass"
             name = "TestReadOnlyPass"
@@ -167,7 +193,7 @@ class JobTest(TestCase):
         """
         Job read only test with fail result.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_read_only_fail"
             name = "TestReadOnlyFail"
@@ -191,7 +217,7 @@ class JobTest(TestCase):
         """
         Job read only test commit field is not shown.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_read_only_no_commit_field"
             name = "TestReadOnlyNoCommitField"
@@ -216,7 +242,7 @@ class JobTest(TestCase):
         - IPAddressWithMaskVar
         - IPNetworkVar
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_ipaddress_vars"
             name = "TestIPAddresses"
@@ -265,7 +291,7 @@ class JobTest(TestCase):
         """
         Test that Object variable fields behave as expected.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
 
             module = "test_object_vars"
             name = "TestObjectVars"
@@ -306,7 +332,7 @@ class JobTest(TestCase):
         """
         Test that an optional Object variable field behaves as expected.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             module = "test_object_var_optional"
             name = "TestOptionalObjectVar"
             job_class = get_job(f"local/{module}/{name}")
@@ -339,7 +365,7 @@ class JobTest(TestCase):
         """
         Test that a required Object variable field behaves as expected.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             module = "test_object_var_required"
             name = "TestRequiredObjectVar"
             job_class = get_job(f"local/{module}/{name}")
@@ -366,7 +392,7 @@ class JobTest(TestCase):
         """
         Test that job doesn't error when not a dictionary.
         """
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             module = "test_object_vars"
             name = "TestObjectVars"
             job_class = get_job(f"local/{module}/{name}")
@@ -397,12 +423,12 @@ class JobFileUploadTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.file_contents = b"I am content.\n"
-        cls.dummy_file = SimpleUploadedFile(name="dummy.txt", content=cls.file_contents)
+        cls.test_file = SimpleUploadedFile(name="test_file.txt", content=cls.file_contents)
         cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
     def setUp(self):
         super().setUp()
-        self.dummy_file.seek(0)  # Reset cursor so we can read it again.
+        self.test_file.seek(0)  # Reset cursor so we can read it again.
 
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
@@ -411,7 +437,7 @@ class JobFileUploadTest(TestCase):
 
     def test_run_job_pass(self):
         """Test that file upload succeeds; job SUCCEEDS; and files are deleted."""
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             job_name = "local/test_file_upload_pass/TestFileUploadPass"
             job_class = get_job(job_name)
 
@@ -423,7 +449,7 @@ class JobFileUploadTest(TestCase):
             )
 
             # Serialize the file to FileProxy
-            data = {"file": self.dummy_file}
+            data = {"file": self.test_file}
             form = job_class().as_form(files=data)
             self.assertTrue(form.is_valid())
             serialized_data = job_class.serialize_data(form.cleaned_data)
@@ -450,7 +476,7 @@ class JobFileUploadTest(TestCase):
 
     def test_run_job_fail(self):
         """Test that file upload succeeds; job FAILS; files deleted."""
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             job_name = "local/test_file_upload_fail/TestFileUploadFail"
             job_class = get_job(job_name)
 
@@ -462,7 +488,7 @@ class JobFileUploadTest(TestCase):
             )
 
             # Serialize the file to FileProxy
-            data = {"file": self.dummy_file}
+            data = {"file": self.test_file}
             form = job_class().as_form(files=data)
             self.assertTrue(form.is_valid())
             serialized_data = job_class.serialize_data(form.cleaned_data)
@@ -503,7 +529,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
         # I had to change this test, unfortunately with no commit, the logs revert since we can't
         # use the fake job_logs db here.
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             out, err = self.run_command("local/test_pass/TestPass")
             self.assertIn("Running local/test_pass/TestPass...", out)
             self.assertIn("test_pass: 0 success, 1 info, 0 warning, 0 failure", out)
@@ -518,7 +544,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
         # I had to change this test, unfortunately with no commit, the logs revert since we can't
         # use the fake job_logs db here.
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             out, err = self.run_command("local/test_modify_db/TestModifyDB")
             self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
             self.assertIn("test_modify_db: 0 success, 1 info, 0 warning, 0 failure", out)
@@ -534,22 +560,22 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
     def test_runjob_db_change_commit_no_username(self):
         """A job that changes the DB, when run with commit=True but no username, is rejected."""
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             with self.assertRaises(CommandError):
                 self.run_command("--commit", "local/test_modify_db/TestModifyDB")
 
     def test_runjob_db_change_commit_wrong_username(self):
         """A job that changes the DB, when run with commit=True and a nonexistent username, is rejected."""
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             with self.assertRaises(CommandError):
                 self.run_command("--commit", "--username", "nosuchuser", "local/test_modify_db/TestModifyDB")
 
     def test_runjob_db_change_commit_and_username(self):
         """A job that chagnes the DB, when run with commit=True and a username, successfully updates the DB."""
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
-            get_user_model().objects.create(username="dummy_user")
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+            get_user_model().objects.create(username="test_user")
 
-            out, err = self.run_command("--commit", "--username", "dummy_user", "local/test_modify_db/TestModifyDB")
+            out, err = self.run_command("--commit", "--username", "test_user", "local/test_modify_db/TestModifyDB")
             self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
             # Changed job to actually log data. Can't display empty results if no logs were created.
             self.assertIn("test_modify_db: 1 success, 0 info, 0 warning, 0 failure", out)

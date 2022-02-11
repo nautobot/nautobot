@@ -298,7 +298,7 @@ def flatten_dict(d, prefix="", separator="."):
     ret = {}
     for k, v in d.items():
         key = separator.join([prefix, k]) if prefix else k
-        if type(v) is dict:
+        if isinstance(v, dict):
             ret.update(flatten_dict(v, prefix=key))
         else:
             ret[key] = v

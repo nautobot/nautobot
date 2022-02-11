@@ -209,7 +209,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixi
         Check that the provided instance or list of instances are matched by the current queryset. This confirms that
         any newly created or modified objects abide by the attributes granted by any applicable ObjectPermissions.
         """
-        if type(instance) is list:
+        if isinstance(instance, list):
             # Check that all instances are still included in the view's queryset
             conforming_count = self.queryset.filter(pk__in=[obj.pk for obj in instance]).count()
             if conforming_count != len(instance):
@@ -337,7 +337,7 @@ class StatusView(APIView):
             app = app_config.module
             version = getattr(app, "VERSION", getattr(app, "__version__", None))
             if version:
-                if type(version) is tuple:
+                if isinstance(version, tuple):
                     version = ".".join(str(n) for n in version)
                 installed_apps[app_config.name] = version
         installed_apps = {k: v for k, v in sorted(installed_apps.items())}

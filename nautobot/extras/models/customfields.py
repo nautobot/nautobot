@@ -453,7 +453,7 @@ class CustomField(BaseModel, ChangeLoggedModel):
 
             # Validate date
             if self.type == CustomFieldTypeChoices.TYPE_DATE:
-                if type(value) is not date:
+                if not isinstance(value, date):
                     try:
                         datetime.strptime(value, "%Y-%m-%d")
                     except ValueError:

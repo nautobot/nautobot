@@ -78,7 +78,22 @@ This is the human-friendly name of your job, as will be displayed in the Nautobo
 
 #### `description`
 
-A human-friendly description of what this job does.
+An optional human-friendly description of what this job does.
+This can accept either plain text or markdown-formatted text. It can also be multiple lines:
+
+```python
+class ExampleJob(Job):
+    class Meta:
+        description = """
+            This job does a number of interesting things.
+            
+             1. It hacks the Gibson
+             2. It immanentizes the eschaton
+             3. It's a floor wax *and* a dessert topping
+        """
+```
+
+If you code a multi-line description, the first line only will be used in the description column of the jobs list, while the full description will be displayed in the job submission, approval, and results pages.
 
 #### `approval_required`
 
@@ -98,9 +113,74 @@ class MyJob(Job):
 
 A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
 
+#### `hidden`
+
+Default: `False`
+
+A Boolean that if set to `True` will prevent the job from being displayed in the list of jobs in the Nautobot UI.
+
+Since the jobs execution framework is designed to be generic, there may be several technical jobs defined by users which interact with or are invoked by external systems. In such cases, these jobs are not meant to be executed by a human and likely do not make sense to expose to end users for execution, and thus having them exposed in the UI at all is extraneous.
+
+Important notes about hidden jobs: 
+
+- This is merely hiding them from the web interface. It is NOT a security feature.
+- While the job will not be shown in the list of jobs on the main Jobs page it will still be able to be executed using the
+REST API or through the UI if a user knows the detail URL for that job.
+- Results for hidden jobs will still appear in the Job Results list after they are run.
+
 #### `read_only`
 
 A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
+
+#### `soft_time_limit`
+
+An int or float value, in seconds, which can be used to override the default [soft time limit](../configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete. 
+
+The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) is reached:
+
+```python
+from celery.exceptions import SoftTimeLimitExceeded
+from nautobot.extras.jobs import Job
+
+class ExampleJobWithSoftTimeLimit(Job):
+    class Meta:
+        name = "Soft Time Limit"
+        description = "Set a soft time limit of 10 seconds`"
+        soft_time_limit = 10
+
+    def run(self, data, commit):
+        try:
+            # code which might take longer than 10 seconds to run
+            job_code()
+        except SoftTimeLimitExceeded:
+            # any clean up code
+            cleanup_in_a_hurry()
+```
+
+#### `time_limit`
+
+An int or float value, in seconds, which can be used to override the
+default [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
+
+Unlike the `soft_time_limit` above, no exceptions are raised when a `time_limit` is exceeded. The task will just terminate silently:
+
+```python
+from nautobot.extras.jobs import Job
+
+class ExampleJobWithHardTimeLimit(Job):
+    class Meta:
+        name = "Hard Time Limit"
+        description = "Set a hard time limit of 10 seconds`"
+        time_limit = 10
+
+    def run(self, data, commit):
+        # code which might take longer than 10 seconds to run
+        # this code will fail silently if the time_limit is exceeded
+        job_code()
+```
+
+!!! note
+    If the time_limit is less than or equal to the soft_time_limit, a warning log is generated to inform the user that this job will fail silently after the time_limit.
 
 ### Variables
 

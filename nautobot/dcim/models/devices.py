@@ -475,7 +475,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     )
     name = models.CharField(max_length=64, blank=True, null=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True)
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number")
     asset_tag = models.CharField(
         max_length=50,
         blank=True,
