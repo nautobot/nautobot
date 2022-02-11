@@ -127,6 +127,23 @@ nautobot=> \q
 !!! note
     This is a built-in Django command. Please see the [official documentation on `dbshell`](https://docs.djangoproject.com/en/stable/ref/django-admin/#dbshell) for more information.
 
+### `dumpdata`
+
+```no-highlight
+$ nautobot-server dumpdata \
+  --natural-foreign \
+  --natural-primary \
+  --exclude contenttypes \
+  --exclude auth.permission \
+  --exclude extras.job \
+  --format json \
+  --indent 2 \
+  --traceback  > nautobot_dump.json
+```
+
+Use this command to generate a JSON dump of the database contents.
+
+One example of using this command would be to [`export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql).
 
 ### `fix_custom_fields`
 
@@ -200,6 +217,16 @@ There are a number of other options not covered here.
 
 !!! note
     This is a built-in management command provided by the [Cacheops plugin](https://github.com/Suor/django-cacheops) Nautobot for caching. Please see the official [Cacheops documentation on `invalidate`](https://github.com/Suor/django-cacheops#invalidation) for more information.
+
+
+### `loaddata`
+
+`nautobot-server loaddata --traceback nautobot_dump.json`
+
+To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
+
+- [`Remove the auto-populated Status records from the database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
 
 ### `migrate`
 

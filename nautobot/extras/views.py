@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -34,6 +34,7 @@ from nautobot.utilities.utils import (
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ContentTypePermissionRequiredMixin
+from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
@@ -337,6 +338,11 @@ class CustomFieldListView(generic.ObjectListView):
 class CustomFieldView(generic.ObjectView):
     queryset = CustomField.objects.all()
 
+    def get_changelog_url(self, instance):
+        """Return the changelog URL."""
+        route = "extras:customfield_changelog"
+        return reverse(route, kwargs={"name": getattr(instance, "name")})
+
 
 class CustomFieldEditView(generic.ObjectEditView):
     queryset = CustomField.objects.all()
@@ -622,28 +628,31 @@ class GitRepositorySyncView(View):
         return redirect("extras:gitrepository_result", slug=slug)
 
 
-class GitRepositoryResultView(ContentTypePermissionRequiredMixin, View):
+class GitRepositoryResultView(generic.ObjectView):
+    """
+    Display a JobResult and its Job data.
+    """
+
+    queryset = GitRepository.objects.all()
+    template_name = "extras/gitrepository_result.html"
+
     def get_required_permission(self):
         return "extras.view_gitrepository"
 
-    def get(self, request, slug):
+    def get_extra_context(self, request, instance):
         git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
-        git_repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
         job_result = (
-            JobResult.objects.filter(obj_type=git_repository_content_type, name=git_repository.name)
+            JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
             .order_by("-created")
             .first()
         )
-        return render(
-            request,
-            "extras/gitrepository_result.html",
-            {
-                "base_template": "extras/gitrepository.html",
-                "object": git_repository,
-                "result": job_result,
-                "active_tab": "result",
-            },
-        )
+
+        return {
+            "result": job_result,
+            "base_template": "extras/gitrepository.html",
+            "object": instance,
+            "active_tab": "result",
+        }
 
 
 #
@@ -775,8 +784,8 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
-        job_form = job.as_form(initial=request.GET)
-        schedule_form = forms.JobScheduleForm(initial=request.GET)
+        job_form = job.as_form(initial=normalize_querydict(request.GET))
+        schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
 
         return render(
             request,
@@ -1007,31 +1016,6 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         )
 
 
-class JobJobResultView(ContentTypePermissionRequiredMixin, View):
-    """
-    Display a JobResult and its Job data.
-    """
-
-    def get_required_permission(self):
-        return "extras.view_jobresult"
-
-    def get(self, request, pk):
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        job_result = get_object_or_404(JobResult.objects.all(), pk=pk, obj_type=job_content_type)
-
-        job_class = get_job(job_result.name)
-        job = job_class() if job_class else None
-
-        return render(
-            request,
-            "extras/job_jobresult.html",
-            {
-                "job": job,
-                "result": job_result,
-            },
-        )
-
-
 class ScheduledJobListView(generic.ObjectListView):
     queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
     table = tables.ScheduledJobTable
@@ -1108,35 +1092,40 @@ class JobResultBulkDeleteView(generic.BulkDeleteView):
 
 class JobResultView(generic.ObjectView):
     """
-    Display a JobResult and its data.
+    Display a JobResult and its Job data.
     """
 
     queryset = JobResult.objects.all()
+    template_name = "extras/jobresult.html"
 
-    def get_required_permission(self):
-        return "extras.view_jobresult"
-
-    def get(self, request, pk):
-        job_result = get_object_or_404(self.queryset, pk=pk)
-
+    def get_extra_context(self, request, instance):
         associated_record = None
         job = None
-        related_object = job_result.related_object
+        related_object = instance.related_object
         if inspect.isclass(related_object) and issubclass(related_object, Job):
             job = related_object()
         elif related_object:
             associated_record = related_object
 
-        return render(
-            request,
-            "extras/jobresult.html",
-            {
-                "associated_record": associated_record,
-                "job": job,
-                "object": job_result,
-                "result": job_result,
-            },
-        )
+        return {
+            "job": job,
+            "associated_record": associated_record,
+            "result": instance,
+        }
+
+
+class JobLogEntryTableView(View):
+    """
+    Display a table of `JobLogEntry` objects for a given `JobResult` instance.
+    """
+
+    queryset = JobResult.objects.all()
+
+    def get(self, request, pk=None):
+        instance = self.queryset.get(pk=pk)
+        log_table = tables.JobLogEntryTable(data=instance.logs.all(), user=request.user)
+        RequestConfig(request).configure(log_table)
+        return HttpResponse(log_table.as_html(request))
 
 
 #

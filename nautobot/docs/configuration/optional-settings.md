@@ -329,6 +329,18 @@ Please see the [official Django documentation on `DEBUG`](https://docs.djangopro
 
 ---
 
+# DISABLE_PREFIX_LIST_HIERARCHY
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY`
+
+This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
+
+A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
+
+---
+
 ## DOCS_ROOT
 
 Default: `$BASE_DIR/docs`
@@ -697,7 +709,7 @@ This setting is used internally in the core settings to provide default location
 
 Default: `50`
 
-The default maximum number of objects to display per page within each list of objects.
+The default maximum number of objects to display per page within each list of objects. Applies to both the UI and the REST API.
 
 !!! tip
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.

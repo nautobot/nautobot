@@ -6,6 +6,7 @@ from datetime import datetime, date
 from django import forms
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
@@ -13,7 +14,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models import ChangeLoggedModel, ObjectChange
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
@@ -29,9 +30,8 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.templatetags.helpers import render_markdown
-from nautobot.utilities.utils import render_jinja2
+from nautobot.utilities.utils import render_jinja2, serialize_object
 from nautobot.utilities.validators import validate_regex
-
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel):
+class CustomField(BaseModel, ChangeLoggedModel):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
@@ -258,10 +258,9 @@ class CustomField(BaseModel):
         validators=[validate_regex],
         max_length=500,
         verbose_name="Validation regex",
-        help_text=(
-            "Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. For "
-            "example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters."
-        ),
+        help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
+        "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters. Regular "
+        "expression on select and multi-select will be applied at <code>Custom Field Choices</code> definition.",
     )
 
     objects = CustomFieldManager()
@@ -307,10 +306,12 @@ class CustomField(BaseModel):
         regex_types = (
             CustomFieldTypeChoices.TYPE_TEXT,
             CustomFieldTypeChoices.TYPE_URL,
+            CustomFieldTypeChoices.TYPE_SELECT,
+            CustomFieldTypeChoices.TYPE_MULTISELECT,
         )
         if self.validation_regex and self.type not in regex_types:
             raise ValidationError(
-                {"validation_regex": "Regular expression validation is supported only for text and URL fields"}
+                {"validation_regex": "Regular expression validation is supported only for text, URL and select fields"}
             )
 
         # Choices can be set only on selection fields
@@ -422,8 +423,12 @@ class CustomField(BaseModel):
         if value not in [None, "", []]:
 
             # Validate text field
-            if self.type == CustomFieldTypeChoices.TYPE_TEXT and self.validation_regex:
-                if not re.match(self.validation_regex, value):
+            if self.type == CustomFieldTypeChoices.TYPE_TEXT:
+
+                if not isinstance(value, str):
+                    raise ValidationError("Value must be a string")
+
+                if self.validation_regex and not re.match(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
             # Validate integer
@@ -488,7 +493,7 @@ class CustomField(BaseModel):
     "graphql",
     "webhooks",
 )
-class CustomFieldChoice(BaseModel):
+class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field
     """
@@ -514,6 +519,9 @@ class CustomFieldChoice(BaseModel):
     def clean(self):
         if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
+
+        if not re.match(self.field.validation_regex, self.value):
+            raise ValidationError(f"Value must match regex {self.field.validation_regex} got {self.value}.")
 
     def save(self, *args, **kwargs):
         """
@@ -561,3 +569,18 @@ class CustomFieldChoice(BaseModel):
                     raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
 
         super().delete(*args, **kwargs)
+
+    def to_objectchange(self, action):
+        # Annotate the parent field
+        try:
+            field = self.field
+        except ObjectDoesNotExist:
+            # The parent field has already been deleted
+            field = None
+        return ObjectChange(
+            changed_object=self,
+            object_repr=str(self),
+            action=action,
+            related_object=field,
+            object_data=serialize_object(self),
+        )

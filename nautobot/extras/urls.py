@@ -5,6 +5,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -155,6 +156,12 @@ urlpatterns = [
         "custom-fields/<str:name>/delete/",
         views.CustomFieldDeleteView.as_view(),
         name="customfield_delete",
+    ),
+    path(
+        "custom-fields/<str:name>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="customfield_changelog",
+        kwargs={"model": CustomField},
     ),
     # Custom links
     path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
@@ -315,7 +322,7 @@ urlpatterns = [
     path("jobs/", views.JobListView.as_view(), name="job_list"),
     path(
         "jobs/results/<uuid:pk>/",
-        views.JobJobResultView.as_view(),
+        views.JobResultView.as_view(),
         name="job_jobresult",
     ),
     path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
@@ -340,6 +347,7 @@ urlpatterns = [
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
+    path("job-results/<uuid:pk>/log-table/", views.JobLogEntryTableView.as_view(), name="jobresult_log-table"),
     path(
         "job-results/delete/",
         views.JobResultBulkDeleteView.as_view(),
