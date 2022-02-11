@@ -38,6 +38,8 @@ As the security issue moves from triage, to identified fix, to release planning 
 
 A public disclosure date is negotiated by the Nautobot maintainers and the bug submitter. We prefer to fully disclose the bug as soon as possible once a user mitigation is available. It is reasonable to delay disclosure when the bug or the fix is not yet fully understood, the solution is not well-tested, or for vendor coordination. The timeframe for disclosure is from immediate (especially if it's already publicly known) to a few weeks. For a vulnerability with a straightforward mitigation, we expect report date to disclosure date to be on the order of ten (10) days. The Nautobot maintainers hold the final say when setting a disclosure date.
 
+Disclosures, regardless of outcome, [will be published on GitHub](https://github.com/nautobot/nautobot/issues?q=label%3A%22security+disclosure%22) with the label "security disclosure".
+
 ## Team 
 
 Below are the current team members responsible for receiving and triaging Nautobot security issues.
