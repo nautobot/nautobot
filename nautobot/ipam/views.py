@@ -399,17 +399,15 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    # `queryset` is implemented as a property, see below
 
     def __init__(self, *args, **kwargs):
         # Set the internal queryset value
         self._queryset = None
+        self.queryset = self.set_queryset()
         super().__init__(*args, **kwargs)
 
-    @property
-    def queryset(self):
+    def set_queryset(self):
         """
-        Property getter for queryset that acts upon `settings.DISABLE_PREFIX_LIST_HIERARCHY`
 
         By default we annotate the prefix hierarchy such that child prefixes are indented in the table.
         When `settings.DISABLE_PREFIX_LIST_HIERARCHY` is True, we do not annotate the queryset, and the
@@ -430,13 +428,6 @@ class PrefixListView(generic.ObjectListView):
             self._queryset = Prefix.objects.annotate_tree()
 
         return self._queryset
-
-    @queryset.setter
-    def queryset(self, value):
-        """
-        Property setter for `queryset`
-        """
-        self._queryset = value
 
 
 class PrefixView(generic.ObjectView):
