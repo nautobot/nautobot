@@ -8,7 +8,6 @@ from django.db.models import Q
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
-from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import EXTRAS_FEATURES
 from nautobot.extras.registry import registry
 
@@ -135,43 +134,3 @@ def swap_status_id_with_status_value_and_label(obj):
             obj["status"] = {"value": status_instance.slug, "label": status_instance.name}
 
     return obj
-
-
-def get_instance_snapshot(instance, action):
-    """
-    Returns the snapshot(prev change, post change and its differences) of a model instance
-    """
-    from nautobot.extras.models import ObjectChange
-    from nautobot.utilities.utils import shallow_compare_dict
-
-    content_object_type = ContentType.objects.get_for_model(instance)
-    changed_object_id = instance.id
-    objectchanges = ObjectChange.objects.filter(
-        changed_object_type=content_object_type, changed_object_id=changed_object_id
-    ).order_by("-time")[:2]
-    objectchanges_count = objectchanges.count()
-
-    post_change = (
-        swap_status_id_with_status_value_and_label(objectchanges[0].object_data)
-        if action != ObjectChangeActionChoices.ACTION_DELETE and objectchanges_count > 0
-        else None
-    )
-    pre_change = (
-        swap_status_id_with_status_value_and_label(objectchanges[1].object_data)
-        if action != ObjectChangeActionChoices.ACTION_CREATE and objectchanges_count > 1
-        else None
-    )
-
-    if pre_change and post_change:
-        diff_added = shallow_compare_dict(pre_change, post_change, exclude=["last_updated"])
-        diff_removed = {x: pre_change.get(x) for x in diff_added}
-    elif pre_change and not post_change:
-        diff_added, diff_removed = None, pre_change
-    else:
-        diff_added, diff_removed = post_change, None
-
-    return {
-        "pre_change": pre_change if pre_change else None,
-        "post_change": post_change if post_change else None,
-        "differences": {"removed": diff_removed, "added": diff_added},
-    }

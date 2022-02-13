@@ -1,6 +1,5 @@
 import json
 import uuid
-from unittest import mock
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -11,10 +10,10 @@ from requests import Session
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.context_managers import change_logging
 from nautobot.extras.models import Webhook
 from nautobot.extras.tasks import process_webhook
-from nautobot.extras.utils import generate_signature, get_instance_snapshot
+from nautobot.extras.utils import generate_signature
+from nautobot.extras.webhooks import get_snapshots
 from nautobot.utilities.testing import APITestCase
 
 
@@ -71,8 +70,8 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["username"], "testuser")
             self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Site Update")
-            self.assertEqual(body["snapshot"]["pre_change"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["post_change"]["name"], "Site Update")
+            self.assertEqual(body["snapshot"]["prechange"]["name"], "Site 1")
+            self.assertEqual(body["snapshot"]["postchange"]["name"], "Site Update")
             self.assertEqual(body["snapshot"]["differences"]["removed"]["name"], "Site 1")
             self.assertEqual(body["snapshot"]["differences"]["added"]["name"], "Site Update")
 
@@ -82,25 +81,16 @@ class WebhookTest(APITestCase):
 
             return FakeResponse()
 
-
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-            users = User.objects.create(username="user1")
+            site = Site.objects.create(name="Site 1", slug="site-1")
 
-            self.client.force_login(users)
-            request = mock.MagicMock()
-            request.user = users
-            request.id = uuid.uuid4()
-            with change_logging(request):
-                site = Site(name="Site 1", slug="site-1")
-                site.save()
+            site.snapshot()
+            site.name = "Site Update"
+            site.save()
 
-                site.name = "Site Update"
-                site.save()
-
-            serializer_context = {"request": None}
-            serializer = SiteSerializer(site, context=serializer_context)
-            snapshot = get_instance_snapshot(site, ObjectChangeActionChoices.ACTION_UPDATE)
+            serializer = SiteSerializer(site, context={"request": None})
+            snapshot = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
 
             process_webhook(
                 webhook.pk,

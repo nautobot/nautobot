@@ -286,7 +286,12 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Look up an existing object by slug, PK, or name, if provided.
         for field in ("slug", "pk", "name"):
             if field in kwargs:
-                return get_object_or_404(self.queryset, **{field: kwargs[field]})
+                obj = get_object_or_404(self.queryset, **{field: kwargs[field]})
+
+                if hasattr(obj, "snapshot"):
+                    obj.snapshot()
+                return obj
+
         return self.queryset.model()
 
     def get_extra_context(self, request, instance):
@@ -417,7 +422,11 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Look up an existing object by slug or PK, or name if provided.
         for field in ("slug", "pk", "name"):
             if field in kwargs:
-                return get_object_or_404(self.queryset, **{field: kwargs[field]})
+                obj = get_object_or_404(self.queryset, **{field: kwargs[field]})
+
+                if hasattr(obj, "snapshot"):
+                    obj.snapshot()
+                return obj
         return self.queryset.model()
 
     def get(self, request, **kwargs):
@@ -909,6 +918,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             obj = self.alter_obj(obj, request, [], kwargs)
 
+                            if hasattr(obj, "snapshot"):
+                                obj.snapshot()
+
                             # Update standard fields. If a field is listed in _nullify, delete its value.
                             for name in standard_fields:
 
@@ -1041,6 +1053,10 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     with transaction.atomic():
                         renamed_pks = []
                         for obj in selected_objects:
+
+                            if hasattr(obj, "snapshot"):
+                                obj.snapshot()
+
                             find = form.cleaned_data["find"]
                             replace = form.cleaned_data["replace"]
                             if form.cleaned_data["use_regex"]:
@@ -1137,8 +1153,12 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
+                deleted_count = queryset.count()
                 try:
-                    deleted_count = queryset.delete()[1][model._meta.label]
+                    for obj in queryset:
+                        if hasattr(obj, "snapshot"):
+                            obj.snapshot()
+                        obj.delete()
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)

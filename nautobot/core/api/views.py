@@ -88,6 +88,8 @@ class BulkUpdateModelMixin:
             data_list = []
             for obj in objects:
                 data = update_data.get(str(obj.id))
+                if hasattr(obj, "snapshot"):
+                    obj.snapshot()
                 serializer = self.get_serializer(obj, data=data, partial=partial)
                 serializer.is_valid(raise_exception=True)
                 self.perform_update(serializer)
@@ -124,6 +126,8 @@ class BulkDestroyModelMixin:
     def perform_bulk_destroy(self, objects):
         with transaction.atomic():
             for obj in objects:
+                if hasattr(obj, "snapshot"):
+                    obj.snapshot()
                 self.perform_destroy(obj)
 
 
