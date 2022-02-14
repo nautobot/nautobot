@@ -30,8 +30,8 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("source", models.CharField(max_length=32)),
-                ("module", models.CharField(max_length=255)),
-                ("job_class", models.CharField(max_length=100)),
+                ("module_name", models.CharField(max_length=255)),
+                ("job_class_name", models.CharField(max_length=100)),
                 ("grouping", models.CharField(max_length=100)),
                 ("name", models.CharField(max_length=100)),
                 ("installed", models.BooleanField(default=True)),
@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ["grouping", "name"],
                 "managed": True,
-                "unique_together": {("grouping", "name"), ("source", "module", "job_class")},
+                "unique_together": {("grouping", "name"), ("source", "module_name", "job_class_name")},
             },
         ),
         migrations.DeleteModel(

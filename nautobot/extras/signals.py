@@ -207,7 +207,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     Job = apps.get_model("extras", "Job")
 
     # To make reverse migrations safe
-    if not hasattr(Job, "job_class"):
+    if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
@@ -229,14 +229,14 @@ def refresh_job_models(sender, *, apps, **kwargs):
             raise RuntimeError(f"Unknown/unexpected job source '{source}'!")
 
         for module_string, module_details in modules.items():
-            module = module_prefix + module_string
+            module_name = module_prefix + module_string
             grouping = module_details["name"]
-            for class_name, job_class in module_details["jobs"].items():
+            for job_class_name, job_class in module_details["jobs"].items():
                 # TODO: catch DB error in case where multiple JobModels have the same grouping + name
                 job_model, created = Job.objects.get_or_create(
                     source=source,
-                    module=module,
-                    job_class=class_name,
+                    module_name=module_name,
+                    job_class_name=job_class_name,
                     defaults={
                         "grouping": grouping,
                         "name": job_class.name,

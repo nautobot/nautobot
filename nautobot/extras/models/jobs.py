@@ -54,8 +54,8 @@ class Job(PrimaryModel):
 
     # Information used to locate the Job source code
     source = models.CharField(max_length=32, choices=JobSourceChoices)
-    module = models.CharField(max_length=255)
-    job_class = models.CharField(max_length=100)
+    module_name = models.CharField(max_length=255)
+    job_class_name = models.CharField(max_length=100)
 
     # Human-readable information
     grouping = models.CharField(max_length=100)
@@ -69,7 +69,7 @@ class Job(PrimaryModel):
         managed = True
         ordering = ["grouping", "name"]
         unique_together = [
-            ("source", "module", "job_class"),
+            ("source", "module_name", "job_class_name"),
             ("grouping", "name"),
         ]
 

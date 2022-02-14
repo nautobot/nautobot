@@ -13,17 +13,17 @@ def migrate_jobresults(apps, schema_editor):
     for job_jobresult in JobResult.objects.filter(obj_type=job_ct):
         job_classpath = job_jobresult.name
         try:
-            source, module, job_class = job_classpath.split("/")
+            source, module_name, job_class_name = job_classpath.split("/")
             if source.startswith("git."):
                 source, repo_slug = source.split(".", 1)
-                module = f"{repo_slug}/{module}"
+                module_name = f"{repo_slug}/{module_name}"
             job_model, created = JobModel.objects.get_or_create(
                 source=source,
-                module=module,
-                job_class=job_class,
+                module_name=module_name,
+                job_class_name=job_class_name,
                 defaults={
-                    "grouping": module,
-                    "name": job_class,
+                    "grouping": module_name,
+                    "name": job_class_name,
                     "installed": False,
                     # Since it was previously run, let's assume it's enabled for running
                     "enabled": True,
