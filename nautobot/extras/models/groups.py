@@ -1,5 +1,7 @@
 """Dynamic Groups Models."""
 
+import logging
+
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -11,6 +13,9 @@ from nautobot.extras.groups import BaseDynamicGroupMap
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.utilities.utils import get_filterform_for_model, get_filterset_for_model
 from nautobot.utilities.querysets import RestrictedQuerySet
+
+
+logger = logging.getLogger(__name__)
 
 
 class DynamicGroupQuerySet(RestrictedQuerySet):
@@ -63,6 +68,11 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
         verbose_name="Object Type",
         help_text="The type of object for this group.",
     )
+    # TODO(jathan): Set editable=False that this field doesn't show up in forms.
+    # It's a complex field only modified by the DynamicGroupForm internals at
+    # this time. I am not happy with this pattern right now but due to the
+    # dynamism of the form by merging in the `FooFilterForm` fields, there's not
+    # currently an easy way to move this construction logic to the model.
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
         editable=False,
@@ -74,7 +84,7 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
     objects = DynamicGroupQuerySet.as_manager()
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["content_type", "name"]
 
     def __str__(self):
         return self.name
@@ -122,7 +132,8 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
     def get_group_members_url(self):
         """Get url to group members."""
         model = self.content_type.model_class()
-        # Move this function to dgm class to simplify support for plugin
+
+        # TODO(jathan): Move this function to DynamicGroupMap class to simplify support for plugin
         base_url = reverse(f"{model._meta.app_label}:{model._meta.model_name}_list")
 
         filter_str = self.map.get_filterset_as_string(self.filter)
@@ -165,7 +176,7 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
             if isinstance(field, forms.ModelMultipleChoiceField):
                 qs = form.cleaned_data[field_name]
                 field_to_query = field.to_field_name or "pk"
-                print(f"{form.cleaned_data[field_name]} - {field_to_query}")
+                logger.debug("%s - %s", form.cleaned_data[field_name], field_to_query)
                 values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
                 filter[field_name] = values or []
 
@@ -174,12 +185,14 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
                 value = getattr(form.cleaned_data[field_name], field_to_query, None)
                 filter[field_name] = value or None
 
-            elif isinstance(field, forms.NullBooleanField):
-                filter[field_name] = form.cleaned_data[field_name]
+            # TODO(jathan): Decide if we need this before removing this code.
+            # elif isinstance(field, forms.NullBooleanField):
+            #     filter[field_name] = form.cleaned_data[field_name]
 
             else:
                 filter[field_name] = form.cleaned_data[field_name]
                 print(f"{field_name}: {form.cleaned_data[field_name]}")
+                logger.debug("%s: %s", field_name, form.cleaned_data[field_name])
 
         self.filter = filter
         self.save()
