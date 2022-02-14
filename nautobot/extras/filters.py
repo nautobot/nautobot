@@ -32,12 +32,13 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    ScheduledJob,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -542,6 +543,26 @@ class ImageAttachmentFilterSet(BaseFilterSet):
 #
 # Jobs
 #
+
+
+class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    installed = django_filters.BooleanFilter()
+    enabled = django_filters.BooleanFilter()
+    read_only = django_filters.BooleanFilter()
+
+    class Meta:
+        model = Job
+        fields = ["id", "name", "grouping"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        # TODO: description is not a database field yet
+        return queryset.filter(Q(name__icontains=value) | Q(grouping__icontains=value))
 
 
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):

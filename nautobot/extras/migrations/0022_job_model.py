@@ -47,11 +47,19 @@ class Migration(migrations.Migration):
         migrations.DeleteModel(
             name="Job",
         ),
+        migrations.RenameModel(
+            old_name="JobModel",
+            new_name="Job",
+        ),
         migrations.AddField(
             model_name="jobresult",
             name="job_model",
             field=models.ForeignKey(
-                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to="extras.jobmodel"
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="extras.job",
+                related_name="results",
             ),
         ),
     ]

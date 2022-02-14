@@ -2,6 +2,8 @@
 
 from datetime import timedelta
 import logging
+import os
+import pkgutil
 import uuid
 
 from celery import schedules
@@ -27,10 +29,15 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
 )
+from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 from .customfields import CustomFieldModel
+
+
+logger = logging.getLogger(__name__)
+
 
 # The JOB_LOGS variable is used to tell the JobLogEntry model the database to store to.
 # We default this to job_logs, and creating at the Global level allows easy override
@@ -73,8 +80,82 @@ class Job(PrimaryModel):
             ("grouping", "name"),
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._job_class = None
+
     def __str__(self):
         return f"{self.grouping}: {self.name}"
+
+    @property
+    def job_class(self):
+        """Get the Job class (source code) associated with this Job model."""
+        if not self.installed:
+            return None
+        if self._job_class is None:
+            if self.source == JobSourceChoices.SOURCE_LOCAL:
+                path = settings.JOBS_ROOT
+                for importer, module_name, _ in pkgutil.iter_modules([path]):
+                    if module_name != self.module_name:
+                        continue
+                    module = importer.find_module(module_name).load_module(module_name)
+                    self._job_class = getattr(module, self.job_class_name)
+                    break
+                else:
+                    logger.warning("Module %s job class %s not found!", self.module_name, self.job_class_name)
+            elif self.source == JobSourceChoices.SOURCE_GIT:
+                path = settings.GIT_ROOT
+                repo_slug, jobs_module_name = self.module_name.split("/", 1)
+                from .datasources import GitRepository
+                from nautobot.extras.datasources.git import ensure_git_repository
+                try:
+                    repository_record = GitRepository.objects.get(slug=repo_slug)
+                    # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
+                    # they are not required to share a common filesystem; therefore, we may need to refresh our local
+                    # clone of the Git repository to ensure that it is in sync with the latest repository clone
+                    # from any instance.
+                    ensure_git_repository(
+                        repository_record,
+                        head=repository_record.current_head,
+                        logger=logger,
+                    )
+                    path = os.path.join(repository_record.filesystem_path, "jobs")
+                    for importer, module_name, _ in pkgutil.iter_modules([path]):
+                        if module_name != jobs_module_name:
+                            continue
+                        module = importer.find_module(module_name).load_module(module_name)
+                        self._job_class = getattr(module, self.job_class_name)
+                        break
+                    else:
+                        logger.warning(
+                            "Module %s job class %s not found in repository %s",
+                            jobs_module_name,
+                            self.job_class_name,
+                            repository_record,
+                        )
+                except GitRepository.DoesNotExist:
+                    return None
+                except Exception as exc:
+                    logger.error(f"Error during local clone/refresh of Git repository {repository_record}: {exc}")
+                    return None
+            elif self.source == JobSourceChoices.SOURCE_PLUGIN:
+                # pkgutil.resolve_name is only available in Python 3.9 and later
+                self._job_class = import_object(f"{self.module_name}.{self.job_class_name}")
+
+        return self._job_class
+
+    @property
+    def latest_result(self):
+        return self.results.last()
+
+    @property
+    def class_path(self):
+        if self.source != JobSourceChoices.SOURCE_GIT:
+            return f"{self.source}/{self.module_name}/{self.job_class_name}"
+        return f"{self.source}.{self.module_name}/{self.job_class_name}"
+
+    def get_absolute_url(self):
+        return reverse("extras:job", kwargs={"class_path": self.class_path})
 
 
 @extras_features(
@@ -117,7 +198,9 @@ class JobResult(BaseModel, CustomFieldModel):
     This model stores the results from running a Job.
     """
 
-    job_model = models.ForeignKey(to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL)
+    job_model = models.ForeignKey(
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
+    )
 
     name = models.CharField(max_length=255)
     obj_type = models.ForeignKey(

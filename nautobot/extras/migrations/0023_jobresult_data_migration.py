@@ -3,10 +3,10 @@ from django.db import migrations
 
 def migrate_jobresults(apps, schema_editor):
     """
-    For all existing JobResults referencing a Job, update them to reference a JobModel, creating the JobModel if needed.
+    For all existing JobResults referencing a Job, update them to reference a Job model, creating the model if needed.
     """
     JobResult = apps.get_model("extras", "JobResult")
-    JobModel = apps.get_model("extras", "JobModel")
+    Job = apps.get_model("extras", "Job")
     ContentType = apps.get_model("contenttypes", "ContentType")
     job_ct = ContentType.objects.get_by_natural_key("extras", "job")
 
@@ -17,7 +17,7 @@ def migrate_jobresults(apps, schema_editor):
             if source.startswith("git."):
                 source, repo_slug = source.split(".", 1)
                 module_name = f"{repo_slug}/{module_name}"
-            job_model, created = JobModel.objects.get_or_create(
+            job_model, created = Job.objects.get_or_create(
                 source=source,
                 module_name=module_name,
                 job_class_name=job_class_name,
@@ -30,9 +30,7 @@ def migrate_jobresults(apps, schema_editor):
                 },
             )
             if created:
-                print(
-                    f'Created JobModel "{module}: {job_class}" for Jobs associated with JobResults for {job_classpath}'
-                )
+                print(f'Created Job model "{module_name}: {job_class_name}" for {job_classpath}')
             job_jobresult.job_model = job_model
             job_jobresult.save()
         except ValueError:
@@ -42,7 +40,7 @@ def migrate_jobresults(apps, schema_editor):
 
 def reverse_migrate_jobresults(apps, schema_editor):
     JobResult = apps.get_model("extras", "JobResult")
-    JobModel = apps.get_model("extras", "JobModel")
+    Job = apps.get_model("extras", "Job")
     ContentType = apps.get_model("contenttypes", "ContentType")
     job_ct = ContentType.objects.get_by_natural_key("extras", "job")
 
@@ -50,7 +48,7 @@ def reverse_migrate_jobresults(apps, schema_editor):
         job_jobresult.job_model = None
         job_jobresult.save()
 
-    JobModel.objects.all().delete()
+    Job.objects.all().delete()
 
 
 class Migration(migrations.Migration):

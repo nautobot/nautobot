@@ -54,6 +54,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobResult,
     ObjectChange,
     Relationship,
@@ -883,6 +884,14 @@ class JobForm(BootstrapMixin, forms.Form):
         A boolean indicating whether the form requires user input (ignore the _commit field).
         """
         return bool(len(self.fields) > 1)
+
+
+class JobFilterForm(BootstrapMixin, forms.Form):
+    model = Job
+    q = forms.CharField(required=False, label="Search")
+    installed = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    # TODO read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
 class JobScheduleForm(BootstrapMixin, forms.Form):

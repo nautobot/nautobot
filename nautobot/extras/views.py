@@ -55,6 +55,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job as JobModel,
     ObjectChange,
     JobResult,
     Relationship,
@@ -736,51 +737,22 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 
 
-class JobListView(ContentTypePermissionRequiredMixin, View):
+class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
     """
 
-    def get_required_permission(self):
-        return "extras.view_job"
+    queryset = JobModel.objects.prefetch_related("results")
+    table = tables.JobTable
+    filterset = filters.JobFilterSet
+    filterset_form = forms.JobFilterForm
+    action_buttons = ()
+    template_name = "extras/job_list.html"
 
-    def get(self, request):
-        jobs_dict = get_jobs()
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        # Get the newest results for each job name
-        results = {
-            r.name: r
-            for r in JobResult.objects.filter(
-                obj_type=job_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
-            )
-            .order_by("completed")
-            .defer("data")
+    def extra_context(self):
+        return {
+            "table_inc_template": "extras/inc/job_table.html",
         }
-
-        # get_jobs() gives us a nested dict {grouping: {module: {"name": name, "jobs": [job, job, job]}}}
-        # But for presentation to the user we want to flatten this to {module_name: [job, job, job]}
-
-        modules_dict = {}
-        for grouping, modules in jobs_dict.items():
-            for module, entry in modules.items():
-                module_jobs = modules_dict.get(entry["name"], [])
-                for job_class in entry["jobs"].values():
-                    job = job_class()
-                    job.result = results.get(job.class_path, None)
-                    module_jobs.append(job)
-                if module_jobs:
-                    # TODO: should we sort module_jobs by job name? Currently they're in source code order
-                    modules_dict[entry["name"]] = module_jobs
-
-        return render(
-            request,
-            "extras/job_list.html",
-            {
-                # Order the jobs listing by case-insensitive sorting of the module human-readable name
-                "jobs": sorted(modules_dict.items(), key=lambda kvpair: kvpair[0].lower()),
-            },
-        )
 
 
 class JobView(ContentTypePermissionRequiredMixin, View):

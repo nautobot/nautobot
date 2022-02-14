@@ -32,6 +32,7 @@ from .models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
+    Job as JobModel,
     JobResult,
     JobLogEntry,
     ObjectChange,
@@ -386,6 +387,46 @@ def log_entry_color_css(record):
     if record.log_level.lower() == "failure":
         return "danger"
     return record.log_level.lower()
+
+
+class JobTable(BaseTable):
+    # TODO pk = ToggleColumn()
+    name = tables.Column(linkify=True, orderable=False)
+    installed = BooleanColumn(orderable=False)
+    enabled = BooleanColumn(orderable=False)
+    read_only = BooleanColumn(accessor="job_class__Meta__read_only", orderable=False)
+    description = tables.Column(accessor="job_class__description", orderable=False)
+    last_run = tables.TemplateColumn(
+        accessor="latest_result",
+        template_code="""
+            {% if value %}
+                {{ value.created }} by {{ value.user }}
+            {% else %}
+                <span class="text-muted">Never</span>
+            {% endif %}
+        """,
+        linkify=lambda value: value.get_absolute_url() if value else None,
+        orderable=False,
+    )
+    last_status = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/job_label.html' with result=record.latest_result %}",
+        orderable=False,
+    )
+
+    def render_description(self, value):
+        return render_markdown(value)
+
+    class Meta(BaseTable.Meta):
+        model = JobModel
+        fields = (
+            "name",
+            "installed",
+            "enabled",
+            "read_only",
+            "description",
+            "last_run",
+            "last_status",
+        )
 
 
 class JobLogEntryTable(BaseTable):
