@@ -1,12 +1,13 @@
 from unittest import skipIf
 
-import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
+
+import netaddr
 
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
