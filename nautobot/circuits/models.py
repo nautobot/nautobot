@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -315,6 +316,15 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
 
     def get_absolute_url(self):
         return reverse("circuits:circuittermination", args=[self.pk])
+
+    def clean(self):
+        super().clean()
+
+        # Must define either site *or* provider network
+        if self.site is None and self.provider_network is None:
+            raise ValidationError("A circuit termination must attach to either a site or a provider network.")
+        if self.site and self.provider_network:
+            raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
 
     def to_objectchange(self, action):
         # Annotate the parent Circuit
