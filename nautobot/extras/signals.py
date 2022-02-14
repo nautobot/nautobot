@@ -193,3 +193,71 @@ def git_repository_pre_delete(instance, **kwargs):
     # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
+
+
+#
+# Jobs
+#
+
+
+def refresh_job_models(sender, *, apps, **kwargs):
+    """
+    Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
+    """
+    Job = apps.get_model("extras", "Job")
+
+    # To make reverse migrations safe
+    if not hasattr(Job, "job_class"):
+        logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
+        return
+
+    from nautobot.extras.choices import JobSourceChoices
+    from nautobot.extras.jobs import get_jobs
+
+    job_classes = get_jobs()
+    job_models = []
+    for source_string, modules in job_classes.items():
+        module_prefix = ""
+        if source_string == "plugins":
+            source = JobSourceChoices.SOURCE_PLUGIN
+        elif source_string == "local":
+            source = JobSourceChoices.SOURCE_LOCAL
+        elif source_string.startswith("git."):
+            source = JobSourceChoices.SOURCE_GIT
+            module_prefix = f"{source_string[4:]}/"  # "git.myrepo" -> "myrepo/"
+        else:
+            raise RuntimeError(f"Unknown/unexpected job source '{source}'!")
+
+        for module_string, module_details in modules.items():
+            module = module_prefix + module_string
+            grouping = module_details["name"]
+            for class_name, job_class in module_details["jobs"].items():
+                # TODO: catch DB error in case where multiple JobModels have the same grouping + name
+                job_model, created = Job.objects.get_or_create(
+                    source=source,
+                    module=module,
+                    job_class=class_name,
+                    defaults={
+                        "grouping": grouping,
+                        "name": job_class.name,
+                        "installed": True,
+                        "enabled": False,
+                    }
+                )
+                if created:
+                    logger.info('Created Job model "%s: %s"', job_model.grouping, job_model.name)
+                else:
+                    # Update attributes of the JobModel in case they've changed
+                    job_model.grouping = grouping
+                    job_model.name = job_class.name
+                    job_model.installed = True
+                    job_model.save()
+                    logger.info('Refreshed Job model "%s: %s"', job_model.grouping, job_model.name)
+
+                job_models.append(job_model)
+
+        for job_model in Job.objects.all():
+            if job_model not in job_models:
+                logger.info('Job "%s: %s" is no longer installed', job_model.grouping, job_model.name)
+                job_model.installed = False
+                job_model.save()

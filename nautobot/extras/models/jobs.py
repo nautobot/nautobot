@@ -20,7 +20,8 @@ from django_celery_beat.managers import ExtendedManager
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import LogLevelChoices, JobExecutionType, JobResultStatusChoices
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
@@ -39,14 +40,41 @@ from .customfields import CustomFieldModel
 JOB_LOGS = "job_logs"
 
 
-@extras_features("job_results")
-class Job(models.Model):
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "graphql",
+    "job_results",
+    "relationships",
+)
+class Job(PrimaryModel):
     """
-    Virtual model used to generate permissions for jobs. Does not exist in the database.
+    Proxy model representing an installed Job class.
     """
 
+    # Information used to locate the Job source code
+    source = models.CharField(max_length=32, choices=JobSourceChoices)
+    module = models.CharField(max_length=255)
+    job_class = models.CharField(max_length=100)
+
+    # Human-readable information
+    grouping = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
+
+    # Control flags
+    installed = models.BooleanField(default=True)
+    enabled = models.BooleanField(default=False)
+
     class Meta:
-        managed = False
+        managed = True
+        ordering = ["grouping", "name"]
+        unique_together = [
+            ("source", "module", "job_class"),
+            ("grouping", "name"),
+        ]
+
+    def __str__(self):
+        return f"{self.grouping}: {self.name}"
 
 
 @extras_features(
@@ -86,8 +114,10 @@ class JobLogEntry(BaseModel):
 )
 class JobResult(BaseModel, CustomFieldModel):
     """
-    This model stores the results from running a user-defined report.
+    This model stores the results from running a Job.
     """
+
+    job_model = models.ForeignKey(to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL)
 
     name = models.CharField(max_length=255)
     obj_type = models.ForeignKey(
