@@ -286,7 +286,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     def test_empty_queryset(self):
         """
         Testing filtering items for non-existent Status actually returns 0 results. For issue #1312 in which the filter
-        view expected to return 0 reesults was instead returning items in list. Used the Status of "depricated" in this test,
+        view expected to return 0 results was instead returning items in list. Used the Status of "deprecated" in this test,
         but the same behavior was observerd in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
