@@ -1302,13 +1302,17 @@ class DeviceInterfacesView(generic.ObjectView):
     template_name = "dcim/device/interfaces.html"
 
     def get_extra_context(self, request, instance):
-        interfaces = instance.vc_interfaces.restrict(request.user, "view").prefetch_related(
-            Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
-            Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
-            "lag",
-            "cable",
-            "_path__destination",
-            "tags",
+        interfaces = (
+            instance.vc_interfaces.restrict(request.user, "view")
+            .prefetch_related(
+                Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
+                Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
+                "lag",
+                "cable",
+                "_path__destination",
+                "tags",
+            )
+            .order_by("name")
         )
         interface_table = tables.DeviceInterfaceTable(data=interfaces, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
