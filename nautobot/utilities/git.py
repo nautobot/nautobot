@@ -22,9 +22,25 @@ GIT_STATUS_MAP = {
 }
 
 
-def swap_status_initials(x):
-    """Swap github status initials with its equivalent"""
-    return GIT_STATUS_MAP.get(x[0]) + " - " + x[1]
+def swap_status_initials(data):
+    """Swap Git status initials with its equivalent."""
+    initial, text = data.split("\t")
+    return GIT_STATUS_MAP.get(initial) + " - " + text
+
+
+def convert_git_diff_log_to_list(logs):
+    """
+    Convert Git diff log into a list splitted by \\n
+
+    Example:
+        >>> git_log = "M\tindex.html\nR\tsample.txt"
+        >>> print(convert_git_diff_log_to_list(git_log))
+        ["Modification - index.html", "Renaming - sample.txt"]
+
+
+    """
+    logs = logs.split("\n")
+    return [swap_status_initials(line) for line in logs]
 
 
 class BranchDoesNotExist(Exception):
@@ -120,6 +136,6 @@ class GitRepo:
         logger.debug("Getting diff between local branch and remote branch")
         diff = self.repo.git.diff("--name-status", f"origin/{branch}")
         if diff:  # if diff is not empty
-            return [swap_status_initials(line.split("\t")) for line in diff.split("\n")]
+            return convert_git_diff_log_to_list(diff)
         logger.debug("No Difference")
         return []

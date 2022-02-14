@@ -124,7 +124,7 @@ class GitRepository(PrimaryModel):
         """
         Add _dryrun flag.
 
-        The existence of this flag indicates that the next sync of this repo (on save()) should be a dry-run only;
+        The existence of this flag indicates that the next sync of this repo (on save()) should be a dry-run only.
         """
         self._dryrun = True
 

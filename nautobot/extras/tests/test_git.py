@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.test import TestCase
 
-from nautobot.utilities.git import GitRepo, swap_status_initials
+from nautobot.utilities.git import GitRepo, convert_git_diff_log_to_list
 
 
 @mock.patch("nautobot.utilities.git.Repo")
@@ -20,7 +20,4 @@ class GitRepoTest(TestCase):
         RepoMock.create_remote.assert_called()
         RepoMock.create_remote.assert_called_with("origin", url=url)
 
-        self.assertEqual(
-            repo.diff_remote("main"),
-            [swap_status_initials(line.split("\t")) for line in RepoMock.git.diff.return_value.split("\n")],
-        )
+        self.assertEqual(repo.diff_remote("main"), convert_git_diff_log_to_list(RepoMock.git.diff.return_value))

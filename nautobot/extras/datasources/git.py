@@ -1,6 +1,6 @@
 """Git data source functionality."""
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import logging
 import mimetypes
 import os
@@ -71,7 +71,9 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
 
 
 def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):
-    """Get JobResult Instance and GItRepository Instance"""
+    """Get JobResult instance and GitRepository instance"""
+    GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
+
     job_result = JobResult.objects.get(pk=job_result_pk)
     repository_record = GitRepository.objects.get(pk=repository_pk)
     if not repository_record:
@@ -82,9 +84,9 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):
         )
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.save()
-        return job_result, None
+        return GitJobResult(job_result=job_result, repository_record=None)
 
-    return job_result, repository_record
+    return GitJobResult(job_result=job_result, repository_record=repository_record)
 
 
 def log_job_result_final_status(job_result, job_type):
@@ -188,12 +190,14 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
 
 def get_repo_from_url_to_path_and_from_branch(repository_record):
     """Returns the from_url, to_path and from_branch of a Git Repo
-    :return (list): [
+    :return (namedtuple): (
         from_url: git repo url with token or user if available,
         to_path: path to location of git repo on local machine
         from_branch: current git repo branch
-    ]
+    )
     """
+    GitRepo = namedtuple("GitRepo", ["from_url", "to_path", "from_branch"])
+
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
 
@@ -236,7 +240,7 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch
 
-    return from_url, to_path, from_branch
+    return GitRepo(from_url=from_url, to_path=to_path, from_branch=from_branch)
 
 
 def ensure_git_repository(repository_record, job_result=None, logger=None, head=None):
