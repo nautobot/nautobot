@@ -85,6 +85,7 @@ class BaseDynamicGroupMap:
     def get_queryset_filter(cls, obj):
 
         queryset_filter = Q()
+        filterset = cls.filterset()
 
         # for field_name in cls.field_order:
         for field_name in cls.fields():
@@ -92,7 +93,7 @@ class BaseDynamicGroupMap:
             if hasattr(cls, f"get_queryset_filter_{field_name}"):
                 method_name = f"get_queryset_filter_{field_name}"
 
-            queryset_filter_item = getattr(cls, method_name)(field_name, obj)
+            queryset_filter_item = getattr(cls, method_name)(field_name, obj, filterset)
 
             if queryset_filter_item:
                 queryset_filter &= queryset_filter_item
@@ -100,37 +101,35 @@ class BaseDynamicGroupMap:
         return queryset_filter
 
     @classmethod
-    def get_queryset_filter_default(cls, field_name, obj):
+    def get_queryset_filter_default(cls, field_name, obj, filterset=None):
         """Return a queryset filter for a specific field.
 
         Args:
-            field_name (str]): name of the field in the DynamicGroupMap
+            filterset (FilterSet): instance of a filterset
+            field_name (str): name of the field in the DynamicGroupMap
             obj (): instance of the object
 
         Returns:
             queryset filter
         """
 
-        filterset = cls.filterset()
+        # Fallback to a class-defined FilterSet object if not provided.
+        if filterset is None:
+            filterset = cls.filterset()
+
         # TODO Add check to ensure that field is present
         # TODO Add check to ensure that the field has a field_name property
         field = filterset.declared_filters[field_name]
 
-        # ----------------------------------------------
-        # Construct the value of the query based on the
-        # ----------------------------------------------
+        # Construct the value of the query based on the object and filter field attributes.
         query_value = extract_value_from_object_from_queryset(obj, field.field_name.split("__"))
 
-        # ----------------------------------------------
         # Construct the query label first
-        # ----------------------------------------------
         query_label = f"filter__{field_name}"
 
-        # ----------------------------------------------
         # Field of type list (multichoice)
         #  if query_value is not null, search for value in list or empty list
         #  if query_value is None, list must be empty
-        # ----------------------------------------------
         if isinstance(field, django_filters.ModelMultipleChoiceFilter):
             if query_value:
                 return Q(**{f"{query_label}__contains": query_value}) | Q(**{f"{query_label}__exact": []})
@@ -140,10 +139,11 @@ class BaseDynamicGroupMap:
         return Q(**{f"{query_label}__exact": query_value})
 
     @classmethod
-    def get_queryset_filter_tag(cls, field_name, obj):
+    def get_queryset_filter_tag(cls, field_name, obj, filterset=None):
         """Return a queryset filter for the tag field.
 
         Args:
+            filterset (FilterSet): instance of a filterset
             field_name (str]): name of the field in the DynamicGroupMap
             obj (): instance of the object
 

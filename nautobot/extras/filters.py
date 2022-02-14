@@ -57,7 +57,7 @@ __all__ = (
     "CustomFieldFilter",
     "CustomFieldModelFilterSet",
     "CustomLinkFilterSet",
-    "DynamicGroup",
+    "DynamicGroupFilterSet",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
@@ -452,7 +452,7 @@ class DynamicGroupFilterSet(
 
     class Meta:
         model = DynamicGroup
-        fields = ("id", "name", "slug", "description", "content_type", "created", "last_updated")
+        fields = ("id", "name", "slug", "description", "content_type")
 
     def search(self, queryset, name, value):
         if not value.strip():

@@ -50,6 +50,7 @@ from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, get_jobs, run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
+from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import copy_safe_request, count_related
 from . import nested_serializers, serializers
 
@@ -212,6 +213,19 @@ class DynamicGroupViewSet(ModelViewSet):
     queryset = DynamicGroup.objects.prefetch_related("content_type")
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
+    lookup_field = "slug"
+
+    # TODO(jathan): Figure out how to do `request_body` serializer based on the
+    # content_type of the DynamicGroup? Likely a `DynamicGroupMemberSerializer`
+    # that emits the appropriate serializer? This seems messy.
+    # @swagger_auto_schema(method="get", request_body=serializers.GitRepositorySerializer)
+    @action(detail=True, methods=["get"])
+    def members(self, request, slug):
+        instance = get_object_or_404(DynamicGroup, slug=slug)
+        model_class = instance.content_type.model_class()
+        serializer_class = get_serializer_for_model(model_class)
+        serializer = serializer_class(instance.members, many=True, context={"request": request})
+        return Response(serializer.data)
 
 
 #

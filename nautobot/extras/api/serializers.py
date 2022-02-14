@@ -399,7 +399,10 @@ class CustomLinkSerializer(ValidatedModelSerializer):
 
 
 class DynamicGroupSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
+    url = serializers.HyperlinkedIdentityField(
+        view_name="extras-api:dynamicgroup-detail",
+        lookup_field="slug",
+    )
     content_type = ContentTypeField(
         # queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
         queryset=ContentType.objects.order_by("app_label", "model"),

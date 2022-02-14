@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "abstract": False,
-                "ordering": ["name"],
+                "ordering": ["content_type", "name"],
             },
         ),
     ]

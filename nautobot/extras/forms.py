@@ -660,7 +660,6 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
-        self.filter_field_names = []
         self._append_filters()
 
     def _append_filters(self):

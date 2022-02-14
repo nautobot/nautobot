@@ -23,7 +23,7 @@ from .models import (
     ImageAttachment,
     Webhook,
 )
-from .relationships import Relationship, RelationshipModel, RelationshipAssociation
+from .relationships import Relationship, RelationshipAssociation, RelationshipModel
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from .tags import Tag, TaggedItem
 
