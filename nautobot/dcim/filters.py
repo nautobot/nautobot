@@ -5,7 +5,6 @@ from django.db.models import Q
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
-    CreatedUpdatedFilterSet,
     NautobotFilterSet,
     StatusModelFilterSetMixin,
 )
