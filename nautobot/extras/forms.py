@@ -679,6 +679,11 @@ def get_git_datasource_content_choices():
 
 
 class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """
+    This class exists to combine common functionality and is used to inherit from throughout
+    the codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are needed.
+    """
+
     pass
 
 

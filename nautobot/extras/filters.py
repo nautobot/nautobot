@@ -62,6 +62,7 @@ __all__ = (
     "JobLogEntryFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
+    "NautobotFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
@@ -454,12 +455,21 @@ class ExportTemplateFilterSet(BaseFilterSet):
         )
 
 
+class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+    """
+    This class exists to combine common functionality and is used as a base class throughout
+    the codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet are needed.
+    """
+
+    pass
+
+
 #
 # Datasources (Git)
 #
 
 
-class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class GitRepositoryFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -795,7 +805,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         return {name: getattr(value, to_field_name)}
 
 
-class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class StatusFilterSet(NautobotFilterSet):
     """API filter for filtering custom status object fields."""
 
     q = django_filters.CharFilter(
@@ -839,7 +849,7 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 #
 
 
-class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class TagFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
