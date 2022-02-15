@@ -104,7 +104,7 @@ class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug"]
 
 
-class CircuitFilterSet(NautobotFilterSet, NameSlugSearchFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
+class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

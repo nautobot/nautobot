@@ -56,6 +56,10 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * Nested API serializers generate minimal representations of an object. These are stored separately from the primary serializers to avoid circular dependencies. Always import nested serializers from other apps directly. For example, from within the DCIM app you would write `from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer`.
 
+* The combination of `nautbot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedFilterSet` and `nautobot.extras.filters.CustomFieldModelFilterSet` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these three classes.
+
+* The combination of `nautbot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelForm` and `nautobot.extras.forms.RelationshipModelForm` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these three classes.
+
 ## Branding
 
 * When referring to Nautobot in writing, use the proper form "Nautobot," with the letter N. The lowercase form "nautobot" should be used in code, filenames, etc.

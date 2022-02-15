@@ -1102,7 +1102,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         return queryset.filter(qs_filter)
 
 
-class CableFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
+class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
