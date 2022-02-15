@@ -610,4 +610,3 @@ class JobSiteCustomFieldTest(CeleryTestCase):
             site_2 = Site.objects.filter(slug="test-site-two")
             self.assertEqual(site_2.count(), 1)
             self.assertEqual(site_2[0].cf["cf1"], "-")
-

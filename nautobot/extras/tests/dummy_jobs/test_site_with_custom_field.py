@@ -23,7 +23,6 @@ class TestCreateSiteWithCustomField(Job):
         site_1.save()
         self.log_success(obj=site_1, message="Created a new site")
 
-
         site_2 = Site.objects.create(name="Test Site Two", slug="test-site-two")
         self.log_success(obj=site_2, message="Created another new site")
 
