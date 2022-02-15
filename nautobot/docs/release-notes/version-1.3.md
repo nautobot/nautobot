@@ -45,6 +45,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 
 ### Changed
 
+- [#368](https://github.com/nautobot/nautobot/issues/368) - All classes which inherit from all three of (nautobot.utilities.forms.BootstrapMixin, nautobot.extras.forms.CustomFieldModelForm, nautobot.extras.forms.RelationshipModelForm) now inherit from nautobot.extras.forms.NautobotModelForm as their base class. All classes which inherit from all three of (nautobot.utilities.filters.BaseFilterSet, nautobot.extras.filters.CreatedUpdatedFilterSet, nautobot.extras.filters.CustomFieldModelFilterSet) now inherit from nautobot.extras.filters.NautobotFilterSet as their base class. 
 - [#443](https://github.com/nautobot/nautobot/issues/443) - The provided "Dummy Plugin" has been renamed to "Example Plugin".
 - [#591](https://github.com/nautobot/nautobot/issues/591) - All uses of type() are now refactored to use isinstance() where applicable.
 - [#880](https://github.com/nautobot/nautobot/issues/880) - Jobs menu items now form their own top-level menu instead of a sub-section under the Extensibility menu.

@@ -678,6 +678,15 @@ def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
 
 
+class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """
+    This class exists to combine common functionality and is used to inherit from throughout
+    the codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are needed.
+    """
+
+    pass
+
+
 class PasswordInputWithPlaceholder(forms.PasswordInput):
     """PasswordInput that is populated with a placeholder value if any existing value is present."""
 
@@ -1067,7 +1076,7 @@ def provider_choices():
     return sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()])
 
 
-class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class SecretForm(NautobotModelForm):
     """Create/update form for `Secret` objects."""
 
     slug = SlugField()
@@ -1123,7 +1132,7 @@ SecretsGroupAssociationFormSet = inlineformset_factory(
 )
 
 
-class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class SecretsGroupForm(NautobotModelForm):
     """Create/update form for `SecretsGroup` objects."""
 
     slug = SlugField()
@@ -1147,7 +1156,7 @@ class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class StatusForm(NautobotModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
@@ -1247,7 +1256,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 #
 
 
-class TagForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class TagForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
