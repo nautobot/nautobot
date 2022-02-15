@@ -131,9 +131,9 @@ class NumericArrayFilter(django_filters.NumberFilter):
         return super().filter(qs, value)
 
 
-class ContentTypeFilter(django_filters.CharFilter):
+class ContentTypeFilterMixin:
     """
-    Allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.site").
+    Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.site").
     """
 
     def filter(self, qs, value):
@@ -152,6 +152,29 @@ class ContentTypeFilter(django_filters.CharFilter):
         )
 
 
+class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
+    """
+    Allows characater-based ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+
+    Does not support limiting of choices. Can be used without arguments on a `FilterSet`:
+
+        content_type = ContentTypeFilter()
+    """
+
+
+class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilter):
+    """
+    Allows characater-based ContentType filtering by <app_label>.<model> (e.g.
+    "dcim.site") but an explicit set of choices must be provided.
+
+    Example use on a `FilterSet`:
+
+        content_type = ContentTypeChoiceFilter(
+            choices=FeatureQuery("dynmic_groups").get_choices,
+        )
+    """
+
+
 class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     """
     Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
@@ -162,7 +185,7 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     Example use on a `FilterSet`:
 
         content_types = ContentTypeMultipleChoiceFilter(
-            choices=FeatureQuery('statuses').get_choices,
+            choices=FeatureQuery("statuses").get_choices,
         )
     """
 

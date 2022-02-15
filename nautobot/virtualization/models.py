@@ -40,6 +40,7 @@ __all__ = (
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -79,6 +80,7 @@ class ClusterType(OrganizationalModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -119,6 +121,7 @@ class ClusterGroup(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -206,6 +209,7 @@ class Cluster(PrimaryModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -371,6 +375,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",

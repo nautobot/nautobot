@@ -639,19 +639,23 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
+class DynamicGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """DynamicGroup model form."""
 
     slug = SlugField()
     content_type = forms.ModelChoiceField(
-        # queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by(
-        queryset=ContentType.objects.order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
         label="Content Type",
     )
 
     class Meta:
         model = DynamicGroup
-        fields = "__all__"
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "content_type",
+        ]
 
     def __init__(self, *args, **kwargs):
 
@@ -684,8 +688,7 @@ class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
     content_type = CSVContentTypeField(
-        # queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
-        queryset=ContentType.objects.order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content Type",
     )

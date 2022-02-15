@@ -43,6 +43,7 @@ __all__ = (
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -118,6 +119,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -158,6 +160,7 @@ class RackRole(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -547,6 +550,7 @@ class Rack(PrimaryModel, StatusModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",

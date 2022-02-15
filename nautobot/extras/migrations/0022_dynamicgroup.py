@@ -18,6 +18,10 @@ class Migration(migrations.Migration):
             name="DynamicGroup",
             fields=[
                 (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                (
                     "id",
                     models.UUIDField(
                         default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
@@ -31,7 +35,11 @@ class Migration(migrations.Migration):
                 (
                     "filter",
                     models.JSONField(
-                        blank=True, editable=False, encoder=django.core.serializers.json.DjangoJSONEncoder, null=True
+                        blank=True,
+                        default=dict,
+                        editable=False,
+                        encoder=django.core.serializers.json.DjangoJSONEncoder,
+                        null=True,
                     ),
                 ),
                 (

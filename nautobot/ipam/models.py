@@ -48,6 +48,7 @@ __all__ = (
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -123,6 +124,7 @@ class VRF(PrimaryModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -169,6 +171,7 @@ class RouteTarget(PrimaryModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -213,6 +216,7 @@ class RIR(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -378,6 +382,7 @@ class Aggregate(PrimaryModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -419,6 +424,7 @@ class Role(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -716,6 +722,7 @@ class Prefix(PrimaryModel, StatusModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -975,6 +982,7 @@ class IPAddress(PrimaryModel, StatusModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -1039,6 +1047,7 @@ class VLANGroup(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -1163,6 +1172,7 @@ class VLAN(PrimaryModel, StatusModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",

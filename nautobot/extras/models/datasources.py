@@ -16,6 +16,7 @@ from nautobot.core.models.generics import PrimaryModel
 @extras_features(
     "config_context_owners",
     "custom_fields",
+    "dynamic_groups",
     "export_template_owners",
     "job_results",
     "relationships",
