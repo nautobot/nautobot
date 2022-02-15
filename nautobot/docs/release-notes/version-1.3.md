@@ -48,6 +48,23 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
 
+#### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
+Based on a feature from NetBox 3 originally authored by Jeremy Stretch.
+Introduce the `/api/users/tokens/` REST API endpoint, which includes a child endpoint that can be employed by a user to provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
+
+```
+$ curl -X POST \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; indent=4" \
+https://nautobot/api/users/tokens/provision/ \
+--data '{
+    "username": "hankhill",
+    "password: "I<3C3H8",
+}'
+```
+
+If the supplied credentials are valid, Nautobot will create and return a new token for the user.
+
 ### Changed
 
 #### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
@@ -83,6 +100,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1109](https://github.com/nautobot/nautobot/issues/1109) - Added pagination support for GraphQL list queries.
 - [#1255](https://github.com/nautobot/nautobot/pull/1255) - Added Python 3.10 support.
 - [#1350](https://github.com/nautobot/nautobot/issues/1350) - Added missing methods on Circuit Termination detail view.
+- [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
 - [#1411](https://github.com/nautobot/nautobot/pull/1411) - Added concrete Job database model; added database signals to populate Job records in the database; added detail, edit, and delete views for Job records.
 - [#1457](https://github.com/nautobot/nautobot/pull/1457) - Added new Jobs REST API, added control logic to use JobModel rather than JobClass where appropriate; improved permissions enforcement for Jobs
 
