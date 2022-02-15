@@ -4,80 +4,117 @@ about: "[BETA] Propose a new Nautobot feature or enhancement"
 
 ---
 
-<!-- 
+<!--
+===
+
     NOTE: IF YOUR ISSUE DOES NOT FOLLOW THIS TEMPLATE, YOU WILL BE REQUIRED TO
     UPDATE THE ISSUE IN ORDER TO HAVE IT REVIEWED.
 
-    This template is in beta. Target release date for this new template is July 6, 2021.
-    At this time, the existing Feature Request template would be deprecated.
+    We follow an Agile User Story format for proposing new features or enhancements.
 
-    This new template is following a common approach to writing Agile User Stories.
-    Please note that it requires understanding and identifying the Nautobot Personas that are
-    relevant for a given feature or enhancement. Personas are users who may 
-    benefit or use a given feature.
-    
-    Please make sure to review the Nautobot Personas:
-    https://github.com/nautobot/nautobot/wiki/Personas
+    Please take a moment to review the template below, as well as our established Nautobot
+    Personas, which can be found here: https://github.com/nautobot/nautobot/wiki/Personas
+
+    Following this format helps us understand the target user(s) of the proposed feature,
+    requirements necessary to meet the expected value, and ultimately implement the best
+    solution.
+
+    Developing good acceptance criteria is the key to getting the feature implemented
+    in a way you expect to use the feature. This provides us insight into how you would
+    ultimately use the feature in your workflow.
 
     This form is only for proposing specific new features or enhancements. If
     you have a general idea or question, please start a discussion instead:
     https://github.com/nautobot/nautobot/discussions
---> 
+
+===
+
+    The story takes the form of the following template:
+    ======================================================
+
+    As a ___WHO, the user persona___,
+    
+    I want ___WHAT, the desired functionality to be implemented___,
+    
+    So that ___WHY, the reason or value of the implemented functionality___.
+    
+    I know this is done when... ___HOW, the requirements/acceptance criteria (a list) as
+    to how this functionality should be implemented___.
 
 
-<!--
-    The user story needs to identify the **who** (user persona), **what**,
-    **why**, and have user acceptance criteria.
 
-    The story needs to follow the following template: As a [WHO], I want [WHAT], So that [WHY],
+    Example:
+    ===========
 
-    I know this is done when... (list bullets)
+    As ___P.D. the Plugin Developer___,  
 
-    User Story Example:
+    I want ___to develop Nautobot plugins that can be inserted as a top-level item in
+    the navigation bar___,
 
-    As P.D. the Plugin Developer,  
-   		 # empty line
-    I want to develop Nautobot plugins that can be inserted as a top-level
-    item in the navigation bar,
-   		 # empty line
-    So that my plugin is seen as first-class citizen by my users and so that
-    the plugins drop-down menu isn't overloaded.  When I use Nautobot as an
-    App Platform, it'll also provide more focus on the Plugins/Apps than core
-    SoT dropdowns (for users that aren't permitted to view those items).
- 		   # empty line
+    So that ___my plugin is seen as first-class citizen by my users and so that the
+    plugins drop-down menu isn't overloaded.  When I use Nautobot as an App Platform,
+    it'll also provide more focus on the Plugins/Apps than core SoT drop-downs (for
+    users that aren't permitted to view those items)___.
+
     I know this is done when:
 
-      * I create a Nautobot plugin and have the option to inject it in the _Plugins_
-        dropdown menu or create a new dedicated dropdown in the navigation bar.
-      * When multiple plugins provide dedicated dropdowns, I can re-order 
-        the plugin dropdowns in the navbar. 
+      - ___I create a Nautobot plugin and have the option to inject it in the Plugins
+      dropdown menu or create a new dedicated dropdown in the navigation bar.___
+      - ___When multiple plugins provide dedicated dropdowns, I can re-order the plugin
+      dropdowns in the navbar.___
 
-    More examples of user stories will be added in the Wiki prior to standardizing on this new template.
 --> 
+
 
 ### User Story
 
-As _name_ the _persona_…,
+As _Name, the Persona_...,
 
 I want to ...,
 
-So that …
+So that ...
 
-I will know this is done when ...
+I will know this is done when:
+- ...
 
-<!--
-    Note any changes to the database schema that may be necessary to support the new
-    feature. For example, does the proposal require adding a new model or field?
-    (Not all new features require database changes.)
----> 
-### Database Changes (Optional)
-
-
+### Pertains To (Optional)
 <!-- 
-    List any new dependencies on external libraries or services that this new
-    feature would introduce that you're aware of. For example, does the proposal require the
-    installation of a new Python package? (Not all new features introduce new
-    dependencies.)
+    To help us understand the size and scope of where this feature is desired to be
+    supported, please identify what feature groups this request pertains to:
 -->
-### External Dependencies (Optional)
 
+- [ ] Automation
+- [ ] Circuits
+- [ ] DCIM
+- [ ] IPAM
+- [ ] Misc (including Data Sources)
+- [ ] Organization
+- [ ] Plugins (and other Extensibility)
+- [ ] Security (Secrets, etc)
+- [ ] Image Management
+- [ ] UI/UX
+- [ ] Documentation
+- [ ] Other (not directly a platform feature)
+
+
+### Database Changes (Optional)
+<!-- 
+    To support this new feature, does the necessary data already exist, or would new
+    models need to be created or additional fields on existing models need to be added?
+
+    It is OK to state you are unsure if this would or would not require changes.
+-->
+
+- ?
+
+
+### External Dependencies (Optional)
+<!-- 
+    To support this new feature, would it require changing or introducing new dependencies
+    on external libraries or services?
+
+    It is OK to suggest an external library that could pose as a reference implementation
+    or be installed directly.
+-->
+
+- ?
