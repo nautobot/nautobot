@@ -4,11 +4,12 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
 from nautobot.core.api import ContentTypeField, WritableNestedSerializer
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 
 __all__ = [
     "NestedGroupSerializer",
     "NestedObjectPermissionSerializer",
+    "NestedTokenSerializer",
     "NestedUserSerializer",
 ]
 
@@ -27,6 +28,14 @@ class NestedUserSerializer(WritableNestedSerializer):
     class Meta:
         model = get_user_model()
         fields = ["id", "url", "username"]
+
+
+class NestedTokenSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="users-api:token-detail")
+
+    class Meta:
+        model = Token
+        fields = ["id", "url", "display", "key", "write_enabled"]
 
 
 class NestedObjectPermissionSerializer(WritableNestedSerializer):

@@ -3,7 +3,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.testing import APIViewTestCases, APITestCase
 from nautobot.utilities.utils import deepmerge
 
@@ -71,6 +71,121 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
         Group.objects.create(name="Group 1")
         Group.objects.create(name="Group 2")
         Group.objects.create(name="Group 3")
+
+
+class TokenTest(APIViewTestCases.APIViewTestCase):
+    model = Token
+    brief_fields = ["display", "id", "key", "url", "write_enabled"]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    def setUp(self):
+        super().setUp()
+
+        tokens = (
+            # We already start with one Token, created by the test class
+            Token(user=self.user),
+            Token(user=self.user),
+        )
+        # Use save() instead of bulk_create() to ensure keys get automatically generated
+        for token in tokens:
+            token.save()
+
+        self.create_data = [
+            {
+                "user": self.user.pk,
+            },
+            {
+                "user": self.user.pk,
+            },
+            {
+                "user": self.user.pk,
+            },
+        ]
+
+    def test_provision_token_valid(self):
+        """
+        Test the provisioning of a new REST API token given a valid username and password.
+        """
+        data = {
+            "username": "user1",
+            "password": "abc123",
+        }
+        user = User.objects.create_user(**data)
+        url = self._get_list_url() + 'provision/'
+
+        response = self.client.post(url, data=data)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn("key", response.data)
+        self.assertEqual(len(response.data["key"]), 40)
+        token = Token.objects.get(user=user)
+        self.assertEqual(token.key, response.data["key"])
+
+    def test_provision_token_invalid_username(self):
+        """
+        Test the behavior of the token provisioning view when a invalid username is supplied.
+        """
+        data = {
+            "username": "nonexistentuser",
+            "password": "abc123",
+        }
+        url = self._get_list_url() + 'provision/'
+
+        response = self.client.post(url, data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_provision_token_invalid_password(self):
+        """
+        Test the behavior of the token provisioning view when a invalid password is supplied.
+        """
+        data = {
+            "username": "user1",
+            "password": "password",
+        }
+        User.objects.create_user(**data)
+        data = {
+            "username": "user1",
+            "password": "hunter2",
+        }
+        url = self._get_list_url() + 'provision/'
+
+        response = self.client.post(url, data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_tokens_are_restricted_by_user(self):
+        """
+        Test that the tokens API can only access tokens belonging to the authenticated user.
+        """
+        # Create users and tokens
+        data = {
+            "username": "user1",
+            "password": "abc123",
+        }
+        self.user = User.objects.create_user(**data)
+        Token(user=self.user).save()
+        data = {
+            "username": "user2",
+            "password": "abc123",
+        }
+        self.user2 = User.objects.create_user(**data)
+        Token(user=self.user2).save()
+
+        token = Token.objects.get(user=self.user)
+        self.header = {
+            "HTTP_AUTHORIZATION": "Token {}".format(token.key),
+        }
+
+        # List all tokens available to user1
+        self.add_permissions("users.view_token")
+        response = self.client.get(self._get_list_url(), **self.header)
+        # Assert that only the user1_token appears in the results
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["id"], str(token.id))
+
+        # Try to retrieve a token belonging to another user by ID
+        response = self.client.get(self._get_detail_url(Token.objects.filter(user=self.user2).first()), **self.header)
+        self.assertEqual(response.status_code, 404)
 
 
 class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):

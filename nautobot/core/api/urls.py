@@ -15,11 +15,7 @@ openapi_info = openapi.Info(
     license=openapi.License(name="Apache v2 License"),
 )
 
-schema_view = get_schema_view(
-    openapi_info,
-    validators=["flex", "ssv"],
-    public=True,
-)
+schema_view = get_schema_view(openapi_info, validators=["flex", "ssv"], public=True, permission_classes=())
 
 
 urlpatterns = [
