@@ -33,6 +33,7 @@ class StatusQuerySet(RestrictedQuerySet):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",

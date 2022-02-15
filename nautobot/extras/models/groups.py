@@ -8,9 +8,9 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
-from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.groups import BaseDynamicGroupMap
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.utils import extras_features
 from nautobot.utilities.utils import get_filterform_for_model, get_filterset_for_model
 from nautobot.utilities.querysets import RestrictedQuerySet
 
@@ -56,7 +56,17 @@ def dynamicgroup_map_factory(model):
     return group_map
 
 
-class DynamicGroup(BaseModel, ChangeLoggedModel):
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class DynamicGroup(OrganizationalModel):
     """Dynamic Group Model."""
 
     name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
@@ -76,6 +86,7 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
         editable=False,
+        default=dict,
         blank=True,
         null=True,
         help_text="A JSON-encoded dictionary of filter parameters for group membership",
@@ -109,6 +120,7 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
     def members(self):
         return self.get_queryset()
 
+    @property
     def count(self):
         """Return the number of objects in the group."""
         return self.get_queryset().count()
@@ -146,7 +158,10 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
     def get_filter_fields(self):
         # Do not present the list of filter options until the object has been created and has a map
         # class.
-        if not self.present_in_database or not self.map:
+        if not self.map:
+            return {}
+
+        if not self.present_in_database:
             return {}
 
         # Add all fields defined in the DynamicGroupMap to the form and populate the default value
@@ -171,6 +186,9 @@ class DynamicGroup(BaseModel, ChangeLoggedModel):
         filter = {}
         filter_fields = self.get_filter_fields()
         for field_name in filter_fields:
+            if field_name not in form.fields:
+                continue
+
             field = form.fields[field_name]
 
             if isinstance(field, forms.ModelMultipleChoiceField):

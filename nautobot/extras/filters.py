@@ -10,6 +10,7 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
+    ContentTypeChoiceFilter,
     ContentTypeMultipleChoiceFilter,
     TagFilter,
 )
@@ -448,7 +449,7 @@ class DynamicGroupFilterSet(
     CreatedUpdatedFilterSet,
 ):
     q = django_filters.CharFilter(method="search", label="Search")
-    content_type = ContentTypeFilter()
+    content_type = ContentTypeChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices)
 
     class Meta:
         model = DynamicGroup
