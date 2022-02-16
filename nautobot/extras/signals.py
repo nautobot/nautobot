@@ -17,6 +17,7 @@ from prometheus_client import Counter
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.utilities.config import get_settings_or_config
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
+from .constants import JOB_OVERRIDABLE_FIELDS
 from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
@@ -232,12 +233,14 @@ def refresh_job_models(sender, *, apps, **kwargs):
         for module_string, module_details in modules.items():
             module_name = module_prefix + module_string
             for job_class_name, job_class in module_details["jobs"].items():
-                # TODO: catch DB error in case where multiple JobModels have the same grouping + name
+                # TODO: catch DB error in case where multiple Jobs have the same grouping + name
                 job_model, created = Job.objects.get_or_create(
                     source=source,
                     module_name=module_name,
                     job_class_name=job_class_name,
                     defaults={
+                        "grouping": module_details["name"],
+                        "name": job_class.name,
                         "installed": True,
                         "enabled": False,
                     },
@@ -245,10 +248,18 @@ def refresh_job_models(sender, *, apps, **kwargs):
                 if created:
                     logger.info('Created Job model "%s: %s"', module_name, job_class_name)
                 else:
-                    # Update attributes of the JobModel in case they've changed
+                    # Update attributes of the Job in case they've changed
                     job_model.installed = True
-                    job_model.save()
-                    logger.info('Refreshed Job model "%s: %s"', module_name, job_class_name)
+                    logger.info('Refreshing Job model "%s: %s"', module_name, job_class_name)
+                for field_name in JOB_OVERRIDABLE_FIELDS:
+                    # Was this field directly inherited from the job before, or was it overridden in the database?
+                    if not getattr(job_model, f"{field_name}_override", False):
+                        # It was inherited and not overridden
+                        if field_name == "grouping":
+                            job_model.grouping = module_details["name"]
+                        else:
+                            setattr(job_model, field_name, getattr(job_class, field_name))
+                job_model.save()
 
                 job_models.append(job_model)
 

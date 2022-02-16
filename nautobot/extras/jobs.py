@@ -174,10 +174,6 @@ class BaseJob:
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
-    def hidden(cls):
-        return getattr(cls.Meta, "hidden", False)
-
-    @classproperty
     def name(cls):
         return getattr(cls.Meta, "name", cls.__name__)
 
@@ -192,12 +188,32 @@ class BaseJob:
         return ""
 
     @classproperty
+    def commit_default(cls):
+        return getattr(cls.Meta, "commit_default", True)
+
+    @classproperty
+    def hidden(cls):
+        return getattr(cls.Meta, "hidden", False)
+
+    @classproperty
+    def field_order(cls):
+        return getattr(cls.Meta, "field_order", None)
+
+    @classproperty
     def read_only(cls):
         return getattr(cls.Meta, "read_only", False)
 
     @classproperty
     def approval_required(cls):
         return getattr(cls.Meta, "approval_required", False)
+
+    @classproperty
+    def soft_time_limit(cls):
+        return getattr(cls.Meta, "soft_time_limit", settings.CELERY_TASK_SOFT_TIME_LIMIT)
+
+    @classproperty
+    def time_limit(cls):
+        return getattr(cls.Meta, "time_limit", settings.CELERY_TASK_TIME_LIMIT)
 
     @classmethod
     def _get_vars(cls):
@@ -264,12 +280,10 @@ class BaseJob:
             form.fields["_commit"].initial = False
         else:
             # Set initial "commit" checkbox state based on the Meta parameter
-            form.fields["_commit"].initial = getattr(self.Meta, "commit_default", True)
+            form.fields["_commit"].initial = self.commit_default
 
-        field_order = getattr(self.Meta, "field_order", None)
-
-        if field_order:
-            form.order_fields(field_order)
+        if self.field_order:
+            form.order_fields(self.field_order)
 
         if approval_view:
             # Set `disabled=True` on all fields
@@ -1007,14 +1021,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    if hasattr(job.Meta, "soft_time_limit"):
-        soft_time_limit = job.Meta.soft_time_limit
-    else:
-        soft_time_limit = settings.CELERY_TASK_SOFT_TIME_LIMIT
-    if hasattr(job.Meta, "time_limit"):
-        time_limit = job.Meta.time_limit
-    else:
-        time_limit = settings.CELERY_TASK_TIME_LIMIT
+    soft_time_limit = self.soft_time_limit
+    time_limit = self.time_limit
     if time_limit <= soft_time_limit:
         job_result.log(
             f"The hard time limit of {time_limit} seconds is less than "

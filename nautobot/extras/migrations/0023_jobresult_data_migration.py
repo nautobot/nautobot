@@ -22,6 +22,8 @@ def migrate_jobresults(apps, schema_editor):
                 module_name=module_name,
                 job_class_name=job_class_name,
                 defaults={
+                    "grouping": module_name,
+                    "name": job_class_name,
                     "installed": False,
                     # Since it was previously run, let's assume it's enabled for running
                     "enabled": True,

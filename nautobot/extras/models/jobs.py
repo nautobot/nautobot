@@ -61,16 +61,15 @@ class Job(PrimaryModel):
     """
 
     # Information used to locate the Job source code
-    source = models.CharField(max_length=32, choices=JobSourceChoices)
-    module_name = models.CharField(max_length=255)
-    job_class_name = models.CharField(max_length=100)
+    source = models.CharField(max_length=32, choices=JobSourceChoices, editable=False)
+    module_name = models.CharField(max_length=255, editable=False)
+    job_class_name = models.CharField(max_length=100, editable=False)
 
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    # Not to be accessed directly - use properties instead
-    _grouping = models.CharField(max_length=100, blank=True, null=True)
-    _name = models.CharField(max_length=100, blank=True, null=True)
-    _description = models.TextField()
+    grouping = models.CharField(max_length=255)
+    name = models.CharField(max_length=100)
+    description = models.TextField()
 
     # Control flags
     installed = models.BooleanField(default=True)
@@ -78,21 +77,31 @@ class Job(PrimaryModel):
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    # Not to be accessed directly - use properties instead
-    _commit_default = models.BooleanField(blank=True, null=True)
-    _hidden = models.BooleanField(blank=True, null=True)
+    commit_default = models.BooleanField(default=True)
+    hidden = models.BooleanField(default=False)
     # Job.Meta.field_order is not overridable in this model
-    _read_only = models.BooleanField(blank=True, null=True)
-    _approval_required = models.BooleanField(blank=True, null=True)
-    _soft_time_limit = models.PositiveIntegerField(blank=True, null=True)
-    _time_limit = models.PositiveIntegerField(blank=True, null=True)
+    read_only = models.BooleanField(default=False)
+    approval_required = models.BooleanField(default=False)
+    soft_time_limit = models.PositiveIntegerField(default=0)
+    time_limit = models.PositiveIntegerField(default=0)
+
+    # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
+    grouping_override = models.BooleanField(default=False)
+    name_override = models.BooleanField(default=False)
+    description_override = models.BooleanField(default=False)
+    commit_default_override = models.BooleanField(default=False)
+    hidden_override = models.BooleanField(default=False)
+    read_only_override = models.BooleanField(default=False)
+    approval_required_override = models.BooleanField(default=False)
+    soft_time_limit_override = models.BooleanField(default=False)
+    time_limit_override = models.BooleanField(default=False)
 
     class Meta:
         managed = True
-        ordering = ["_grouping", "_name"]
+        ordering = ["grouping", "name"]
         unique_together = [
             ("source", "module_name", "job_class_name"),
-            ("_grouping", "_name"),
+            ("grouping", "name"),
         ]
 
     def __init__(self, *args, **kwargs):
@@ -170,164 +179,6 @@ class Job(PrimaryModel):
         if self._latest_result is None:
             self._latest_result = self.results.last()
         return self._latest_result
-
-    @property
-    def grouping(self):
-        """
-        The human-readable grouping of this Job.
-
-        If not set explicitly in the database, it defaults to the JobClass's module's 'name' attribute if any,
-        or to the module name otherwise.
-        """
-        if self._grouping:
-            return self._grouping
-        module = inspect.getmodule(self.job_class)
-        if hasattr(module, "name"):
-            return module.name
-        return module.__name__
-
-    @grouping.setter
-    def grouping(self, value):
-        self._grouping = value
-
-    @property
-    def name(self):
-        """
-        The human-readable name of this Job.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.name attribute if any,
-        or to the JobClass.__name__ otherwise.
-        """
-        if self._name:
-            return self._name
-        return self.job_class.name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    @property
-    def description(self):
-        """
-        The human-readable description of this Job.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.description if any.
-        """
-        if self._description:
-            return self._description
-        return self.job_class.description
-
-    @description.setter
-    def description(self, value):
-        self._description = value
-
-    @property
-    def description_first_line(self):
-        """
-        The first line of the description, as displayed in the Jobs list view for example.
-        """
-        if self.description is not None:
-            return self.description.splitlines()[0]
-        return ""
-
-    @property
-    def commit_default(self):
-        """
-        Whether the "commit" flag defaults to True or False when running this Job.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.commit_default if any, or True.
-        """
-        if self._commit_default is not None:
-            return self._commit_default
-        return getattr(self.job_class.Meta, "commit_default", True)
-
-    @commit_default.setter
-    def commit_default(self, value):
-        self._commit_default = value
-
-    @property
-    def hidden(self):
-        """
-        Whether the job should be by default excluded from the Jobs list view.
-
-        Note that this is a usability feature, not a security feature - users can clear the filter flag in order to
-        view all Jobs including hidden ones.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.hidden if any, or False.
-        """
-        if self._hidden is not None:
-            return self._hidden
-        return self.job_class.hidden
-
-    @hidden.setter
-    def hidden(self, value):
-        self._hidden = value
-
-    @property
-    def read_only(self):
-        """
-        Whether the job should *always* run with commit=False.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.read_only if any, or False.
-        """
-        if self._read_only is not None:
-            return self._read_only
-        return self.job_class.read_only
-
-    @read_only.setter
-    def read_only(self, value):
-        self._read_only = value
-
-    @property
-    def approval_required(self):
-        """
-        Whether the job requires pre-approval before running.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.approval_required if any, or False.
-        """
-        if self._approval_required is not None:
-            return self._approval_required
-        return self.job_class.approval_required
-
-    @approval_required.setter
-    def approval_required(self, value):
-        self._approval_required = value
-
-    @property
-    def soft_time_limit(self):
-        """
-        The time, in seconds, after which execution of this job will receive a SoftTimeLimitExceeded exception.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.soft_time_limit if any,
-        or the CELERY_TASK_SOFT_TIME_LIMIT setting otherwise.
-        """
-        if self._soft_time_limit is not None:
-            return self._soft_time_limit
-        if hasattr(self.job_class.Meta, "soft_time_limit"):
-            return self.job_class.Meta.soft_time_limit
-        return settings.CELERY_TASK_SOFT_TIME_LIMIT
-
-    @soft_time_limit.setter
-    def soft_time_limit(self, value):
-        self._soft_time_limit = value
-
-    @property
-    def time_limit(self):
-        """
-        The time, in seconds, after which execution of this job will receive a SIGKILL.
-
-        If not set explicitly in the database, it defaults to the JobClass.Meta.time_limit if any,
-        or the CELERY_TASK_TIME_LIMIT setting otherwise.
-        """
-        if self._time_limit is not None:
-            return self._time_limit
-        if hasattr(self.job_class.Meta, "time_limit"):
-            return self.job_class.Meta.time_limit
-        return settings.CELERY_TASK_TIME_LIMIT
-
-    @time_limit.setter
-    def time_limit(self, value):
-        self._time_limit = value
 
     def get_absolute_url(self):
         return reverse("extras:job", kwargs={"class_path": self.class_path})
