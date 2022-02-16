@@ -109,14 +109,14 @@ class Job(PrimaryModel):
         if not self.installed:
             return None
         if self._job_class is None:
+            from nautobot.extras.jobs import jobs_in_directory  # avoid circular import
+
             if self.source == JobSourceChoices.SOURCE_LOCAL:
                 path = settings.JOBS_ROOT
-                for importer, module_name, _ in pkgutil.iter_modules([path]):
-                    if module_name != self.module_name:
-                        continue
-                    module = importer.find_module(module_name).load_module(module_name)
-                    self._job_class = getattr(module, self.job_class_name)
-                    break
+                for job_info in jobs_in_directory(settings.JOBS_ROOT, module_name=self.module_name):
+                    if job_info.job_class_name == self.job_class_name:
+                        self._job_class = job_info.job_class
+                        break
                 else:
                     logger.warning("Module %s job class %s not found!", self.module_name, self.job_class_name)
             elif self.source == JobSourceChoices.SOURCE_GIT:
@@ -137,12 +137,10 @@ class Job(PrimaryModel):
                         logger=logger,
                     )
                     path = os.path.join(repository_record.filesystem_path, "jobs")
-                    for importer, module_name, _ in pkgutil.iter_modules([path]):
-                        if module_name != jobs_module_name:
-                            continue
-                        module = importer.find_module(module_name).load_module(module_name)
-                        self._job_class = getattr(module, self.job_class_name)
-                        break
+                    for job_info in jobs_in_directory(path, module_name=jobs_module_name):
+                        if job_info.job_class_name == self.job_class_name:
+                            self._job_class = job_info.job_class
+                            break
                     else:
                         logger.warning(
                             "Module %s job class %s not found in repository %s",

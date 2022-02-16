@@ -929,50 +929,38 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     installed_jobs = []
     jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
     if os.path.isdir(jobs_path):
-        from nautobot.extras.jobs import is_job  # to avoid circular import
+        from nautobot.extras.jobs import jobs_in_directory  # to avoid circular import
 
-        # TODO: redundancy with get_jobs() function here
-        for importer, module_name, _ in pkgutil.iter_modules([jobs_path]):
-            try:
-                # Remove cached module to ensure consistency with filesystem
-                if module_name in sys.modules:
-                    del sys.modules[module_name]
-
-                # Dynamically import this module to make its contents (job(s)) available to Python
-                module = importer.find_module(module_name).load_module(module_name)
-            except Exception as exc:
-                logger.error(f"Unable to load job {module_name}: {exc}")
-                continue
-            for job_class_name, job_class in inspect.getmembers(module, is_job):
-                # TODO: redundancy with refresh_job_models signal handler here
-                job_model, created = Job.objects.get_or_create(
-                    source=JobSourceChoices.SOURCE_GIT,
-                    module_name=f"{repository_record.slug}/{module_name}",
-                    job_class_name=job_class_name,
-                    defaults={
-                        "installed": True,
-                        "enabled": False,
-                    },
+        for job_info in jobs_in_directory(jobs_path):
+            # TODO: redundancy with refresh_job_models signal handler here
+            job_model, created = Job.objects.get_or_create(
+                source=JobSourceChoices.SOURCE_GIT,
+                module_name=f"{repository_record.slug}/{job_info.module_name}",
+                job_class_name=job_info.job_class_name,
+                defaults={
+                    "installed": True,
+                    "enabled": False,
+                },
+            )
+            if created:
+                job_result.log(
+                    f'Created Job model "{job_model.grouping}: {job_model.name}"',
+                    grouping="jobs",
+                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    logger=logger,
                 )
-                if created:
-                    job_result.log(
-                        f'Created Job model "{job_model.grouping}: {job_model.name}"',
-                        grouping="jobs",
-                        level_choice=LogLevelChoices.LOG_SUCCESS,
-                        logger=logger,
-                    )
-                else:
-                    # Update attributes of the JobModel in case they've changed
-                    job_model.installed = True
-                    job_model.save()
-                    job_result.log(
-                        f'Refreshed Job model "{grouping}: {job_class.name}"',
-                        grouping="jobs",
-                        level_choice=LogLevelChoices.LOG_SUCCESS,
-                        logger=logger,
-                    )
+            else:
+                # Update attributes of the JobModel in case they've changed
+                job_model.installed = True
+                job_model.save()
+                job_result.log(
+                    f'Refreshed Job model "{job_model.grouping}: {job_model.name}"',
+                    grouping="jobs",
+                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    logger=logger,
+                )
 
-                installed_jobs.append(job_model)
+            installed_jobs.append(job_model)
     else:
         job_result.log(
             f"No `jobs` subdirectory found in Git repository",

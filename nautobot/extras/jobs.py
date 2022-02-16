@@ -1,5 +1,5 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
-from collections import OrderedDict
+from collections import namedtuple, OrderedDict
 import inspect
 import json
 import logging
@@ -817,33 +817,14 @@ def get_jobs():
 
     paths = _get_job_source_paths()
 
-    # Iterate over all groupings (local, git.<slug1>, git.<slug2>, etc.)
-    for grouping, path_list in paths.items():
-        # Iterate over all modules (Python files) found in any of the directory paths identified for the given grouping
-        for importer, module_name, _ in pkgutil.iter_modules(path_list):
-            try:
-                # Remove cached module to ensure consistency with filesystem
-                if module_name in sys.modules:
-                    del sys.modules[module_name]
-
-                # Dynamically import this module to make its contents (job(s)) available to Python
-                module = importer.find_module(module_name).load_module(module_name)
-            except Exception as exc:
-                logger.error(f"Unable to load job {module_name}: {exc}")
-                continue
-
-            # For each module, we construct a dict {"name": module_name, "jobs": {"job_name": job_class, ...}}
-            human_readable_name = module.name if hasattr(module, "name") else module_name
-            module_jobs = {"name": human_readable_name, "jobs": OrderedDict()}
-            # Get all Job subclasses (which includes Script and Report subclasses as well) in this module,
-            # and add them to the dict
-            for name, cls in inspect.getmembers(module, is_job):
-                module_jobs["jobs"][name] = cls
-
-            # If there were any Job subclasses found, add the module_jobs dict to the overall jobs dict
-            # (otherwise skip it since there aren't any jobs in this module to report)
-            if module_jobs["jobs"]:
-                jobs.setdefault(grouping, {})[module_name] = module_jobs
+    # Iterate over all filesystem sources (local, git.<slug1>, git.<slug2>, etc.)
+    for source, path in paths.items():
+        for job_info in jobs_in_directory(path):
+            jobs.setdefault(source, {})
+            if job_info.module_name not in jobs[source]:
+                grouping = job_info.module.name if hasattr(job_info.module, "name") else job_info.module_name
+                jobs[source][job_info.module_name] = {"name": grouping, "jobs": OrderedDict()}
+            jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
 
     # Add jobs from plugins (which were already imported at startup)
     for cls in registry["plugin_jobs"]:
@@ -859,14 +840,14 @@ def _get_job_source_paths():
     """
     Helper function to get_jobs().
 
-    Constructs a dict of {"grouping": [filesystem_path, ...]}.
+    Constructs a dict of {"grouping": filesystem_path, ...}.
     Current groupings are "local", "git.<repository_slug>".
     Plugin jobs aren't loaded dynamically from a source_path and so are not included in this function
     """
     paths = {}
     # Locally installed jobs
     if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
-        paths.setdefault("local", []).append(settings.JOBS_ROOT)
+        paths["local"] = settings.JOBS_ROOT
 
     # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
@@ -890,7 +871,7 @@ def _get_job_source_paths():
 
             jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
             if os.path.isdir(jobs_path):
-                paths[f"git.{repository_record.slug}"] = [jobs_path]
+                paths[f"git.{repository_record.slug}"] = jobs_path
             else:
                 logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
 
@@ -947,6 +928,37 @@ def get_job(class_path):
 
     jobs = get_jobs()
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
+
+
+JobClassInfo = namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
+
+
+def jobs_in_directory(path, module_name=None, reload_modules=True):
+    """
+    Walk the available Python modules in the given directory, and for each module, walk its Job class members.
+
+    Args:
+        path (str): Directory to import modules from, outside of sys.path
+        module_name (str): Specific module name to select; if unspecified, all modules will be inspected
+        reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
+
+    Yields:
+        JobClassInfo: (module_name, module, job_class_name, job_class)
+    """
+    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
+        if module_name and discovered_module_name != module_name:
+            continue
+        if reload_modules and discovered_module_name in sys.modules:
+            del sys.modules[discovered_module_name]
+        try:
+            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+        except Exception as exc:
+            logger.error(f"Unable to load module {module_name} from {path}: {exc}")
+            # TODO: we want to be able to report these errors to the UI in some fashion?
+            continue
+        # Get all members of the module that are Job subclasses
+        for job_class_name, job_class in inspect.getmembers(module, is_job):
+            yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
 
 
 @nautobot_task
