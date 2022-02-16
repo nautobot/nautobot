@@ -9,9 +9,8 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.core.models.generics import OrganizationalModel
-from nautobot.extras.groups import BaseDynamicGroupMap
+from nautobot.extras.groups import dynamicgroup_map_factory
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import get_filterform_for_model, get_filterset_for_model
 from nautobot.utilities.querysets import RestrictedQuerySet
 
 
@@ -30,30 +29,16 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
 
         # Check if dynamicgroup is supported for this model
         model = obj._meta.model
-        dynamicgroupmap = dynamicgroup_map_factory(model)
+        dynamicgroup_map = dynamicgroup_map_factory(model)
 
         # If there's not a map just return an unfiltered queryset?
         # TODO(jathan): Are we sure that's what we want?
-        if not dynamicgroupmap:
+        if not dynamicgroup_map:
             return self
 
-        dynamicgroup_filter = dynamicgroupmap.get_queryset_filter(obj)
-        return self.filter(content_type=ContentType.objects.get_for_model(obj)).filter(dynamicgroup_filter)
-
-
-def dynamicgroup_map_factory(model):
-    """Generate a `FooDynamicGroupMap` class for a given `model`."""
-
-    filterset = get_filterset_for_model(model)
-    filterform = get_filterform_for_model(model)
-
-    group_map = type(
-        str("%sDynamicGroupMap" % model._meta.object_name),
-        (BaseDynamicGroupMap,),
-        {"model": model, "filterset": filterset, "filterform": filterform},
-    )
-
-    return group_map
+        dynamicgroup_filter = dynamicgroup_map.get_queryset_filter(obj)
+        content_type = ContentType.objects.get_for_model(model)
+        return self.filter(content_type=content_type).filter(dynamicgroup_filter)
 
 
 @extras_features(
@@ -127,6 +112,12 @@ class DynamicGroup(OrganizationalModel):
 
     @property
     def map(self):
+        """
+        Accessor to automatically generated `BaseDynamicGroupMap` class.
+
+        This class object is cached on the instance after the first time it is accessed.
+        """
+
         if getattr(self, "_map", None) is None:
             try:
                 model = self.content_type.model_class()
@@ -142,16 +133,12 @@ class DynamicGroup(OrganizationalModel):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
     def get_group_members_url(self):
-        """Get url to group members."""
-        model = self.content_type.model_class()
+        """Get URL to group members."""
+        base_url = self.map.base_url
+        filter_str = self.map.urlencode(self.filter)
 
-        # TODO(jathan): Move this function to DynamicGroupMap class to simplify support for plugin
-        base_url = reverse(f"{model._meta.app_label}:{model._meta.model_name}_list")
-
-        filter_str = self.map.get_filterset_as_string(self.filter)
-
-        if filter_str:
-            return f"{base_url}?{filter_str}"
+        if filter_str is not None:
+            base_url += f"?{filter_str}"
 
         return base_url
 
