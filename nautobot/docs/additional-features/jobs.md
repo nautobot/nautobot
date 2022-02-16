@@ -510,22 +510,41 @@ While individual methods within your Job can and should be tested in isolation, 
 
 Because of the way `run_job()` works, which is somewhat complex behind the scenes, there are a few things you'll need to do in your test code:
 
-1. Inherit from `django.test.TransactionTestCase` instead of `django.test.TestCase`.
+1. Inherit from `django.test.TransactionTestCase` instead of `django.test.TestCase`. (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes.)
 2. Set your test class's `databases` attribute to `("default", "job_logs")`. (`job_logs` is a proxy connection to the same (`default`) database that's used exclusively for Job logging.)
 
-A simple example of a Job test case might look like the following:
+!!! tip
+    Additionally, *if your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x*, you should add the following block to your test module:
+
+        from django.conf import settings
+
+        if "job_logs" in settings.DATABASES:
+            settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
+            settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+
+    This code isn't *needed* in Nautobot 1.3.x and later, as the `"job_logs"` database will already be set up correctly for testability, but it also won't hurt anything to include.
+
+A simple example of a Job test case that's implemented to be backwards-compatible with Nautobot 1.2.x might look like the following:
 
 ```python
 import uuid
 
-from django.test import TransactionTestCase
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.test import TransactionTestCase
 
-from nautoabot.extras.jobs import get_job, run_job
+from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import JobResult, JobLogEntry
 
+
+if "job_logs" in settings.DATABASES:
+    settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
+    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+
+
 class MyJobTestCase(TransactionTestCase):
-    databases = ("default", "job_logs")
+    if "job_logs" in settings.DATABASES:
+        databases = ("default", "job_logs")
 
     def test_my_job(self):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
