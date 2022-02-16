@@ -214,6 +214,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     from nautobot.extras.choices import JobSourceChoices
     from nautobot.extras.jobs import get_jobs
 
+    # TODO: eventually this should be inverted so that get_jobs() relies on the database models...
     job_classes = get_jobs()
     job_models = []
     for source_string, modules in job_classes.items():
