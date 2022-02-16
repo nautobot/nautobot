@@ -3,11 +3,7 @@ from django.db.models import Q
 
 from nautobot.dcim.filters import CableTerminationFilterSet, PathEndpointFilterSet
 from nautobot.dcim.models import Region, Site
-from nautobot.extras.filters import (
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-    StatusModelFilterSetMixin,
-)
+from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -26,7 +22,7 @@ __all__ = (
 )
 
 
-class ProviderFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class ProviderFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -73,7 +69,7 @@ class ProviderFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdated
         )
 
 
-class ProviderNetworkFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class ProviderNetworkFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -102,24 +98,13 @@ class ProviderNetworkFilterSet(BaseFilterSet, CustomFieldModelFilterSet, Created
         ).distinct()
 
 
-class CircuitTypeFilterSet(
-    BaseFilterSet,
-    CustomFieldModelFilterSet,
-    NameSlugSearchFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = CircuitType
         fields = ["id", "name", "slug"]
 
 
-class CircuitFilterSet(
-    BaseFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    TenancyFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
