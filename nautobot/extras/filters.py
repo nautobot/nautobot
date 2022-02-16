@@ -60,6 +60,7 @@ __all__ = (
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
+    "JobFilterSet",
     "JobLogEntryFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
@@ -552,12 +553,14 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     )
     installed = django_filters.BooleanFilter()
     enabled = django_filters.BooleanFilter()
+    commit_default = django_filters.BooleanFilter()
+    hidden = django_filters.BooleanFilter()
     read_only = django_filters.BooleanFilter()
+    approval_required = django_filters.BooleanFilter()
 
     class Meta:
         model = Job
-        fields = ["id"]
-        # TODO fields = ["id", "name", "grouping"]
+        fields = ["id", "name", "grouping"]  # TODO
 
     def search(self, queryset, name, value):
         if not value.strip():

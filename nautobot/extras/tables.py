@@ -394,8 +394,13 @@ class JobTable(BaseTable):
     name = tables.Column(linkify=True, orderable=False)
     installed = BooleanColumn(orderable=False)
     enabled = BooleanColumn(orderable=False)
-    read_only = BooleanColumn(accessor="job_class__Meta__read_only", orderable=False)
-    description = tables.Column(accessor="job_class__description", orderable=False)
+    description = tables.Column(accessor="description_first_line", orderable=False)
+    commit_default = BooleanColumn(orderable=False)
+    hidden = BooleanColumn(orderable=False)
+    read_only = BooleanColumn(orderable=False)
+    approval_required = BooleanColumn(orderable=False)
+    soft_time_limit = tables.Column(orderable=False)
+    time_limit = tables.Column(orderable=False)
     last_run = tables.TemplateColumn(
         accessor="latest_result",
         template_code="""
@@ -422,8 +427,13 @@ class JobTable(BaseTable):
             "name",
             "installed",
             "enabled",
-            "read_only",
             "description",
+            "commit_default",
+            "hidden",
+            "read_only",
+            "approval_required",
+            "soft_time_limit",
+            "time_limit",
             "last_run",
             "last_status",
         )

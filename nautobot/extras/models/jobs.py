@@ -180,6 +180,10 @@ class Job(PrimaryModel):
             self._latest_result = self.results.last()
         return self._latest_result
 
+    @property
+    def description_first_line(self):
+        return self.description.splitlines()[0]
+
     def get_absolute_url(self):
         return reverse("extras:job", kwargs={"class_path": self.class_path})
 

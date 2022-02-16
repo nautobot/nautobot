@@ -749,6 +749,13 @@ class JobListView(generic.ObjectListView):
     action_buttons = ()
     template_name = "extras/job_list.html"
 
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        if "hidden" not in request.GET or request.GET.get("hidden") == "":
+            # Default to hiding "hidden" jobs
+            queryset = queryset.filter(hidden=False)
+        return queryset
+
     def extra_context(self):
         return {
             "table_inc_template": "extras/inc/job_table.html",
