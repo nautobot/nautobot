@@ -275,6 +275,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         null=True,
         help_text="Queryset filter matching the applicable destination objects of the selected type",
     )
+    advanced_ui = models.BooleanField(default=False)
 
     objects = RelationshipManager()
 

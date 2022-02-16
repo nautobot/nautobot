@@ -44,4 +44,5 @@
             </tbody>
         </table>
     </div>
+    {% include 'inc/custom_fields_panel.html' with custom_fields=object.get_hidden_custom_fields %}
 {% endif %}

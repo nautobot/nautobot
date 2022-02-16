@@ -68,6 +68,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
+    advanced_ui = models.BooleanField(default=False)
 
     objects = ComputedFieldManager()
 
@@ -124,12 +125,24 @@ class CustomFieldModel(models.Model):
         """
         return self._custom_field_data
 
-    def get_custom_fields(self):
+    def _get_custom_fields(self, hidden=False):
         """
         Return a dictionary of custom fields for a single object in the form {<field>: value}.
         """
         fields = CustomField.objects.get_for_model(self)
-        return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
+        return OrderedDict([(field, self.cf.get(field.name)) for field in fields if field.advanced_ui == hidden])
+
+    def get_custom_fields(self):
+        """
+        Return a dictionary of custom fields which have advanced_ui == False
+        """
+        return self._get_custom_fields()
+
+    def get_hidden_custom_fields(self):
+        """
+        Return a dictionary of custom fields which have advanced_ui == True
+        """
+        return self._get_custom_fields(hidden=True)
 
     def clean(self):
         super().clean()
@@ -261,6 +274,11 @@ class CustomField(BaseModel, ChangeLoggedModel):
         help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
         "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters. Regular "
         "expression on select and multi-select will be applied at <code>Custom Field Choices</code> definition.",
+    )
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Hide from main detail tab",
+        help_text="Hide this custom field from the main detail tab. It will appear in the advanced tab instead.",
     )
 
     objects = CustomFieldManager()

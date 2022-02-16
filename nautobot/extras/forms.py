@@ -496,6 +496,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "validation_minimum",
             "validation_maximum",
             "validation_regex",
+            "advanced_ui",
         )
 
 
