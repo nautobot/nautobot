@@ -45,6 +45,7 @@ logger = logging.getLogger("nautobot.datasources.git")
 # namedtuple takes a job_result(JobResult instance) and a repository_record(GitRepository instance).
 GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
 
+# namedtuple takes from_url(remote git repository url), to_path(local path of git repo), from_branch(git branch)
 GitRepoInfo = namedtuple("GitRepoInfo", ["from_url", "to_path", "from_branch"])
 
 
