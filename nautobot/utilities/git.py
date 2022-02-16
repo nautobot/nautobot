@@ -36,8 +36,6 @@ def convert_git_diff_log_to_list(logs):
         >>> git_log = "M\tindex.html\nR\tsample.txt"
         >>> print(convert_git_diff_log_to_list(git_log))
         ["Modification - index.html", "Renaming - sample.txt"]
-
-
     """
     logs = logs.split("\n")
     return [swap_status_initials(line) for line in logs]
