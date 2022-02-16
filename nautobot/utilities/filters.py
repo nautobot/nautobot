@@ -257,6 +257,13 @@ class BaseFilterSet(django_filters.FilterSet):
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueCharFilter},
             MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            # TODO(jathan): This was added for objects to be able to do reverse mapping to their
+            # DynamicGroup membership.
+            # Ref: https://github.com/carltongibson/django-filter/issues/1107
+            models.JSONField: {
+                "filter_class": MultiValueCharFilter,
+                "extra": lambda f: {"lookup_expr": ["icontains"]},
+            },
         }
     )
 

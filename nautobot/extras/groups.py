@@ -1,83 +1,120 @@
 from collections import OrderedDict
+import logging
 
 import django_filters
+from django_filters.utils import get_model_field
 from django.db.models import Q
+from django.db import models
+from django.urls import reverse
+from django.utils.functional import classproperty
+
+from nautobot.utilities.utils import get_filterform_for_model, get_filterset_for_model
 
 
-def extract_value_from_object_from_queryset(obj, attrs_list):
+logger = logging.getLogger(__name__)
 
-    if not attrs_list:
+
+def extract_value_from_object_from_queryset(obj, field_parts):
+    # FIXME(jathan): Document this and fix the variable names for readability.
+
+    if not field_parts:
         raise ValueError("A list of attribute must be provided")
 
-    # print(obj, attrs_list)
-    attr = attrs_list.pop(0)
-    # TODO Catch exception if the attribute doesn't exist
+    field_name = field_parts.pop(0)
+    value = getattr(obj, field_name, None)
 
-    value = getattr(obj, attr)
-    if not value:
+    # Only proceed if the field is found.
+    if value is None:
         return None
 
-    if attrs_list:
-        return extract_value_from_object_from_queryset(value, attrs_list)
+    if field_parts:
+        return extract_value_from_object_from_queryset(value, field_parts)
+
+    if isinstance(value, models.Model):
+        value = str(value)
 
     return value
 
 
+def dynamicgroup_map_factory(model):
+    """Generate a `FooDynamicGroupMap` class for a given `model`."""
+
+    filterset = get_filterset_for_model(model)
+    filterform = get_filterform_for_model(model)
+
+    group_map = type(
+        str("%sDynamicGroupMap" % model._meta.object_name),
+        (BaseDynamicGroupMap,),
+        {"model": model, "filterset": filterset, "filterform": filterform},
+    )
+
+    return group_map
+
+
 class BaseDynamicGroupMap:
-    """Dynamic Group mapping used to generate mappings for each model class."""
+    """
+    Dynamic Group mapping used to generate mappings for each model class.
+
+    This class itself should not be invoked directly as the class variables will
+    not be populated and most class methods will fail.
+    """
 
     model = None
     filterset = None
     filterform = None
 
-    field_order = []
-    # field_exclude = ["model", "filterset", "field_order", "field_exclude"]
+    @classproperty
+    def base_url(cls):
+        if cls.model is None:
+            return
+        # FIXME(jathan): Call the helper method that automatically determines plugin or not
+        return reverse(f"{cls.model._meta.app_label}:{cls.model._meta.model_name}_list")
 
     @classmethod
     def fields(cls):
         """Return all fields in a dictionnary."""
         _fields = OrderedDict()
-
-        # TODO(jathan): If we want to keep field_order and not just use what is
-        # defined in the FilterSet, we need to do it here.
         filterform = cls.filterform()
-        # for field_name in cls.field_order:
         for field_name in filterform.fields:
             _fields[field_name] = filterform.fields[field_name]
 
         return _fields
 
     @classmethod
-    def get_queryset(cls, filter):
-        """Return a queryset matching the dynamic group filter.
+    def get_queryset(cls, filter_params):
+        """
+        Return a queryset matching the dynamic group `filter_params`.
 
         By default the queryset is generated based of the filterset but this is not mandatory
         """
-        filterset = cls.filterset(cls.get_filterset_params(filter), cls.model.objects.all())
+        filterset = cls.filterset(filter_params, cls.model.objects.all())
         return filterset.qs
 
-    # TODO(jathan): Consider removing this method now that map classes are automatically generated.
     @classmethod
-    def get_filterset_params(cls, filter):
-        return filter
+    def urlencode(cls, filter_params):
+        """
+        Given a `filter_params` dict, return a URL-encoded HTTP query string.
 
-    @classmethod
-    def get_filterset_as_string(cls, filter):
-        """Get filterset as string."""
-        if not filter:
+        For example:
+            >>> dg = DynamicGroup.objects.first()
+            >>> filter_params = {"site": ["ams01", "bkk01"], "has_primary_ip": True}
+            >>> dg.map.urlencode(filter_params)
+            site=ams01&site=bkk01&has_primary_ip=True'
+
+        """
+        if not filter_params:
             return None
 
         result = ""
 
-        for key, value in cls.get_filterset_params(filter).items():
+        for key, value in filter_params.items():
             if isinstance(value, list):
                 for item in value:
                     if result != "":
                         result += "&"
                     result += f"{key}={item}"
             else:
-                result += "&"
-                result += f"{key}={value}"
+                result += f"&{key}={value}"
 
         return result
 
@@ -87,7 +124,6 @@ class BaseDynamicGroupMap:
         queryset_filter = Q()
         filterset = cls.filterset()
 
-        # for field_name in cls.field_order:
         for field_name in cls.fields():
             method_name = "get_queryset_filter_default"
             if hasattr(cls, f"get_queryset_filter_{field_name}"):
@@ -117,12 +153,27 @@ class BaseDynamicGroupMap:
         if filterset is None:
             filterset = cls.filterset()
 
-        # TODO Add check to ensure that field is present
-        # TODO Add check to ensure that the field has a field_name property
+        # FIXME(jathan): Add check to ensure that the field has a field_name property
         field = filterset.declared_filters[field_name]
 
+        # Ensure that the field is present on the model, or bomb out.
+        model_field = get_model_field(obj._meta.model, field_name)
+        if model_field is None:
+            logger.debug("Declared filter field %s is not a model field", field_name)
+            return None
+
+        derived_field = filterset.filter_for_field(model_field, field_name)
+
+        # If the declared field type (e.g. `BooleanFilter`) doesn't match the model's derived field
+        # type (e.g. `ModelMultipleChoiceFilter`), this means the declared field shadows the model
+        # field and should be skipped.
+        if type(field) != type(derived_field):
+            logger.debug("Declared and derived filter field mismatch for %s", field_name)
+            return None
+
         # Construct the value of the query based on the object and filter field attributes.
-        query_value = extract_value_from_object_from_queryset(obj, field.field_name.split("__"))
+        field_parts = field.field_name.split("__")
+        query_value = extract_value_from_object_from_queryset(obj, field_parts)
 
         # Construct the query label first
         query_label = f"filter__{field_name}"
