@@ -16,7 +16,7 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_yasg.openapi import Schema, TYPE_OBJECT, TYPE_ARRAY
 from drf_yasg.utils import swagger_auto_schema
@@ -221,6 +221,13 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixi
         else:
             # Check that the instance is matched by the view's queryset
             self.queryset.get(pk=instance.pk)
+
+    def get_object(self):
+        obj = super().get_object()
+        if self.request.method not in SAFE_METHODS and hasattr(obj, "snapshot"):
+            obj.snapshot()
+
+        return obj
 
     def perform_create(self, serializer):
         model = self.queryset.model
