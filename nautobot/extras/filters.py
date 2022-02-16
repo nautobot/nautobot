@@ -556,7 +556,8 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
 
     class Meta:
         model = Job
-        fields = ["id", "name", "grouping"]
+        fields = ["id"]
+        # TODO fields = ["id", "name", "grouping"]
 
     def search(self, queryset, name, value):
         if not value.strip():

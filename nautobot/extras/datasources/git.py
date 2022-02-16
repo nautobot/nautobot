@@ -943,7 +943,6 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             except Exception as exc:
                 logger.error(f"Unable to load job {module_name}: {exc}")
                 continue
-            grouping = module.name if hasattr(module, "name") else module_name
             for job_class_name, job_class in inspect.getmembers(module, is_job):
                 # TODO: redundancy with refresh_job_models signal handler here
                 job_model, created = Job.objects.get_or_create(
@@ -951,23 +950,19 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     module_name=f"{repository_record.slug}/{module_name}",
                     job_class_name=job_class_name,
                     defaults={
-                        "grouping": grouping,
-                        "name": job_class.name,
                         "installed": True,
                         "enabled": False,
-                    }
+                    },
                 )
                 if created:
                     job_result.log(
-                        f'Created Job model "{grouping}: {job_class.name}"',
+                        f'Created Job model "{job_model.grouping}: {job_model.name}"',
                         grouping="jobs",
                         level_choice=LogLevelChoices.LOG_SUCCESS,
                         logger=logger,
                     )
                 else:
                     # Update attributes of the JobModel in case they've changed
-                    job_model.grouping = grouping
-                    job_model.name = job_class.name
                     job_model.installed = True
                     job_model.save()
                     job_result.log(
@@ -999,6 +994,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             )
             job_model.installed = False
             job_model.save()
+
 
 #
 # Export template handling

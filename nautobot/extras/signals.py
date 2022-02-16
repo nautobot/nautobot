@@ -231,7 +231,6 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
         for module_string, module_details in modules.items():
             module_name = module_prefix + module_string
-            grouping = module_details["name"]
             for job_class_name, job_class in module_details["jobs"].items():
                 # TODO: catch DB error in case where multiple JobModels have the same grouping + name
                 job_model, created = Job.objects.get_or_create(
@@ -239,26 +238,22 @@ def refresh_job_models(sender, *, apps, **kwargs):
                     module_name=module_name,
                     job_class_name=job_class_name,
                     defaults={
-                        "grouping": grouping,
-                        "name": job_class.name,
                         "installed": True,
                         "enabled": False,
-                    }
+                    },
                 )
                 if created:
-                    logger.info('Created Job model "%s: %s"', job_model.grouping, job_model.name)
+                    logger.info('Created Job model "%s: %s"', module_name, job_class_name)
                 else:
                     # Update attributes of the JobModel in case they've changed
-                    job_model.grouping = grouping
-                    job_model.name = job_class.name
                     job_model.installed = True
                     job_model.save()
-                    logger.info('Refreshed Job model "%s: %s"', job_model.grouping, job_model.name)
+                    logger.info('Refreshed Job model "%s: %s"', module_name, job_class_name)
 
                 job_models.append(job_model)
 
         for job_model in Job.objects.all():
             if job_model not in job_models:
-                logger.info('Job "%s: %s" is no longer installed', job_model.grouping, job_model.name)
+                logger.info("Job %s is no longer installed", job_model.id)
                 job_model.installed = False
                 job_model.save()
