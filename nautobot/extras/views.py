@@ -742,7 +742,7 @@ class JobListView(generic.ObjectListView):
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
     """
 
-    queryset = JobModel.objects.prefetch_related("results")
+    queryset = JobModel.objects.all()
     table = tables.JobTable
     filterset = filters.JobFilterSet
     filterset_form = forms.JobFilterForm
@@ -752,8 +752,8 @@ class JobListView(generic.ObjectListView):
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
         if "hidden" not in request.GET or request.GET.get("hidden") == "":
-            # Default to hiding "hidden" jobs
-            queryset = queryset.filter(hidden=False)
+            # Default to hiding "hidden" and non-installed jobs
+            queryset = queryset.filter(hidden=False, installed=True).prefetch_related("results")
         return queryset
 
     def extra_context(self):
@@ -777,8 +777,12 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             raise Http404
         return job_class
 
-    def get(self, request, class_path):
-        job_class = self._get_job(class_path)
+    def get(self, request, class_path=None, slug=None):
+        if class_path:
+            job_class = self._get_job(class_path)
+        else:
+            job_class = JobModel.objects.get(slug=slug).job_class
+            class_path = job_class.class_path
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
@@ -797,11 +801,15 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             },
         )
 
-    def post(self, request, class_path):
+    def post(self, request, class_path=None, slug=None):
         if not request.user.has_perm("extras.run_job"):
             return HttpResponseForbidden()
 
-        job_class = self._get_job(class_path)
+        if class_path:
+            job_class = self._get_job(class_path)
+        else:
+            job_class = JobModel.objects.get(slug=slug).job_class
+            class_path = job_class.class_path
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
         job_form = job.as_form(request.POST, request.FILES)
@@ -893,6 +901,12 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 class JobDetailView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
+
+
+class JobEditView(generic.ObjectEditView):
+    queryset = JobModel.objects.all()
+    model_form = forms.JobEditForm
+    template_name = "extras/job_edit.html"
 
 
 class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):

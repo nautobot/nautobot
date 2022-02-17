@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
                 ("grouping", models.CharField(max_length=255)),
                 ("name", models.CharField(max_length=100)),
                 ("description", models.TextField()),
-                ("installed", models.BooleanField(default=True)),
+                ("installed", models.BooleanField(default=True, editable=False)),
                 ("enabled", models.BooleanField(default=False)),
                 ("commit_default", models.BooleanField(default=True)),
                 ("hidden", models.BooleanField(default=False)),

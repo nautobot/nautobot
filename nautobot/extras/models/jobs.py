@@ -82,7 +82,7 @@ class Job(PrimaryModel):
     description = models.TextField()
 
     # Control flags
-    installed = models.BooleanField(default=True)
+    installed = models.BooleanField(default=True, editable=False)
     enabled = models.BooleanField(default=False)
 
     # Additional properties, potentially inherited from the source code

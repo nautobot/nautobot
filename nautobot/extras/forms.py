@@ -886,15 +886,38 @@ class JobForm(BootstrapMixin, forms.Form):
         return bool(len(self.fields) > 1)
 
 
+class JobEditForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    slug = SlugField()
+
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = Job
+        fields = [
+            "slug",
+            "enabled",
+            "commit_default_override",
+            "commit_default",
+            "hidden_override",
+            "hidden",
+            "read_only_override",
+            "read_only",
+            "approval_required_override",
+            "approval_required",
+            "soft_time_limit_override",
+            "soft_time_limit",
+            "time_limit_override",
+            "time_limit",
+        ]
+
+
 class JobFilterForm(BootstrapMixin, forms.Form):
     model = Job
     q = forms.CharField(required=False, label="Search")
     installed = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     commit_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    hidden = forms.NullBooleanField(
-        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
-    )
+    hidden = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     approval_required = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
