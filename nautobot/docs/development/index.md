@@ -75,7 +75,7 @@ Here is what you need to know about Nautobot releases:
 - The initial launch of Nautobot is version 1.0.0beta1 (major.minor.patch) released on February 24, 2021.
 - The core team estimates quarterly releases with the majority of them being minor releases.
 - It is an aspirational goal that there will be no more than one major release per year as major releases do indicate a break in backwards compatibility.
-- For information pertaining patch releases, which will be released on a schedule, please see the [Patch Releases](#patch-releases) section below.
+- For information pertaining to patch releases, which will be released on a schedule, please see the [Patch Releases](#patch-releases) section below.
 - Given the core team is estimating quarterly releases, there will not be firm dates for releases.
 - In order to provide more visibility into the development and release schedule of Nautobot, there will be structured notifications as follows:
   - At the start of a release cycle, the estimated timeframe for release will be a 4-6 week window.
