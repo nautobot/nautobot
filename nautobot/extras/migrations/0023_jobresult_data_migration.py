@@ -14,9 +14,6 @@ def migrate_jobresults(apps, schema_editor):
         job_classpath = job_jobresult.name
         try:
             source, module_name, job_class_name = job_classpath.split("/")
-            if source.startswith("git."):
-                source, repo_slug = source.split(".", 1)
-                module_name = f"{repo_slug}/{module_name}"
             job_model, created = Job.objects.get_or_create(
                 source=source,
                 module_name=module_name,

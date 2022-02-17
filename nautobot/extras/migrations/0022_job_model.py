@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("source", models.CharField(max_length=32)),
+                ("source", models.CharField(max_length=255)),
                 ("module_name", models.CharField(max_length=255)),
                 ("job_class_name", models.CharField(max_length=100)),
                 ("grouping", models.CharField(max_length=255)),

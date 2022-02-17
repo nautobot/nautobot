@@ -912,10 +912,7 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     if delete:
-        for job_model in Job.objects.filter(
-            source=JobSourceChoices.SOURCE_GIT,
-            module_name__startswith=f"{repository_record.slug}/",
-        ):
+        for job_model in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
             job_result.log(
                 f'Marking Job model "{job_model.grouping}: {job_model.name}" as no longer installed',
                 grouping="jobs",
@@ -934,8 +931,8 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
         for job_info in jobs_in_directory(jobs_path):
             # TODO: redundancy with refresh_job_models signal handler here
             job_model, created = Job.objects.get_or_create(
-                source=JobSourceChoices.SOURCE_GIT,
-                module_name=f"{repository_record.slug}/{job_info.module_name}",
+                source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}",
+                module_name=job_info.module_name,
                 job_class_name=job_info.job_class_name,
                 defaults={
                     "installed": True,
@@ -969,10 +966,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             logger=logger,
         )
 
-    for job_model in Job.objects.filter(
-        source=JobSourceChoices.SOURCE_GIT,
-        module_name__startswith=f"{repository_record.slug}/",
-    ):
+    for job_model in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
         if job_model not in installed_jobs:
             job_result.log(
                 f'Marking Job model "{job_model.grouping}: {job_model.name}" as no longer installed',

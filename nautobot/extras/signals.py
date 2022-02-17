@@ -219,19 +219,16 @@ def refresh_job_models(sender, *, apps, **kwargs):
     job_classes = get_jobs()
     job_models = []
     for source_string, modules in job_classes.items():
-        module_prefix = ""
         if source_string == "plugins":
             source = JobSourceChoices.SOURCE_PLUGIN
         elif source_string == "local":
             source = JobSourceChoices.SOURCE_LOCAL
         elif source_string.startswith("git."):
-            source = JobSourceChoices.SOURCE_GIT
-            module_prefix = f"{source_string[4:]}/"  # "git.myrepo" -> "myrepo/"
+            source = f"{JobSourceChoices.SOURCE_GIT}.{source_string[4:]}"  # somewhat unnecessary, TBH
         else:
             raise RuntimeError(f"Unknown/unexpected job source '{source}'!")
 
-        for module_string, module_details in modules.items():
-            module_name = module_prefix + module_string
+        for module_name, module_details in modules.items():
             for job_class_name, job_class in module_details["jobs"].items():
                 # TODO: catch DB error in case where multiple Jobs have the same grouping + name
                 job_model, created = Job.objects.get_or_create(

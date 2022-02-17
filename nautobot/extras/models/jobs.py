@@ -61,7 +61,9 @@ class Job(PrimaryModel):
     """
 
     # Information used to locate the Job source code
-    source = models.CharField(max_length=32, choices=JobSourceChoices, editable=False)
+    source = models.CharField(max_length=255, editable=False)
+    # source does not use choices=JobSourceChoices directly as for Git repositories, it must include the
+    # Git repository slug as part of the source value, in order to remain backwards-compatible.
     module_name = models.CharField(max_length=255, editable=False)
     job_class_name = models.CharField(max_length=100, editable=False)
 
@@ -128,9 +130,9 @@ class Job(PrimaryModel):
                         break
                 else:
                     logger.warning("Module %s job class %s not found!", self.module_name, self.job_class_name)
-            elif self.source == JobSourceChoices.SOURCE_GIT:
+            elif self.source.startswith(JobSourceChoices.SOURCE_GIT):
                 path = settings.GIT_ROOT
-                repo_slug, jobs_module_name = self.module_name.split("/", 1)
+                repo_slug = self.source.split(".", 1)[1]
                 from .datasources import GitRepository
                 from nautobot.extras.datasources.git import ensure_git_repository
 
@@ -146,14 +148,14 @@ class Job(PrimaryModel):
                         logger=logger,
                     )
                     path = os.path.join(repository_record.filesystem_path, "jobs")
-                    for job_info in jobs_in_directory(path, module_name=jobs_module_name):
+                    for job_info in jobs_in_directory(path, module_name=self.module_name):
                         if job_info.job_class_name == self.job_class_name:
                             self._job_class = job_info.job_class
                             break
                     else:
                         logger.warning(
                             "Module %s job class %s not found in repository %s",
-                            jobs_module_name,
+                            self.module_name,
                             self.job_class_name,
                             repository_record,
                         )
@@ -170,9 +172,7 @@ class Job(PrimaryModel):
 
     @property
     def class_path(self):
-        if self.source != JobSourceChoices.SOURCE_GIT:
-            return f"{self.source}/{self.module_name}/{self.job_class_name}"
-        return f"{self.source}.{self.module_name}/{self.job_class_name}"
+        return f"{self.source}/{self.module_name}/{self.job_class_name}"
 
     @property
     def latest_result(self):
@@ -183,6 +183,17 @@ class Job(PrimaryModel):
     @property
     def description_first_line(self):
         return self.description.splitlines()[0]
+
+    @property
+    def git_repository(self):
+        """The GitRepository providing this Job, if applicable."""
+        if self.source == JobSourceChoices.SOURCE_GIT:
+            from .datasources import GitRepository
+            try:
+                return GitRepository.objects.get(slug=self.source.split(".")[1])
+            except GitRepository.DoesNotExist:
+                return None
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:job", kwargs={"class_path": self.class_path})
