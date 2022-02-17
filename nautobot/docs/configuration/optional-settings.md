@@ -329,7 +329,7 @@ Please see the [official Django documentation on `DEBUG`](https://docs.djangopro
 
 ---
 
-# DISABLE_PREFIX_LIST_HIERARCHY
+## DISABLE_PREFIX_LIST_HIERARCHY
 
 Default: `False`
 
