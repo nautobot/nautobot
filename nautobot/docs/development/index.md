@@ -89,15 +89,15 @@ Here is what you need to know about Nautobot releases:
 Specifics around patch releases:
 
 - Will be released every two weeks on Mondays, starting March 7th, 2022.
-- Will be focused bugs, security vulnerabilities, backports, and other issues as they arise.
-- Will not introduce new functionality that isn't addressing a bug.
-- Will not release a patch release if there has been no new merges to `develop` since the previous release.
+- Will be focused on bugs, security vulnerabilities, backports, and other issues as they arise.
+- Will not introduce new functionality that isn’t addressing a bug.
+- Will not be released if there has been no new merges to `develop` since the previous release.
 - Should not be considered a mandatory upgrade: If it does not fix a bug or issue you are experiencing, you should not feel the need to upgrade right away.
 - May happen a day or two after the Monday schedule if Monday is an observed holiday. We would like to ensure full availability post-release.
 
 Should a patch release contain a fix for CVE(s), data-loss bug(s), or other vulnerability, we will:
 
-- Release a new patch release as soon as the fix has been identified, fixed, and thoroughly tested. No waiting for the next regularly scheduled release date.
+- Release a new patch release as soon as the fix has been identified, implemented, and thoroughly tested. No waiting for the next regularly scheduled release date.
 - Bring special attention to these releases in our notification channels.
 - Strongly urge you to upgrade to address these more serious issues as soon as possible.
 - Not adjust any preceding/proceeding release dates.
