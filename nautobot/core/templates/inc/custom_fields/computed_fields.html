@@ -1,8 +1,3 @@
-{% load helpers %}
-{% with custom_fields=custom_fields_override %}
-    {% include 'inc/custom_fields_panel_data.html' %}
-{% endwith %}
-
 {% if object.has_computed_fields %}
     {% load computed_fields %}
     <div class="panel panel-default">

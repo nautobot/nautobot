@@ -130,16 +130,16 @@ class CustomFieldModel(models.Model):
         Return a dictionary of custom fields for a single object in the form {<field>: value}
         which have advanced_ui set to False
         """
-        fields = CustomField.objects.get_for_model(self)
-        return OrderedDict([(field, self.cf.get(field.name)) for field in fields if not field.advanced_ui])
+        fields = CustomField.objects.get_for_model(self).filter(advanced_ui=False)
+        return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
     def get_advanced_custom_fields(self):
         """
         Return a dictionary of custom fields for a single object in the form {<field>: value}
         which have advanced_ui set to True
         """
-        fields = CustomField.objects.get_for_model(self)
-        return OrderedDict([(field, self.cf.get(field.name)) for field in fields if field.advanced_ui])
+        fields = CustomField.objects.get_for_model(self).filter(advanced_ui=True)
+        return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
     def get_custom_fields(self):
         """
