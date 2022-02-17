@@ -90,7 +90,7 @@ Specifics around patch releases:
 
 - Will be released every two weeks on Mondays, starting March 7th, 2022.
 - Will be focused on bugs, security vulnerabilities, backports, and other issues as they arise.
-- Will not introduce new functionality that isn’t addressing a bug.
+- Will not introduce new functionality that isn't addressing a bug.
 - Will not be released if there has been no new merges to `develop` since the previous release.
 - Should not be considered a mandatory upgrade: If it does not fix a bug or issue you are experiencing, you should not feel the need to upgrade right away.
 - May happen a day or two after the Monday schedule if Monday is an observed holiday. We would like to ensure full availability post-release.
