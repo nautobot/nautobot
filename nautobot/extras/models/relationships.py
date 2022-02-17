@@ -195,9 +195,17 @@ class RelationshipModel(models.Model):
         return resp
 
     def get_relationships_data_basic_fields(self):
+        """
+        Same docstring as get_relationships_data() above except this only returns relationships
+        where advanced_ui==False for displaying in the main object detail tab on the object's page
+        """
         return self.get_relationships_data(advanced_ui=False)
 
     def get_relationships_data_advanced_fields(self):
+        """
+        Same docstring as get_relationships_data() above except this only returns relationships
+        where advanced_ui==True for displaying in the 'Advanced' tab on the object's page
+        """
         return self.get_relationships_data(advanced_ui=True)
 
 
