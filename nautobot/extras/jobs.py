@@ -209,11 +209,11 @@ class BaseJob:
 
     @classproperty
     def soft_time_limit(cls):
-        return getattr(cls.Meta, "soft_time_limit", settings.CELERY_TASK_SOFT_TIME_LIMIT)
+        return getattr(cls.Meta, "soft_time_limit", 0)
 
     @classproperty
     def time_limit(cls):
-        return getattr(cls.Meta, "time_limit", settings.CELERY_TASK_TIME_LIMIT)
+        return getattr(cls.Meta, "time_limit", 0)
 
     @classmethod
     def _get_vars(cls):
@@ -1021,8 +1021,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    soft_time_limit = self.soft_time_limit
-    time_limit = self.time_limit
+    soft_time_limit = self.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+    time_limit = self.time_limit or settings.CELERY_TASK_TIME_LIMIT
     if time_limit <= soft_time_limit:
         job_result.log(
             f"The hard time limit of {time_limit} seconds is less than "

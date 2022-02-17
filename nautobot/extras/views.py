@@ -762,6 +762,7 @@ class JobListView(generic.ObjectListView):
         }
 
 
+# 2.0 TODO: this should really be "JobRunView"
 class JobView(ContentTypePermissionRequiredMixin, View):
     """
     View the parameters of a Job and enqueue it if desired.
@@ -786,7 +787,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
         return render(
             request,
-            "extras/job.html",
+            "extras/job.html",  # 2.0 TODO: extras/job_submission.html
             {
                 "grouping": grouping,
                 "module": module,
@@ -886,6 +887,12 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 "schedule_form": schedule_form,
             },
         )
+
+
+# 2.0 TODO: this should really be "JobView"
+class JobDetailView(generic.ObjectView):
+    queryset = JobModel.objects.all()
+    template_name = "extras/job_detail.html"
 
 
 class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):

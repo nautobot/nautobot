@@ -22,6 +22,7 @@ from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
@@ -61,11 +62,18 @@ class Job(PrimaryModel):
     """
 
     # Information used to locate the Job source code
-    source = models.CharField(max_length=255, editable=False)
+    source = models.CharField(max_length=110, editable=False)
     # source does not use choices=JobSourceChoices directly as for Git repositories, it must include the
     # Git repository slug as part of the source value, in order to remain backwards-compatible.
-    module_name = models.CharField(max_length=255, editable=False)
+    # This is also why it maxes at 110 characters rather than 100 - "git.<100-character-repo-slug>"
+    module_name = models.CharField(max_length=100, editable=False)
     job_class_name = models.CharField(max_length=100, editable=False)
+
+    slug = AutoSlugField(
+        max_length=320,
+        populate_from=["source", "module_name", "job_class_name"],
+        slugify_function=slugify_dots_to_dashes,
+    )
 
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
@@ -112,7 +120,7 @@ class Job(PrimaryModel):
         self._latest_result = None
 
     def __str__(self):
-        return f"{self.grouping}: {self.name}"
+        return self.name
 
     @property
     def job_class(self):
@@ -187,7 +195,7 @@ class Job(PrimaryModel):
     @property
     def git_repository(self):
         """The GitRepository providing this Job, if applicable."""
-        if self.source == JobSourceChoices.SOURCE_GIT:
+        if self.source.startswith(JobSourceChoices.SOURCE_GIT):
             from .datasources import GitRepository
             try:
                 return GitRepository.objects.get(slug=self.source.split(".")[1])
@@ -196,7 +204,7 @@ class Job(PrimaryModel):
         return None
 
     def get_absolute_url(self):
-        return reverse("extras:job", kwargs={"class_path": self.class_path})
+        return reverse("extras:job_detail", kwargs={"slug": self.slug})
 
 
 @extras_features(

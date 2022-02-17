@@ -1,0 +1,119 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+{% load perms %}
+{% load plugins %}
+
+{% block extra_breadcrumbs %}
+    <li>{{ object.grouping }}</li>
+{% endblock extra_breadcrumbs %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Job</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Grouping</td>
+                <td>{{ object.grouping }}</td>
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{ object.name }}</td>
+            </tr>
+            <tr>
+                <td>Installed</td>
+                <td>{{ object.installed | render_boolean }}</td>
+            </tr>
+            <tr>
+                <td>Enabled</td>
+                <td>{{ object.enabled | render_boolean }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Source Code</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Source</td>
+                <td>{{ object.source | split:"." | first | bettertitle }}</td>
+            </tr>
+            {% if "git." in object.source %}
+                <tr>
+                    <td>Repository</td>
+                    {% if object.git_repository is not None %}
+                        <td><a href="{{ object.git_repository.get_absolute_url }}">{{ object.git_repository }}</a></td>
+                    {% else %}
+                        <td><code>{{ object.source | split:"." | last }}</code></td>
+                    {% endif %}
+                </tr>
+            {% endif %}
+            <tr>
+                <td>Module</td>
+                <td><code>{{ object.module_name }}</code></td>
+            </tr>
+            <tr>
+                <td>Job Class</td>
+                <td><code>{{ object.job_class_name }}</code></td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Properties</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Default to Committing Changes</td>
+                <td>{{ object.commit_default | render_boolean }}
+                    {% if not object.commit_default_override %}(defined by source code){% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Hidden by Default</td>
+                <td>{{ object.hidden | render_boolean }}
+                    {% if not object.hidden_override %}(defined by source code){% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Read-Only Execution</td>
+                <td>{{ object.read_only | render_boolean }}
+                    {% if not object.read_only_override %}(defined by source code){% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Approval Required</td>
+                <td>{{ object.approval_required | render_boolean }}
+                    {% if not object.approval_required_override %}(defined by source code){% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Execution Soft Time Limit</td>
+                <td>
+                    {% if object.soft_time_limit %}
+                        {{ object.soft_time_limit }} seconds
+                        {% if not object.soft_time_limit_override %}(defined by source code){% endif %}
+                    {% else %}
+                        {{ "CELERY_TASK_SOFT_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Execution Hard Time Limit</td>
+                <td>
+                    {% if object.time_limit %}
+                        {{ object.time_limit }} seconds
+                        {% if not object.time_limit_override %}(defined by source code){% endif %}
+                    {% else %}
+                        {{ "CELERY_TASK_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_right_page %}

@@ -401,6 +401,7 @@ class JobTable(BaseTable):
     approval_required = BooleanColumn(orderable=False)
     soft_time_limit = tables.Column(orderable=False)
     time_limit = tables.Column(orderable=False)
+    actions = ButtonsColumn(JobModel, pk_field="slug")
     last_run = tables.TemplateColumn(
         accessor="latest_result",
         template_code="""
@@ -434,6 +435,7 @@ class JobTable(BaseTable):
             "approval_required",
             "soft_time_limit",
             "time_limit",
+            "actions",
             "last_run",
             "last_status",
         )

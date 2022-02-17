@@ -3,6 +3,7 @@
 import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
+import nautobot.core.fields
 import taggit.managers
 import uuid
 
@@ -29,9 +30,18 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("source", models.CharField(max_length=255)),
-                ("module_name", models.CharField(max_length=255)),
-                ("job_class_name", models.CharField(max_length=100)),
+                ("source", models.CharField(max_length=110, editable=False)),
+                ("module_name", models.CharField(max_length=100, editable=False)),
+                ("job_class_name", models.CharField(max_length=100, editable=False)),
+                (
+                    "slug",
+                    nautobot.core.fields.AutoSlugField(
+                        blank=True,
+                        max_length=320,
+                        populate_from=["source", "module_name", "job_class_name"],
+                        unique=True,
+                    ),
+                ),
                 ("grouping", models.CharField(max_length=255)),
                 ("name", models.CharField(max_length=100)),
                 ("description", models.TextField()),

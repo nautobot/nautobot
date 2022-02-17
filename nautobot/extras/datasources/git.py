@@ -912,9 +912,9 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     if delete:
-        for job_model in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
+        for job_model in Job.objects.filter(installed=True, source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
             job_result.log(
-                f'Marking Job model "{job_model.grouping}: {job_model.name}" as no longer installed',
+                f'Marking Job model "{job_model}" as no longer installed',
                 grouping="jobs",
                 level_choice=LogLevelChoices.LOG_WARNING,
                 logger=logger,
@@ -941,17 +941,18 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             )
             if created:
                 job_result.log(
-                    f'Created Job model "{job_model.grouping}: {job_model.name}"',
+                    f'Created Job model "{job_model}"',
                     grouping="jobs",
                     level_choice=LogLevelChoices.LOG_SUCCESS,
                     logger=logger,
                 )
             else:
                 # Update attributes of the JobModel in case they've changed
-                job_model.installed = True
-                job_model.save()
+                if not job_model.installed:
+                    job_model.installed = True
+                    job_model.save()
                 job_result.log(
-                    f'Refreshed Job model "{job_model.grouping}: {job_model.name}"',
+                    f'Refreshed Job model "{job_model}"',
                     grouping="jobs",
                     level_choice=LogLevelChoices.LOG_SUCCESS,
                     logger=logger,
@@ -967,9 +968,9 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
         )
 
     for job_model in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
-        if job_model not in installed_jobs:
+        if job_model.installed and job_model not in installed_jobs:
             job_result.log(
-                f'Marking Job model "{job_model.grouping}: {job_model.name}" as no longer installed',
+                f'Marking Job model "{job_model}" as no longer installed',
                 grouping="jobs",
                 level_choice=LogLevelChoices.LOG_WARNING,
                 logger=logger,

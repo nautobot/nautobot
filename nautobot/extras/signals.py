@@ -14,6 +14,7 @@ from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 from prometheus_client import Counter
 
+from nautobot.core.fields import slugify_dots_to_dashes
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.utilities.config import get_settings_or_config
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
@@ -218,16 +219,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     # TODO: eventually this should be inverted so that get_jobs() relies on the database models...
     job_classes = get_jobs()
     job_models = []
-    for source_string, modules in job_classes.items():
-        if source_string == "plugins":
-            source = JobSourceChoices.SOURCE_PLUGIN
-        elif source_string == "local":
-            source = JobSourceChoices.SOURCE_LOCAL
-        elif source_string.startswith("git."):
-            source = f"{JobSourceChoices.SOURCE_GIT}.{source_string[4:]}"  # somewhat unnecessary, TBH
-        else:
-            raise RuntimeError(f"Unknown/unexpected job source '{source}'!")
-
+    for source, modules in job_classes.items():
         for module_name, module_details in modules.items():
             for job_class_name, job_class in module_details["jobs"].items():
                 # TODO: catch DB error in case where multiple Jobs have the same grouping + name
@@ -235,6 +227,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
                     source=source,
                     module_name=module_name,
                     job_class_name=job_class_name,
+                    # AutoSlugField.slugify_function isn't applied during migrations, need to manually generate slug
+                    slug=slugify_dots_to_dashes(f"{source}-{module_name}-{job_class_name}"),
                     defaults={
                         "grouping": module_details["name"],
                         "name": job_class.name,
@@ -243,11 +237,11 @@ def refresh_job_models(sender, *, apps, **kwargs):
                     },
                 )
                 if created:
-                    logger.info('Created Job model "%s: %s"', module_name, job_class_name)
+                    logger.info('Created Job model "%s/%s/%s"', source, module_name, job_class_name)
                 else:
                     # Update attributes of the Job in case they've changed
                     job_model.installed = True
-                    logger.info('Refreshing Job model "%s: %s"', module_name, job_class_name)
+                    logger.info('Refreshing Job model "%s/%s/%s"', source, module_name, job_class_name)
                 for field_name in JOB_OVERRIDABLE_FIELDS:
                     # Was this field directly inherited from the job before, or was it overridden in the database?
                     if not getattr(job_model, f"{field_name}_override", False):
@@ -260,8 +254,13 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
                 job_models.append(job_model)
 
-        for job_model in Job.objects.all():
-            if job_model not in job_models:
-                logger.info("Job %s is no longer installed", job_model.id)
-                job_model.installed = False
-                job_model.save()
+    for job_model in Job.objects.all():
+        if job_model.installed and job_model not in job_models:
+            logger.info(
+                "Job %s/%s/%s is no longer installed",
+                job_model.source,
+                job_model.module_name,
+                job_model.job_class_name
+            )
+            job_model.installed = False
+            job_model.save()

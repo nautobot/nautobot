@@ -1,5 +1,7 @@
 from django.db import migrations
 
+from nautobot.core.fields import slugify_dots_to_dashes
+
 
 def migrate_jobresults(apps, schema_editor):
     """
@@ -18,6 +20,8 @@ def migrate_jobresults(apps, schema_editor):
                 source=source,
                 module_name=module_name,
                 job_class_name=job_class_name,
+                # AutoSlugField.slugify_function isn't applied during migrations, need to manually generate slug
+                slug=slugify_dots_to_dashes(f"{source}-{module_name}-{job_class_name}"),
                 defaults={
                     "grouping": module_name,
                     "name": job_class_name,
