@@ -1,5 +1,5 @@
 {% load helpers %}
-{% with custom_fields=object.get_custom_fields %}
+{% with custom_fields=custom_fields_override %}
     {% include 'inc/custom_fields_panel_data.html' %}
 {% endwith %}
 

@@ -95,7 +95,7 @@
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
-                    {% include 'inc/custom_fields_panel.html' with custom_fields=object.get_custom_fields %}
+                    {% include 'inc/custom_fields_panel_override.html' with custom_fields_override=object.get_basic_custom_fields %}
                     {% include 'inc/relationships_panel.html' %}
                     {% include 'extras/inc/tags_panel.html' %}
                     {% plugin_left_page object %}
