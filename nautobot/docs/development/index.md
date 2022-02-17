@@ -88,7 +88,7 @@ Here is what you need to know about Nautobot releases:
 
 Specifics around patch releases:
 
-- Will be released every two weeks, starting Monday, starting March 7th, 2022.
+- Will be released every two weeks on Mondays, starting March 7th, 2022.
 - Will be focused bugs, security vulnerabilities, backports, and other issues as they arise.
 - Will not introduce new functionality that isn't addressing a bug.
 - Will not release a patch release if there has been no new merges to `develop` since the previous release.
