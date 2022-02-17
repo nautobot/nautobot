@@ -53,7 +53,7 @@ class RelationshipModel(models.Model):
         related_query_name="destination_%(app_label)s_%(class)s",  # e.g. 'destination_dcim_rack'
     )
 
-    def get_relationships(self, include_hidden=False):
+    def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
         Return a dictionary of queryset for all custom relationships
 
@@ -74,6 +74,9 @@ class RelationshipModel(models.Model):
             }
         """
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
+        if advanced_ui is not None and advanced_ui in [True, False]:
+            src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
+            dst_relationships = dst_relationships.filter(advanced_ui=advanced_ui)
         content_type = ContentType.objects.get_for_model(self)
 
         sides = {
@@ -122,7 +125,7 @@ class RelationshipModel(models.Model):
 
         return resp
 
-    def get_relationships_data(self):
+    def get_relationships_data(self, advanced_ui=None):
         """
         Return a dictionary of relationships with the label and the value or the queryset for each.
 
@@ -153,7 +156,7 @@ class RelationshipModel(models.Model):
             }
         """
 
-        relationships_by_side = self.get_relationships()
+        relationships_by_side = self.get_relationships(advanced_ui=advanced_ui)
 
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
@@ -190,6 +193,12 @@ class RelationshipModel(models.Model):
                     resp[side][relationship]["url"] = peer.get_absolute_url()
 
         return resp
+
+    def get_relationships_data_basic_fields(self):
+        return self.get_relationships_data(advanced_ui=False)
+
+    def get_relationships_data_advanced_fields(self):
+        return self.get_relationships_data(advanced_ui=True)
 
 
 class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
@@ -275,7 +284,11 @@ class Relationship(BaseModel, ChangeLoggedModel):
         null=True,
         help_text="Queryset filter matching the applicable destination objects of the selected type",
     )
-    advanced_ui = models.BooleanField(default=False)
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Hide from main detail tab",
+        help_text="Hide this relationship from the main detail tab. It will appear in the advanced tab instead.",
+    )
 
     objects = RelationshipManager()
 

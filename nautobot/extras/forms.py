@@ -1026,6 +1026,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "destination_label",
             "destination_hidden",
             "destination_filter",
+            "advanced_ui",
         ]
 
     def save(self, commit=True):
