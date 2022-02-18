@@ -290,6 +290,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
             "template",
             "fallback_value",
             "weight",
+            "advanced_ui",
         )
 
 

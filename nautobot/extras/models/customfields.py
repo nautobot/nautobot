@@ -68,7 +68,11 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
-    advanced_ui = models.BooleanField(default=False)
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Hide from main detail tab",
+        help_text="Hide this computed field from the main detail tab. It will appear in the advanced tab instead.",
+    )
 
     objects = ComputedFieldManager()
 
@@ -168,11 +172,24 @@ class CustomFieldModel(models.Model):
                 raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
     # Computed Field Methods
-    def has_computed_fields(self):
+    def _has_computed_fields(self, advanced_ui=None):
         """
         Return a boolean indicating whether or not this content type has computed fields associated with it.
+        This can also check whether the advanced_ui attribute is True or False for UI display purposes.
         """
-        return ComputedField.objects.get_for_model(self).exists()
+        computed_fields_qs = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None and advanced_ui in [True, False]:
+            computed_fields_qs = computed_fields_qs.filter(advanced_ui=advanced_ui)
+        return computed_fields_qs.exists()
+
+    def has_computed_fields(self):
+        return self._has_computed_fields()
+
+    def has_computed_fields_basic(self):
+        return self._has_computed_fields(advanced_ui=False)
+
+    def has_computed_fields_advanced(self):
+        return self._has_computed_fields(advanced_ui=True)
 
     def get_computed_field(self, slug, render=True):
         """
@@ -188,13 +205,15 @@ class CustomFieldModel(models.Model):
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
-    def get_computed_fields(self, label_as_key=False):
+    def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """
         Return a dictionary of all computed fields and their rendered values for this model.
         Keys are the `slug` value of each field. If label_as_key is True, `label` values of each field are used as keys.
         """
         computed_fields_dict = {}
         computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None and advanced_ui in [True, False]:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
         if not computed_fields:
             return {}
         for cf in computed_fields:

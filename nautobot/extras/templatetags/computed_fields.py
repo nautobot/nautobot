@@ -18,12 +18,12 @@ def has_computed_fields(context, obj):
     return ComputedField.objects.filter(content_type=content_type).exists()
 
 
-@register.simple_tag(takes_context=True)
-def computed_fields(context, obj):
+def _computed_fields(obj, advanced_ui=None):
     """
     Render all applicable links for the given object.
+    This can also check whether the advanced_ui attribute is True or False for UI display purposes.
     """
-    computed_fields = obj.get_computed_fields(label_as_key=True)
+    computed_fields = obj.get_computed_fields(label_as_key=True, advanced_ui=advanced_ui)
     if not computed_fields:
         return ""
 
@@ -32,9 +32,24 @@ def computed_fields(context, obj):
     for label, value in computed_fields.items():
         escaped_label = escape(label)
         template_code += f"""
-            <tr>
-                <td><span title="{escaped_label}">{escaped_label}</span></td>
-                <td>{escape(value)}</td>
-            <tr>
-            """
+                <tr>
+                    <td><span title="{escaped_label}">{escaped_label}</span></td>
+                    <td>{escape(value)}</td>
+                <tr>
+                """
     return mark_safe(template_code)
+
+
+@register.simple_tag(takes_context=True)
+def computed_fields(context, obj):
+    return _computed_fields(obj)
+
+
+@register.simple_tag(takes_context=True)
+def computed_fields_basic(context, obj):
+    return _computed_fields(obj, advanced_ui=False)
+
+
+@register.simple_tag(takes_context=True)
+def computed_fields_advanced(context, obj):
+    return _computed_fields(obj, advanced_ui=True)
