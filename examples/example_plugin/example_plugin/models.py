@@ -3,7 +3,7 @@ from django.urls import reverse
 
 from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
-from nautobot.extras.models import CustomFieldModel, ObjectChange
+from nautobot.extras.models import CustomFieldModel
 
 
 @extras_features(
