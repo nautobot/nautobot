@@ -38,7 +38,7 @@ class ExampleModel(BaseModel):
             action=action,
             object_data=serialize_object(self),
             object_datav2=object_datav2,
-         )
+        )
 
     def to_csv(self):
         return (
