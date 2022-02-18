@@ -8,7 +8,6 @@ from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
     CustomFieldModel,
-    ObjectChange,
     StatusModel,
     TaggedItem,
 )
@@ -20,7 +19,6 @@ from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import serialize_object
 
 
 __all__ = (
@@ -461,13 +459,10 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
 
     def to_objectchange(self, action):
         # Annotate the parent VirtualMachine
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            related_object=self.virtual_machine,
-            object_data=serialize_object(self),
-        )
+        obj = super().to_objectchange(action)
+        obj.related_object = self.virtual_machine
+
+        return obj
 
     @property
     def parent(self):

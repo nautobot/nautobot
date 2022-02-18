@@ -2,7 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.extras.models import Webhook
+from nautobot.extras.models import Webhook, ObjectChange
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 from .choices import ObjectChangeActionChoices
@@ -10,17 +10,23 @@ from ..utilities.utils import shallow_compare_dict
 
 
 def get_snapshots(instance, action):
-    serializer_class = get_serializer_for_model(instance.__class__)
+    prechange = None
 
-    prechange = (
-        getattr(instance, "_prechange_snapshot", None) if action != ObjectChangeActionChoices.ACTION_CREATE else None
-    )
+    if action != ObjectChangeActionChoices.ACTION_CREATE:
+        changed_object_type = ContentType.objects.get_for_model(instance)
+        object_datav2 = ObjectChange.objects.filter(
+            changed_object_type=changed_object_type, changed_object_id=instance.id
+        )[:2]
+        prechange = object_datav2[1].object_datav2
+
+    serializer_class = get_serializer_for_model(instance.__class__)
 
     postchange = (
         serializer_class(instance, context={"request": None}).data
         if action != ObjectChangeActionChoices.ACTION_DELETE
         else None
     )
+
     if prechange and postchange:
         diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
         diff_removed = {x: prechange.get(x) for x in diff_added}

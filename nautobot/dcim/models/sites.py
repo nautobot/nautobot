@@ -6,7 +6,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
 
 from nautobot.dcim.fields import ASNField
-from nautobot.extras.models import ObjectChange, StatusModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -75,13 +75,11 @@ class Region(MPTTModel, OrganizationalModel):
         return Site.objects.filter(Q(region=self) | Q(region__in=self.get_descendants())).count()
 
     def to_objectchange(self, action):
+        obj = super().to_objectchange(action)
         # Remove MPTT-internal fields
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self, exclude=["level", "lft", "rght", "tree_id"]),
-        )
+        obj.object_data = serialize_object(self, exclude=["level", "lft", "rght", "tree_id"])
+
+        return obj
 
 
 #

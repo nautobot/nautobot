@@ -26,18 +26,6 @@ class ChangeLoggedModel(models.Model):
     created = models.DateField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.snapshot()  # Take a snapshot
-
-    def snapshot(self):
-        """
-        Save a snapshot of the object's current state in preparation for modification.
-        """
-        serializer_class = get_serializer_for_model(self.__class__)
-        self._prechange_snapshot = serializer_class(self, context={"request": None}).data
-
     class Meta:
         abstract = True
 
@@ -46,11 +34,15 @@ class ChangeLoggedModel(models.Model):
         Return a new ObjectChange representing a change made to this object. This will typically be called automatically
         by ChangeLoggingMiddleware.
         """
+        serializer_class = get_serializer_for_model(self.__class__)
+        object_datav2 = serializer_class(self, context={"request": None}).data
+
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
             object_data=serialize_object(self),
+            object_datav2=object_datav2,
         )
 
 
@@ -87,6 +79,7 @@ class ObjectChange(BaseModel):
     related_object = GenericForeignKey(ct_field="related_object_type", fk_field="related_object_id")
     object_repr = models.CharField(max_length=200, editable=False)
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
+    object_datav2 = models.JSONField(encoder=DjangoJSONEncoder, editable=False, null=True, blank=True)
 
     csv_headers = [
         "time",

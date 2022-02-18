@@ -1,6 +1,7 @@
 import json
 import uuid
 from copy import deepcopy
+from unittest import mock
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -11,6 +12,7 @@ from requests import Session
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.context_managers import change_logging
 from nautobot.extras.models import Webhook
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
@@ -82,26 +84,34 @@ class WebhookTest(APITestCase):
 
             return FakeResponse()
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
+            self.client.force_login(self.user)
 
-            site.name = "Site Update"
-            site.save()
+            request = mock.MagicMock()
+            request.user = self.user
+            request.id = request_id
 
-            serializer = SiteSerializer(site, context={"request": None})
-            snapshot = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1")
+                site.save()
 
-            process_webhook(
-                webhook.pk,
-                serializer.data,
-                snapshot,
-                Site._meta.model_name,
-                ObjectChangeActionChoices.ACTION_CREATE,
-                timestamp,
-                self.user.username,
-                request_id,
-            )
+                site.name = "Site Update"
+                site.save()
+
+                serializer = SiteSerializer(site, context={"request": None})
+                snapshot = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    snapshot,
+                    Site._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                )
 
     def test_webhooks_snapshot_on_create(self):
         request_id = uuid.uuid4()
@@ -125,22 +135,28 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-            site = Site(name="Site 1", slug="site-1")
-            site.save()
 
-            serializer = SiteSerializer(site, context={"request": None})
-            snapshot = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
+            request = mock.MagicMock()
+            request.user = self.user
+            request.id = request_id
 
-            process_webhook(
-                webhook.pk,
-                serializer.data,
-                snapshot,
-                Site._meta.model_name,
-                ObjectChangeActionChoices.ACTION_CREATE,
-                timestamp,
-                self.user.username,
-                request_id,
-            )
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1")
+                site.save()
+
+                serializer = SiteSerializer(site, context={"request": None})
+                snapshot = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    snapshot,
+                    Site._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                )
 
     def test_webhooks_snapshot_on_delete(self):
         request_id = uuid.uuid4()
@@ -162,23 +178,30 @@ class WebhookTest(APITestCase):
 
             return FakeResponse()
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-            # deepcopy instance state to be used by SiteSerializer and get_snapshots
-            temp_site = deepcopy(site)
-            site.delete()
+            request = mock.MagicMock()
+            request.user = self.user
+            request.id = request_id
 
-            serializer = SiteSerializer(temp_site, context={"request": None})
-            snapshot = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1")
+                site.save()
 
-            process_webhook(
-                webhook.pk,
-                serializer.data,
-                snapshot,
-                Site._meta.model_name,
-                ObjectChangeActionChoices.ACTION_CREATE,
-                timestamp,
-                self.user.username,
-                request_id,
-            )
+                # deepcopy instance state to be used by SiteSerializer and get_snapshots
+                temp_site = deepcopy(site)
+                site.delete()
+
+                serializer = SiteSerializer(temp_site, context={"request": None})
+                snapshot = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    snapshot,
+                    Site._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                )

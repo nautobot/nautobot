@@ -4,11 +4,10 @@ from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import ObjectChange, RelationshipModel, StatusModel
+from nautobot.extras.models import RelationshipModel, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import serialize_object
 from .choices import CircuitTerminationSideChoices
 
 
@@ -328,6 +327,7 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
             raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
 
     def to_objectchange(self, action):
+        obj = super().to_objectchange(action)
         # Annotate the parent Circuit
         try:
             related_object = self.circuit
@@ -335,13 +335,9 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
             # Parent circuit has been deleted
             related_object = None
 
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            related_object=related_object,
-            object_data=serialize_object(self),
-        )
+        obj.related_object = related_object
+
+        return obj
 
     @property
     def parent(self):

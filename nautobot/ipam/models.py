@@ -10,11 +10,11 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import ObjectChange, Status, StatusModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
+from nautobot.utilities.utils import array_to_string, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import IPAddressRoleChoices, ServiceProtocolChoices
@@ -907,14 +907,11 @@ class IPAddress(PrimaryModel, StatusModel):
         self.dns_name = self.dns_name.lower()
 
     def to_objectchange(self, action):
+        obj = super().to_objectchange(action)
         # Annotate the assigned object, if any
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            related_object=self.assigned_object,
-            object_data=serialize_object(self),
-        )
+        obj.related_object = self.assigned_object
+
+        return obj
 
     def to_csv(self):
 
