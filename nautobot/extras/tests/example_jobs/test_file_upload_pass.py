@@ -3,8 +3,8 @@ from nautobot.extras.jobs import Job, FileVar
 
 class TestFileUploadPass(Job):
     class Meta:
-        name = "File Upload"
-        description = "Upload a file`"
+        name = "File Upload Success"
+        description = "Upload a file successfully"
 
     file = FileVar(
         description="File to upload",

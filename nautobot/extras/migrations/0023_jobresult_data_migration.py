@@ -10,7 +10,7 @@ def migrate_jobresults(apps, schema_editor):
     JobResult = apps.get_model("extras", "JobResult")
     Job = apps.get_model("extras", "Job")
     ContentType = apps.get_model("contenttypes", "ContentType")
-    job_ct = ContentType.objects.get_by_natural_key("extras", "job")
+    job_ct = ContentType.objects.get_for_model(Job)
 
     for job_jobresult in JobResult.objects.filter(obj_type=job_ct):
         job_classpath = job_jobresult.name

@@ -1021,8 +1021,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    soft_time_limit = self.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-    time_limit = self.time_limit or settings.CELERY_TASK_TIME_LIMIT
+    soft_time_limit = job.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+    time_limit = job.time_limit or settings.CELERY_TASK_TIME_LIMIT
     if time_limit <= soft_time_limit:
         job_result.log(
             f"The hard time limit of {time_limit} seconds is less than "

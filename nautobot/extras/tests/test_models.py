@@ -20,7 +20,7 @@ from nautobot.dcim.models import (
     Region,
 )
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
-from nautobot.extras.jobs import get_job, Job
+from nautobot.extras.jobs import get_job, Job as JobClass
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -29,6 +29,7 @@ from nautobot.extras.models import (
     FileAttachment,
     FileProxy,
     GitRepository,
+    Job as JobModel,
     JobLogEntry,
     JobResult,
     Secret,
@@ -666,6 +667,36 @@ class GitRepositoryTest(TransactionTestCase):
                 self.assertTrue(os.path.isdir(new_path))
 
 
+class JobModelTest(TestCase):
+    """
+    Tests for the `Job` model class.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        # JobModel instances are automatically instantiated at startup, so we just need to look them up.
+        cls.local_job = JobModel.objects.get(job_class_name="TestPass")
+        cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
+
+    def test_job_class(self):
+        self.assertEqual(self.local_job.job_class.description, "Validate job import")
+
+        from example_plugin.jobs import ExampleJob
+        self.assertEqual(self.plugin_job.job_class, ExampleJob)
+
+    def test_class_path(self):
+        self.assertEqual(self.local_job.class_path, "local/test_pass/TestPass")
+        self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
+
+        self.assertEqual(self.plugin_job.class_path, "plugins/example_plugin.jobs/ExampleJob")
+        self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
+
+    def test_latest_result(self):
+        self.assertEqual(self.local_job.latest_result, None)
+        self.assertEqual(self.plugin_job.latest_result, None)
+        # TODO: create some JobResults and test that this works correctly for them as well.
+
+
 class JobResultTest(TestCase):
     """
     Tests for the `JobResult` model class.
@@ -674,24 +705,23 @@ class JobResultTest(TestCase):
     def test_related_object(self):
         """Test that the `related_object` property is computed properly."""
         # Case 1: Job, identified by class_path.
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
-            job_class = get_job("local/test_pass/TestPass")
-            job_result = JobResult(
-                name=job_class.class_path,
-                obj_type=ContentType.objects.get(app_label="extras", model="job"),
-                job_id=uuid.uuid4(),
-            )
+        job_class = get_job("local/test_pass/TestPass")
+        job_result = JobResult(
+            name=job_class.class_path,
+            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            job_id=uuid.uuid4(),
+        )
 
-            # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
-            self.assertEqual(type(job_result.related_object), type)
-            self.assertTrue(issubclass(job_result.related_object, Job))
-            self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
+        # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
+        self.assertEqual(type(job_result.related_object), type)
+        self.assertTrue(issubclass(job_result.related_object, JobClass))
+        self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
 
-            job_result.name = "local/no_such_job/NoSuchJob"
-            self.assertIsNone(job_result.related_object)
+        job_result.name = "local/no_such_job/NoSuchJob"
+        self.assertIsNone(job_result.related_object)
 
-            job_result.name = "not-a-class-path"
-            self.assertIsNone(job_result.related_object)
+        job_result.name = "not-a-class-path"
+        self.assertIsNone(job_result.related_object)
 
         # Case 2: GitRepository, identified by name.
         repo = GitRepository(
@@ -1053,29 +1083,27 @@ class JobLogEntryTest(TestCase):
     """
 
     def test_log_entry_creation(self):
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+        module = "test_pass"
+        name = "TestPass"
+        job_class = get_job(f"local/{module}/{name}")
 
-            module = "test_pass"
-            name = "TestPass"
-            job_class = get_job(f"local/{module}/{name}")
+        job_result = JobResult.objects.create(
+            name=job_class.class_path,
+            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            user=None,
+            job_id=uuid.uuid4(),
+        )
 
-            job_result = JobResult.objects.create(
-                name=job_class.class_path,
-                obj_type=ContentType.objects.get(app_label="extras", model="job"),
-                user=None,
-                job_id=uuid.uuid4(),
-            )
+        log = JobLogEntry(
+            log_level=LogLevelChoices.LOG_SUCCESS,
+            job_result=job_result,
+            grouping="run",
+            message="This is a test",
+        )
+        log.save()
 
-            log = JobLogEntry(
-                log_level=LogLevelChoices.LOG_SUCCESS,
-                job_result=job_result,
-                grouping="run",
-                message="This is a test",
-            )
-            log.save()
-
-            self.assertEqual(JobLogEntry.objects.all().count(), 1)
-            log_object = JobLogEntry.objects.first()
-            self.assertEqual(log_object.message, log.message)
-            self.assertEqual(log_object.log_level, log.log_level)
-            self.assertEqual(log_object.grouping, log.grouping)
+        self.assertEqual(JobLogEntry.objects.all().count(), 1)
+        log_object = JobLogEntry.objects.first()
+        self.assertEqual(log_object.message, log.message)
+        self.assertEqual(log_object.log_level, log.log_level)
+        self.assertEqual(log_object.grouping, log.grouping)
