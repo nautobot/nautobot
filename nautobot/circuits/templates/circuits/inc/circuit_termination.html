@@ -128,7 +128,7 @@
                 <td>Description</td>
                 <td>{{ termination.description|placeholder }}</td>
             </tr>
-            {% include 'inc/relationships/table_rows.html' with object=termination %}
+            {% include 'inc/relationships/table_rows.html' with relationships_data=termination.get_relationships_data %}
         </table>
     {% else %}
         <div class="panel-body">
