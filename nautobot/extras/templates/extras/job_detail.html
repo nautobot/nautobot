@@ -7,6 +7,15 @@
     <li>{{ object.grouping }}</li>
 {% endblock extra_breadcrumbs %}
 
+{% block extra_buttons %}
+    {% if perms.extras.run_job %}
+        <a href="{% url 'extras:job_run' slug=object.slug %}" class="btn btn-primary"
+           {% if not object.installed or not object.enabled %}disabled="disabled"{% endif %}>
+            <i class="mdi mdi-play" aria-hidden="true"></i> Run/Schedule
+        </a>
+    {% endif %}
+{% endblock extra_buttons %}
+
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -20,6 +29,10 @@
             <tr>
                 <td>Name</td>
                 <td>{{ object.name }}</td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description | render_markdown }}</td>
             </tr>
             <tr>
                 <td>Installed</td>

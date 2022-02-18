@@ -22,7 +22,7 @@ from nautobot.utilities.tables import (
 )
 from nautobot.utilities.templatetags.helpers import render_boolean, render_markdown
 from .choices import LogLevelChoices
-from .jobs import Job
+from .jobs import Job as JobClass
 from .models import (
     ComputedField,
     ConfigContext,
@@ -69,6 +69,10 @@ class="label label-{% if entry.content_identifier in record.provided_contents %}
 
 GITREPOSITORY_BUTTONS = """
 <button data-url="{% url 'extras:gitrepository_sync' slug=record.slug %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
+"""
+
+JOB_BUTTONS = """
+<a href="{% url 'extras:job_run' slug=record.slug %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.enabled or not record.installed %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -391,6 +395,8 @@ def log_entry_color_css(record):
 
 class JobTable(BaseTable):
     # TODO pk = ToggleColumn()
+    source = tables.Column(orderable=False)
+    # grouping is used to, well, group the Jobs, so it isn't a column of its own.
     name = tables.Column(linkify=True, orderable=False)
     installed = BooleanColumn(orderable=False)
     enabled = BooleanColumn(orderable=False)
@@ -401,7 +407,7 @@ class JobTable(BaseTable):
     approval_required = BooleanColumn(orderable=False)
     soft_time_limit = tables.Column(orderable=False)
     time_limit = tables.Column(orderable=False)
-    actions = ButtonsColumn(JobModel, pk_field="slug")
+    actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
     last_run = tables.TemplateColumn(
         accessor="latest_result",
         template_code="""
@@ -425,6 +431,7 @@ class JobTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = JobModel
         fields = (
+            "source",
             "name",
             "installed",
             "enabled",
@@ -435,9 +442,17 @@ class JobTable(BaseTable):
             "approval_required",
             "soft_time_limit",
             "time_limit",
-            "actions",
             "last_run",
             "last_status",
+            "actions",
+        )
+        default_columns = (
+            "name",
+            "enabled",
+            "description",
+            "last_run",
+            "last_status",
+            "actions",
         )
 
 
@@ -483,7 +498,7 @@ def job_creator_link(value, record):
     Get a link to the related object, if any, associated with the given JobResult record.
     """
     related_object = record.related_object
-    if inspect.isclass(related_object) and issubclass(related_object, Job):
+    if inspect.isclass(related_object) and issubclass(related_object, JobClass):
         return reverse("extras:job", kwargs={"class_path": related_object.class_path})
     elif related_object:
         return related_object.get_absolute_url()
