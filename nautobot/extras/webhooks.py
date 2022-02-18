@@ -6,6 +6,36 @@ from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 from .choices import ObjectChangeActionChoices
+from ..utilities.utils import shallow_compare_dict
+
+
+def get_snapshots(instance, action):
+    serializer_class = get_serializer_for_model(instance.__class__)
+
+    prechange = (
+        getattr(instance, "_prechange_snapshot", None)
+        if action != ObjectChangeActionChoices.ACTION_CREATE
+        else None
+    )
+
+    postchange = (
+        serializer_class(instance, context={"request": None}).data
+        if action != ObjectChangeActionChoices.ACTION_DELETE
+        else None
+    )
+    if prechange and postchange:
+        diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
+        diff_removed = {x: prechange.get(x) for x in diff_added}
+    elif prechange and not postchange:
+        diff_added, diff_removed = None, prechange
+    else:
+        diff_added, diff_removed = postchange, None
+
+    return {
+        "prechange": prechange,
+        "postchange": postchange,
+        "differences": {"removed": diff_removed, "added": diff_added},
+    }
 
 
 def enqueue_webhooks(instance, user, request_id, action):
@@ -35,7 +65,7 @@ def enqueue_webhooks(instance, user, request_id, action):
             "request": None,
         }
         serializer = serializer_class(instance, context=serializer_context)
-        snapshot = None
+        snapshot = get_snapshots(instance, action)
 
         # Enqueue the webhooks
         for webhook in webhooks:
