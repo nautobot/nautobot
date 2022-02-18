@@ -296,7 +296,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         default=False,
         verbose_name="Hide from main detail tab",
         help_text="Hide this field from the object's primary information tab. "
-                  "It will appear in the \"Advanced\" tab instead.",
+        'It will appear in the "Advanced" tab instead.',
     )
 
     objects = RelationshipManager()
