@@ -20,7 +20,6 @@ from nautobot.extras.choices import (
     SecretsGroupSecretTypeChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
-from nautobot.extras.jobs import Job
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -29,6 +28,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
+    Job,
     JobResult,
     ObjectChange,
     Relationship,
@@ -42,7 +42,6 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
-from nautobot.extras.views import JobView, ScheduledJobView
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import post_data
@@ -937,14 +936,38 @@ class JobResultTestCase(
 
 
 class JobTestCase(
-    TestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
 ):
     """
     The Job view test cases.
-
-    Since Job is not an actual model, we have to improvise and test the views
-    manually.
     """
+
+    model = Job
+
+    @classmethod
+    def setUpTestData(cls):
+        # Job model objects are automatically created during database migrations
+
+        cls.form_data = {
+            "slug": "custom-job-slug",
+            "enabled": True,
+            "commit_default_override": True,
+            "commit_default": False,
+            "hidden_override": True,
+            "hidden": True,
+            "read_only_override": True,
+            "read_only": False,
+            "approval_required_override": True,
+            "approval_required": True,
+            "soft_time_limit_override": True,
+            "soft_time_limit": 350,
+            "time_limit_override": True,
+            "time_limit": 650,
+        }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_without_permission(self):

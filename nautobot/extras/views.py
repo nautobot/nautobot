@@ -909,6 +909,10 @@ class JobEditView(generic.ObjectEditView):
     template_name = "extras/job_edit.html"
 
 
+class JobDeleteView(generic.ObjectDeleteView):
+    queryset = JobModel.objects.all()
+
+
 class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
     """
     This view handles requests to view and approve a Job execution request.
