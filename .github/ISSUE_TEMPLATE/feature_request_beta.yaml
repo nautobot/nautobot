@@ -72,7 +72,7 @@ body:
     id: database_changes
     attributes:
       label: Database Changes
-      description: >
+      description: |
         To support this new feature, does the necessary data already exist, or would new
         models need to be created or additional fields on existing models need to be added?
 
@@ -81,7 +81,7 @@ body:
     id: external_dependencies
     attributes:
       label: External Dependencies
-      description: >
+      description: |
         To support this new feature, would it require changing or introducing new dependencies
         on external libraries or services?
 
