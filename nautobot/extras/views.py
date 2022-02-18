@@ -490,8 +490,6 @@ class CustomLinkBulkDeleteView(generic.BulkDeleteView):
 
 
 class DynamicGroupListView(generic.ObjectListView):
-    """Dynamic Group List."""
-
     queryset = DynamicGroup.objects.all()
     table = tables.DynamicGroupTable
     filterset = filters.DynamicGroupFilterSet
@@ -500,8 +498,6 @@ class DynamicGroupListView(generic.ObjectListView):
 
 
 class DynamicGroupView(generic.ObjectView):
-    """Dynamic Group Detail."""
-
     queryset = DynamicGroup.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -518,16 +514,17 @@ class DynamicGroupView(generic.ObjectView):
 
 
 class DynamicGroupEditView(generic.ObjectEditView):
-    """Dynamic Group Edit."""
-
     queryset = DynamicGroup.objects.all()
     model_form = forms.DynamicGroupForm
 
 
 class DynamicGroupDeleteView(generic.ObjectDeleteView):
-    """Dynamic Group Delete."""
-
     queryset = DynamicGroup.objects.all()
+
+
+class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = DynamicGroup.objects.all()
+    table = tables.DynamicGroupTable
 
 
 #

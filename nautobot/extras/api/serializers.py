@@ -76,6 +76,7 @@ from .nested_serializers import (  # noqa: F401
     NestedConfigContextSerializer,
     NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
+    NestedDynamicGroupSerializer,
     NestedExportTemplateSerializer,
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
@@ -397,18 +398,22 @@ class CustomLinkSerializer(ValidatedModelSerializer):
 
 
 class DynamicGroupSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name="extras-api:dynamicgroup-detail",
-        lookup_field="slug",
-    )
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
     content_type = ContentTypeField(
-        # queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
-        queryset=ContentType.objects.order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
 
     class Meta:
         model = DynamicGroup
-        fields = "__all__"
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "description",
+            "content_type",
+            "filter",
+        ]
 
 
 #

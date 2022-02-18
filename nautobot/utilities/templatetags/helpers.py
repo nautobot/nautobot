@@ -14,7 +14,7 @@ from django_jinja import library
 
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.utils import foreground_color, UtilizationData
+from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
@@ -158,11 +158,7 @@ def viewname(model, action):
         >>> viewname(Device, "list")
         "dcim:device_list"
     """
-    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
-    if model._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
-
-    return viewname
+    return get_route_for_model(model, action)
 
 
 @library.filter()
@@ -178,7 +174,7 @@ def validated_viewname(model, action):
     Returns:
         str or None: return the name of the view for the model/action provided if valid, or None if invalid.
     """
-    viewname_str = viewname(model, action)
+    viewname_str = get_route_for_model(model, action)
 
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates

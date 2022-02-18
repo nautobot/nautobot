@@ -192,6 +192,11 @@ urlpatterns = [
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
     path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
+    path(
+        "dynamic-groups/delete/",
+        views.DynamicGroupBulkDeleteView.as_view(),
+        name="dynamicgroup_bulk_delete",
+    ),
     path("dynamic-groups/<str:slug>/", views.DynamicGroupView.as_view(), name="dynamicgroup"),
     path("dynamic-groups/<str:slug>/edit/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_edit"),
     path("dynamic-groups/<str:slug>/delete/", views.DynamicGroupDeleteView.as_view(), name="dynamicgroup_delete"),

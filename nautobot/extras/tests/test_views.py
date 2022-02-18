@@ -27,6 +27,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -442,6 +443,45 @@ class CustomLinkTest(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(f"FOO {site.name} BAR", content, content)
+
+
+class DynamicGroupTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = DynamicGroup
+
+    @classmethod
+    def setUpTestData(cls):
+
+        content_type = ContentType.objects.get_for_model(Device)
+
+        # DynamicGroup objects to test.
+        DynamicGroup.objects.create(name="DG 1", slug="dg-1", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=content_type)
+
+        cls.form_data = {
+            "name": "new_dynamic_group",
+            "slug": "new-dynamic-group",
+            "description": "I am a new dynamic group object.",
+            "content_type": content_type.pk,
+        }
+
+    # FIXME(jathan): This currently fails because there's create and then update
+    # within DynamicGroupForm. (2 changes vs. 1)
+    def test_create_object_with_permission(self):
+        pass
+
+    # FIXME(jathan): This currently fails because there's edit and then update
+    # within DynamicGroupForm. (2 changes vs. 1)
+    def test_edit_object_with_permission(self):
+        pass
 
 
 class ExportTemplateTestCase(

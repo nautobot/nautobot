@@ -10,6 +10,7 @@ __all__ = [
     "NestedConfigContextSchemaSerializer",
     "NestedCustomFieldSerializer",
     "NestedCustomLinkSerializer",
+    "NestedDynamicGroupSerializer",
     "NestedExportTemplateSerializer",
     "NestedGitRepositorySerializer",
     "NestedGraphQLQuerySerializer",

@@ -48,6 +48,28 @@ def csv_format(data):
     return ",".join(csv)
 
 
+def get_route_for_model(model, action):
+    """
+    Return the URL route name for the given model and action. Does not perform any validation.
+    Supports both core and plugin routes.
+
+    Args:
+        model (models.Model): Class or Instance of a Django Model
+        action (str): name of the action in the route
+
+    Returns:
+        str: return the name of the view for the model/action provided.
+    Examples:
+        >>> viewname(Device, "list")
+        "dcim:device_list"
+    """
+    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+    if model._meta.app_label in settings.PLUGINS:
+        viewname = f"plugins:{viewname}"
+
+    return viewname
+
+
 def hex_to_rgb(hex):
     """
     Map a hex string like "00ff00" to individual r, g, b integer values.
