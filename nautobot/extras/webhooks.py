@@ -13,9 +13,7 @@ def get_snapshots(instance, action):
     serializer_class = get_serializer_for_model(instance.__class__)
 
     prechange = (
-        getattr(instance, "_prechange_snapshot", None)
-        if action != ObjectChangeActionChoices.ACTION_CREATE
-        else None
+        getattr(instance, "_prechange_snapshot", None) if action != ObjectChangeActionChoices.ACTION_CREATE else None
     )
 
     postchange = (
