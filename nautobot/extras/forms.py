@@ -1,11 +1,11 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory
 from django.urls.base import reverse
-from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
@@ -662,7 +662,6 @@ class DynamicGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFo
         ]
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
         self._append_filters()
 

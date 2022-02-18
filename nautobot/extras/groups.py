@@ -8,7 +8,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.utilities.utils import get_filterform_for_model, get_filterset_for_model
+from nautobot.utilities.utils import get_filterform_for_model, get_filterset_for_model, get_route_for_model
 
 
 logger = logging.getLogger(__name__)
@@ -67,8 +67,8 @@ class BaseDynamicGroupMap:
     def base_url(cls):
         if cls.model is None:
             return
-        # FIXME(jathan): Call the helper method that automatically determines plugin or not
-        return reverse(f"{cls.model._meta.app_label}:{cls.model._meta.model_name}_list")
+        route_name = get_route_for_model(cls.model, "list")
+        return reverse(route_name)
 
     @classmethod
     def fields(cls):

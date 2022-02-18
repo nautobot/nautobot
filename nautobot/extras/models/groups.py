@@ -4,6 +4,7 @@ import logging
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
@@ -78,6 +79,8 @@ class DynamicGroup(OrganizationalModel):
     )
 
     objects = DynamicGroupQuerySet.as_manager()
+
+    clone_fields = ["content_type", "filter"]
 
     class Meta:
         ordering = ["content_type", "name"]
@@ -196,11 +199,20 @@ class DynamicGroup(OrganizationalModel):
 
             else:
                 filter[field_name] = form.cleaned_data[field_name]
-                print(f"{field_name}: {form.cleaned_data[field_name]}")
                 logger.debug("%s: %s", field_name, form.cleaned_data[field_name])
 
         self.filter = filter
         self.save()
+
+    def clean(self):
+        super().clean()
+
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.objects.get(pk=self.pk)
+
+            if self.content_type != database_object.content_type:
+                raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
     # def clean(self):
     #     """Group Model clean method."""

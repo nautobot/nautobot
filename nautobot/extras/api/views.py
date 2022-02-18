@@ -213,19 +213,21 @@ class DynamicGroupViewSet(ModelViewSet):
     queryset = DynamicGroup.objects.prefetch_related("content_type")
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
-    lookup_field = "slug"
 
-    # TODO(jathan): Figure out how to do `request_body` serializer based on the
+    # FIXME(jathan): Figure out how to do `request_body` serializer based on the
     # content_type of the DynamicGroup? Likely a `DynamicGroupMemberSerializer`
     # that emits the appropriate serializer? This seems messy.
     # @swagger_auto_schema(method="get", request_body=serializers.GitRepositorySerializer)
     @action(detail=True, methods=["get"])
-    def members(self, request, slug):
-        instance = get_object_or_404(DynamicGroup, slug=slug)
-        model_class = instance.content_type.model_class()
-        serializer_class = get_serializer_for_model(model_class)
-        serializer = serializer_class(instance.members, many=True, context={"request": request})
-        return Response(serializer.data)
+    def members(self, request, pk, *args, **kwargs):
+        instance = get_object_or_404(DynamicGroup, pk=pk)
+
+        # Retrieve the serializer for the content_type and paginate the results
+        member_model_class = instance.content_type.model_class()
+        member_serializer_class = get_serializer_for_model(member_model_class)
+        members = self.paginate_queryset(instance.members)
+        member_serializer = member_serializer_class(members, many=True, context={"request": request})
+        return self.get_paginated_response(member_serializer.data)
 
 
 #

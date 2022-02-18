@@ -4,8 +4,8 @@ from collections import OrderedDict
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import ValidationError
 from django.db import models
 from django.db.models import Q
 

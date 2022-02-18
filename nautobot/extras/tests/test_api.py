@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -500,6 +501,66 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
             weight=100,
             new_window=False,
         )
+
+
+class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
+    model = DynamicGroup
+    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "API DynamicGroup 4",
+            "slug": "api-dynamicgroup-4",
+            "content_type": "dcim.site",
+        },
+        {
+            "name": "API DynamicGroup 5",
+            "slug": "api-dynamicgroup-5",
+            "content_type": "dcim.site",
+        },
+        {
+            "name": "API DynamicGroup 6",
+            "slug": "api-dynamicgroup-6",
+            "content_type": "dcim.site",
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create the Sites first.
+        status_active = Status.objects.get(slug="active")
+        status_planned = Status.objects.get(slug="planned")
+        Site.objects.create(name="Site 1", slug="site-1", status=status_active)
+        Site.objects.create(name="Site 2", slug="site-2", status=status_planned)
+
+        # Then the DynamicGroups.
+        content_type = ContentType.objects.get_for_model(Site)
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 1",
+            slug="api-dynamicgroup-1",
+            content_type=content_type,
+            filter={"status": ["active"]},
+        )
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 2",
+            slug="api-dynamicgroup-2",
+            content_type=content_type,
+            filter={"status": ["planned"]},
+        )
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 3",
+            slug="api-dynamicgroup-3",
+            content_type=content_type,
+        )
+
+    def test_get_members(self):
+        """Test that the `/members/` API endpoint returns what is expected."""
+        self.add_permissions("extras.view_dynamicgroup")
+        instance = DynamicGroup.objects.first()
+        member_count = instance.members.count()
+        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(member_count, len(response.json()["results"]))
 
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
