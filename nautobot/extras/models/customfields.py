@@ -71,7 +71,8 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     advanced_ui = models.BooleanField(
         default=False,
         verbose_name="Hide from main detail tab",
-        help_text="Hide this computed field from the main detail tab. It will appear in the advanced tab instead.",
+        help_text="Hide this field from the object's primary information tab. "
+                  "It will appear in the \"Advanced\" tab instead.",
     )
 
     objects = ComputedFieldManager()
@@ -301,7 +302,8 @@ class CustomField(BaseModel, ChangeLoggedModel):
     advanced_ui = models.BooleanField(
         default=False,
         verbose_name="Hide from main detail tab",
-        help_text='Hide this field from the object's primary information tab. It will appear in the "Advanced" tab instead.',
+        help_text="Hide this field from the object's primary information tab. "
+                  "It will appear in the \"Advanced\" tab instead.",
     )
 
     objects = CustomFieldManager()

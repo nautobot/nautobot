@@ -32,24 +32,34 @@ def _computed_fields(obj, advanced_ui=None):
     for label, value in computed_fields.items():
         escaped_label = escape(label)
         template_code += f"""
-                <tr>
-                    <td><span title="{escaped_label}">{escaped_label}</span></td>
-                    <td>{escape(value)}</td>
-                <tr>
-                """
+            <tr>
+                <td><span title="{escaped_label}">{escaped_label}</span></td>
+                <td>{escape(value)}</td>
+            <tr>
+            """
     return mark_safe(template_code)
 
 
 @register.simple_tag(takes_context=True)
 def computed_fields(context, obj):
+    """
+    Render all applicable links for the given object.
+    This will ignore any advanced_ui setting.
+    """
     return _computed_fields(obj)
 
 
 @register.simple_tag(takes_context=True)
 def computed_fields_basic(context, obj):
+    """
+    Render all applicable links for the given object which will display in the object's primary information tab.
+    """
     return _computed_fields(obj, advanced_ui=False)
 
 
 @register.simple_tag(takes_context=True)
 def computed_fields_advanced(context, obj):
+    """
+    Render all applicable links for the given object which will display in the object's "Advanced" tab.
+    """
     return _computed_fields(obj, advanced_ui=True)
