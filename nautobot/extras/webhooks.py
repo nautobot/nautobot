@@ -35,12 +35,14 @@ def enqueue_webhooks(instance, user, request_id, action):
             "request": None,
         }
         serializer = serializer_class(instance, context=serializer_context)
+        snapshot = None
 
         # Enqueue the webhooks
         for webhook in webhooks:
             args = [
                 webhook.pk,
                 serializer.data,
+                snapshot,
                 instance._meta.model_name,
                 action,
                 str(timezone.now()),

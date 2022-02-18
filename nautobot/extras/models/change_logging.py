@@ -5,6 +5,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
+from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import serialize_object
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices
@@ -24,6 +25,18 @@ class ChangeLoggedModel(models.Model):
 
     created = models.DateField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.snapshot()  # Take a snapshot
+
+    def snapshot(self):
+        """
+        Save a snapshot of the object's current state in preparation for modification.
+        """
+        serializer_class = get_serializer_for_model(self.__class__)
+        self._prechange_snapshot = serializer_class(self, context={"request": None}).data
 
     class Meta:
         abstract = True
