@@ -8,6 +8,7 @@ from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
     CustomFieldModel,
+    ObjectChange,
     StatusModel,
     TaggedItem,
 )
@@ -15,6 +16,7 @@ from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
@@ -33,6 +35,7 @@ __all__ = (
 #
 # Cluster types
 #
+from nautobot.utilities.utils import serialize_object
 
 
 @extras_features(
@@ -458,11 +461,18 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             )
 
     def to_objectchange(self, action):
-        # Annotate the parent VirtualMachine
-        obj = super().to_objectchange(action)
-        obj.related_object = self.virtual_machine
+        serializer_class = get_serializer_for_model(self.__class__)
+        object_datav2 = serializer_class(self, context={"request": None}).data
 
-        return obj
+        # Annotate the parent VirtualMachine
+        return ObjectChange(
+            changed_object=self,
+            object_repr=str(self),
+            action=action,
+            object_data=serialize_object(self),
+            object_datav2=object_datav2,
+            related_object=self.virtual_machine,
+        )
 
     @property
     def parent(self):

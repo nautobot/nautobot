@@ -14,7 +14,7 @@ from nautobot.dcim.choices import (
 
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
 
-from nautobot.extras.models import CustomFieldModel, RelationshipModel
+from nautobot.extras.models import CustomFieldModel, RelationshipModel, ObjectChange
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import NaturalOrderingField
@@ -41,6 +41,9 @@ __all__ = (
     "RearPortTemplate",
 )
 
+from ...utilities.api import get_serializer_for_model
+from ...utilities.utils import serialize_object
+
 
 class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
     device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.CASCADE, related_name="%(class)ss")
@@ -64,7 +67,6 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         raise NotImplementedError()
 
     def to_objectchange(self, action):
-        obj = super().to_objectchange(action)
         # Annotate the parent DeviceType
         try:
             device_type = self.device_type
@@ -72,9 +74,17 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
             # The parent DeviceType has already been deleted
             device_type = None
 
-        obj.related_object = device_type
+        serializer_class = get_serializer_for_model(self.__class__)
+        object_datav2 = serializer_class(self, context={"request": None}).data
 
-        return obj
+        return ObjectChange(
+            changed_object=self,
+            object_repr=str(self),
+            action=action,
+            object_data=serialize_object(self),
+            object_datav2=object_datav2,
+            related_object=device_type,
+        )
 
     def instantiate_model(self, model, device, **kwargs):
         """

@@ -3,7 +3,9 @@ from django.urls import reverse
 
 from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
-from nautobot.extras.models import CustomFieldModel
+from nautobot.extras.models import CustomFieldModel, ObjectChange
+from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.utils import serialize_object
 
 
 @extras_features(
@@ -27,9 +29,16 @@ class ExampleModel(BaseModel):
         return reverse("plugins:example_plugin:examplemodel", kwargs={"pk": self.pk})
 
     def to_objectchange(self, action):
-        obj = super().to_objectchange(action)
+        serializer_class = get_serializer_for_model(self.__class__)
+        object_datav2 = serializer_class(self, context={"request": None}).data
 
-        return obj
+        return ObjectChange(
+            changed_object=self,
+            object_repr=str(self),
+            action=action,
+            object_data=serialize_object(self),
+            object_datav2=object_datav2,
+         )
 
     def to_csv(self):
         return (
