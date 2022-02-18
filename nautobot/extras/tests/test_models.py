@@ -19,6 +19,7 @@ from nautobot.dcim.models import (
     Site,
     Region,
 )
+from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.jobs import get_job, Job as JobClass
 from nautobot.extras.models import (
@@ -695,6 +696,15 @@ class JobModelTest(TestCase):
         self.assertEqual(self.local_job.latest_result, None)
         self.assertEqual(self.plugin_job.latest_result, None)
         # TODO: create some JobResults and test that this works correctly for them as well.
+
+    def test_defaults(self):
+        """Verify that defaults for discovered JobModel instances are as expected."""
+        for job_model in JobModel.objects.all():
+            self.assertTrue(job_model.installed)
+            self.assertFalse(job_model.enabled)
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                self.assertFalse(getattr(job_model, f"{field_name}_override"))
+                self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
 
 
 class JobResultTest(TestCase):

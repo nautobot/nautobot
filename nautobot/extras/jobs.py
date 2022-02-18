@@ -174,6 +174,11 @@ class BaseJob:
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
+    def grouping(cls):
+        module = inspect.getmodule(cls)
+        return getattr(module, "name", module.__name__)
+
+    @classproperty
     def name(cls):
         return getattr(cls.Meta, "name", cls.__name__)
 
@@ -836,15 +841,13 @@ def get_jobs():
         for job_info in jobs_in_directory(path):
             jobs.setdefault(source, {})
             if job_info.module_name not in jobs[source]:
-                grouping = job_info.module.name if hasattr(job_info.module, "name") else job_info.module_name
-                jobs[source][job_info.module_name] = {"name": grouping, "jobs": OrderedDict()}
+                jobs[source][job_info.module_name] = {"name": job_info.job_class.grouping, "jobs": OrderedDict()}
             jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
 
     # Add jobs from plugins (which were already imported at startup)
     for cls in registry["plugin_jobs"]:
         module = inspect.getmodule(cls)
-        human_readable_name = module.name if hasattr(module, "name") else module.__name__
-        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": human_readable_name, "jobs": OrderedDict()})
+        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
         jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
 
     return jobs
