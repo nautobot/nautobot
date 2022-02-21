@@ -189,7 +189,7 @@ class CustomFieldTestCase(SplinterTestCase):
         This test creates a device and a custom field for that device.
         It first leaves the custom field advanced_ui default of False to be show on the primary information
         tab in the UI and checks it is there.
-        It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it is there only.
+        It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it appears ONLY there!.
         """
         device = _create_test_device()
         custom_field = CustomField(

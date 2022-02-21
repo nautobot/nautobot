@@ -29,7 +29,7 @@ class RelationshipsTestCase(SplinterTestCase):
         This test creates a device and a relationship for that device.
         It first leaves the relationship advanced_ui default of False to be show on the primary information
         tab in the UI and checks it is there.
-        It secondly sets the relationship to be shown only in the "Advanced" tab in the UI and checks it is there only.
+        It secondly sets the relationship to be shown only in the "Advanced" tab in the UI and checks it appears ONLY there!.
         """
         device = _create_test_device()
         power_panel = PowerPanel.objects.create(
