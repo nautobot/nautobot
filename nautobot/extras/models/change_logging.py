@@ -6,7 +6,7 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import convert_set_to_list_in_obj, serialize_object
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.utils import extras_features
@@ -35,7 +35,8 @@ class ChangeLoggedModel(models.Model):
         by ChangeLoggingMiddleware.
         """
         serializer_class = get_serializer_for_model(self.__class__)
-        object_datav2 = serializer_class(self, context={"request": None}).data
+        serialized_data = serializer_class(self, context={"request": None}).data
+        object_datav2 = convert_set_to_list_in_obj(serialized_data)
 
         return ObjectChange(
             changed_object=self,

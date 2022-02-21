@@ -41,7 +41,7 @@ from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import UtilizationData, serialize_object
+from nautobot.utilities.utils import UtilizationData, convert_set_to_list_in_obj, serialize_object
 
 __all__ = (
     "BaseInterface",
@@ -88,7 +88,8 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
             device = None
 
         serializer_class = get_serializer_for_model(self.__class__)
-        object_datav2 = serializer_class(self, context={"request": None}).data
+        serialized_data = serializer_class(self, context={"request": None}).data
+        object_datav2 = convert_set_to_list_in_obj(serialized_data)
 
         return ObjectChange(
             changed_object=self,

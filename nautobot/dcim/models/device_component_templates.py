@@ -42,7 +42,7 @@ __all__ = (
 )
 
 from ...utilities.api import get_serializer_for_model
-from ...utilities.utils import serialize_object
+from ...utilities.utils import convert_set_to_list_in_obj, serialize_object
 
 
 class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
@@ -75,7 +75,8 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
             device_type = None
 
         serializer_class = get_serializer_for_model(self.__class__)
-        object_datav2 = serializer_class(self, context={"request": None}).data
+        serialized_data = serializer_class(self, context={"request": None}).data
+        object_datav2 = convert_set_to_list_in_obj(serialized_data)
 
         return ObjectChange(
             changed_object=self,

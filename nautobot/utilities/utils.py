@@ -17,6 +17,8 @@ from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 
+from rest_framework.utils.serializer_helpers import ReturnDict
+
 
 def csv_format(data):
     """
@@ -380,6 +382,21 @@ def copy_safe_request(request):
             "id": getattr(request, "id", None),  # UUID assigned by middleware
         }
     )
+
+
+def convert_set_to_list_in_obj(obj):
+    """
+    Convert all set found in obj to a list to make it JSON serializable
+    """
+
+    if type(obj) in [dict, OrderedDict, ReturnDict]:
+        type_class = type(obj) if type(obj) != ReturnDict else dict
+        return type_class((key, convert_set_to_list_in_obj(value)) for key, value in obj.items())
+
+    elif type(obj) in [list, set]:
+        return list(convert_set_to_list_in_obj(value) for value in obj)
+
+    return obj
 
 
 def get_filterset_for_model(model):
