@@ -1,9 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import CustomField, Status
+from nautobot.dcim.models import Device
+from nautobot.extras.models import CustomField
 from nautobot.utilities.testing.integration import SplinterTestCase
+
+from . import _create_test_device
 
 
 class CustomFieldTestCase(SplinterTestCase):
@@ -185,33 +187,15 @@ class CustomFieldTestCase(SplinterTestCase):
     def test_custom_field_advanced_ui(self):
         """
         This test creates a device and a custom field for that device.
-        It first sets the custom field to be show on the primary information tab in the UI and checks it is there.
+        It first leaves the custom field advanced_ui default of False to be show on the primary information
+        tab in the UI and checks it is there.
         It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it is there only.
         """
-        device_role = DeviceRole.objects.create(
-            name="Test Role",
-            slug="test-role",
-        )
-        manufacturer = Manufacturer.objects.create(
-            name="Test Manufacturer",
-            slug="test-manufacturer",
-        )
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Model", slug="test-model")
-        site = Site.objects.create(
-            name="Test Site", slug="test-site", status=Status.objects.get_for_model(Site).get(slug="active")
-        )
-        device = Device.objects.create(
-            name="Test Device",
-            device_role=device_role,
-            device_type=device_type,
-            site=site,
-            status=Status.objects.get_for_model(Device).get(slug="active"),
-        )
+        device = _create_test_device()
         custom_field = CustomField(
             type="text",
             label="Device Custom Field",
             name="test_custom_field",
-            advanced_ui=False,
             required=False,
         )
         custom_field.save()
