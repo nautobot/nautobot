@@ -1,3 +1,8 @@
+from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.extras.models import CustomField, Status
 from nautobot.utilities.testing.integration import SplinterTestCase
 
 
@@ -176,3 +181,62 @@ class CustomFieldTestCase(SplinterTestCase):
         self.assertEquals(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
+
+    def test_custom_field_advanced_ui(self):
+        """
+        This test creates a device and a custom field for that device.
+        It first sets the custom field to be show on the primary information tab in the UI and checks it is there.
+        It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it is there only.
+        """
+        device_role = DeviceRole.objects.create(
+            name="Test Role",
+            slug="test-role",
+        )
+        manufacturer = Manufacturer.objects.create(
+            name="Test Manufacturer",
+            slug="test-manufacturer",
+        )
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Model", slug="test-model")
+        site = Site.objects.create(
+            name="Test Site", slug="test-site", status=Status.objects.get_for_model(Site).get(slug="active")
+        )
+        device = Device.objects.create(
+            name="Test Device",
+            device_role=device_role,
+            device_type=device_type,
+            site=site,
+            status=Status.objects.get_for_model(Device).get(slug="active"),
+        )
+        custom_field = CustomField(
+            type="text",
+            label="Device Custom Field",
+            name="test_custom_field",
+            advanced_ui=False,
+            required=False,
+        )
+        custom_field.save()
+        device_content_type = ContentType.objects.get_for_model(Device)
+        custom_field.content_types.set([device_content_type])
+        device.cf[custom_field.name] = "This is some testing text"
+        device.validated_save()
+        # Visit the device detail page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        # Check the custom field appears in the primary information tab
+        self.assertTrue(self.browser.is_text_present("Device Custom Field"))
+        self.assertTrue(self.browser.is_text_present("This is some testing text"))
+        # Check the custom field does NOT appear in the advanced tab
+        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.assertFalse(self.browser.is_text_present("Device Custom Field"))
+        self.assertFalse(self.browser.is_text_present("This is some testing text"))
+        # Set the custom_field to only show in the advanced tab
+        custom_field.advanced_ui = True
+        custom_field.save()
+        # Visit the device detail page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        # Check the custom field does NOT appear in the primary information tab
+        self.assertFalse(self.browser.is_text_present("Device Custom Field"))
+        self.assertFalse(self.browser.is_text_present("This is some testing text"))
+        # Check the custom field appears in the advanced tab
+        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.assertTrue(self.browser.is_text_present("Device Custom Field"))
+        self.assertTrue(self.browser.is_text_present("This is some testing text"))
