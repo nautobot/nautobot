@@ -1,10 +1,8 @@
-import os.path
 import uuid
 
-from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
 from nautobot.extras.choices import (
@@ -51,7 +49,6 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.signals import refresh_job_models
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices

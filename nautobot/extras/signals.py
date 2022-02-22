@@ -213,7 +213,6 @@ def refresh_job_models(sender, *, apps, **kwargs):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
-    from nautobot.extras.choices import JobSourceChoices
     from nautobot.extras.jobs import get_jobs
 
     # TODO: eventually this should be inverted so that get_jobs() relies on the database models...

@@ -44,7 +44,7 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .jobs import get_job, get_jobs, run_job, Job
+from .jobs import get_job, run_job, Job
 from .models import (
     ComputedField,
     ConfigContext,

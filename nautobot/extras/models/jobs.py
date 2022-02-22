@@ -1,10 +1,8 @@
 # Data models relating to Jobs
 
 from datetime import timedelta
-import inspect
 import logging
 import os
-import pkgutil
 import uuid
 
 from celery import schedules

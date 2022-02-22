@@ -4,7 +4,6 @@ from collections import defaultdict, namedtuple
 import logging
 import mimetypes
 import os
-import pkgutil
 import re
 from urllib.parse import quote
 
@@ -963,7 +962,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             installed_jobs.append(job_model)
     else:
         job_result.log(
-            f"No `jobs` subdirectory found in Git repository",
+            "No `jobs` subdirectory found in Git repository",
             grouping="jobs",
             level_choice=LogLevelChoices.LOG_WARNING,
             logger=logger,

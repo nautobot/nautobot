@@ -1,12 +1,10 @@
 from datetime import datetime, timedelta
-import os.path
 import uuid
 from unittest import mock, skipIf
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
@@ -22,7 +20,6 @@ from nautobot.dcim.models import (
     RackRole,
     Site,
 )
-from nautobot.extras.api.views import JobViewSet
 from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
