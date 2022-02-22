@@ -44,7 +44,7 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .jobs import get_job, run_job, Job
+from .jobs import get_job, run_job, Job as JobClass
 from .models import (
     ComputedField,
     ConfigContext,
@@ -1127,7 +1127,7 @@ class JobResultView(generic.ObjectView):
         associated_record = None
         job = None
         related_object = instance.related_object
-        if inspect.isclass(related_object) and issubclass(related_object, Job):
+        if inspect.isclass(related_object) and issubclass(related_object, JobClass):
             job = related_object()
         elif related_object:
             associated_record = related_object
