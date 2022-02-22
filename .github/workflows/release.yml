@@ -76,8 +76,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value={{version}}-py${{ matrix.python-version }}
-            type=raw,value={{version}},enable=${{ matrix.python-version == 3.6 }}
+            type=semver,pattern={{version}}-py${{ matrix.python-version }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable-py${{ matrix.python-version }}
       - name: "Build"
@@ -100,8 +100,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value={{version}}-py${{ matrix.python-version }}
-            type=raw,value={{version}},enable=${{ matrix.python-version == 3.6 }}
+            type=semver,pattern={{version}}-py${{ matrix.python-version }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable-py${{ matrix.python-version }}
       - name: "Build Dev Containers"
