@@ -12,7 +12,6 @@ from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import serialize_object
 
 __all__ = (
     "Region",
@@ -75,11 +74,8 @@ class Region(MPTTModel, OrganizationalModel):
         return Site.objects.filter(Q(region=self) | Q(region__in=self.get_descendants())).count()
 
     def to_objectchange(self, action):
-        obj = super().to_objectchange(action)
         # Remove MPTT-internal fields
-        obj.object_data = serialize_object(self, exclude=["level", "lft", "rght", "tree_id"])
-
-        return obj
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
 
 
 #

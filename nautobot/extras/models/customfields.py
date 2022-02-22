@@ -571,7 +571,6 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         super().delete(*args, **kwargs)
 
     def to_objectchange(self, action):
-        obj = super().to_objectchange(action)
         # Annotate the parent field
         try:
             field = self.field
@@ -579,6 +578,4 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             # The parent field has already been deleted
             field = None
 
-        obj.related_object = field
-
-        return obj
+        return super().to_objectchange(action, related_object=field)

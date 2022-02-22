@@ -29,18 +29,21 @@ class ChangeLoggedModel(models.Model):
     class Meta:
         abstract = True
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, object_data_extra=None, object_data_exclude=None):
         """
         Return a new ObjectChange representing a change made to this object. This will typically be called automatically
         by ChangeLoggingMiddleware.
         """
 
+        extra = {} if not related_object else {"related_object": related_object}
+
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
-            object_data=serialize_object(self),
+            object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
             object_datav2=serialize_object_v2(self),
+            **extra,
         )
 
 

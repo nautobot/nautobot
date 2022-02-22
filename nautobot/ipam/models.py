@@ -907,11 +907,8 @@ class IPAddress(PrimaryModel, StatusModel):
         self.dns_name = self.dns_name.lower()
 
     def to_objectchange(self, action):
-        obj = super().to_objectchange(action)
         # Annotate the assigned object, if any
-        obj.related_object = self.assigned_object
-
-        return obj
+        return super().to_objectchange(action, related_object=self.assigned_object)
 
     def to_csv(self):
 

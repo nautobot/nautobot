@@ -22,7 +22,7 @@ from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
+from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -99,11 +99,8 @@ class RackGroup(MPTTModel, OrganizationalModel):
         )
 
     def to_objectchange(self, action):
-        obj = super().to_objectchange(action)
         # Remove MPTT-internal fields
-        obj.object_data = serialize_object(self, exclude=["level", "lft", "rght", "tree_id"])
-
-        return obj
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
 
     def clean(self):
         super().clean()

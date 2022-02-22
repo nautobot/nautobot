@@ -6,7 +6,6 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import serialize_object
 
 
 __all__ = (
@@ -64,10 +63,7 @@ class TenantGroup(MPTTModel, OrganizationalModel):
 
     def to_objectchange(self, action):
         # Remove MPTT-internal fields
-        obj = super().to_objectchange(action)
-        obj.object_data = serialize_object(self, exclude=["level", "lft", "rght", "tree_id"])
-
-        return obj
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
 
 
 @extras_features(
