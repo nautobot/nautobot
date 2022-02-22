@@ -99,7 +99,7 @@ Jinja2 = "~2.11.3"
 jsonschema = "~3.2.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.6"
-# Escape text to use HTML and XML
+# Escape text to use HTML and XML. NOTE: later versions are not compatible with Jinja2 2.x
 MarkupSafe = "2.0.1"
 # MySQL database adapter
 mysqlclient = {version = "~2.0.3", optional = true}
