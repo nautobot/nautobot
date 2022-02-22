@@ -492,8 +492,10 @@ def update_git_config_contexts(repository_record, job_result):
 def import_config_context(context_data, repository_record, job_result, logger):
     """
     Parse a given dictionary of data to create/update a ConfigContext record.
+
     The dictionary is expected to have a key "_metadata" which defines properties on the ConfigContext record itself
     (name, weight, description, etc.), while all other keys in the dictionary will go into the record's "data" field.
+
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
     the reason is that the serializer only allows us to identify related objects (Region, Site, DeviceRole, etc.)
     by their database primary keys, whereas here we need to be able to look them up by other values such as slug.
@@ -923,6 +925,7 @@ def refresh_git_export_templates(repository_record, job_result, delete=False):
 
 def update_git_export_templates(repository_record, job_result):
     """Refresh any export templates provided by this Git repository.
+    
     Templates are located in GIT_ROOT/<repo>/export_templates/<app_label>/<model>/<template name>.
     """
     export_template_path = os.path.join(repository_record.filesystem_path, "export_templates")
