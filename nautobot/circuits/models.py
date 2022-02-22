@@ -4,10 +4,12 @@ from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import RelationshipModel, StatusModel, ObjectChange
+from nautobot.extras.models import ObjectChange, RelationshipModel, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.utils import convert_set_to_list_in_obj, serialize_object
 from .choices import CircuitTerminationSideChoices
 
 
@@ -19,8 +21,6 @@ __all__ = (
     "ProviderNetwork",
 )
 
-from ..utilities.api import get_serializer_for_model
-from ..utilities.utils import convert_set_to_list_in_obj, serialize_object
 
 
 @extras_features(
