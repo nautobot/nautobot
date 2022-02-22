@@ -923,7 +923,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
     def post(self, request, scheduled_job):
         """
         Act upon one of the 3 submit button actions from the user.
-        
+
         dry-run will immediately enqueue the job with commit=False and send the user to the normal JobResult view
         deny will delete the scheduled_job instance
         approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
