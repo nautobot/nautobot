@@ -220,6 +220,25 @@ class BaseJob:
     def time_limit(cls):
         return getattr(cls.Meta, "time_limit", 0)
 
+    @classproperty
+    def properties_dict(cls):
+        """
+        Return all relevant classproperties as a dict.
+
+        Used for convenient rendering into job_edit.html via the `json_script` template tag.
+        """
+        return {
+            "name": cls.name,
+            "grouping": cls.grouping,
+            "description": cls.description,
+            "approval_required": cls.approval_required,
+            "commit_default": cls.commit_default,
+            "hidden": cls.hidden,
+            "read_only": cls.read_only,
+            "soft_time_limit": cls.soft_time_limit,
+            "time_limit": cls.time_limit,
+        }
+
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()

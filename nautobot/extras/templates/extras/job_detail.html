@@ -23,15 +23,15 @@
         </div>
         <table class="table table-hover panel-body attr-table">
             <tr>
-                <td>Grouping</td>
+                <td>Grouping{% if not object.grouping_override %} (defined by source code){% endif %}</td>
                 <td>{{ object.grouping }}</td>
             </tr>
             <tr>
-                <td>Name</td>
+                <td>Name{% if not object.name_override %} (defined by source code){% endif %}</td>
                 <td>{{ object.name }}</td>
             </tr>
             <tr>
-                <td>Description</td>
+                <td>Description{% if not object.description_override %} (defined by source code){% endif %}</td>
                 <td>{{ object.description | render_markdown }}</td>
             </tr>
             <tr>
@@ -82,13 +82,19 @@
         </div>
         <table class="table table-hover panel-body attr-table">
             <tr>
+                <td>Approval Required to Execute</td>
+                <td>{{ object.approval_required | render_boolean }}
+                    {% if not object.approval_required_override %}(defined by source code){% endif %}
+                </td>
+            </tr>
+            <tr>
                 <td>Default to Committing Changes</td>
                 <td>{{ object.commit_default | render_boolean }}
                     {% if not object.commit_default_override %}(defined by source code){% endif %}
                 </td>
             </tr>
             <tr>
-                <td>Hidden by Default</td>
+                <td>Hide from Default UI</td>
                 <td>{{ object.hidden | render_boolean }}
                     {% if not object.hidden_override %}(defined by source code){% endif %}
                 </td>
@@ -100,15 +106,9 @@
                 </td>
             </tr>
             <tr>
-                <td>Approval Required</td>
-                <td>{{ object.approval_required | render_boolean }}
-                    {% if not object.approval_required_override %}(defined by source code){% endif %}
-                </td>
-            </tr>
-            <tr>
                 <td>Execution Soft Time Limit</td>
                 <td>
-                    {% if object.soft_time_limit %}
+                    {% if object.soft_time_limit > 0 %}
                         {{ object.soft_time_limit }} seconds
                         {% if not object.soft_time_limit_override %}(defined by source code){% endif %}
                     {% else %}
@@ -119,7 +119,7 @@
             <tr>
                 <td>Execution Hard Time Limit</td>
                 <td>
-                    {% if object.time_limit %}
+                    {% if object.time_limit > 0 %}
                         {{ object.time_limit }} seconds
                         {% if not object.time_limit_override %}(defined by source code){% endif %}
                     {% else %}

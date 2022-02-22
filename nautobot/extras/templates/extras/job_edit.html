@@ -30,7 +30,10 @@
                 <label class="col-md-3 control-label">Job Class</label>
                 <div class="col-md-9" style="padding-top: 7px"><code>{{ obj.job_class_name }}</code></div>
             </div>
+            {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
             {% render_field form.slug %}
+            {% include "extras/inc/overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
             <div class="form-group">
                 <div class="col-md-9 col-md-offset-3">
                     <div class="checkbox">
@@ -42,22 +45,55 @@
                 </div>
             </div>
             {% render_field form.enabled %}
-        </div>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job Properties</strong></div>
-        <div class="panel-body">
-            {% render_field form.approval_required %}
-            {% render_field form.approval_required_override %}
-            {% render_field form.commit_default %}
-            {% render_field form.commit_default_override %}
-            {% render_field form.hidden %}
-            {% render_field form.hidden_override %}
-            {% render_field form.soft_time_limit %}
-            {% render_field form.soft_time_limit_override %}
-            {% render_field form.time_limit %}
-            {% render_field form.time_limit_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.commit_default override_field=form.commit_default_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.hidden override_field=form.hidden_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.read_only override_field=form.read_only_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.soft_time_limit override_field=form.soft_time_limit_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.time_limit override_field=form.time_limit_override %}
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock form %}
+
+{% block javascript %}
+{{ block.super }}
+{{ obj.job_class.properties_dict | json_script:"job_class_properties" }}
+<script>
+    const job_class_properties = JSON.parse(document.getElementById("job_class_properties").textContent);
+    /* All id_*_override fields */
+    $("[id^=id_][id$=_override]").change(function() {
+        const override_id = $(this).attr("id");
+        /* What's the form field this is an override for? */
+        const field_id = override_id.slice(0, -9);
+        const field = $("#" + field_id);
+        const field_name = field_id.slice(3);
+        if ($(this).prop("checked")) {
+            field.attr("readonly", null);
+            field.attr("disabled", null);
+        } else {
+            /* Revert the field to its default value */
+            if (field.attr("type") == "checkbox") {
+                field.prop("checked", job_class_properties[field_name]);
+                /*
+                 * Checkboxes can't be "readonly" in HTML :-(
+                 * Note that "disabled" fields aren't included in form submission, so we have to be sure to
+                 * re-enable them at form submission time.
+                 */
+                field.attr("disabled", "disabled");
+            } else {
+                field.val(job_class_properties[field_name]);
+                field.attr("readonly", "readonly");
+            }
+        }
+    });
+    $("[id^=id_][id$=_override]").change();
+
+    /* As mentioned above, we need to re-enable all checkboxes on form submission so they get included */
+    $("form").submit(function() {
+        $('input[type="checkbox"]:disabled').each(function() {
+            $(this).attr("disabled", null);
+        });
+    });
+</script>
+{% endblock javascript %}

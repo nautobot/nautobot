@@ -42,6 +42,7 @@ from .choices import (
     RelationshipSideChoices,
     RelationshipTypeChoices,
 )
+from .constants import JOB_OVERRIDABLE_FIELDS
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
@@ -896,6 +897,12 @@ class JobEditForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
         fields = [
             "slug",
             "enabled",
+            "name_override",
+            "name",
+            "grouping_override",
+            "grouping",
+            "description_override",
+            "description",
             "commit_default_override",
             "commit_default",
             "hidden_override",
@@ -909,6 +916,17 @@ class JobEditForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "time_limit_override",
             "time_limit",
         ]
+
+    def clean(self):
+        """
+        For all overridable fields, if they aren't marked as overridden, revert them to the underlying value.
+        """
+        cleaned_data = super().clean() or self.cleaned_data
+        job_class = self.instance.job_class
+        for field_name in JOB_OVERRIDABLE_FIELDS:
+            if not cleaned_data.get(f"{field_name}_override", False):
+                cleaned_data[field_name] = getattr(job_class, field_name)
+        return cleaned_data
 
 
 class JobFilterForm(BootstrapMixin, forms.Form):
