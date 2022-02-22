@@ -35,7 +35,7 @@ __all__ = (
 #
 # Cluster types
 #
-from nautobot.utilities.utils import convert_set_to_list_in_obj, serialize_object
+from nautobot.utilities.utils import serialize_object
 
 
 @extras_features(
@@ -462,8 +462,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
 
     def to_objectchange(self, action):
         serializer_class = get_serializer_for_model(self.__class__)
-        serialized_data = serializer_class(self, context={"request": None}).data
-        object_datav2 = convert_set_to_list_in_obj(serialized_data)
+        object_datav2 = serializer_class(self, context={"request": None}).data
 
         # Annotate the parent VirtualMachine
         return ObjectChange(

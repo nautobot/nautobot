@@ -5,7 +5,7 @@ from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
 from nautobot.extras.models import CustomFieldModel, ObjectChange
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import convert_set_to_list_in_obj, serialize_object
+from nautobot.utilities.utils import serialize_object
 
 
 @extras_features(
@@ -30,8 +30,7 @@ class ExampleModel(BaseModel):
 
     def to_objectchange(self, action):
         serializer_class = get_serializer_for_model(self.__class__)
-        serialized_data = serializer_class(self, context={"request": None}).data
-        object_datav2 = convert_set_to_list_in_obj(serialized_data)
+        object_datav2 = serializer_class(self, context={"request": None}).data
 
         return ObjectChange(
             changed_object=self,
