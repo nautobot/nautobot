@@ -103,7 +103,8 @@ CACHES = {
             },
             "SENTINELS": [
                 ("mysentinel.redis.example.com", 26379),
-                ("othersentinel.redis.example.com", 26379)
+                ("othersentinel.redis.example.com", 26379),
+                ("thirdsentinel.redis.example.com", 26379)
             ],
         },
     },
@@ -138,7 +139,8 @@ CACHEOPS_SENTINEL = {
     "db": 0,
     "locations": [
         ("mysentinel.redis.example.com", 26379),
-        ("othersentinel.redis.example.com", 26379)
+        ("othersentinel.redis.example.com", 26379),
+        ("thirdsentinel.redis.example.com", 26379)
     ],
     "service_name": "nautobot",
     "socket_timeout": 10,
@@ -163,8 +165,10 @@ redis_password = ""
 sentinel_password = ""
 
 CELERY_BROKER_URL = (
-    f"sentinel://:{redis_password}@mysentinel.redis.example.com:26379,",
-    f"sentinel://:{redis_password}@othersentinel.redis.example.com:26379",
+    f"sentinel://:{redis_password}@mysentinel.redis.example.com:26379;"
+    f"sentinel://:{redis_password}@othersentinel.redis.example.com:26379;"
+    # The final entry must not have the `;` delimiter
+    f"sentinel://:{redis_password}@thirdsentinel.redis.example.com:26379"
 )
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     "master_name": "nautobot",

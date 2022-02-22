@@ -240,7 +240,10 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return "Side {}".format(self.get_term_side_display())
+        return f"Termination {self.term_side}: {self.site}"
+
+    def get_absolute_url(self):
+        return self.site.get_absolute_url()
 
     def to_objectchange(self, action):
         # Annotate the parent Circuit

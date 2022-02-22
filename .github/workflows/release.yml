@@ -40,10 +40,10 @@ jobs:
           user: "__token__"
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
-  container-publish:
+  publish_containers:
     runs-on: "ubuntu-20.04"
     needs:
-      - "integration-test"
+      - "ci"
     strategy:
       fail-fast: true
       matrix:
@@ -119,8 +119,8 @@ jobs:
 
   slack-notify:
     needs:
-      - "publish_gh"
-      - "publish_pypi"
+      - "publish_python"
+      - "publish_containers"
     runs-on: "ubuntu-20.04"
     env:
       SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"

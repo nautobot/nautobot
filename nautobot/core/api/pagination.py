@@ -52,7 +52,7 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
             except (KeyError, ValueError):
                 pass
 
-        return self.default_limit
+        return get_settings_or_config("PAGINATE_COUNT")
 
     def get_next_link(self):
 

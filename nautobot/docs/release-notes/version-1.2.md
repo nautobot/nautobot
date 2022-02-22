@@ -140,6 +140,31 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.6 (2022-02-22)
+
+### Added
+
+- [#1279](https://github.com/nautobot/nautobot/issues/1279) - Circuit terminations now render custom relationships on the circuit detail page.
+- [#1353](https://github.com/nautobot/nautobot/issues/1353) - Added UI for deleting previously uploaded images when editing a DeviceType.
+
+### Changed
+
+- [#1386](https://github.com/nautobot/nautobot/issues/1386) - Updated release schedule in docs for patch releases, now every two weeks.
+
+### Fixed
+
+- [#1249](https://github.com/nautobot/nautobot/issues/1249) - Fixed a timing issue where after creating a custom field with a default value and immediately assigning values to this custom field on individual objects, the custom field values could be automatically reverted to the default value.
+- [#1280](https://github.com/nautobot/nautobot/pull/1280) - Added missing `get_absolute_url` method to the `CircuitTermination` model, fixing a UI error that could occur when relationships involve CircuitTerminations.
+- [#1283](https://github.com/nautobot/nautobot/pull/1283) - Update Sentinel docs to have 3 hosts (minimum per Redis docs), and change `CELERY_BROKER_URL` to a multiline string instead of a Tuple (tuple is invalid, and raises an exception when job completes).
+- [#1312](https://github.com/nautobot/nautobot/issues/1312) - Fixed a bug where a Prefix filter matching zero records would instead show all records in the UI.
+- [#1327](https://github.com/nautobot/nautobot/pull/1327) - Fixes the broken dependencies from the Release action.
+- [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../additional-features/jobs.md#jobs-and-class_path).
+- [#1332](https://github.com/nautobot/nautobot/pull/1332) - Fixed a regression in which the REST API did not default to pagination based on the configured `PAGINATE_COUNT` setting but instead defaulted to full unpaginated results.
+- [#1335](https://github.com/nautobot/nautobot/issues/1335) - Fixed an issue with the Secret create/edit form that caused problems when defining AWS secrets using the `nautobot-secrets-providers` plugin.
+- [#1346](https://github.com/nautobot/nautobot/issues/1346) - Fixed an error in the periodic execution of Celery's built-in `celery.backend_cleanup` task.
+- [#1360](https://github.com/nautobot/nautobot/issues/1360) - Fixed an issue in the development environment that could cause Selenium integration tests to error out.
+- [#1390](https://github.com/nautobot/nautobot/issues/1390) - Pinned transitive dependency `MarkupSafe` to version 2.0.1 as later versions are incompatible with Nautobot's current `Jinja2` dependency.
+
 ## v1.2.5 (2022-02-02)
 
 ### Changed
