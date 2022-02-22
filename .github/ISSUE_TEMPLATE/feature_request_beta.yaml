@@ -13,7 +13,7 @@ body:
   - type: dropdown
     id: persona
     attributes:
-      label: As a **WHO**, the user persona___,
+      label: As a WHO, the user persona___,
       description: Please choose the appropriate [persona](https://github.com/nautobot/nautobot/wiki/Personas)
       multiple: false
       options:
@@ -32,7 +32,7 @@ body:
   - type: input
     id: what
     attributes:
-      label: I want **WHAT**, the desired functionality to be implemented___,
+      label: I want WHAT, the desired functionality to be implemented___,
       description: Please enter the desired functionality
       placeholder: to develop Nautobot plugins that can be inserted as a top-level item in the navigation bar
     validations:
@@ -40,7 +40,7 @@ body:
   - type: textarea
     id: why
     attributes:
-      label: So that **WHY**, the reason or value of the implemented functionality___.
+      label: So that WHY, the reason or value of the implemented functionality___.
       description: Please enter the reason for the desired functionality
       placeholder: >
         my plugin is seen as first-class citizen by my users and so that the
@@ -52,7 +52,7 @@ body:
   - type: textarea
     id: acceptance_criteria
     attributes:
-      label: I know this is done when... **HOW**.
+      label: I know this is done when... HOW.
       description: The requirements/acceptance criteria (a list) as to how this functionality should be implemented.
       placeholder: >
         - I create a Nautobot plugin and have the option to inject it in the Plugins
