@@ -925,7 +925,7 @@ def refresh_git_export_templates(repository_record, job_result, delete=False):
 
 def update_git_export_templates(repository_record, job_result):
     """Refresh any export templates provided by this Git repository.
-    
+
     Templates are located in GIT_ROOT/<repo>/export_templates/<app_label>/<model>/<template name>.
     """
     export_template_path = os.path.join(repository_record.filesystem_path, "export_templates")
