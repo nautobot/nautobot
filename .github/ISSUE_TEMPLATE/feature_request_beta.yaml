@@ -13,7 +13,7 @@ body:
   - type: dropdown
     id: persona
     attributes:
-      label: As a ___WHO, the user persona___,
+      label: As a **WHO**, the user persona___,
       description: Please choose the appropriate [persona](https://github.com/nautobot/nautobot/wiki/Personas)
       multiple: false
       options:
@@ -32,22 +32,33 @@ body:
   - type: input
     id: what
     attributes:
-      label: I want ___WHAT, the desired functionality to be implemented___,
+      label: I want **WHAT**, the desired functionality to be implemented___,
       description: Please enter the desired functionality
+      placeholder: to develop Nautobot plugins that can be inserted as a top-level item in the navigation bar
     validations:
       required: true
   - type: textarea
     id: why
     attributes:
-      label: So that ___WHY, the reason or value of the implemented functionality___.
+      label: So that **WHY**, the reason or value of the implemented functionality___.
       description: Please enter the reason for the desired functionality
+      placeholder: >
+        my plugin is seen as first-class citizen by my users and so that the
+        plugins drop-down menu isn't overloaded.  When I use Nautobot as an App Platform,
+        it'll also provide more focus on the Plugins/Apps than core SoT drop-downs (for
+        users that aren't permitted to view those items)
     validations:
       required: true
   - type: textarea
     id: acceptance_criteria
     attributes:
-      label: I know this is done when... ___HOW.
+      label: I know this is done when... **HOW**.
       description: The requirements/acceptance criteria (a list) as to how this functionality should be implemented.
+      placeholder: >
+        - I create a Nautobot plugin and have the option to inject it in the Plugins
+          dropdown menu or create a new dedicated dropdown in the navigation bar.
+        - When multiple plugins provide dedicated dropdowns, I can re-order the plugin
+          dropdowns in the navbar.
     validations:
       required: true
   - type: checkboxes
