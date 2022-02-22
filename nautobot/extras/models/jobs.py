@@ -30,6 +30,7 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import ScheduledJobExtendedQuerySet
@@ -202,6 +203,12 @@ class Job(PrimaryModel):
             except GitRepository.DoesNotExist:
                 return None
         return None
+
+    def clean(self):
+        """For any non-overridden fields, make sure they get reset to the actual underlying class value."""
+        for field_name in JOB_OVERRIDABLE_FIELDS:
+            if not getattr(self, f"{field_name}_override", False):
+                setattr(self, field_name, getattr(self.job_class, field_name))
 
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})

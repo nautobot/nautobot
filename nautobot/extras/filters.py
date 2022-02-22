@@ -565,8 +565,11 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        # TODO: description is not a database field yet
-        return queryset.filter(Q(name__icontains=value) | Q(grouping__icontains=value))
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(grouping__icontains=value) |
+            Q(description__icontains=value)
+        )
 
 
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
