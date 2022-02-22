@@ -25,7 +25,7 @@ GIT_STATUS_MAP = {
 def swap_status_initials(data):
     """Swap Git status initials with its equivalent."""
     initial, text = data.split("\t")
-    return GIT_STATUS_MAP.get(initial) + " - " +f"`{text}`"
+    return GIT_STATUS_MAP.get(initial) + " - " + f"`{text}`"
 
 
 def convert_git_diff_log_to_list(logs):
