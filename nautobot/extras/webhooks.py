@@ -5,8 +5,8 @@ from nautobot.utilities.api import get_serializer_for_model
 from nautobot.extras.models import Webhook, ObjectChange
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
+from nautobot.utilities.utils import shallow_compare_dict
 from .choices import ObjectChangeActionChoices
-from ..utilities.utils import shallow_compare_dict
 
 
 def get_snapshots(instance, action):
