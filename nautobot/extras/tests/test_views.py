@@ -953,6 +953,12 @@ class JobTestCase(
         cls.form_data = {
             "slug": "custom-job-slug",
             "enabled": True,
+            "grouping_override": True,
+            "grouping": "Overridden Grouping",
+            "name_override": True,
+            "name": "Overridden Name",
+            "description_override": True,
+            "description": "This is an overridden description of a job.",
             "commit_default_override": True,
             "commit_default": False,
             "hidden_override": True,
