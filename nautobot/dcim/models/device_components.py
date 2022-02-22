@@ -36,12 +36,11 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
-from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import UtilizationData, serialize_object
+from nautobot.utilities.utils import UtilizationData, serialize_object, serialize_object_v2
 
 __all__ = (
     "BaseInterface",
@@ -87,15 +86,12 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
             # The parent Device has already been deleted
             device = None
 
-        serializer_class = get_serializer_for_model(self.__class__)
-        object_datav2 = serializer_class(self, context={"request": None}).data
-
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
             object_data=serialize_object(self),
-            object_datav2=object_datav2,
+            object_datav2=serialize_object_v2(self),
             related_object=device,
         )
 

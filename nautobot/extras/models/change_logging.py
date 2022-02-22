@@ -9,8 +9,7 @@ from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 #
@@ -35,15 +34,13 @@ class ChangeLoggedModel(models.Model):
         Return a new ObjectChange representing a change made to this object. This will typically be called automatically
         by ChangeLoggingMiddleware.
         """
-        serializer_class = get_serializer_for_model(self.__class__)
-        object_datav2 = serializer_class(self, context={"request": None}).data
 
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
             object_data=serialize_object(self),
-            object_datav2=object_datav2,
+            object_datav2=serialize_object_v2(self),
         )
 
 

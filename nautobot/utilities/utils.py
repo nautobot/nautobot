@@ -15,9 +15,8 @@ from django.template import engines
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
+from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
-
-from rest_framework.utils.serializer_helpers import ReturnDict
 
 
 def csv_format(data):
@@ -141,6 +140,16 @@ def serialize_object(obj, extra=None, exclude=None):
         # Explicitly excluded keys
         if isinstance(exclude, (list, tuple)) and key in exclude:
             data.pop(key)
+
+    return data
+
+
+def serialize_object_v2(obj):
+    """
+    Return a JSON serialized representation of an object using obj's serializer.
+    """
+    serializer_class = get_serializer_for_model(obj.__class__)
+    data = serializer_class(obj, context={"request": None}).data
 
     return data
 
