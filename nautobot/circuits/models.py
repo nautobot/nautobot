@@ -22,7 +22,6 @@ __all__ = (
 )
 
 
-
 @extras_features(
     "custom_fields",
     "custom_links",
