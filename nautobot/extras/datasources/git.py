@@ -912,7 +912,9 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     if delete:
-        for job_model in Job.objects.filter(installed=True, source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
+        for job_model in Job.objects.filter(
+            installed=True, source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"
+        ):
             job_result.log(
                 f'Marking Job model "{job_model}" as no longer installed',
                 grouping="jobs",

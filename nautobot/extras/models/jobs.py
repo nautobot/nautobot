@@ -198,6 +198,7 @@ class Job(PrimaryModel):
         """The GitRepository providing this Job, if applicable."""
         if self.source.startswith(JobSourceChoices.SOURCE_GIT):
             from .datasources import GitRepository
+
             try:
                 return GitRepository.objects.get(slug=self.source.split(".")[1])
             except GitRepository.DoesNotExist:

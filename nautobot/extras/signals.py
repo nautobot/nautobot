@@ -260,7 +260,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
                 "Job %s/%s/%s is no longer installed",
                 job_model.source,
                 job_model.module_name,
-                job_model.job_class_name
+                job_model.job_class_name,
             )
             job_model.installed = False
             job_model.save()

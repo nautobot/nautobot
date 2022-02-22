@@ -357,7 +357,12 @@ urlpatterns = [
     ),
     path("jobs/<slug:slug>/edit/", views.JobEditView.as_view(), name="job_edit"),
     path("jobs/<slug:slug>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
-    path("jobs/<slug:slug>/changelog/", views.ObjectChangeLogView.as_view(), name="job_changelog", kwargs={"model": Job}),
+    path(
+        "jobs/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="job_changelog",
+        kwargs={"model": Job},
+    ),
     # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
     path("jobs/<slug:slug>/run/", views.JobView.as_view(), name="job_run"),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),

@@ -683,6 +683,7 @@ class JobModelTest(TestCase):
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
         from example_plugin.jobs import ExampleJob
+
         self.assertEqual(self.plugin_job.job_class, ExampleJob)
 
     def test_class_path(self):

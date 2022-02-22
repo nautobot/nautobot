@@ -1,6 +1,7 @@
 from nautobot.dcim.models import DeviceRole
 from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
 
+
 class APITestJob(Job):
     class Meta:
         name = "Job for API Tests"
