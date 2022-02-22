@@ -147,6 +147,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1279](https://github.com/nautobot/nautobot/issues/1279) - Circuit terminations now render custom relationships on the circuit detail page.
 - [#1353](https://github.com/nautobot/nautobot/issues/1353) - Added UI for deleting previously uploaded images when editing a DeviceType.
 
+### Changed
+
+- [#1386](https://github.com/nautobot/nautobot/issues/1386) - Updated release schedule in docs for patch releases, now every two weeks.
+
 ### Fixed
 
 - [#1249](https://github.com/nautobot/nautobot/issues/1249) - Fixed a timing issue where after creating a custom field with a default value and immediately assigning values to this custom field on individual objects, the custom field values could be automatically reverted to the default value.
