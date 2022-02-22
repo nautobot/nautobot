@@ -397,6 +397,15 @@ class TestIPAddress(TestCase):
             role=IPAddressRoleChoices.ROLE_VIP,
         )
 
+    def test_multiple_nat_outside(self):
+        nat_inside = IPAddress.objects.create(address=netaddr.IPNetwork("192.168.0.1/24"))
+        nat_outside1 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), nat_inside=nat_inside)
+        nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"), nat_inside=nat_inside)
+
+        nat_inside.refresh_from_db()
+        self.assertEqual(nat_inside.nat_outside.first(), nat_outside1)
+        self.assertEqual(nat_inside.nat_outside.last(), nat_outside2)
+
 
 class TestVLANGroup(TestCase):
     def test_get_next_available_vid(self):

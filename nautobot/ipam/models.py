@@ -772,7 +772,7 @@ class IPAddress(PrimaryModel, StatusModel):
     )
     assigned_object_id = models.UUIDField(blank=True, null=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
-    nat_inside = models.OneToOneField(
+    nat_inside = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
         related_name="nat_outside",
