@@ -164,6 +164,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1346](https://github.com/nautobot/nautobot/issues/1346) - Fixed an error in the periodic execution of Celery's built-in `celery.backend_cleanup` task.
 - [#1360](https://github.com/nautobot/nautobot/issues/1360) - Fixed an issue in the development environment that could cause Selenium integration tests to error out.
 - [#1390](https://github.com/nautobot/nautobot/issues/1390) - Pinned transitive dependency `MarkupSafe` to version 2.0.1 as later versions are incompatible with Nautobot's current `Jinja2` dependency.
+- [#1403](https://github.com/nautobot/nautobot/issues/1403) - Changes the GitHub Action on Release version template variable name.
 
 ## v1.2.5 (2022-02-02)
 
