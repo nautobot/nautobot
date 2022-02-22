@@ -17,7 +17,7 @@ def get_snapshots(instance, action):
         object_datav2 = ObjectChange.objects.filter(
             changed_object_type=changed_object_type, changed_object_id=instance.id
         )[:2]
-        prechange = object_datav2[1].object_datav2
+        prechange = object_datav2[1].object_datav2 if object_datav2.count() > 1 else None
 
     serializer_class = get_serializer_for_model(instance.__class__)
 
