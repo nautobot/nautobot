@@ -33,7 +33,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import ScheduledJobExtendedQuerySet
-from nautobot.extras.utils import extras_features, FeatureQuery
+from nautobot.extras.utils import extras_features, FeatureQuery, jobs_in_directory
 
 from .customfields import CustomFieldModel
 
@@ -128,8 +128,6 @@ class Job(PrimaryModel):
         if not self.installed:
             return None
         if self._job_class is None:
-            from nautobot.extras.jobs import jobs_in_directory  # avoid circular import
-
             if self.source == JobSourceChoices.SOURCE_LOCAL:
                 path = settings.JOBS_ROOT
                 for job_info in jobs_in_directory(settings.JOBS_ROOT, module_name=self.module_name):

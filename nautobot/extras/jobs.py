@@ -1,11 +1,9 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 import inspect
 import json
 import logging
 import os
-import pkgutil
-import sys
 import shutil
 from textwrap import dedent
 import traceback
@@ -36,6 +34,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, ScheduledJob
 from .registry import registry
+from .utils import jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -964,37 +963,6 @@ def get_job(class_path):
 
     jobs = get_jobs()
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
-
-
-JobClassInfo = namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
-
-
-def jobs_in_directory(path, module_name=None, reload_modules=True):
-    """
-    Walk the available Python modules in the given directory, and for each module, walk its Job class members.
-
-    Args:
-        path (str): Directory to import modules from, outside of sys.path
-        module_name (str): Specific module name to select; if unspecified, all modules will be inspected
-        reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
-
-    Yields:
-        JobClassInfo: (module_name, module, job_class_name, job_class)
-    """
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
-        if module_name and discovered_module_name != module_name:
-            continue
-        if reload_modules and discovered_module_name in sys.modules:
-            del sys.modules[discovered_module_name]
-        try:
-            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-        except Exception as exc:
-            logger.error(f"Unable to load module {module_name} from {path}: {exc}")
-            # TODO: we want to be able to report these errors to the UI in some fashion?
-            continue
-        # Get all members of the module that are Job subclasses
-        for job_class_name, job_class in inspect.getmembers(module, is_job):
-            yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
 
 
 @nautobot_task
