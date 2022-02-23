@@ -42,8 +42,7 @@ def convert_git_diff_log_to_list(logs):
         ["Modification - index.html", "Renaming - sample.txt"]
     """
     logs = logs.split("\n")
-    swapped_initials = map(swap_status_initials, logs)
-    return ["{} - `{}`".format(status, text) for status, text in swapped_initials]
+    return [swap_status_initials(line) for line in logs]
 
 
 class BranchDoesNotExist(Exception):
