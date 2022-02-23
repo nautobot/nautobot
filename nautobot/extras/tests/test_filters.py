@@ -531,13 +531,13 @@ class JobFilterSetTestCase(TestCase):
 
     def test_installed(self):
         params = {"installed": True}
-        # 17 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 20)
+        # 18 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 21)
 
     def test_enabled(self):
         params = {"enabled": False}
-        # 17 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 20)
+        # 18 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 21)
 
     def test_commit_default(self):
         params = {"commit_default": False}
