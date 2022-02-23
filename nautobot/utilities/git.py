@@ -1,5 +1,6 @@
 """General-purpose Git utilities."""
 
+from collections import namedtuple
 import logging
 import os
 
@@ -7,6 +8,9 @@ from git import Repo
 
 
 logger = logging.getLogger("nautobot.utilities.git")
+
+# namedtuple takes a git log diff status and its accompanying text.
+GitDiffLog = namedtuple("GitDiffLog", ["status", "text"])
 
 # 'A' and 'D' status are swapped because of the way the repo.git.diff was implemented
 # e.g. 'A' actually stands for Addition but in this case is Deletion
@@ -25,7 +29,7 @@ GIT_STATUS_MAP = {
 def swap_status_initials(data):
     """Swap Git status initials with its equivalent."""
     initial, text = data.split("\t")
-    return GIT_STATUS_MAP.get(initial) + " - " + f"`{text}`"
+    return GitDiffLog(status=GIT_STATUS_MAP.get(initial), text=text)
 
 
 def convert_git_diff_log_to_list(logs):
@@ -38,7 +42,8 @@ def convert_git_diff_log_to_list(logs):
         ["Modification - index.html", "Renaming - sample.txt"]
     """
     logs = logs.split("\n")
-    return [swap_status_initials(line) for line in logs]
+    swapped_initials = map(swap_status_initials, logs)
+    return ["{} - `{}`".format(status, text) for status, text in swapped_initials]
 
 
 class BranchDoesNotExist(Exception):
