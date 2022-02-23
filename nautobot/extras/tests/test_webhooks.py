@@ -11,9 +11,11 @@ from requests import Session
 
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
+from nautobot.dcim.models.sites import Region
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.context_managers import change_logging
 from nautobot.extras.models import Webhook
+from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
 from nautobot.extras.webhooks import get_snapshots
@@ -42,6 +44,12 @@ class WebhookTest(APITestCase):
         )
         for webhook in webhooks:
             webhook.content_types.set([site_ct])
+        
+        cls.active_status = Status.objects.get_for_model(Site).get(slug="active")
+        cls.planned_status = Status.objects.get_for_model(Site).get(slug="planned")
+        cls.region_one = Region.objects.create(name="Region One", slug="region-one")
+        cls.region_two = Region.objects.create(name="Region Two", slug="region-two")
+
 
     def test_webhooks_process_webhook_on_update(self):
         """
@@ -60,6 +68,7 @@ class WebhookTest(APITestCase):
             """
             signature = generate_signature(request.body, webhook.secret)
 
+
             # Validate the outgoing request headers
             self.assertEqual(request.headers["Content-Type"], webhook.http_content_type)
             self.assertEqual(request.headers["X-Hook-Signature"], signature)
@@ -73,8 +82,14 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["username"], "testuser")
             self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Site Update")
+            self.assertEqual(body["data"]["status"]["value"], self.planned_status.slug)
+            self.assertEqual(body["data"]["region"]["slug"], self.region_two.slug)
             self.assertEqual(body["snapshot"]["prechange"]["name"], "Site 1")
+            self.assertEqual(body["snapshot"]["prechange"]["status"]["value"], self.active_status.slug)
+            self.assertEqual(body["snapshot"]["prechange"]["region"]["slug"], self.region_one.slug)
             self.assertEqual(body["snapshot"]["postchange"]["name"], "Site Update")
+            self.assertEqual(body["snapshot"]["postchange"]["status"]["value"], self.planned_status.slug)
+            self.assertEqual(body["snapshot"]["postchange"]["region"]["slug"], self.region_two.slug)
             self.assertEqual(body["snapshot"]["differences"]["removed"]["name"], "Site 1")
             self.assertEqual(body["snapshot"]["differences"]["added"]["name"], "Site Update")
 
@@ -93,10 +108,12 @@ class WebhookTest(APITestCase):
             request.id = request_id
 
             with change_logging(request):
-                site = Site(name="Site 1", slug="site-1")
+                site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
                 site.save()
 
                 site.name = "Site Update"
+                site.status = self.planned_status
+                site.region = self.region_two
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
