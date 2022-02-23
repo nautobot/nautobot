@@ -14,10 +14,10 @@ def get_snapshots(instance, action):
 
     if action != ObjectChangeActionChoices.ACTION_CREATE:
         changed_object_type = ContentType.objects.get_for_model(instance)
-        object_datav2 = ObjectChange.objects.filter(
+        most_recent_changes = ObjectChange.objects.filter(
             changed_object_type=changed_object_type, changed_object_id=instance.id
         )[:2]
-        prechange = object_datav2[1].object_datav2 if object_datav2.count() > 1 else None
+        prechange = most_recent_changes[1].object_datav2 if most_recent_changes.count() > 1 else None
 
     serializer_class = get_serializer_for_model(instance.__class__)
 
