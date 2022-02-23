@@ -76,11 +76,11 @@ def enqueue_webhooks(instance, user, request_id, action):
             args = [
                 webhook.pk,
                 serializer.data,
-                snapshot,
                 instance._meta.model_name,
                 action,
                 str(timezone.now()),
                 user.username,
                 request_id,
+                snapshot,
             ]
             process_webhook.apply_async(args=args)

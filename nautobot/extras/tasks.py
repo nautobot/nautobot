@@ -98,7 +98,7 @@ def provision_field(field_id, content_type_pk_set):
 
 
 @nautobot_task
-def process_webhook(webhook_pk, data, snapshot, model_name, event, timestamp, username, request_id):
+def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id, snapshot):
     """
     Make a POST request to the defined Webhook
     """
