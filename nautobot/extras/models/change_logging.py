@@ -35,15 +35,13 @@ class ChangeLoggedModel(models.Model):
         by ChangeLoggingMiddleware.
         """
 
-        extra = {} if not related_object else {"related_object": related_object}
-
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
             object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
             object_datav2=serialize_object_v2(self),
-            **extra,
+            related_object=related_object,
         )
 
 
