@@ -30,10 +30,6 @@
                 <label class="col-md-3 control-label">Job Class</label>
                 <div class="col-md-9" style="padding-top: 7px"><code>{{ obj.job_class_name }}</code></div>
             </div>
-            {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
-            {% render_field form.slug %}
-            {% include "extras/inc/overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
-            {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
             <div class="form-group">
                 <div class="col-md-9 col-md-offset-3">
                     <div class="checkbox">
@@ -44,6 +40,10 @@
                     </div>
                 </div>
             </div>
+            {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
+            {% render_field form.slug %}
+            {% include "extras/inc/overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
             {% render_field form.enabled %}
             {% include "extras/inc/overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}
             {% include "extras/inc/overridable_field.html" with field=form.commit_default override_field=form.commit_default_override %}
@@ -61,6 +61,7 @@
 {{ obj.job_class.properties_dict | json_script:"job_class_properties" }}
 <script>
     const job_class_properties = JSON.parse(document.getElementById("job_class_properties").textContent);
+    const description_default = $("#id_description").val();
     /* All id_*_override fields */
     $("[id^=id_][id$=_override]").change(function() {
         const override_id = $(this).attr("id");
@@ -74,7 +75,13 @@
         } else {
             /* Revert the field to its default value */
             if (field.attr("type") == "checkbox") {
-                field.prop("checked", job_class_properties[field_name]);
+                /* Do we have a job class object to derive properties from? */
+                if (job_class_properties != "") {
+                    field.prop("checked", job_class_properties[field_name]);
+                } else {
+                    /* No, we don't - it's probably not installed */
+                    field.prop("checked", field.attr("checked"));
+                }
                 /*
                  * Checkboxes can't be "readonly" in HTML :-(
                  * Note that "disabled" fields aren't included in form submission, so we have to be sure to
@@ -82,7 +89,16 @@
                  */
                 field.attr("disabled", "disabled");
             } else {
-                field.val(job_class_properties[field_name]);
+                /* Do we have a job class object to derive properties from? */
+                if (job_class_properties != "") {
+                    field.val(job_class_properties[field_name]);
+                } else if (field_name != "description") {
+                    /* No, we don't - it's probably not installed */
+                    field.val(field.attr("value"));
+                } else {
+                    /* Textarea fields don't have a "value" attribute */
+                    field.val(description_default);
+                }
                 field.attr("readonly", "readonly");
             }
         }

@@ -79,7 +79,7 @@ class Job(PrimaryModel):
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     grouping = models.CharField(max_length=255)
     name = models.CharField(max_length=100)
-    description = models.TextField()
+    description = models.TextField(blank=True)
 
     # Control flags
     installed = models.BooleanField(default=True, editable=False)
@@ -205,10 +205,11 @@ class Job(PrimaryModel):
         return None
 
     def clean(self):
-        """For any non-overridden fields, make sure they get reset to the actual underlying class value."""
-        for field_name in JOB_OVERRIDABLE_FIELDS:
-            if not getattr(self, f"{field_name}_override", False):
-                setattr(self, field_name, getattr(self.job_class, field_name))
+        """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
+        if self.job_class is not None:
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                if not getattr(self, f"{field_name}_override", False):
+                    setattr(self, field_name, getattr(self.job_class, field_name))
 
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})

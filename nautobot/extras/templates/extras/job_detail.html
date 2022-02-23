@@ -19,33 +19,6 @@
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
-            <strong>Job</strong>
-        </div>
-        <table class="table table-hover panel-body attr-table">
-            <tr>
-                <td>Grouping{% if not object.grouping_override %} (defined by source code){% endif %}</td>
-                <td>{{ object.grouping }}</td>
-            </tr>
-            <tr>
-                <td>Name{% if not object.name_override %} (defined by source code){% endif %}</td>
-                <td>{{ object.name }}</td>
-            </tr>
-            <tr>
-                <td>Description{% if not object.description_override %} (defined by source code){% endif %}</td>
-                <td>{{ object.description | render_markdown }}</td>
-            </tr>
-            <tr>
-                <td>Installed</td>
-                <td>{{ object.installed | render_boolean }}</td>
-            </tr>
-            <tr>
-                <td>Enabled</td>
-                <td>{{ object.enabled | render_boolean }}</td>
-            </tr>
-        </table>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
             <strong>Source Code</strong>
         </div>
         <table class="table table-hover panel-body attr-table">
@@ -71,6 +44,70 @@
                 <td>Job Class</td>
                 <td><code>{{ object.job_class_name }}</code></td>
             </tr>
+            <tr>
+                <td>Installed</td>
+                <td>{{ object.installed | render_boolean }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Job</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Grouping</td>
+                <td>{{ object.grouping }}</td>
+                <td>
+                    {% if object.grouping_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                “{{ object.job_class.grouping }}”
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{ object.name }}</td>
+                <td>
+                    {% if object.name_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                “{{ object.job_class.name }}”
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description | render_markdown | placeholder }}</td>
+                <td>
+                    {% if object.description_override %}
+                        <div class="text-muted">
+                            overridden; default is:<br>
+                            {% if object.installed %}
+                                {{ object.job_class.description | render_markdown | placeholder }}”
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Enabled</td>
+                <td>{{ object.enabled | render_boolean }}</td>
+                <td></td>
+            </tr>
         </table>
     </div>
 {% endblock content_left_page %}
@@ -83,26 +120,66 @@
         <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Approval Required to Execute</td>
-                <td>{{ object.approval_required | render_boolean }}
-                    {% if not object.approval_required_override %}(defined by source code){% endif %}
+                <td>{{ object.approval_required | render_boolean }}</td>
+                <td>
+                    {% if object.approval_required_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.approval_required | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
                 </td>
             </tr>
             <tr>
                 <td>Default to Committing Changes</td>
-                <td>{{ object.commit_default | render_boolean }}
-                    {% if not object.commit_default_override %}(defined by source code){% endif %}
+                <td>{{ object.commit_default | render_boolean }}</td>
+                <td>
+                    {% if object.commit_default_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.commit_default | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
                 </td>
             </tr>
             <tr>
                 <td>Hide from Default UI</td>
-                <td>{{ object.hidden | render_boolean }}
-                    {% if not object.hidden_override %}(defined by source code){% endif %}
+                <td>{{ object.hidden | render_boolean }}</td>
+                <td>
+                    {% if object.hidden_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.hidden | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
                 </td>
             </tr>
             <tr>
                 <td>Read-Only Execution</td>
-                <td>{{ object.read_only | render_boolean }}
-                    {% if not object.read_only_override %}(defined by source code){% endif %}
+                <td>{{ object.read_only | render_boolean }}</td>
+                <td>
+                    {% if object.read_only_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.read_only | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
                 </td>
             </tr>
             <tr>
@@ -110,9 +187,24 @@
                 <td>
                     {% if object.soft_time_limit > 0 %}
                         {{ object.soft_time_limit }} seconds
-                        {% if not object.soft_time_limit_override %}(defined by source code){% endif %}
                     {% else %}
                         {{ "CELERY_TASK_SOFT_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                    {% endif %}
+                </td>
+                <td>
+                    {% if object.soft_time_limit_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {% if object.job_class.soft_time_limit > 0 %}
+                                    {{ object.job_class.soft_time_limit }} seconds
+                                {% else %}
+                                    {{ "CELERY_TASK_SOFT_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                                {% endif %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
                     {% endif %}
                 </td>
             </tr>
@@ -121,9 +213,24 @@
                 <td>
                     {% if object.time_limit > 0 %}
                         {{ object.time_limit }} seconds
-                        {% if not object.time_limit_override %}(defined by source code){% endif %}
                     {% else %}
                         {{ "CELERY_TASK_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                    {% endif %}
+                </td>
+                <td>
+                    {% if object.time_limit_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {% if object.job_class.time_limit > 0 %}
+                                    {{ object.job_class.time_limit }} seconds
+                                {% else %}
+                                    {{ "CELERY_TASK_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                                {% endif %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
                     {% endif %}
                 </td>
             </tr>

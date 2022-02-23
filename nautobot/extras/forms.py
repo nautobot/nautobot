@@ -919,13 +919,14 @@ class JobEditForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
     def clean(self):
         """
-        For all overridable fields, if they aren't marked as overridden, revert them to the underlying value.
+        For all overridable fields, if they aren't marked as overridden, revert them to the underlying value if known.
         """
         cleaned_data = super().clean() or self.cleaned_data
         job_class = self.instance.job_class
-        for field_name in JOB_OVERRIDABLE_FIELDS:
-            if not cleaned_data.get(f"{field_name}_override", False):
-                cleaned_data[field_name] = getattr(job_class, field_name)
+        if job_class is not None:
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                if not cleaned_data.get(f"{field_name}_override", False):
+                    cleaned_data[field_name] = getattr(job_class, field_name)
         return cleaned_data
 
 
