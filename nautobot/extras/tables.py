@@ -395,18 +395,18 @@ def log_entry_color_css(record):
 
 class JobTable(BaseTable):
     # TODO pk = ToggleColumn()
-    source = tables.Column(orderable=False)
+    source = tables.Column()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
-    name = tables.Column(linkify=True, orderable=False)
-    installed = BooleanColumn(orderable=False)
-    enabled = BooleanColumn(orderable=False)
-    description = tables.Column(accessor="description_first_line", orderable=False)
-    commit_default = BooleanColumn(orderable=False)
-    hidden = BooleanColumn(orderable=False)
-    read_only = BooleanColumn(orderable=False)
-    approval_required = BooleanColumn(orderable=False)
-    soft_time_limit = tables.Column(orderable=False)
-    time_limit = tables.Column(orderable=False)
+    name = tables.Column(linkify=True)
+    installed = BooleanColumn()
+    enabled = BooleanColumn()
+    description = tables.Column(accessor="description_first_line")
+    commit_default = BooleanColumn()
+    hidden = BooleanColumn()
+    read_only = BooleanColumn()
+    approval_required = BooleanColumn()
+    soft_time_limit = tables.Column()
+    time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
     last_run = tables.TemplateColumn(
         accessor="latest_result",
@@ -418,18 +418,18 @@ class JobTable(BaseTable):
             {% endif %}
         """,
         linkify=lambda value: value.get_absolute_url() if value else None,
-        orderable=False,
     )
     last_status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record.latest_result %}",
-        orderable=False,
     )
+    tags = TagColumn(url_name="extras:job_list")
 
     def render_description(self, value):
         return render_markdown(value)
 
     class Meta(BaseTable.Meta):
         model = JobModel
+        orderable = False
         fields = (
             "source",
             "name",
@@ -444,6 +444,7 @@ class JobTable(BaseTable):
             "time_limit",
             "last_run",
             "last_status",
+            "tags",
             "actions",
         )
         default_columns = (

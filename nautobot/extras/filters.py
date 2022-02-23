@@ -557,6 +557,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     hidden = django_filters.BooleanFilter()
     read_only = django_filters.BooleanFilter()
     approval_required = django_filters.BooleanFilter()
+    tag = TagFilter()
 
     class Meta:
         model = Job

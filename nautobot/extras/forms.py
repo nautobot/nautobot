@@ -887,7 +887,7 @@ class JobForm(BootstrapMixin, forms.Form):
         return bool(len(self.fields) > 1)
 
 
-class JobEditForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class JobEditForm(NautobotModelForm):
     slug = SlugField()
 
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
@@ -915,6 +915,7 @@ class JobEditForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "soft_time_limit",
             "time_limit_override",
             "time_limit",
+            "tags",
         ]
 
     def clean(self):
@@ -947,6 +948,7 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     )
     read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     approval_required = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    tag = TagFilterField(model)
 
 
 class JobScheduleForm(BootstrapMixin, forms.Form):
