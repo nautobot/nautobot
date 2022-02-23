@@ -17,7 +17,7 @@ def get_snapshots(instance, action):
         most_recent_changes = ObjectChange.objects.filter(
             changed_object_type=changed_object_type, changed_object_id=instance.id
         )[:2]
-        prechange = most_recent_changes[1].object_datav2 if most_recent_changes.count() > 1 else None
+        prechange = most_recent_changes[1].object_data_v2 if most_recent_changes.count() > 1 else None
 
     serializer_class = get_serializer_for_model(instance.__class__)
 

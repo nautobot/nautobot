@@ -40,7 +40,7 @@ class ChangeLoggedModel(models.Model):
             object_repr=str(self),
             action=action,
             object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
-            object_datav2=serialize_object_v2(self),
+            object_data_v2=serialize_object_v2(self),
             related_object=related_object,
         )
 
@@ -78,7 +78,7 @@ class ObjectChange(BaseModel):
     related_object = GenericForeignKey(ct_field="related_object_type", fk_field="related_object_id")
     object_repr = models.CharField(max_length=200, editable=False)
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
-    object_datav2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
+    object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
     csv_headers = [
         "time",

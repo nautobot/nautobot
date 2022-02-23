@@ -91,7 +91,7 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
             object_repr=str(self),
             action=action,
             object_data=serialize_object(self),
-            object_datav2=serialize_object_v2(self),
+            object_data_v2=serialize_object_v2(self),
             related_object=device,
         )
 

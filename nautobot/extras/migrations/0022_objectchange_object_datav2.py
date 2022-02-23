@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="objectchange",
-            name="object_datav2",
+            name="object_data_v2",
             field=models.JSONField(
                 blank=True,
                 editable=False,
