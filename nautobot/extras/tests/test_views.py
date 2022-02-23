@@ -946,6 +946,10 @@ class JobTestCase(
 
     model = Job
 
+    def _get_queryset(self):
+        """Don't include hidden or non-installed Jobs as they won't appear in the UI by default."""
+        return self.model.objects.filter(installed=True, hidden=False)
+
     @classmethod
     def setUpTestData(cls):
         # Job model objects are automatically created during database migrations
@@ -962,7 +966,7 @@ class JobTestCase(
             "commit_default_override": True,
             "commit_default": False,
             "hidden_override": True,
-            "hidden": True,
+            "hidden": False,
             "read_only_override": True,
             "read_only": False,
             "approval_required_override": True,
