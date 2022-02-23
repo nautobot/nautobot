@@ -44,12 +44,11 @@ class WebhookTest(APITestCase):
         )
         for webhook in webhooks:
             webhook.content_types.set([site_ct])
-        
+
         cls.active_status = Status.objects.get_for_model(Site).get(slug="active")
         cls.planned_status = Status.objects.get_for_model(Site).get(slug="planned")
         cls.region_one = Region.objects.create(name="Region One", slug="region-one")
         cls.region_two = Region.objects.create(name="Region Two", slug="region-two")
-
 
     def test_webhooks_process_webhook_on_update(self):
         """
@@ -67,7 +66,6 @@ class WebhookTest(APITestCase):
             Always returns a 200 HTTP response.
             """
             signature = generate_signature(request.body, webhook.secret)
-
 
             # Validate the outgoing request headers
             self.assertEqual(request.headers["Content-Type"], webhook.http_content_type)
