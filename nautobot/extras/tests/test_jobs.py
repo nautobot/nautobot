@@ -16,7 +16,7 @@ from django.test.client import RequestFactory
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, JobResult, Status
+from nautobot.extras.models import FileProxy, JobResult, Status, CustomField
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import CeleryTestCase, TestCase
 
@@ -589,3 +589,50 @@ class RunJobManagementCommandTest(CeleryTestCase):
         self.assertEqual(status.name, "Test Status")
 
         status.delete()
+
+
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
+class JobSiteCustomFieldTest(CeleryTestCase):
+    """Test a job that creates a site and a custom field."""
+
+    def setUp(self):
+        super().setUp()
+        user = User.objects.create(username="User1")
+
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = user
+
+    def test_run(self):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
+            self.clear_worker()
+
+            job_content_type = ContentType.objects.get(app_label="extras", model="job")
+            job_name = "local/test_site_with_custom_field/TestCreateSiteWithCustomField"
+            job_class = get_job(job_name)
+
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+
+            # Run the job
+            run_job(data={}, request=self.request, commit=True, job_result_pk=job_result.pk)
+
+            self.wait_on_active_tasks()
+            job_result.refresh_from_db()
+
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+
+            # Test site with a value for custom_field
+            site_1 = Site.objects.filter(slug="test-site-one")
+            self.assertEqual(site_1.count(), 1)
+            self.assertEqual(CustomField.objects.filter(name="cf1").count(), 1)
+            self.assertEqual(site_1[0].cf["cf1"], "some-value")
+
+            # Test site with default value for custom field
+            site_2 = Site.objects.filter(slug="test-site-two")
+            self.assertEqual(site_2.count(), 1)
+            self.assertEqual(site_2[0].cf["cf1"], "-")
