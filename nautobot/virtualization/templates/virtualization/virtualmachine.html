@@ -11,8 +11,15 @@
 {% endblock extra_buttons %}
 
 {% block nav_tabs %}
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Virtual Machine</a>
+        <li role="presentation"{% if not active_tab and not request.GET.tab or request.GET.tab == "main" %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
+                Virtual Machine
+            </a>
+        </li>
+        <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+                Advanced
+            </a>
         </li>
         {% if perms.extras.view_configcontext %}
             <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
@@ -248,4 +255,12 @@
 {% block javascript %}
     <script src="{% static 'js/interface_filtering.js' %}?v{{ settings.VERSION }}"></script>
     <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+    <script>
+        function switch_tab(tab_href) {
+            if (location.pathname != "{{ object.get_absolute_url }}") {
+                tab_location = tab_href.split("#");
+                window.location.href = `${tab_location[0]}?tab=${tab_location[1]}`;
+            };
+        }
+    </script>
 {% endblock javascript %}
