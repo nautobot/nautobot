@@ -5,7 +5,7 @@ from django.db.models import Q
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
-    CreatedUpdatedFilterSet,
+    NautobotFilterSet,
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
@@ -108,12 +108,7 @@ __all__ = (
 )
 
 
-class RegionFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Region.objects.all(),
         label="Parent region (ID)",
@@ -130,13 +125,7 @@ class RegionFilterSet(
         fields = ["id", "name", "slug", "description"]
 
 
-class SiteFilterSet(
-    BaseFilterSet,
-    TenancyFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -192,12 +181,7 @@ class SiteFilterSet(
         return queryset.filter(qs_filter)
 
 
-class RackGroupFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
@@ -237,24 +221,13 @@ class RackGroupFilterSet(
         fields = ["id", "name", "slug", "description"]
 
 
-class RackRoleFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = RackRole
         fields = ["id", "name", "slug", "color"]
 
 
-class RackFilterSet(
-    BaseFilterSet,
-    TenancyFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -336,7 +309,7 @@ class RackFilterSet(
         )
 
 
-class RackReservationFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet, TenancyFilterSet):
+class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -396,18 +369,13 @@ class RackReservationFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFie
         )
 
 
-class ManufacturerFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = Manufacturer
         fields = ["id", "name", "slug", "description"]
 
 
-class DeviceTypeFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class DeviceTypeFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -552,23 +520,13 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ["id", "name"]
 
 
-class DeviceRoleFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = DeviceRole
         fields = ["id", "name", "slug", "color", "vm_role"]
 
 
-class PlatformFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         field_name="manufacturer",
         queryset=Manufacturer.objects.all(),
@@ -586,14 +544,7 @@ class PlatformFilterSet(
         fields = ["id", "name", "slug", "napalm_driver", "description"]
 
 
-class DeviceFilterSet(
-    BaseFilterSet,
-    TenancyFilterSet,
-    LocalContextFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1088,7 +1039,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         return queryset.filter(qs_filter)
 
 
-class VirtualChassisFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class VirtualChassisFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1151,7 +1102,7 @@ class VirtualChassisFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFiel
         return queryset.filter(qs_filter)
 
 
-class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1235,7 +1186,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = []
 
 
-class PowerPanelFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class PowerPanelFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -1283,12 +1234,7 @@ class PowerPanelFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldMod
 
 
 class PowerFeedFilterSet(
-    BaseFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
+    NautobotFilterSet, CableTerminationFilterSet, PathEndpointFilterSet, StatusModelFilterSetMixin
 ):
     q = django_filters.CharFilter(
         method="search",

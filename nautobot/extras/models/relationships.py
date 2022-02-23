@@ -10,7 +10,7 @@ from django.db import models
 from django.db.models import Q
 
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
@@ -480,6 +480,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
                 )
 
 
+@extras_features("custom_validators")
 class RelationshipAssociation(BaseModel):
     relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
 

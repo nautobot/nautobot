@@ -7,14 +7,17 @@ from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
 
+import netaddr
+
 from nautobot.dcim.models import Site
-from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
-from nautobot.extras.models import CustomField, Secret
+from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
+from nautobot.ipam.models import Prefix, IPAddress
 from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from example_plugin import config as example_config
@@ -70,11 +73,13 @@ class PluginTest(TestCase):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from example_plugin.custom_validators import (
-            SiteCustomValidator,
-        )
+        from example_plugin.custom_validators import SiteCustomValidator, RelationshipAssociationCustomValidator
 
         self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
+        self.assertIn(
+            RelationshipAssociationCustomValidator,
+            registry["plugin_custom_validators"]["extras.relationshipassociation"],
+        )
 
     def test_jinja_filter_registration(self):
         """
@@ -444,6 +449,21 @@ class PluginCustomValidationTest(TestCase):
 
         with self.assertRaises(ValidationError):
             site.clean()
+
+    def test_relationship_association_validator_raises_exception(self):
+        status_active = Status.objects.create(name="status1", slug="status1")
+        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
+        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status_active)
+        relationship = Relationship.objects.create(
+            name="Test Relationship",
+            slug="test-relationship",
+            source_type=ContentType.objects.get_for_model(Prefix),
+            destination_type=ContentType.objects.get_for_model(IPAddress),
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+        relationship_assoc = RelationshipAssociation(relationship=relationship, source=prefix, destination=ipaddress)
+        with self.assertRaises(ValidationError):
+            relationship_assoc.clean()
 
 
 class LoadPluginTest(TestCase):
