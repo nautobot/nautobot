@@ -314,11 +314,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):
             # Log each modified files
             for item in modified_files:
                 log_message = f"{item.status} - `{item.text}`"
-                job_result.log(
-                    log_message,
-                    level_choice=LogLevelChoices.LOG_INFO, 
-                    logger=logger
-                    )
+                job_result.log(log_message, level_choice=LogLevelChoices.LOG_INFO, logger=logger)
         else:
             job_result.log("Repository has no changes", level_choice=LogLevelChoices.LOG_INFO, logger=logger)
 
