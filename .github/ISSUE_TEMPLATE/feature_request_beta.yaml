@@ -29,22 +29,22 @@ body:
         - "Cora - Coder"
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: what
     attributes:
-      label: I want WHAT, the desired functionality to be implemented___,
-      description: Please enter the desired functionality
-      placeholder: to develop Nautobot plugins that can be inserted as a top-level item in the navigation bar
+      label: I want WHAT
+      description: Please enter the desired functionality to be implemented.
+      placeholder: To develop Nautobot plugins that can be inserted as a top-level item in the navigation bar
     validations:
       required: true
   - type: textarea
     id: why
     attributes:
-      label: So that WHY, the reason or value of the implemented functionality___.
-      description: Please enter the reason for the desired functionality
+      label: So that WHY
+      description: Please enter the reason or value for the desired functionality.
       placeholder: >
-        my plugin is seen as first-class citizen by my users and so that the
-        plugins drop-down menu isn't overloaded.  When I use Nautobot as an App Platform,
+        My plugin is seen as first-class citizen by my users and so that the
+        plugins drop-down menu isn't overloaded. When I use Nautobot as an App Platform,
         it'll also provide more focus on the Plugins/Apps than core SoT drop-downs (for
         users that aren't permitted to view those items)
     validations:
@@ -52,9 +52,9 @@ body:
   - type: textarea
     id: acceptance_criteria
     attributes:
-      label: I know this is done when... HOW.
+      label: I know this is done when... HOW
       description: The requirements/acceptance criteria (a list) as to how this functionality should be implemented.
-      placeholder: >
+      placeholder: |
         - I create a Nautobot plugin and have the option to inject it in the Plugins
           dropdown menu or create a new dedicated dropdown in the navigation bar.
         - When multiple plugins provide dedicated dropdowns, I can re-order the plugin
@@ -88,6 +88,8 @@ body:
         models need to be created or additional fields on existing models need to be added?
 
         It is OK to state you are unsure if this would or would not require changes.
+      placeholder: |
+        - ?
   - type: textarea
     id: external_dependencies
     attributes:
@@ -98,3 +100,6 @@ body:
 
         It is OK to suggest an external library that could pose as a reference implementation
         or be installed directly.
+      placeholder: |
+        - django-entangled
+        - django-extras
