@@ -11,6 +11,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import signals
 from django.urls import reverse
@@ -91,8 +92,8 @@ class Job(PrimaryModel):
     # Job.Meta.field_order is not overridable in this model
     read_only = models.BooleanField(default=False)
     approval_required = models.BooleanField(default=False)
-    soft_time_limit = models.PositiveIntegerField(default=0)
-    time_limit = models.PositiveIntegerField(default=0)
+    soft_time_limit = models.FloatField(default=0, validators=[MinValueValidator(0)])
+    time_limit = models.FloatField(default=0, validators=[MinValueValidator(0)])
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     grouping_override = models.BooleanField(default=False)
