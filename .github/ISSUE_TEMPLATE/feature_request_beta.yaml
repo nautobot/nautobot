@@ -13,7 +13,7 @@ body:
   - type: dropdown
     id: persona
     attributes:
-      label: As a WHO, the user persona___,
+      label: As WHO, the USER PERSONA,
       description: Please choose the appropriate [persona](https://github.com/nautobot/nautobot/wiki/Personas)
       multiple: false
       options:
