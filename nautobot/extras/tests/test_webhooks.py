@@ -120,12 +120,12 @@ class WebhookTest(APITestCase):
                 process_webhook(
                     webhook.pk,
                     serializer.data,
-                    snapshot,
                     Site._meta.model_name,
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
                     request_id,
+                    snapshot,
                 )
 
     def test_webhooks_snapshot_on_create(self):
