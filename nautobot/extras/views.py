@@ -40,8 +40,9 @@ from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
-    get_datasource_contents,
+    enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
+    get_datasource_contents,
 )
 from .jobs import get_job, get_jobs, run_job, Job
 from .models import (
@@ -555,6 +556,7 @@ class GitRepositoryView(generic.ObjectView):
 class GitRepositoryEditView(generic.ObjectEditView):
     queryset = GitRepository.objects.all()
     model_form = forms.GitRepositoryForm
+    template_name = "extras/gitrepository_object_edit.html"
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
@@ -612,20 +614,36 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
+def check_and_call_git_repository_function(request, slug, func):
+    """Helper for checking Git permissions and worker availability, then calling provided function if all is well
+    Args:
+        request: request object.
+        slug (str): GitRepository slug value.
+        func (function): Enqueue git repo function.
+    Returns:
+        HttpResponseForbidden or a redirect
+    """
+    if not request.user.has_perm("extras.change_gitrepository"):
+        return HttpResponseForbidden()
+
+    # Allow execution only if a worker process is running.
+    if not get_worker_count(request):
+        messages.error(request, "Unable to run job: Celery worker process not running.")
+    else:
+        repository = get_object_or_404(GitRepository, slug=slug)
+        func(repository, request)
+
+    return redirect("extras:gitrepository_result", slug=slug)
+
+
 class GitRepositorySyncView(View):
     def post(self, request, slug):
-        if not request.user.has_perm("extras.change_gitrepository"):
-            return HttpResponseForbidden()
+        return check_and_call_git_repository_function(request, slug, enqueue_pull_git_repository_and_refresh_data)
 
-        repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
-        # Allow execution only if a worker process is running.
-        if not get_worker_count(request):
-            messages.error(request, "Unable to run job: Celery worker process not running.")
-        else:
-            enqueue_pull_git_repository_and_refresh_data(repository, request)
-
-        return redirect("extras:gitrepository_result", slug=slug)
+class GitRepositoryDryRunView(View):
+    def post(self, request, slug):
+        return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
 
 
 class GitRepositoryResultView(generic.ObjectView):
@@ -1185,7 +1203,6 @@ class ObjectChangeView(generic.ObjectView):
 class ObjectChangeLogView(View):
     """
     Present a history of changes made to a particular object.
-
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
