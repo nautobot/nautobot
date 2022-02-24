@@ -77,6 +77,11 @@ AUTH_LDAP_BIND_PASSWORD = "demo"
 
 # Include this `ldap.set_option` call if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+
+# Include the following to validate the certificate of your ldap server.
+# This should not be used with the option to ignore certificate errors above.
+ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, "/path/to/ca.pem")
+ldap.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
 ```
 
 ### TLS Options
