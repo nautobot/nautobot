@@ -82,14 +82,14 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["data"]["name"], "Site Update")
             self.assertEqual(body["data"]["status"]["value"], self.planned_status.slug)
             self.assertEqual(body["data"]["region"]["slug"], self.region_two.slug)
-            self.assertEqual(body["snapshot"]["prechange"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["prechange"]["status"]["value"], self.active_status.slug)
-            self.assertEqual(body["snapshot"]["prechange"]["region"]["slug"], self.region_one.slug)
-            self.assertEqual(body["snapshot"]["postchange"]["name"], "Site Update")
-            self.assertEqual(body["snapshot"]["postchange"]["status"]["value"], self.planned_status.slug)
-            self.assertEqual(body["snapshot"]["postchange"]["region"]["slug"], self.region_two.slug)
-            self.assertEqual(body["snapshot"]["differences"]["removed"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["differences"]["added"]["name"], "Site Update")
+            self.assertEqual(body["snapshots"]["prechange"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["prechange"]["status"]["value"], self.active_status.slug)
+            self.assertEqual(body["snapshots"]["prechange"]["region"]["slug"], self.region_one.slug)
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site Update")
+            self.assertEqual(body["snapshots"]["postchange"]["status"]["value"], self.planned_status.slug)
+            self.assertEqual(body["snapshots"]["postchange"]["region"]["slug"], self.region_two.slug)
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site Update")
 
             class FakeResponse:
                 ok = True
@@ -115,7 +115,7 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshot = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
 
                 process_webhook(
                     webhook.pk,
@@ -125,7 +125,7 @@ class WebhookTest(APITestCase):
                     timestamp,
                     self.user.username,
                     request_id,
-                    snapshot,
+                    snapshots,
                 )
 
     def test_webhooks_snapshot_on_create(self):
@@ -137,10 +137,10 @@ class WebhookTest(APITestCase):
             # Validate the outgoing request body
             body = json.loads(request.body)
             self.assertEqual(body["data"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["prechange"], None)
-            self.assertEqual(body["snapshot"]["postchange"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["differences"]["removed"], None)
-            self.assertEqual(body["snapshot"]["differences"]["added"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["prechange"], None)
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["removed"], None)
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site 1")
 
             class FakeResponse:
                 ok = True
@@ -160,7 +160,7 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshot = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
+                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
 
                 process_webhook(
                     webhook.pk,
@@ -170,7 +170,7 @@ class WebhookTest(APITestCase):
                     timestamp,
                     self.user.username,
                     request_id,
-                    snapshot,
+                    snapshots,
                 )
 
     def test_webhooks_snapshot_on_delete(self):
@@ -182,10 +182,10 @@ class WebhookTest(APITestCase):
             # Validate the outgoing request body
             body = json.loads(request.body)
             self.assertEqual(body["data"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["prechange"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["postchange"], None)
-            self.assertEqual(body["snapshot"]["differences"]["removed"]["name"], "Site 1")
-            self.assertEqual(body["snapshot"]["differences"]["added"], None)
+            self.assertEqual(body["snapshots"]["prechange"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["postchange"], None)
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"], None)
 
             class FakeResponse:
                 ok = True
@@ -208,7 +208,7 @@ class WebhookTest(APITestCase):
                 site.delete()
 
                 serializer = SiteSerializer(temp_site, context={"request": None})
-                snapshot = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+                snapshots = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
 
                 process_webhook(
                     webhook.pk,
@@ -218,5 +218,5 @@ class WebhookTest(APITestCase):
                     timestamp,
                     self.user.username,
                     request_id,
-                    snapshot,
+                    snapshots,
                 )

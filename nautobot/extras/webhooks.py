@@ -11,21 +11,18 @@ from .choices import ObjectChangeActionChoices
 
 def get_snapshots(instance, action):
     prechange = None
+    postchange = None
 
-    if action != ObjectChangeActionChoices.ACTION_CREATE:
-        changed_object_type = ContentType.objects.get_for_model(instance)
-        most_recent_changes = ObjectChange.objects.filter(
-            changed_object_type=changed_object_type, changed_object_id=instance.id
-        )[:2]
-        prechange = most_recent_changes[1].object_data_v2 if most_recent_changes.count() > 1 else None
+    changed_object_type = ContentType.objects.get_for_model(instance)
+    most_recent_changes = ObjectChange.objects.filter(
+        changed_object_type=changed_object_type, changed_object_id=instance.id
+    )[:2]
 
-    serializer_class = get_serializer_for_model(instance.__class__)
+    if action != ObjectChangeActionChoices.ACTION_CREATE and most_recent_changes.count() > 1:
+        prechange = most_recent_changes[1].object_data_v2
 
-    postchange = (
-        serializer_class(instance, context={"request": None}).data
-        if action != ObjectChangeActionChoices.ACTION_DELETE
-        else None
-    )
+    if action != ObjectChangeActionChoices.ACTION_DELETE and most_recent_changes.count() > 0:
+        postchange = most_recent_changes[0].object_data_v2
 
     if prechange and postchange:
         diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
@@ -69,7 +66,7 @@ def enqueue_webhooks(instance, user, request_id, action):
             "request": None,
         }
         serializer = serializer_class(instance, context=serializer_context)
-        snapshot = get_snapshots(instance, action)  # Get instance snapshot
+        snapshots = get_snapshots(instance, action)  # Get instance snapshots
 
         # Enqueue the webhooks
         for webhook in webhooks:
@@ -81,6 +78,6 @@ def enqueue_webhooks(instance, user, request_id, action):
                 str(timezone.now()),
                 user.username,
                 request_id,
-                snapshot,
+                snapshots,
             ]
             process_webhook.apply_async(args=args)
