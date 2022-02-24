@@ -57,6 +57,7 @@ body:
       placeholder: |
         - I create a Nautobot plugin and have the option to inject it in the Plugins
           dropdown menu or create a new dedicated dropdown in the navigation bar.
+          
         - When multiple plugins provide dedicated dropdowns, I can re-order the plugin
           dropdowns in the navbar.
     validations:
