@@ -217,6 +217,9 @@ class DynamicGroup(OrganizationalModel):
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
+        if not isinstance(self.filter, dict):
+            raise ValidationError({"filter": "Filter must be a dict"})
+
     # def clean(self):
     #     """Group Model clean method."""
     #     model = self.content_type.model_class()
