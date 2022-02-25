@@ -1,17 +1,17 @@
 import copy
 import datetime
-import json
 import inspect
-from importlib import import_module
+import json
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.serializers import serialize
-from django.db.models import Count, OuterRef, Subquery, Model
+from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.template import engines
+from django.utils.module_loading import import_string
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
@@ -422,100 +422,79 @@ def copy_safe_request(request):
     )
 
 
-def get_filterset_for_model(model):
-    """Return the FilterSet class associated with a given model.
+def get_object_for_model(model, module_name, object_suffix):
+    """Return the appropriate class associated with a given model matching the `module_name` and
+    `object_suffix`.
 
-    The FilterSet class is expected to be in the filters module within the application
-    associated with the model and its name is expected to be {ModelName}FilterSet
+    The object class is expected to be in the module within the application
+    associated with the model and its name is expected to be `{ModelName}{object_suffix}`.
 
-    Not all models have a FilterSet defined so this function can return None as well
+    If a matching class is not found, this will return `None`.
 
     Returns:
-        either the filterset class or none
+        Either the matching object class or None
     """
     if not inspect.isclass(model):
         raise TypeError(f"model class {model} was passes as an instance!")
     if not issubclass(model, Model):
         raise TypeError(f"{model} is not a subclass of Django Model class")
 
+    # e.g. "nautobot.dcim.forms.DeviceFilterForm"
+    app_label = model._meta.app_label
+    object_name = f"{model.__name__}{object_suffix}"
+    object_path = f"{app_label}.{module_name}.{object_name}"
+    if app_label not in settings.PLUGINS:
+        object_path = f"nautobot.{object_path}"
+
     try:
-        filterset_name = f"{model.__name__}FilterSet"
-        if model._meta.app_label in settings.PLUGINS:
-            return getattr(import_module(f"{model._meta.app_label}.filters"), filterset_name)
-        else:
-            return getattr(import_module(f"nautobot.{model._meta.app_label}.filters"), filterset_name)
-    except ModuleNotFoundError:
-        # The name of the module is not correct
-        pass
-    except AttributeError:
-        # Unable to find a filterset for this model
+        return import_string(object_path)
+    # The name of the module is not correct or unable to find the desired object for this model
+    except (AttributeError, ImportError, ModuleNotFoundError):
         pass
 
     return None
+
+
+def get_filterset_for_model(model):
+    """Return the `FilterSet` class associated with a given `model`.
+
+    The `FilterSet` class is expected to be in the `filters` module within the application
+    associated with the model and its name is expected to be `{ModelName}FilterSet`.
+
+    If a matching `FilterSet` is not found, this will return `None`.
+
+    Returns:
+        Either the `FilterSet` class or `None`
+    """
+    return get_object_for_model(model, module_name="filters", object_suffix="FilterSet")
 
 
 def get_filterform_for_model(model):
-    """Return the FilterForm class associated with a given model.
+    """Return the `FilterForm` class associated with a given `model`.
 
-    The FilterForm class is expected to be in the filters module within the application
-    associated with the model and its name is expected to be {ModelName}FilterForm
+    The `FilterForm` class is expected to be in the `forms` module within the application
+    associated with the model and its name is expected to be `{ModelName}FilterForm`.
 
-    Not all models have a FilterForm defined so this function can return None as well
+    If a matching `FilterForm` is not found, this will return `None`.
 
     Returns:
-        either the filter form class or none
+        Either the `FilterForm` class or `None`
     """
-    if not inspect.isclass(model):
-        raise TypeError(f"model class {model} was passes as an instance!")
-    if not issubclass(model, Model):
-        raise TypeError(f"{model} is not a subclass of Django Model class")
-
-    try:
-        filterform_name = f"{model.__name__}FilterForm"
-        if model._meta.app_label in settings.PLUGINS:
-            return getattr(import_module(f"{model._meta.app_label}.forms"), filterform_name)
-        else:
-            return getattr(import_module(f"nautobot.{model._meta.app_label}.forms"), filterform_name)
-    except ModuleNotFoundError:
-        # The name of the module is not correct
-        pass
-    except AttributeError:
-        # Unable to find a filterset for this model
-        pass
-
-    return None
+    return get_object_for_model(model, module_name="forms", object_suffix="FilterForm")
 
 
 def get_table_for_model(model):
-    """Return the Table class associated with a given model.
+    """Return the `Table` class associated with a given `model`.
 
-    The Table class is expected to be in the filters module within the application
-    associated with the model and its name is expected to be {ModelName}Table
+    The `Table` class is expected to be in the `tables` module within the application
+    associated with the model and its name is expected to be `{ModelName}Table`.
 
-    Not all models have a Table defined so this function can return None as well
+    If a matching `Table` is not found, this will return `None`.
 
     Returns:
-        either the table class or None
+        Either the `Table` class or `None`
     """
-    if not inspect.isclass(model):
-        raise TypeError(f"model class {model} was passes as an instance!")
-    if not issubclass(model, Model):
-        raise TypeError(f"{model} is not a subclass of Django Model class")
-
-    try:
-        table_name = f"{model.__name__}Table"
-        if model._meta.app_label in settings.PLUGINS:
-            return getattr(import_module(f"{model._meta.app_label}.tables"), table_name)
-        else:
-            return getattr(import_module(f"nautobot.{model._meta.app_label}.tables"), table_name)
-    except ModuleNotFoundError:
-        # The name of the module is not correct
-        pass
-    except AttributeError:
-        # Unable to find a filterset for this model
-        pass
-
-    return None
+    return get_object_for_model(model, module_name="tables", object_suffix="Table")
 
 
 # Setup UtilizationData named tuple for use by multiple methods
