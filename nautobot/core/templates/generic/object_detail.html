@@ -137,7 +137,7 @@
 </script>
 <script>
     url = window.location.href.split("?")[0];
-    window.history.pushState({}, document.title, url);
+    window.history.replaceState({}, document.title, url);
     var clipboard = new ClipboardJS('.btn');
 
     clipboard.on('success', function (e) {});
