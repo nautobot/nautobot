@@ -335,7 +335,7 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 The `run()` method, if you choose to implement it, should accept two arguments:
 
 1. `data` - A dictionary which will contain all of the variable data passed in by the user (via the web UI or REST API)
-2. `commit` - A boolean indicating whether database changes should be committed. If this is false, even if your Job attempts to make database changes, they will be automatically rolled back when the Job completes.
+2. `commit` - A boolean indicating whether database changes should be committed. If this is `False`, even if your Job attempts to make database changes, they will be automatically rolled back when the Job completes.
 
 ```python
 from nautobot.extras.jobs import Job, StringVar, IntegerVar, ObjectVar

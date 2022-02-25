@@ -33,6 +33,8 @@ class JobTest(TransactionTestCase):
     maxDiff = None
 
     def setUp(self):
+        super().setUp()
+
         self.job_content_type = ContentType.objects.get(app_label="extras", model="job")
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
@@ -410,6 +412,8 @@ class JobFileUploadTest(TransactionTestCase):
     databases = ("default", "job_logs")
 
     def setUp(self):
+        super().setUp()
+
         self.file_contents = b"I am content.\n"
         self.test_file = SimpleUploadedFile(name="test_file.txt", content=self.file_contents)
         self.job_content_type = ContentType.objects.get(app_label="extras", model="job")
