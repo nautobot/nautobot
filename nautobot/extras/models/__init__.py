@@ -3,6 +3,13 @@ from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
 from .groups import DynamicGroup
+from .jobs import (
+    Job,
+    JobLogEntry,
+    JobResult,
+    ScheduledJob,
+    ScheduledJobs,
+)
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -14,11 +21,6 @@ from .models import (
     GraphQLQuery,
     HealthCheckTestModel,
     ImageAttachment,
-    Job,
-    JobLogEntry,
-    JobResult,
-    ScheduledJob,
-    ScheduledJobs,
     Webhook,
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel

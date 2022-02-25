@@ -75,8 +75,7 @@ Here is what you need to know about Nautobot releases:
 - The initial launch of Nautobot is version 1.0.0beta1 (major.minor.patch) released on February 24, 2021.
 - The core team estimates quarterly releases with the majority of them being minor releases.
 - It is an aspirational goal that there will be no more than one major release per year as major releases do indicate a break in backwards compatibility.
-- Patch releases will be released as needed without a defined schedule.
-- Patch releases will be used for bugs, security vulnerabilities, backports, and other issues as they arise.
+- For information pertaining to patch releases, which will be released on a schedule, please see the [Patch Releases](#patch-releases) section below.
 - Given the core team is estimating quarterly releases, there will not be firm dates for releases.
 - In order to provide more visibility into the development and release schedule of Nautobot, there will be structured notifications as follows:
   - At the start of a release cycle, the estimated timeframe for release will be a 4-6 week window.
@@ -84,6 +83,24 @@ Here is what you need to know about Nautobot releases:
   - After 8-9 weeks within the development cycle, the estimated timeframe for release will be narrowed further to a 2 week window.
   - The final notification will be provided 3-5 days before the release drops.
 - The dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
+
+#### Patch Releases
+
+Specifics around patch releases:
+
+- Will be released every two weeks on Mondays, starting March 7th, 2022.
+- Will be focused on bugs, security vulnerabilities, backports, and other issues as they arise.
+- Will not introduce significant new functionality except as needed to address a bug.
+- Will not be released if there have been no new merges to `develop` since the previous release.
+- Should not be considered a mandatory upgrade: If it does not fix a bug or issue you are experiencing, you should not feel the need to upgrade right away.
+- May happen a day or two after the Monday schedule if Monday is an observed holiday. We would like to ensure full team availability post-release.
+
+Should a patch release contain a fix for security vulnerability(s) (i.e. CVE(s)), data-loss bug(s), or other critical issue(s), we will:
+
+- Release a new patch release as soon as the fix has been identified, implemented, and thoroughly tested. No waiting for the next regularly scheduled release date.
+- Bring special attention to these releases in our notification channels.
+- Strongly urge you to upgrade to address these more serious issues as soon as possible.
+- Not adjust any subsequent release dates (the next scheduled release will still occur as scheduled).
 
 ### Long Term Support (LTS)
 

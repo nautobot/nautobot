@@ -34,6 +34,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 
 ### Added
 
+- [#5](https://github.com/nautobot/nautobot/issues/5) - Added the option to perform a "dry run" of Git repository syncing.
 - [#498](https://github.com/nautobot/nautobot/issues/498) - Added custom-validator support to the RelationshipAssociation model.
 - [#724](https://github.com/nautobot/nautobot/issues/724) - Added Provider Network data model. (Partially based on [NetBox #5986](https://github.com/netbox-community/netbox/issues/5986).)
 - [#803](https://github.com/nautobot/nautobot/issues/803) - There is now a *render_boolean* template filter in helpers, which renders computed boolean values as HTML in a consistent manner.
@@ -56,6 +57,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#1307](https://github.com/nautobot/nautobot/pull/1307) - Updated various Python package dependencies to their latest compatible versions.
 - [#1314](https://github.com/nautobot/nautobot/pull/1314) - Updated various development-only Python package dependencies to their latest compatible versions.
 - [#1321](https://github.com/nautobot/nautobot/pull/1321) - Updates to various browser package dependencies. This includes updating from Material Design Icons 5.x to 6.x, which has a potential impact on plugins: a [small number of icons have been removed or renamed](https://dev.materialdesignicons.com/upgrade#5.9.55-to-6.1.95) as a result of this change.
+- [#1367](https://github.com/nautobot/nautobot/pull/1367) - Extracted Job-related models to submodule `nautobot.extras.models.jobs`; refined Job testing best practices.
 
 ### Fixed
 
