@@ -202,7 +202,10 @@ class DynamicGroup(OrganizationalModel):
                 logger.debug("%s: %s", field_name, form.cleaned_data[field_name])
 
         self.filter = filter
-        self.save()
+        # FIXME(jathan): Don't call save here. Just dynamically update `.filter`
+        # and let the caller worry about save. This also aligns with the current
+        # dynamic `FilterForm` pattern which may or may not persist.
+        # self.save()
 
     def clean(self):
         super().clean()

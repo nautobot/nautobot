@@ -1,0 +1,26 @@
+{% extends "generic/object_edit.html" %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Dynamic Group</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.slug %}
+            {% render_field form.description %}
+            {% render_field form.content_type %}
+        </div>
+    </div>
+   {% if extra_form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Filter Fields</strong></div>
+        <div class="panel-body">
+            <span class="help-block">
+                Select the filtering criteria to determine membership of objects matching the Content Type for this Dynamic Group. The filter fields available here are the same that you would find in the landing page for that object in the web interface. 
+            </span>
+	    {% render_form extra_form %}
+        </div>
+    </div>
+    {% endif %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}

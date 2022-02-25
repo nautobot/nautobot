@@ -199,7 +199,6 @@ class PathEndpoint(models.Model):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",

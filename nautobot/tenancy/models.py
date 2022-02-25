@@ -17,7 +17,6 @@ __all__ = (
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "graphql",
     "relationships",
 )

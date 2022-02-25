@@ -283,7 +283,7 @@ class ConfigContextSchema(OrganizationalModel):
 #
 
 
-@extras_features("dynamic_groups", "graphql")
+@extras_features("graphql")
 class CustomLink(BaseModel, ChangeLoggedModel):
     """
     A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
@@ -335,7 +335,6 @@ class CustomLink(BaseModel, ChangeLoggedModel):
 
 
 @extras_features(
-    "dynamic_groups",
     "graphql",
     "relationships",
 )
