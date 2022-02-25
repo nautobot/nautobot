@@ -1,7 +1,6 @@
 import json
 from io import StringIO
 import os
-from unittest import mock
 import uuid
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -18,34 +17,29 @@ from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, JobResult, Status, CustomField
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TestCase
+from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase
 
 
 # Use the proper swappable User model
 User = get_user_model()
 
 
-# Override the JOB_LOGS to None so that the Log Objects are created in the default database.
-# This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
-# database cleanup will fail and cause tests to fail as this is not a real database.
-@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
-class JobTest(TestCase):
+class JobTest(TransactionTestCase):
     """
     Test basic jobs to ensure importing works.
     """
 
+    databases = ("default", "job_logs")
     maxDiff = None
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
     def setUp(self):
         super().setUp()
 
+        self.job_content_type = ContentType.objects.get(app_label="extras", model="job")
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
+        self.user = User.objects.create_user(username="testuser")
         self.request.user = self.user
 
     def test_job_hard_time_limit_less_than_soft_time_limit(self):
@@ -270,11 +264,8 @@ class JobTest(TestCase):
             data = job_class.serialize_data(form.cleaned_data)
 
             # Run the job and extract the job payload data
-            # Changing commit=True as commit=False will rollback database changes including the
-            # logs that we are trying to read. See above note on why we are using the default database.
-            # Also need to pass a mock request object as execute_webhooks will be called with the creation
-            # of the objects.
-            run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
+            # Need to pass a mock request object as execute_webhooks will be called with the creation of the objects.
+            run_job(data=data, request=self.request, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
 
             log_info = JobLogEntry.objects.filter(
@@ -312,8 +303,7 @@ class JobTest(TestCase):
             }
 
             # Run the job and extract the job payload data
-            # See test_ip_address_vars as to why we are changing commit=True and request=self.request.
-            run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
+            run_job(data=data, request=self.request, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
             # Test storing additional data in job
             job_result_data = job_result.data["object_vars"]
@@ -416,23 +406,22 @@ class JobTest(TestCase):
             self.assertIn("Data should be a dictionary", log_failure.message)
 
 
-@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
-class JobFileUploadTest(TestCase):
+class JobFileUploadTest(TransactionTestCase):
     """Test a job that uploads/deletes files."""
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.file_contents = b"I am content.\n"
-        cls.test_file = SimpleUploadedFile(name="test_file.txt", content=cls.file_contents)
-        cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
+    databases = ("default", "job_logs")
 
     def setUp(self):
         super().setUp()
-        self.test_file.seek(0)  # Reset cursor so we can read it again.
+
+        self.file_contents = b"I am content.\n"
+        self.test_file = SimpleUploadedFile(name="test_file.txt", content=self.file_contents)
+        self.job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
+        self.user = User.objects.create_user(username="testuser")
         self.request.user = self.user
 
     def test_run_job_pass(self):
@@ -460,8 +449,7 @@ class JobFileUploadTest(TestCase):
             self.assertEqual(FileProxy.objects.count(), 1)
 
             # Run the job
-            # See test_ip_address_vars as to why we are changing commit=True and request=self.request.
-            run_job(data=serialized_data, request=self.request, commit=True, job_result_pk=job_result.pk)
+            run_job(data=serialized_data, request=self.request, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
 
             warning_log = JobLogEntry.objects.filter(
@@ -502,14 +490,25 @@ class JobFileUploadTest(TestCase):
             run_job(data=serialized_data, request=None, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
 
-            # Can't check log objects when jobs are reverted (within tests anyways.)
-            # This is due to the fake job_logs db not being available for tests.
+            # Assert that file contents were correctly read
+            self.assertEqual(
+                JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run")
+                .first()
+                .message,
+                f"File contents: {self.file_contents}",
+            )
+            # Also ensure the standard log message about aborting the transaction is present
+            self.assertEqual(
+                JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run")
+                .first()
+                .message,
+                "Database changes have been reverted due to error.",
+            )
 
             # Assert that FileProxy was cleaned up
             self.assertEqual(FileProxy.objects.count(), 0)
 
 
-@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class RunJobManagementCommandTest(CeleryTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
 
@@ -527,12 +526,11 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
-        # I had to change this test, unfortunately with no commit, the logs revert since we can't
-        # use the fake job_logs db here.
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             out, err = self.run_command("local/test_pass/TestPass")
             self.assertIn("Running local/test_pass/TestPass...", out)
-            self.assertIn("test_pass: 0 success, 1 info, 0 warning, 0 failure", out)
+            self.assertIn("test_pass: 1 success, 1 info, 0 warning, 0 failure", out)
+            self.assertIn("success: None", out)
             self.assertIn("info: Database changes have been reverted automatically.", out)
             self.assertIn("local/test_pass/TestPass: SUCCESS", out)
             self.assertEqual("", err)
@@ -542,12 +540,11 @@ class RunJobManagementCommandTest(CeleryTestCase):
         with self.assertRaises(ObjectDoesNotExist):
             Status.objects.get(slug="test-status")
 
-        # I had to change this test, unfortunately with no commit, the logs revert since we can't
-        # use the fake job_logs db here.
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")):
             out, err = self.run_command("local/test_modify_db/TestModifyDB")
             self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
-            self.assertIn("test_modify_db: 0 success, 1 info, 0 warning, 0 failure", out)
+            self.assertIn("test_modify_db: 1 success, 1 info, 0 warning, 0 failure", out)
+            self.assertIn("success: Test Status: Status created successfully.", out)
             self.assertIn("info: Database changes have been reverted automatically.", out)
             self.assertIn("local/test_modify_db/TestModifyDB: SUCCESS", out)
             self.assertEqual("", err)
@@ -591,9 +588,10 @@ class RunJobManagementCommandTest(CeleryTestCase):
         status.delete()
 
 
-@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class JobSiteCustomFieldTest(CeleryTestCase):
     """Test a job that creates a site and a custom field."""
+
+    databases = ("default", "job_logs")
 
     def setUp(self):
         super().setUp()

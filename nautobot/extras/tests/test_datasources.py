@@ -8,7 +8,7 @@ import yaml
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.ipam.models import VLAN
@@ -20,6 +20,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data, git_repository_diff_origin_and_local
 from nautobot.extras.datasources.registry import get_datasource_contents
+from nautobot.extras.management import create_custom_statuses
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -31,22 +32,29 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
 )
+from nautobot.utilities.testing import TransactionTestCase
 
 
 # Use the proper swappable User model
 User = get_user_model()
 
 
-# Override the JOB_LOGS to None so that the Log Objects are created in the default database.
-# This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
-# database cleanup will fail and cause tests to fail as this is not a real database.
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
-@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
-class GitTest(TestCase):
+class GitTest(TransactionTestCase):
+    """
+    Tests for Git repository handling.
+
+    This is a TransactionTestCase because it involves JobResult logging.
+    """
+
+    databases = ("default", "job_logs")
 
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
 
     def setUp(self):
+        # Repopulate custom statuses between test cases, as TransactionTestCase deletes them during cleanup
+        create_custom_statuses(None, verbosity=0)
+
         self.user = User.objects.create_user(username="testuser")
         self.factory = RequestFactory()
         self.mock_request = self.factory.get("/no-op/")
@@ -279,7 +287,7 @@ class GitTest(TestCase):
 
                 # Check that token-based authentication is handled as expected
                 self.repo._token = "1:3@/?=ab@"
-                self.repo.save()
+                self.repo.save(trigger_resync=False)
                 # For verisimilitude, don't re-use the old request and job_result
                 self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
@@ -318,7 +326,7 @@ class GitTest(TestCase):
                 # Check that username/password authentication is handled as expected
                 self.repo.username = "núñez"
                 self.repo._token = "1:3@/?=ab@"
-                self.repo.save()
+                self.repo.save(trigger_resync=False)
                 # For verisimilitude, don't re-use the old request and job_result
                 self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
@@ -388,7 +396,7 @@ class GitTest(TestCase):
                 )
 
                 self.repo.secrets_group = secrets_group
-                self.repo.validated_save()
+                self.repo.save(trigger_resync=False)
 
                 self.mock_request.id = uuid.uuid4()
                 self.job_result = JobResult.objects.create(
