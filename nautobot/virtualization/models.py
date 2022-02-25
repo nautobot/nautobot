@@ -40,7 +40,6 @@ __all__ = (
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -80,7 +79,6 @@ class ClusterType(OrganizationalModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "graphql",
     "relationships",
 )

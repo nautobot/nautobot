@@ -89,7 +89,6 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class ConsolePortTemplate(ComponentTemplateModel):
@@ -110,7 +109,6 @@ class ConsolePortTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class ConsoleServerPortTemplate(ComponentTemplateModel):
@@ -131,7 +129,6 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class PowerPortTemplate(ComponentTemplateModel):
@@ -179,7 +176,6 @@ class PowerPortTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class PowerOutletTemplate(ComponentTemplateModel):
@@ -230,7 +226,6 @@ class PowerOutletTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class InterfaceTemplate(ComponentTemplateModel):
@@ -264,7 +259,6 @@ class InterfaceTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class FrontPortTemplate(ComponentTemplateModel):
@@ -327,7 +321,6 @@ class FrontPortTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class RearPortTemplate(ComponentTemplateModel):
@@ -360,7 +353,6 @@ class RearPortTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "relationships",
 )
 class DeviceBayTemplate(ComponentTemplateModel):

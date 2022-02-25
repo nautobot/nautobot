@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import logging
+import urllib
 
 import django_filters
 from django_filters.utils import get_model_field
@@ -102,21 +103,7 @@ class BaseDynamicGroupMap:
             site=ams01&site=bkk01&has_primary_ip=True'
 
         """
-        if not filter_params:
-            return None
-
-        result = ""
-
-        for key, value in filter_params.items():
-            if isinstance(value, list):
-                for item in value:
-                    if result != "":
-                        result += "&"
-                    result += f"{key}={item}"
-            else:
-                result += f"&{key}={value}"
-
-        return result
+        return urllib.parse.urlencode(filter_params, doseq=True)
 
     @classmethod
     def get_queryset_filter(cls, obj):
