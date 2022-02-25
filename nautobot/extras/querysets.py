@@ -130,6 +130,16 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         return base_query
 
 
+class JobQuerySet(RestrictedQuerySet):
+    """
+    Extend the standard queryset with a get_for_class_path method.
+    """
+
+    def get_for_class_path(self, class_path):
+        source, module_name, job_class_name = class_path.split("/")
+        return self.get(source=source, module_name=module_name, job_class_name=job_class_name)
+
+
 class ScheduledJobExtendedQuerySet(RestrictedQuerySet, ExtendedQuerySet):
     """
     Base queryset used for the ScheduledJob class

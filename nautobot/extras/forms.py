@@ -1001,6 +1001,13 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
 class JobResultFilterForm(BootstrapMixin, forms.Form):
     model = JobResult
     q = forms.CharField(required=False, label="Search")
+    # TODO: need REST API updates to support this
+    # job_model = DynamicModelMultipleChoiceField(
+    #     label="Job",
+    #     queryset=Job.objects.all(),
+    #     required=False,
+    #     to_field_name="slug",
+    # )
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(

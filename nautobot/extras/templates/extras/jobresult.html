@@ -11,12 +11,19 @@
         <div class="col-md-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
-                {% if associated_record and associated_record.name %}
-                    <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
-                        {{ associated_record.name }}
+                {% if result.job_model %}
+                    <li>{{ result.job_model.grouping }}</li>
+                    <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.slug }}">
+                        {{ result.job_model }}
                     </a></li>
                 {% elif associated_record %}
-                    <li>{{ associated_record }}</li>
+                    {% if associated_record.name %}
+                        <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
+                            {{ associated_record.name }}
+                        </a></li>
+                    {% else %}
+                        <li>{{ associated_record }}</li>
+                    {% endif %}
                 {% elif job %}
                     <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
                         {{ job.class_path }}

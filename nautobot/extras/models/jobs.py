@@ -32,7 +32,7 @@ from nautobot.extras.constants import (
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.plugins.utils import import_object
-from nautobot.extras.querysets import ScheduledJobExtendedQuerySet
+from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, jobs_in_directory
 
 from .customfields import CustomFieldModel
@@ -173,6 +173,8 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
+
+    objects = JobQuerySet.as_manager()
 
     class Meta:
         managed = True
@@ -451,12 +453,12 @@ class JobResult(BaseModel, CustomFieldModel):
             self.completed = timezone.now()
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, celery_kwargs=None, *args, schedule=None, **kwargs):
+    def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
         func: The callable object to be enqueued for execution
-        name: Name for the JobResult instance
+        name: Name for the JobResult instance - corresponds to the desired Job class's "class_path" attribute
         obj_type: ContentType to link to the JobResult instance obj_type
         user: User object to link to the JobResult instance
         celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
@@ -464,8 +466,6 @@ class JobResult(BaseModel, CustomFieldModel):
         schedule: Optional ScheduledJob instance to link to the JobResult
         kwargs: additional kwargs passed to the callable
         """
-        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
-
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
         kwargs["job_result_pk"] = job_result.pk
@@ -474,12 +474,25 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is None:
             celery_kwargs = {}
 
-        job = get_job(name)
-        if job is not None:
-            if hasattr(job.Meta, "soft_time_limit"):
-                celery_kwargs["soft_time_limit"] = job.Meta.soft_time_limit
-            if hasattr(job.Meta, "time_limit"):
-                celery_kwargs["time_limit"] = job.Meta.time_limit
+        try:
+            job_model = Job.objects.get_for_class_path(name)
+            if job_model.soft_time_limit > 0:
+                celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+            if job_model.time_limit > 0:
+                celery_kwargs["time_limit"] = job_model.time_limit
+            job_result.job_model = job_model
+            job_result.save()
+        except Job.DoesNotExist:
+            # 2.0 TODO: remove this fallback logic, database records should always exist
+            from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+
+            job_class = get_job(name)
+            if job_class is not None:
+                logger.error("No Job instance found in the database corresponding to %s", name)
+                if hasattr(job_class.Meta, "soft_time_limit"):
+                    celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
+                if hasattr(job_class.Meta, "time_limit"):
+                    celery_kwargs["time_limit"] = job_class.Meta.time_limit
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 

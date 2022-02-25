@@ -605,6 +605,16 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         method="search",
         label="Search",
     )
+    job_model = django_filters.ModelMultipleChoiceFilter(
+        field_name="job_model__slug",
+        queryset=Job.objects.all(),
+        to_field_name="slug",
+        label="Job (slug)",
+    )
+    job_model_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (ID)",
+    )
     obj_type = ContentTypeFilter()
     created = django_filters.DateTimeFilter()
     completed = django_filters.DateTimeFilter()
@@ -617,7 +627,11 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(user__username__icontains=value))
+        return queryset.filter(
+            Q(job_model__name__icontains=value) |
+            Q(name__icontains=value) |
+            Q(user__username__icontains=value)
+        )
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

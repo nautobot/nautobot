@@ -774,31 +774,28 @@ class JobView(ContentTypePermissionRequiredMixin, View):
     def get_required_permission(self):
         return "extras.view_job"
 
-    def _get_job(self, class_path):
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
-        return job_class
-
     def get(self, request, class_path=None, slug=None):
         if class_path:
-            job_class = self._get_job(class_path)
+            try:
+                job_model = JobModel.objects.get_for_class_path(class_path)
+            except JobModel.DoesNotExist:
+                raise Http404("No Job matches the given query")
         else:
-            job_class = JobModel.objects.get(slug=slug).job_class
-            class_path = job_class.class_path
-        job = job_class()
-        grouping, module, class_name = class_path.split("/", 2)
+            job_model = get_object_or_404(JobModel, slug=slug)
 
-        job_form = job.as_form(initial=normalize_querydict(request.GET))
+        if job_model.job_class is None:
+            raise Http404(
+                "Unable to find the Job source class corresponding to this database record - check if it's installed!"
+            )
+
+        job_form = job_model.job_class.job_form(initial=normalize_querydict(request.GET))
         schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
 
         return render(
             request,
             "extras/job.html",  # 2.0 TODO: extras/job_submission.html
             {
-                "grouping": grouping,
-                "module": module,
-                "job": job,
+                "job_model": job_model,
                 "job_form": job_form,
                 "schedule_form": schedule_form,
             },
@@ -809,24 +806,34 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             return HttpResponseForbidden()
 
         if class_path:
-            job_class = self._get_job(class_path)
+            try:
+                job_model = JobModel.objects.get_for_class_path(class_path)
+            except JobModel.DoesNotExist:
+                raise Http404("No Job matches the given query")
         else:
-            job_class = JobModel.objects.get(slug=slug).job_class
-            class_path = job_class.class_path
-        job = job_class()
-        grouping, module, class_name = class_path.split("/", 2)
-        job_form = job.as_form(request.POST, request.FILES)
+            job_model = get_object_or_404(JobModel, slug=slug)
+
+        if job_model.job_class is None:
+            raise Http404(
+                "Unable to find the Job source class corresponding to this database record - check if it's installed!"
+            )
+
+        job_form = job_model.job_class.job_form(request.POST, request.FILES)
         schedule_form = forms.JobScheduleForm(request.POST)
 
-        # Allow execution only if a worker process is running.
+        # Allow execution only if a worker process is running and the job is runnable.
         if not get_worker_count(request):
-            messages.error(request, "Unable to run job: Celery worker process not running.")
+            messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
+        elif not job_model.installed:
+            messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
+        elif not job_model.enabled:
+            messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
         elif job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if job_class.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
 
                 if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                     # Schedule the job instead of running it now
@@ -840,32 +847,32 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                     # when approval is granted, the task is immediately due for execution.
                     schedule_type = JobExecutionType.TYPE_FUTURE
                     schedule_datetime = datetime.now()
-                    schedule_name = f"{job.name} - {schedule_datetime}"
+                    schedule_name = f"{job_model} - {schedule_datetime}"
 
                 job_kwargs = {
-                    "data": job_class.serialize_data(job_form.cleaned_data),
+                    "data": job_model.job_class.serialize_data(job_form.cleaned_data),
                     "request": copy_safe_request(request),
                     "user": request.user.pk,
                     "commit": commit,
-                    "name": job.class_path,
+                    "name": job_model.class_path,
                 }
 
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
                     task="nautobot.extras.jobs.scheduled_job_handler",
-                    job_class=job.class_path,
+                    job_class=job_model.class_path,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} on {schedule_datetime}",
                     kwargs=job_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     user=request.user,
-                    approval_required=job_class.approval_required,
+                    approval_required=job_model.approval_required,
                 )
                 scheduled_job.kwargs["scheduled_job_pk"] = scheduled_job.pk
                 scheduled_job.save()
 
-                if job_class.approval_required:
+                if job_model.approval_required:
                     messages.success(request, f"Job {schedule_name} successfully submitted for approval")
                     return redirect("extras:scheduledjob_approval_queue_list")
                 else:
@@ -877,10 +884,10 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 job_content_type = ContentType.objects.get(app_label="extras", model="job")
                 job_result = JobResult.enqueue_job(
                     run_job,
-                    job.class_path,
+                    job_model.class_path,
                     job_content_type,
                     request.user,
-                    data=job_class.serialize_data(job_form.cleaned_data),
+                    data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
                 )
@@ -891,9 +898,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             request,
             "extras/job.html",
             {
-                "grouping": grouping,
-                "module": module,
-                "job": job,
+                "job_model": job_model,
                 "job_form": job_form,
                 "schedule_form": schedule_form,
             },
@@ -964,7 +969,6 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
                 run_job,
                 job.class_path,
                 job_content_type,
-                scheduled_job.user,
                 request.user,
                 data=job_class.serialize_data(initial),
                 request=copy_safe_request(request),

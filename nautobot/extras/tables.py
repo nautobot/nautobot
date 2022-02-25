@@ -494,7 +494,7 @@ class JobLogEntryTable(BaseTable):
         }
 
 
-def job_creator_link(value, record):
+def related_object_link(value, record):
     """
     Get a link to the related object, if any, associated with the given JobResult record.
     """
@@ -508,8 +508,9 @@ def job_creator_link(value, record):
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
+    related_object = tables.Column(verbose_name="Related Object", linkify=related_object_link, accessor="related_name")
     name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
@@ -548,6 +549,7 @@ class JobResultTable(BaseTable):
             "pk",
             "created",
             "name",
+            "job_model",
             "obj_type",
             "related_object",
             "duration",
@@ -556,7 +558,7 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
         )
-        default_columns = ("pk", "created", "related_object", "user", "status", "summary")
+        default_columns = ("pk", "created", "job_model", "related_object", "user", "status", "summary")
 
 
 #
