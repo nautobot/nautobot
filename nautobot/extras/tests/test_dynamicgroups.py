@@ -1,6 +1,7 @@
 from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
+
 # from django.core.exceptions import ValidationError
 
 from nautobot.dcim.models import Site, Region
