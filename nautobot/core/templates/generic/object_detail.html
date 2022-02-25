@@ -136,19 +136,58 @@
     onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'">
 </script>
 <script>
-    url = window.location.href.split("?")[0];
-    window.history.replaceState({}, document.title, url);
     var clipboard = new ClipboardJS('.btn');
 
     clipboard.on('success', function (e) {});
 
     clipboard.on('error', function (e) {});
 
-    function switch_tab(tab_href) {
-        if (location.pathname != "{{ object.get_absolute_url }}") {
-            tab_location = tab_href.split("#");
-            window.location.href = `${tab_location[0]}?tab=${tab_location[1]}`;
-        };
+    
+    /**
+    * Set Initial state
+    **/
+    if (location.pathname == "{{ object.get_absolute_url }}"){
+        var tab_id = "main";
+        var tab_url = location.origin + location.pathname
+        var query_string = location.search.replace("?", "")
+
+        if(query_string.includes("tab")){
+            query_params = query_string.split("&")
+
+            tag_query_string = query_params.find(params => params.startsWith("tab"))
+            tab_id = tag_query_string.split("=")[1]
+
+            query_string_excluding_tab = query_params.filter(params => !params.startsWith("tab"))
+            query_string = query_string_excluding_tab.join("&")
+
+        }
+
+        final_query_string = query_string ? "&" + query_string : ""
+
+        window.history.replaceState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}${final_query_string}`)
+
     }
+
+
+    function switch_tab(tab_href) {
+
+        let [tab_url, tab_id] = tab_href.split("#")
+
+        if (location.pathname != "{{ object.get_absolute_url }}")
+            window.location.href = `${tab_url}?tab=${tab_id}`;
+        else if (window.history.state["id"] != tab_id){
+            window.history.pushState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}`);
+        }
+    }
+
+    window.onpopstate = function(event) {
+        if(event){
+          // Code to handle back button or prevent from navigation
+        }
+        else{
+          // Continue user action through link or button
+        }
+    }
+
 </script>
 {% endblock javascript %}
