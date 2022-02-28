@@ -58,7 +58,7 @@ JOB_LOGS = "job_logs"
 )
 class Job(PrimaryModel):
     """
-    Proxy model representing an installed Job class.
+    Database model representing an installed Job class.
     """
 
     # Information used to locate the Job source code

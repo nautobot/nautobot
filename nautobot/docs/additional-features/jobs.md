@@ -68,7 +68,7 @@ It's important to understand that jobs execute on the server asynchronously as b
 
 #### `name` (Grouping)
 
-You can define a global constant called `name` within a job module (the Python file which contains one or more job classes) to set the default grouping that jobs in this module will be displayed under in the Nautobot UI. If this value is not defined, the module's file name will be used. This "grouping" value may also be defined or overridden when editing Job records in the database.
+You can define a global constant called `name` within a job module (the Python file which contains one or more job classes) to set the default grouping under which jobs in this module will be displayed in the Nautobot UI. If this value is not defined, the module's file name will be used. This "grouping" value may also be defined or overridden when editing Job records in the database.
 
 !!! note
     In some UI elements and API endpoints, the module file name is displayed in addition to or in place of this attribute, so even if defining this attribute, you should still choose an appropriately explanatory file name as well.
@@ -122,6 +122,8 @@ class MyJob(Job):
 ```
 
 #### `field_order`
+
+Default: `[]`
 
 A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code.
 

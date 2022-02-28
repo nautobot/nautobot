@@ -245,7 +245,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         filter_form = None
         if self.filterset_form:
-            if len(request.GET):
+            if request.GET:
                 # Bind form to the values specified in request.GET
                 filter_form = self.filterset_form(request.GET, label_suffix="")
             else:
