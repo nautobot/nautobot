@@ -339,18 +339,19 @@ class JobResult(BaseModel, CustomFieldModel):
 
         model_class = self.obj_type.model_class()
 
-        if hasattr(model_class, "name"):
-            # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
+        if model_class is not None:
+            if hasattr(model_class, "name"):
+                # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
+                try:
+                    return model_class.objects.get(name=self.name)
+                except model_class.DoesNotExist:
+                    pass
+
+            # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
             try:
-                return model_class.objects.get(name=self.name)
+                return model_class.objects.get(id=self.job_id)
             except model_class.DoesNotExist:
                 pass
-
-        # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
-        try:
-            return model_class.objects.get(id=self.job_id)
-        except model_class.DoesNotExist:
-            pass
 
         return None
 
