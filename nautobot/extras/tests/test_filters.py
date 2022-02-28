@@ -555,6 +555,10 @@ class JobFilterSetTestCase(TestCase):
         params = {"approval_required": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
+    def test_search(self):
+        params = {"q": "file"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class JobLogEntryTestCase(TestCase):
     queryset = JobLogEntry.objects.all()

@@ -132,6 +132,8 @@ def get_worker_count(request=None):
     return celery_count
 
 
+# namedtuple class yielded by the jobs_in_directory generator function, below
+# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">)
 JobClassInfo = collections.namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
 
 

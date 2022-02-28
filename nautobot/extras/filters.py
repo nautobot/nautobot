@@ -551,23 +551,45 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         method="search",
         label="Search",
     )
-    installed = django_filters.BooleanFilter()
-    enabled = django_filters.BooleanFilter()
-    commit_default = django_filters.BooleanFilter()
-    hidden = django_filters.BooleanFilter()
-    read_only = django_filters.BooleanFilter()
-    approval_required = django_filters.BooleanFilter()
     tag = TagFilter()
 
     class Meta:
         model = Job
-        fields = ["id", "name", "grouping"]  # TODO
+        fields = [
+            "id",
+            "source",
+            "module_name",
+            "job_class_name",
+            "slug",
+            "name",
+            "grouping",
+            "installed",
+            "enabled",
+            "approval_required",
+            "commit_default",
+            "hidden",
+            "read_only",
+            "soft_time_limit",
+            "time_limit",
+            "grouping_override",
+            "name_override",
+            "approval_required_override",
+            "description_override",
+            "commit_default_override",
+            "hidden_override",
+            "read_only_override",
+            "soft_time_limit_override",
+            "time_limit_override",
+        ]
 
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) | Q(grouping__icontains=value) | Q(description__icontains=value)
+            Q(name__icontains=value) |
+            Q(slug__icontains=value) |
+            Q(grouping__icontains=value) |
+            Q(description__icontains=value)
         )
 
 

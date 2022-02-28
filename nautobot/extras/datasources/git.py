@@ -922,19 +922,15 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     job_info.job_class,
                 )
                 if created:
-                    job_result.log(
-                        f'Created Job model "{job_model}"',
-                        grouping="jobs",
-                        level_choice=LogLevelChoices.LOG_SUCCESS,
-                        logger=logger,
-                    )
+                    message = f'Created Job model "{job_model}"'
                 else:
-                    job_result.log(
-                        f'Refreshed Job model "{job_model}"',
-                        grouping="jobs",
-                        level_choice=LogLevelChoices.LOG_SUCCESS,
-                        logger=logger,
-                    )
+                    message = f'Refreshed Job model "{job_model}"'
+                job_result.log(
+                    message,
+                    grouping="jobs",
+                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    logger=logger,
+                )
                 installed_jobs.append(job_model)
         else:
             job_result.log(
