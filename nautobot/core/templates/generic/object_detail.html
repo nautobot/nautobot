@@ -162,6 +162,7 @@
         final_query_string = query_string ? "&" + query_string : ""
 
         window.history.replaceState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}${final_query_string}`);
+        $(`#tabs a[href="{{ object.get_absolute_url }}#${tab_id}"]`).tab('show');
 
     }
 
