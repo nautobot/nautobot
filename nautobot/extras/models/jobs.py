@@ -510,6 +510,9 @@ class ScheduledJob(BaseModel):
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
     )
+    job_model = models.ForeignKey(
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
+    )
     job_class = models.CharField(
         max_length=255, verbose_name="Job Class", help_text="Name of the fully qualified Nautobot Job class path"
     )
