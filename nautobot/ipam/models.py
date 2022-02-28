@@ -775,11 +775,11 @@ class IPAddress(PrimaryModel, StatusModel):
     nat_inside = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
-        related_name="nat_outside",
+        related_name="nat_outside_list",
         blank=True,
         null=True,
         verbose_name="NAT (Inside)",
-        help_text='The IP for which this address is the "outside" IP',
+        help_text='The IP Addresses for which this address is the "outside" IP',
     )
     dns_name = models.CharField(
         max_length=255,
@@ -957,6 +957,10 @@ class IPAddress(PrimaryModel, StatusModel):
         if self.address:
             return self.address.version
         return None
+
+    @property
+    def nat_outside(self):
+        return self.nat_outside_list.first()
 
     def _set_mask_length(self, value):
         """

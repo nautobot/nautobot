@@ -294,7 +294,8 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = IPAddress.objects.prefetch_related(
         "assigned_object",
         "nat_inside",
-        "nat_outside",
+        # TODO: Change back to nat_outside when breaking change is implemented, More details: #1420
+        "nat_outside_list",
         "status",
         "tags",
         "tenant",

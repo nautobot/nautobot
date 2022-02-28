@@ -401,7 +401,8 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
     )
     assigned_object = serializers.SerializerMethodField(read_only=True)
     nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
-    nat_outside = NestedIPAddressSerializer(read_only=True, many=True)
+    nat_outside = NestedIPAddressSerializer(read_only=True)
+    nat_outside_list = NestedIPAddressSerializer(read_only=True, many=True)
 
     class Meta:
         model = IPAddress
@@ -419,6 +420,7 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
             "assigned_object",
             "nat_inside",
             "nat_outside",
+            "nat_outside_list",
             "dns_name",
             "description",
             "tags",
