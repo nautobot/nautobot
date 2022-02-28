@@ -141,7 +141,13 @@ class BaseDynamicGroupMap:
             filterset = cls.filterset()
 
         # FIXME(jathan): Add check to ensure that the field has a field_name property
-        field = filterset.declared_filters[field_name]
+        try:
+            field = filterset.declared_filters[field_name]
+        # e.g. KeyError: 'cf_example-plugin-auto-custom-field'
+        # FIXME(jathan): What do about custom field filters?
+        except KeyError as err:
+            logger.debug("Declared filter not found: %s", err)
+            return None
 
         # Ensure that the field is present on the model, or bomb out.
         model_field = get_model_field(obj._meta.model, field_name)

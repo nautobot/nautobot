@@ -62,13 +62,13 @@ class DynamicGroupTest(DynamicGroupTestBase):
             dg.validated_save()
 
     # FIXME(jathan): Implement validation of the filter value "somehow"? using a
-    # Form and `save_filters()`??
+    # Form and `save_filters()`?? Ugh.
     @skip
     def test_clean_filter_not_valid(self):
         dg = self.groups[0]  # Site DG
         with self.assertRaises(ValidationError):
-           dg.filter = {"fake": ["not real"]}
-           dg.validated_save()
+            dg.filter = {"fake": ["not real"]}
+            dg.validated_save()
 
     @skip
     def test_clean_valid(self):
