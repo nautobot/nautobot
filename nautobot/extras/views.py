@@ -1140,15 +1140,19 @@ class JobResultView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         associated_record = None
-        job = None
+        job_class = None
+        if instance.job_model is not None:
+            job_class = instance.job_model.job_class
+        # 2.0 TODO: remove JobResult.related_object entirely
         related_object = instance.related_object
         if inspect.isclass(related_object) and issubclass(related_object, JobClass):
-            job = related_object()
+            if job_class is None:
+                job_class = related_object
         elif related_object:
             associated_record = related_object
 
         return {
-            "job": job,
+            "job": job_class,
             "associated_record": associated_record,
             "result": instance,
         }
