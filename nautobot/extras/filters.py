@@ -586,10 +586,10 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) |
-            Q(slug__icontains=value) |
-            Q(grouping__icontains=value) |
-            Q(description__icontains=value)
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(grouping__icontains=value)
+            | Q(description__icontains=value)
         )
 
 
