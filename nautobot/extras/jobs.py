@@ -1000,7 +1000,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         logger.error(e)
         return False
 
-    job_class = get_job(job_result.name)
+    job_model = job_result.job_model
+    if not job_model:
+        # 2.0 TODO: remove this fallback logic
+        job_model = JobModel.objects.get_for_class_path(job_result.name)
+
+    job_class = job_model.job_class
+
     if not job_class:
         job_result.log(
             f'Unable to locate job "{job_result.name}" to run it!',
@@ -1027,8 +1033,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    soft_time_limit = job.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-    time_limit = job.time_limit or settings.CELERY_TASK_TIME_LIMIT
+    soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+    time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
     if time_limit <= soft_time_limit:
         job_result.log(
             f"The hard time limit of {time_limit} seconds is less than "
@@ -1066,7 +1072,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job.delete_files(*file_ids)  # Cleanup FileProxy objects
         return False
 
-    if job.read_only:
+    if job_model.read_only:
         # Force commit to false for read only jobs.
         commit = False
 
@@ -1118,13 +1124,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                     raise AbortTransaction()
 
         except AbortTransaction:
-            if not job.read_only:
+            if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted automatically.")
 
         except Exception as exc:
             stacktrace = traceback.format_exc()
             job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
-            if not job.read_only:
+            if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted due to error.")
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
