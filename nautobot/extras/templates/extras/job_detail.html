@@ -95,7 +95,7 @@
                         <div class="text-muted">
                             overridden; default is:<br>
                             {% if object.installed %}
-                                {{ object.job_class.description | render_markdown | placeholder }}”
+                                {{ object.job_class.description | render_markdown | placeholder }}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}
