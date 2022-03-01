@@ -62,12 +62,27 @@ class Job(PrimaryModel):
     """
 
     # Information used to locate the Job source code
-    source = models.CharField(max_length=110, editable=False)
+    source = models.CharField(
+        max_length=110,
+        editable=False,
+        db_index=True,
+        help_text="Source of the Python code for this job - local, Git repository, or plugins",
+    )
     # source does not use choices=JobSourceChoices directly as for Git repositories, it must include the
     # Git repository slug as part of the source value, in order to remain backwards-compatible.
     # This is also why it maxes at 110 characters rather than 100 - "git.<100-character-repo-slug>"
-    module_name = models.CharField(max_length=100, editable=False)
-    job_class_name = models.CharField(max_length=100, editable=False)
+    module_name = models.CharField(
+        max_length=100,
+        editable=False,
+        db_index=True,
+        help_text="Dotted name of the Python module providing this job",
+    )
+    job_class_name = models.CharField(
+        max_length=100,
+        editable=False,
+        db_index=True,
+        help_text="Name of the Python class providing this job",
+    )
 
     slug = AutoSlugField(
         max_length=320,
@@ -77,34 +92,87 @@ class Job(PrimaryModel):
 
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    grouping = models.CharField(max_length=255)
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
+    grouping = models.CharField(max_length=255, help_text="Human-readable grouping that this job belongs to")
+    name = models.CharField(max_length=100, help_text="Human-readable name of this job")
+    description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
     # Control flags
-    installed = models.BooleanField(default=True, editable=False)
-    enabled = models.BooleanField(default=False)
+    installed = models.BooleanField(
+        default=True,
+        db_index=True,
+        editable=False,
+        help_text="Whether the Python module and class providing this job are presently installed and loadable",
+    )
+    enabled = models.BooleanField(default=False, help_text="Whether this job can be executed by users")
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    commit_default = models.BooleanField(default=True)
-    hidden = models.BooleanField(default=False)
+    approval_required = models.BooleanField(
+        default=False, help_text="Whether the job requires approval from another user before running"
+    )
+    commit_default = models.BooleanField(
+        default=True, help_text="Whether the job defaults to committing changes when run, or defaults to a dry-run"
+    )
+    hidden = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether the job defaults to not being shown in the UI",
+    )
     # Job.Meta.field_order is not overridable in this model
-    read_only = models.BooleanField(default=False)
-    approval_required = models.BooleanField(default=False)
-    soft_time_limit = models.FloatField(default=0, validators=[MinValueValidator(0)])
-    time_limit = models.FloatField(default=0, validators=[MinValueValidator(0)])
+    read_only = models.BooleanField(
+        default=False, help_text="Whether the job is prevented from making lasting changes to the database"
+    )
+    soft_time_limit = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will receive a <code>SoftTimeLimitExceeded</code> "
+        "exception.<br>Set to 0 to use Nautobot system default",
+    )
+    time_limit = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will be forcibly terminated."
+        "<br>Set to 0 to use Nautobot system default",
+    )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
-    grouping_override = models.BooleanField(default=False)
-    name_override = models.BooleanField(default=False)
-    description_override = models.BooleanField(default=False)
-    commit_default_override = models.BooleanField(default=False)
-    hidden_override = models.BooleanField(default=False)
-    read_only_override = models.BooleanField(default=False)
-    approval_required_override = models.BooleanField(default=False)
-    soft_time_limit_override = models.BooleanField(default=False)
-    time_limit_override = models.BooleanField(default=False)
+    grouping_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured grouping will remain even if the underlying Job source code changes",
+    )
+    name_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured name will remain even if the underlying Job source code changes",
+    )
+    description_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured description will remain even if the underlying Job source code changes",
+    )
+
+    approval_required_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    commit_default_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    hidden_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    read_only_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    soft_time_limit_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    time_limit_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
 
     class Meta:
         managed = True

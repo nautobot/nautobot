@@ -10,6 +10,9 @@
                 {{ override_field }}
                 <i>Override default value</i>
             </label>
+            {% if override_field.help_text %}
+                <span class="help-block">{{ override_field.help_text|safe }}</span>
+            {% endif %}
         </div>
     </div>
     <div class="col-md-6">

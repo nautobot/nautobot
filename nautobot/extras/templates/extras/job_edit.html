@@ -4,11 +4,14 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job</strong></div>
+        <div class="panel-heading"><strong>Job Source</strong></div>
         <div class="panel-body">
             <div class="form-group">
                 <label class="col-md-3 control-label">Source</label>
-                <div class="col-md-9" style="padding-top: 7px">{{ obj.source | split:"." | first | bettertitle }}</div>
+                <div class="col-md-9" style="padding-top: 7px">
+                    {{ obj.source | split:"." | first | bettertitle }}
+                    <span class="help-block">Source of the Python code for this job</span>
+                </div>
             </div>
             {% if "git." in obj.source %}
                 <div class="form-group">
@@ -24,11 +27,17 @@
             {% endif %}
             <div class="form-group">
                 <label class="col-md-3 control-label">Module</label>
-                <div class="col-md-9" style="padding-top: 7px"><code>{{ obj.module_name }}</code></div>
+                <div class="col-md-9" style="padding-top: 7px">
+                    <code>{{ obj.module_name }}</code>
+                    <span class="help-block">Dotted name of the Python module providing this job</span>
+                </div>
             </div>
             <div class="form-group">
                 <label class="col-md-3 control-label">Job Class</label>
-                <div class="col-md-9" style="padding-top: 7px"><code>{{ obj.job_class_name }}</code></div>
+                <div class="col-md-9" style="padding-top: 7px">
+                    <code>{{ obj.job_class_name }}</code>
+                    <span class="help-block">Name of the Python class providing this job</span>
+                </div>
             </div>
             <div class="form-group">
                 <div class="col-md-9 col-md-offset-3">
@@ -37,14 +46,27 @@
                             <input type="checkbox" disabled="true" {% if obj.installed %}checked="checked"{% endif %}>
                             Installed
                         </label>
+                        <span class="help-block">
+                            Whether the Python class providing this job is presently installed and loadable
+                        </span>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Job</strong></div>
+        <div class="panel-body">
+            {% render_field form.enabled %}
             {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
             {% render_field form.slug %}
             {% include "extras/inc/overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
             {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
-            {% render_field form.enabled %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Properties</strong></div>
+        <div class="panel-body">
             {% include "extras/inc/overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}
             {% include "extras/inc/overridable_field.html" with field=form.commit_default override_field=form.commit_default_override %}
             {% include "extras/inc/overridable_field.html" with field=form.hidden override_field=form.hidden_override %}
