@@ -3,24 +3,25 @@
 {% load form_helpers %}
 {% load log_levels %}
 
-{% block title %}{{ job }} - Approval Request{% endblock %}
+{% block title %}{{ job_model }} - Approval Request{% endblock %}
 
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
-                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}">{{ grouping|bettertitle }}</a></li>
-                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}.module.{{ module }}">{{ module }}</a></li>
-                <li>{{ job }}</li>
+                <li>{{ job_model.grouping | bettertitle }}</li>
+                <li><a href="{{ job_model.get_absolute_url }}">{{ job_model }}</a></li>
+                <li>Approval Requests</li>
+                <li>{{ scheduled_job.name }}</li>
             </ol>
         </div>
     </div>
-    <h1>{{ job }}</h1>
-    {% if job.read_only %}
+    <h1>{{ job_model }}</h1>
+    {% if job_model.read_only %}
         <label class="label label-default">Read-only</label>
     {% endif %}
-    <p>{{ job.description | render_markdown }}</p>
+    <p>{{ job_model.description | render_markdown }}</p>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
             <a href="#run" role="tab" data-toggle="tab" class="active">Approval Request</a>
@@ -36,7 +37,17 @@
                     {% if not perms.extras.run_job %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i>
-                            You do not have permission to run & approve jobs.
+                            You do not have permission to run and approve jobs.
+                        </div>
+                    {% endif %}
+                    {% if not job_model.installed or job_model.job_class is None %}
+                        <div class="alert alert-warning">
+                            <i class="mdi mdi-alert"></i> This job is not presently installed and cannot be run.
+                        </div>
+                    {% endif %}
+                    {% if not job_model.enabled %}
+                        <div class="alert alert-warning">
+                            <i class="mdi mdi-alert"></i> This job is not enabled to be run.
                         </div>
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
@@ -96,14 +107,16 @@
             </div>
         </div>
         <div role="tabpanel" class="tab-pane" id="source">
-            <p><code>{{ job.filename }}</code></p>
-            <pre>{{ job.source }}</pre>
+            {% if job_model.installed and job_model.job_class is not None %}
+                <p><code>{{ job_model.job_class.filename }}</code></p>
+                <pre>{{ job_model.job_class.source }}</pre>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
 {% block javascript %}
 <script type="text/javascript">
-    var requires_approval = {{ job.approval_required|yesno:"true,false" }};
+    var requires_approval = {{ job_model.approval_required|yesno:"true,false" }};
     var run_now_text;
     var schedule_text;
 

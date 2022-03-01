@@ -105,12 +105,12 @@
                 </div>
             </div>
         </div>
-        {% if job_model.installed and job_model.job_class is not None %}
-            <div role="tabpanel" class="tab-pane" id="source">
+        <div role="tabpanel" class="tab-pane" id="source">
+            {% if job_model.installed and job_model.job_class is not None %}
                 <p><code>{{ job_model.job_class.filename }}</code></p>
                 <pre>{{ job_model.job_class.source }}</pre>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 {% endblock %}
 {% block javascript %}

@@ -13,6 +13,7 @@ from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, In
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
+    JobSourceChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -954,6 +955,26 @@ class JobTestCase(
     def setUpTestData(cls):
         # Job model objects are automatically created during database migrations
 
+        # But we do need to make sure the ones we're testing are flagged appropriately
+        test_pass = Job.objects.get(job_class_name="TestPass")
+        test_pass.enabled = True
+        test_pass.save()
+        test_required_args = Job.objects.get(job_class_name="TestRequired")
+        test_required_args.enabled = True
+        test_required_args.save()
+
+        # Create an entry for a non-installed Job as well
+        cls.test_not_installed = Job(
+            source=JobSourceChoices.SOURCE_LOCAL,
+            module_name="nonexistent",
+            job_class_name="NoSuchJob",
+            grouping="Nonexistent Jobs",
+            name="No such job",
+            enabled=True,
+            installed=False,
+        )
+        cls.test_not_installed.validated_save()
+
         cls.form_data = {
             "slug": "custom-job-slug",
             "enabled": True,
@@ -1047,6 +1068,36 @@ class JobTestCase(
 
         result = JobResult.objects.last()
         self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_not_installed(self, _):
+        self.add_permissions("extras.run_job")
+        data = {
+            "_schedule_type": "immediately",
+        }
+
+        response = self.client.post(reverse("extras:job_run", kwargs={"slug": self.test_not_installed.slug}), data)
+        self.assertEqual(response.status_code, 404)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Unable to find the Job class", response_body)
+
+        self.assertEqual(0, len(JobResult.objects.all()))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_not_enabled(self, _):
+        self.add_permissions("extras.run_job")
+        data = {
+            "_schedule_type": "immediately",
+        }
+
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}), data)
+        self.assertEqual(response.status_code, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Job is not enabled to be run", response_body)
+
+        self.assertEqual(0, len(JobResult.objects.all()))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_now_missing_args(self):

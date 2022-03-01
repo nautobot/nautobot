@@ -779,14 +779,15 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             try:
                 job_model = JobModel.objects.get_for_class_path(class_path)
             except JobModel.DoesNotExist:
-                raise Http404("No Job matches the given query")
+                raise Http404
         else:
             job_model = get_object_or_404(JobModel, slug=slug)
 
         if job_model.job_class is None:
-            raise Http404(
-                "Unable to find the Job source class corresponding to this database record - check if it's installed!"
+            messages.error(
+                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
             )
+            raise Http404
 
         job_form = job_model.job_class.job_form(initial=normalize_querydict(request.GET))
         schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
@@ -809,14 +810,15 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             try:
                 job_model = JobModel.objects.get_for_class_path(class_path)
             except JobModel.DoesNotExist:
-                raise Http404("No Job matches the given query")
+                raise Http404
         else:
             job_model = get_object_or_404(JobModel, slug=slug)
 
         if job_model.job_class is None:
-            raise Http404(
-                "Unable to find the Job source class corresponding to this database record - check if it's installed!"
+            messages.error(
+                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
             )
+            raise Http404
 
         job_form = job_model.job_class.job_form(request.POST, request.FILES)
         schedule_form = forms.JobScheduleForm(request.POST)
@@ -944,16 +946,23 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
             return HttpResponseForbidden()
 
         scheduled_job = get_object_or_404(ScheduledJob, pk=scheduled_job)
-        job_class = get_job(scheduled_job.job_class)
-        if job_class is None:
-            raise Http404
-        job = job_class()
-        grouping, module, class_name = job_class.class_path.split("/", 2)
+        job_model = scheduled_job.job_model
+        if job_model is not None:
+            job_class = job_model.job_class
+        else:
+            # 2.0 TODO: remove this fallback?
+            job_class = get_job(scheduled_job.job_class)
 
-        # Render the form will all fields disabled
+        if job_class is None:
+            messages.error(
+                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
+            )
+            raise Http404
+
+        # Render the form with all fields disabled
         initial = scheduled_job.kwargs.get("data", {})
         initial["_commit"] = scheduled_job.kwargs.get("commit", True)
-        job_form = job.as_form(initial=initial, approval_view=True)
+        job_form = job_class.job_form(initial=initial, approval_view=True)
 
         post_data = request.POST
 
@@ -967,7 +976,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
             job_content_type = ContentType.objects.get(app_label="extras", model="job")
             job_result = JobResult.enqueue_job(
                 run_job,
-                job.class_path,
+                job_class.class_path,
                 job_content_type,
                 request.user,
                 data=job_class.serialize_data(initial),
@@ -1006,9 +1015,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
             request,
             "extras/job_approval_request.html",
             {
-                "grouping": grouping,
-                "module": module,
-                "job": job,
+                "job_model": job_model,
                 "job_form": job_form,
                 "scheduled_job": scheduled_job,
             },
@@ -1021,24 +1028,28 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
         """
         scheduled_job = get_object_or_404(ScheduledJob, pk=scheduled_job)
-        job_class = get_job(scheduled_job.job_class)
+        job_model = scheduled_job.job_model
+        if job_model is not None:
+            job_class = job_model.job_class
+        else:
+            # 2.0 TODO: remove this fallback?
+            job_class = get_job(scheduled_job.job_class)
         if job_class is None:
+            messages.error(
+                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
+            )
             raise Http404
-        job = job_class()
-        grouping, module, class_name = job_class.class_path.split("/", 2)
 
         # Render the form will all fields disabled
         initial = scheduled_job.kwargs.get("data", {})
         initial["_commit"] = scheduled_job.kwargs.get("commit", True)
-        job_form = job.as_form(initial=initial, approval_view=True)
+        job_form = job_class.job_form(initial=initial, approval_view=True)
 
         return render(
             request,
             "extras/job_approval_request.html",
             {
-                "grouping": grouping,
-                "module": module,
-                "job": job,
+                "job_model": job_model,
                 "job_form": job_form,
                 "scheduled_job": scheduled_job,
             },
