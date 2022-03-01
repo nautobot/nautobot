@@ -136,7 +136,10 @@ class JobQuerySet(RestrictedQuerySet):
     """
 
     def get_for_class_path(self, class_path):
-        source, module_name, job_class_name = class_path.split("/")
+        try:
+            source, module_name, job_class_name = class_path.split("/")
+        except ValueError:  # not a class_path perhaps?
+            raise self.model.DoesNotExist()
         return self.get(source=source, module_name=module_name, job_class_name=job_class_name)
 
 

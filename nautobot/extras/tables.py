@@ -569,7 +569,7 @@ class JobResultTable(BaseTable):
 class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    job_class = tables.Column(verbose_name="Job")
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="First Run")
     last_run_at = tables.Column(verbose_name="Most Recent Run")
@@ -577,12 +577,12 @@ class ScheduledJobTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
+        fields = ("pk", "name", "job_model", "interval", "start_time", "last_run_at")
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
     name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
-    job_class = tables.Column(verbose_name="Job")
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
     user = tables.Column(verbose_name="Requestor")
@@ -590,7 +590,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("name", "job_class", "interval", "user", "start_time", "actions")
+        fields = ("name", "job_model", "interval", "user", "start_time", "actions")
 
 
 class ObjectChangeTable(BaseTable):

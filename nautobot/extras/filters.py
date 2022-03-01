@@ -655,12 +655,23 @@ class ScheduledJobFilterSet(BaseFilterSet):
         method="search",
         label="Search",
     )
+    job_model = django_filters.ModelMultipleChoiceFilter(
+        field_name="job_model__slug",
+        queryset=Job.objects.all(),
+        to_field_name="slug",
+        label="Job (slug)",
+    )
+    job_model_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (ID)",
+    )
+
     first_run = django_filters.DateTimeFilter()
     last_run = django_filters.DateTimeFilter()
 
     class Meta:
         model = ScheduledJob
-        fields = ["id", "first_run", "last_run", "total_run_count"]
+        fields = ["id", "name", "total_run_count"]
 
     def search(self, queryset, name, value):
         if not value.strip():

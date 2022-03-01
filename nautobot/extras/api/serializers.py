@@ -574,14 +574,13 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
-    # TODO: enable this once we have an updated Job REST API
-    # url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
 
     class Meta:
         model = Job
         fields = [
             "id",
-            # "url", TODO: enable this
+            "url",
             "source",
             "module_name",
             "job_class_name",
@@ -613,6 +612,22 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+
+
+class JobVariableSerializer(serializers.Serializer):
+    name = serializers.CharField(read_only=True)
+    type = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True, required=False)
+    help_text = serializers.CharField(read_only=True, required=False)
+    default = serializers.JSONField(read_only=True, required=False)
+    required = serializers.BooleanField(read_only=True, required=False)
+
+    min_length = serializers.IntegerField(read_only=True, required=False)
+    max_length = serializers.IntegerField(read_only=True, required=False)
+    min_value = serializers.IntegerField(read_only=True, required=False)
+    max_value = serializers.IntegerField(read_only=True, required=False)
+    choices = serializers.JSONField(read_only=True, required=False)
+    model = serializers.CharField(read_only=True, required=False)
 
 
 #
@@ -677,7 +692,8 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
 
 
 #
-# Jobs (fka Custom Scripts, Reports)
+# Job classes (fka Custom Scripts, Reports)
+# 2.0 TODO: remove these if no longer needed
 #
 
 
