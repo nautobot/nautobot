@@ -628,9 +628,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(job_model__name__icontains=value) |
-            Q(name__icontains=value) |
-            Q(user__username__icontains=value)
+            Q(job_model__name__icontains=value) | Q(name__icontains=value) | Q(user__username__icontains=value)
         )
 
 
