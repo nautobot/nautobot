@@ -173,24 +173,21 @@ class CustomFieldModel(models.Model):
                 raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
     # Computed Field Methods
-    def _has_computed_fields(self, advanced_ui=None):
+    def has_computed_fields(self, advanced_ui=None):
         """
         Return a boolean indicating whether or not this content type has computed fields associated with it.
         This can also check whether the advanced_ui attribute is True or False for UI display purposes.
         """
-        computed_fields_qs = ComputedField.objects.get_for_model(self)
-        if advanced_ui is not None and advanced_ui in [True, False]:
-            computed_fields_qs = computed_fields_qs.filter(advanced_ui=advanced_ui)
-        return computed_fields_qs.exists()
-
-    def has_computed_fields(self):
-        return self._has_computed_fields()
+        computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
+        return computed_fields.exists()
 
     def has_computed_fields_basic(self):
-        return self._has_computed_fields(advanced_ui=False)
+        return self.has_computed_fields(advanced_ui=False)
 
     def has_computed_fields_advanced(self):
-        return self._has_computed_fields(advanced_ui=True)
+        return self.has_computed_fields(advanced_ui=True)
 
     def get_computed_field(self, slug, render=True):
         """
