@@ -321,6 +321,9 @@ class JobResult(BaseModel, CustomFieldModel):
     This model stores the results from running a Job.
     """
 
+    # Note that we allow job_model to be null and use models.SET_NULL here.
+    # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
+    # deleting the corresponding Job record.
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
     )
@@ -579,6 +582,9 @@ class ScheduledJob(BaseModel):
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
     )
+    # Note that we allow job_model to be null and use models.SET_NULL here.
+    # This is because we want to be able to keep ScheduledJob records for tracking and auditing purposes even after
+    # deleting the corresponding Job record.
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
     )
