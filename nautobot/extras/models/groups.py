@@ -28,24 +28,17 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         if not isinstance(obj, models.Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
 
-        # Extract the content_type fields to optimize the query.
-        model = obj._meta.model
-        app_label = model._meta.app_label
-        model_name = model._meta.model_name
-
-        # Get dynamic groups for this content_type.
+        # Get dynamic groups for this content_type using the discrete content_type fields to
+        # optimize the query.
         # TODO(jathan): 1 query
-        print(">>> GETTING ELIGIBLE GROUPS\n")
         eligible_groups = self.filter(
-            content_type__app_label=app_label,
-            content_type__model=model_name
+            content_type__app_label=obj._meta.app_label, content_type__model=obj._meta.model_name
         ).select_related("content_type")
 
         # Filter down to matching groups
         my_groups = []
         # TODO(jathan: 3 queries per DynamicGroup instance
         for dynamic_group in eligible_groups:
-            print(">>> GROUP INSTANCE\n")
             if obj.pk in dynamic_group.get_queryset(flat=True):
                 my_groups.append(dynamic_group.pk)
 
@@ -100,7 +93,11 @@ class DynamicGroup(OrganizationalModel):
         return self.name
 
     def get_queryset(self, **kwargs):
-        """Define custom queryset for group model."""
+        """
+        Define custom queryset for group model.
+
+        Any `kwargs` are passed along to `DynamicGroupMap.get_queryset()`.
+        """
 
         model = self.content_type.model_class()
 
