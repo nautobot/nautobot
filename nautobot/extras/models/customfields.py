@@ -210,7 +210,7 @@ class CustomFieldModel(models.Model):
         """
         computed_fields_dict = {}
         computed_fields = ComputedField.objects.get_for_model(self)
-        if advanced_ui is not None and advanced_ui in [True, False]:
+        if advanced_ui is not None:
             computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
         if not computed_fields:
             return {}
