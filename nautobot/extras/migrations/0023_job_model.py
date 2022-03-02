@@ -12,7 +12,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0021_customfield_changelog_data"),
+        ("extras", "0022_objectchange_object_datav2"),
     ]
 
     operations = [

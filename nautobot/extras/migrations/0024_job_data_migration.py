@@ -80,7 +80,7 @@ def reverse_migrate_job_data(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0022_job_model"),
+        ("extras", "0023_job_model"),
     ]
 
     operations = [
