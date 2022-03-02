@@ -144,13 +144,17 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
-- [#1299](https://github.com/nautobot/nautobot/issues/1299) - Add SECURITY.md to repository
-- [#1359](https://github.com/nautobot/nautobot/issues/1359) - Add CODE_OF_CONDUCT.md to repository
-- [#1388](https://github.com/nautobot/nautobot/issues/1388) - Added beta version of GitHub Issue Form style for feature request
+- [#839](https://github.com/nautobot/nautobot/issues/839) - Add CODE_OF_CONDUCT.md to repository
+- [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add SECURITY.md to repository
+- [#1388](https://github.com/nautobot/nautobot/pull/1388) - Added beta version of GitHub Issue Form style for feature request
 
 ## Changed
 
-- [#1348](https://github.com/nautobot/nautobot/issues/1348) - Pin Selenium Grid container version to match Python Client version
+- [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version
+
+## Fixed
+
+- [#1405](https://github.com/nautobot/nautobot/issues/1405) - Fixed incorrect import in 'startplugin' template code.
 
 ## v1.2.7 (2022-02-22)
 
