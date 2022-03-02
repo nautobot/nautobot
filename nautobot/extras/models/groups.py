@@ -28,18 +28,29 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         if not isinstance(obj, models.Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
 
-        # Check if dynamicgroup is supported for this model
+        # Extract the content_type fields to optimize the query.
         model = obj._meta.model
-        dynamicgroup_map = dynamicgroup_map_factory(model)
+        app_label = model._meta.app_label
+        model_name = model._meta.model_name
 
-        # If there's not a map just return an unfiltered queryset?
-        # TODO(jathan): Are we sure that's what we want?
-        if not dynamicgroup_map:
-            return self
+        # Get dynamic groups for this content_type.
+        # TODO(jathan): 1 query
+        print(">>> GETTING ELIGIBLE GROUPS\n")
+        eligible_groups = self.filter(
+            content_type__app_label=app_label,
+            content_type__model=model_name
+        ).select_related("content_type")
 
-        dynamicgroup_filter = dynamicgroup_map.get_queryset_filter(obj)
-        content_type = ContentType.objects.get_for_model(model)
-        return self.filter(content_type=content_type).filter(dynamicgroup_filter)
+        # Filter down to matching groups
+        my_groups = []
+        # TODO(jathan: 3 queries per DynamicGroup instance
+        for dynamic_group in eligible_groups:
+            print(">>> GROUP INSTANCE\n")
+            if obj.pk in dynamic_group.get_queryset(flat=True):
+                my_groups.append(dynamic_group.pk)
+
+        # TODO(jathan): 1 query
+        return self.filter(pk__in=my_groups)
 
 
 @extras_features(
@@ -88,7 +99,7 @@ class DynamicGroup(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_queryset(self):
+    def get_queryset(self, **kwargs):
         """Define custom queryset for group model."""
 
         model = self.content_type.model_class()
@@ -96,7 +107,7 @@ class DynamicGroup(OrganizationalModel):
         if not self.filter:
             return model.objects.none()
 
-        qs = self.map.get_queryset(self.filter)
+        qs = self.map.get_queryset(self.filter, **kwargs)
 
         # Make sure that this instance can't be a member of its own group
         if self.present_in_database and model == self.__class__:
