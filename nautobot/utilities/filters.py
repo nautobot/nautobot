@@ -76,6 +76,40 @@ class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(MACAddressField)
 
 
+class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
+    """
+    BooleanFilter for related objects that will explicitly perform `exclude=True` and `isnull`
+    lookups. The `field_name` argument is required and must be set to the related field on the
+    model.
+
+    This should be used instead of a default `BooleanFilter` paired `method=`
+    argument to test for the existence of related objects.
+
+    Example:
+
+        has_interfaces = RelatedMembershipBooleanFilter(
+            field_name="interfaces",
+            label="Has interfaces",
+        )
+    """
+
+    def __init__(
+        self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=False, exclude=True, **kwargs
+    ):
+        if field_name is None:
+            raise ValueError(f"Field name is required for {__self__.__class__.__name__}")
+
+        super().__init__(
+            field_name=field_name,
+            lookup_expr=lookup_expr,
+            label=label,
+            method=method,
+            distinct=distinct,
+            exclude=exclude,
+            **kwargs,
+        )
+
+
 class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filters for a set of Models, including all descendant models within a Tree.  Example: [<Region: R1>,<Region: R2>]

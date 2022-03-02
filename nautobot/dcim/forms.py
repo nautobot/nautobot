@@ -2077,27 +2077,27 @@ class DeviceFilterForm(
         label="Virtual chassis member",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_ports = forms.NullBooleanField(
+    has_console_ports = forms.NullBooleanField(
         required=False,
         label="Has console ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_server_ports = forms.NullBooleanField(
+    has_console_server_ports = forms.NullBooleanField(
         required=False,
         label="Has console server ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_ports = forms.NullBooleanField(
+    has_power_ports = forms.NullBooleanField(
         required=False,
         label="Has power ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_outlets = forms.NullBooleanField(
+    has_power_outlets = forms.NullBooleanField(
         required=False,
         label="Has power outlets",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    interfaces = forms.NullBooleanField(
+    has_interfaces = forms.NullBooleanField(
         required=False,
         label="Has interfaces",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),

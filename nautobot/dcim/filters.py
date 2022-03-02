@@ -17,6 +17,7 @@ from nautobot.utilities.filters import (
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     NameSlugSearchFilterSet,
+    RelatedMembershipBooleanFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -665,20 +666,40 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         method="_console_ports",
         label="Has console ports",
     )
+    has_console_ports = RelatedMembershipBooleanFilter(
+        field_name="consoleports",
+        label="Has console ports",
+    )
     console_server_ports = django_filters.BooleanFilter(
         method="_console_server_ports",
+        label="Has console server ports",
+    )
+    has_console_server_ports = RelatedMembershipBooleanFilter(
+        field_name="consoleserverports",
         label="Has console server ports",
     )
     power_ports = django_filters.BooleanFilter(
         method="_power_ports",
         label="Has power ports",
     )
+    has_power_ports = RelatedMembershipBooleanFilter(
+        field_name="powerports",
+        label="Has power ports",
+    )
     power_outlets = django_filters.BooleanFilter(
         method="_power_outlets",
         label="Has power outlets",
     )
+    has_power_outlets = RelatedMembershipBooleanFilter(
+        field_name="poweroutlets",
+        label="Has power outlets",
+    )
     interfaces = django_filters.BooleanFilter(
         method="_interfaces",
+        label="Has interfaces (deprecated)",
+    )
+    has_interfaces = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
         label="Has interfaces",
     )
     pass_through_ports = django_filters.BooleanFilter(
@@ -687,6 +708,10 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
     )
     device_bays = django_filters.BooleanFilter(
         method="_device_bays",
+        label="Has device bays",
+    )
+    has_device_bays = RelatedMembershipBooleanFilter(
+        field_name="devicebays",
         label="Has device bays",
     )
     tag = TagFilter()

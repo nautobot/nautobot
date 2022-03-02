@@ -1707,10 +1707,22 @@ class DeviceTestCase(TestCase):
         params = {"console_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_has_console_ports(self):
+        params = {"has_console_ports": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_console_ports": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
     def test_console_server_ports(self):
         params = {"console_server_ports": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"console_server_ports": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_has_console_server_ports(self):
+        params = {"has_console_server_ports": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_console_server_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_power_ports(self):
@@ -1719,16 +1731,34 @@ class DeviceTestCase(TestCase):
         params = {"power_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_has_power_ports(self):
+        params = {"has_power_ports": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_power_ports": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
     def test_power_outlets(self):
         params = {"power_outlets": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"power_outlets": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_has_power_outlets(self):
+        params = {"has_power_outlets": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_power_outlets": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
     def test_interfaces(self):
         params = {"interfaces": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"interfaces": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_has_interfaces(self):
+        params = {"has_interfaces": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_interfaces": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_pass_through_ports(self):
@@ -1741,6 +1771,12 @@ class DeviceTestCase(TestCase):
         params = {"device_bays": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"device_bays": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_has_device_bays(self):
+        params = {"has_device_bays": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_device_bays": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_local_context_data(self):
