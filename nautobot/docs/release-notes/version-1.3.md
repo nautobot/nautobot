@@ -35,6 +35,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 ### Added
 
 - [#5](https://github.com/nautobot/nautobot/issues/5) - Added the option to perform a "dry run" of Git repository syncing.
+- [#330](https://github.com/nautobot/nautobot/issues/330) - Added pre-/post-change data to WebHooks leveraging snapshots
 - [#498](https://github.com/nautobot/nautobot/issues/498) - Added custom-validator support to the RelationshipAssociation model.
 - [#724](https://github.com/nautobot/nautobot/issues/724) - Added Provider Network data model. (Partially based on [NetBox #5986](https://github.com/netbox-community/netbox/issues/5986).)
 - [#803](https://github.com/nautobot/nautobot/issues/803) - There is now a *render_boolean* template filter in helpers, which renders computed boolean values as HTML in a consistent manner.
