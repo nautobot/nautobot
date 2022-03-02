@@ -10,7 +10,7 @@
             </table>
         </div>
     {% endif %}
-{% elif advanced_ui %}
+{% else %}
     {% if object.has_computed_fields_advanced %}
         {% load computed_fields %}
         <div class="panel panel-default">
