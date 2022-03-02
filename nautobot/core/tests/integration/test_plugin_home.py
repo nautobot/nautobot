@@ -101,9 +101,7 @@ class PluginHomeTestCase(SplinterTestCase):
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
                 item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                self.assertTrue(
-                    "mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"]
-                )
+                self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])
 
     def test_examplemodel_custom_panel(self):
         """
@@ -144,6 +142,4 @@ class PluginHomeTestCase(SplinterTestCase):
                         self.assertEqual(counter, counter_html)
                 else:
                     item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                    self.assertTrue(
-                        "mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"]
-                    )
+                    self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])
