@@ -282,6 +282,11 @@ urlpatterns = [
         views.GitRepositorySyncView.as_view(),
         name="gitrepository_sync",
     ),
+    path(
+        "git-repositories/<str:slug>/dry-run/",
+        views.GitRepositoryDryRunView.as_view(),
+        name="gitrepository_dryrun",
+    ),
     # GraphQL Queries
     path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
     path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),

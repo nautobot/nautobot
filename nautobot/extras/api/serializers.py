@@ -15,6 +15,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceRoleSerializer,
+    NestedDeviceTypeSerializer,
     NestedPlatformSerializer,
     NestedRackSerializer,
     NestedRegionSerializer,
@@ -189,7 +190,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
     )
     device_types = SerializedPKRelatedField(
         queryset=DeviceType.objects.all(),
-        serializer=NestedDeviceRoleSerializer,
+        serializer=NestedDeviceTypeSerializer,
         required=False,
         many=True,
     )

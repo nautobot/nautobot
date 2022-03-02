@@ -2,12 +2,10 @@ from django.db import models
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
-from nautobot.extras.models import ObjectChange
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import serialize_object
 
 
 __all__ = (
@@ -65,12 +63,7 @@ class TenantGroup(MPTTModel, OrganizationalModel):
 
     def to_objectchange(self, action):
         # Remove MPTT-internal fields
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self, exclude=["level", "lft", "rght", "tree_id"]),
-        )
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
 
 
 @extras_features(

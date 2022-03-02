@@ -176,8 +176,12 @@ def git_repository_pre_delete(instance, **kwargs):
         status=JobResultStatusChoices.STATUS_RUNNING,
     )
 
-    # Use the default DB for storing job log entries since this occurs outside of an atomic transaction.
-    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True, use_default_db=True)
+    # This isn't running in the context of a Job execution transaction,
+    # so there's no need to use the "job_logs" proxy DB.
+    # In fact, attempting to do so would cause database IntegrityErrors!
+    job_result.use_job_logs_db = False
+
+    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
     if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
