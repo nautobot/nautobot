@@ -421,7 +421,7 @@ class JobViewSet(viewsets.ViewSet):
             )
             job.result = job_result
 
-        serializer = serializers.JobDetailSerializer(job, context={"request": request})
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
 
         return Response(serializer.data)
 
