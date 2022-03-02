@@ -146,6 +146,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#1299](https://github.com/nautobot/nautobot/issues/1299) - Add SECURITY.md to repository
 - [#1359](https://github.com/nautobot/nautobot/issues/1359) - Add CODE_OF_CONDUCT.md to repository
+- [#1388](https://github.com/nautobot/nautobot/issues/1388) - Added beta version of GitHub Issue Form style for feature request
 
 ## Changed
 
