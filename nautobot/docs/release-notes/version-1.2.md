@@ -144,7 +144,11 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
-- [#1299](https://github.com/nautobot/nautobot/issues/1299) - Add SECURITY.md to repository 
+- [#1299](https://github.com/nautobot/nautobot/issues/1299) - Add SECURITY.md to repository
+
+## Changed
+
+- [#1348](https://github.com/nautobot/nautobot/issues/1348) - Pin Selenium Grid container version to match Python Client version
 
 ## v1.2.7 (2022-02-22)
 
