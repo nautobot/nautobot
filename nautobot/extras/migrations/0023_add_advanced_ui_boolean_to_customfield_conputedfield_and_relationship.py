@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0022_objectchange_object_datav2'),
+        ("extras", "0022_objectchange_object_datav2"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='computedfield',
-            name='advanced_ui',
+            model_name="computedfield",
+            name="advanced_ui",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='customfield',
-            name='advanced_ui',
+            model_name="customfield",
+            name="advanced_ui",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='relationship',
-            name='advanced_ui',
+            model_name="relationship",
+            name="advanced_ui",
             field=models.BooleanField(default=False),
         ),
     ]
