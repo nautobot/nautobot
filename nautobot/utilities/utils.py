@@ -143,6 +143,18 @@ def serialize_object(obj, extra=None, exclude=None):
     return data
 
 
+def serialize_object_v2(obj):
+    """
+    Return a JSON serialized representation of an object using obj's serializer.
+    """
+    from nautobot.utilities.api import get_serializer_for_model
+
+    serializer_class = get_serializer_for_model(obj.__class__)
+    data = serializer_class(obj, context={"request": None}).data
+
+    return data
+
+
 def dict_to_filter_params(d, prefix=""):
     """
     Translate a dictionary of attributes to a nested set of parameters suitable for QuerySet filtering. For example:

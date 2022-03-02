@@ -14,7 +14,7 @@ from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, R
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import ObjectChange, StatusModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -22,7 +22,7 @@ from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
+from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -100,12 +100,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
     def to_objectchange(self, action):
         # Remove MPTT-internal fields
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self, exclude=["level", "lft", "rght", "tree_id"]),
-        )
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
 
     def clean(self):
         super().clean()
