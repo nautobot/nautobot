@@ -5,7 +5,7 @@ from nautobot.dcim.models import DeviceRole, Platform, Region, Site
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     CreatedUpdatedFilterSet,
-    LocalConfigContextFilterSet,
+    LocalContextFilterSet,
     StatusModelFilterSetMixin,
 )
 from nautobot.tenancy.filters import TenancyFilterSet
@@ -16,7 +16,6 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from .choices import *
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (
@@ -112,7 +111,7 @@ class ClusterFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSe
 
 class VirtualMachineFilterSet(
     BaseFilterSet,
-    LocalConfigContextFilterSet,
+    LocalContextFilterSet,
     TenancyFilterSet,
     StatusModelFilterSetMixin,
     CustomFieldModelFilterSet,

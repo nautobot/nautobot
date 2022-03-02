@@ -2,7 +2,6 @@ import json
 from urllib.parse import urljoin
 
 from django import forms
-from django.conf import settings
 from django.urls import get_script_prefix
 
 from nautobot.utilities.choices import ColorChoices

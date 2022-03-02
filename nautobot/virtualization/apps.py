@@ -1,5 +1,5 @@
-from django.apps import AppConfig
+from nautobot.core.apps import NautobotConfig
 
 
-class VirtualizationConfig(AppConfig):
+class VirtualizationConfig(NautobotConfig):
     name = "nautobot.virtualization"

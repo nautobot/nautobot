@@ -17,8 +17,15 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from .nested_serializers import *
 
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
+    NestedCircuitSerializer,
+    NestedCircuitTerminationSerializer,
+    NestedCircuitTypeSerializer,
+    NestedProviderSerializer,
+)
 
 #
 # Providers
@@ -47,7 +54,9 @@ class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "created",
             "last_updated",
             "circuit_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -71,7 +80,9 @@ class CircuitTypeSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
@@ -120,7 +131,9 @@ class CircuitSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cust
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class CircuitTerminationSerializer(CableTerminationSerializer, ConnectedEndpointSerializer):

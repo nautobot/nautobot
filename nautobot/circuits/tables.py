@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import COL_TENANT
+from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     ButtonsColumn,
@@ -72,7 +72,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     cid = tables.LinkColumn(verbose_name="ID")
     provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__slug")])
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     a_side = tables.Column(verbose_name="A Side")
     z_side = tables.Column(verbose_name="Z Side")
     tags = TagColumn(url_name="circuits:circuit_list")

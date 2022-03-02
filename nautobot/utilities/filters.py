@@ -12,8 +12,8 @@ from nautobot.extras.models import Tag
 from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NEGATION_LOOKUP_MAP,
-    FILTER_TREENODE_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
+    FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
 
 
@@ -229,6 +229,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.PositiveSmallIntegerField: {"filter_class": MultiValueNumberFilter},
             models.SlugField: {"filter_class": MultiValueCharFilter},
             models.SmallIntegerField: {"filter_class": MultiValueNumberFilter},
+            models.TextField: {"filter_class": MultiValueCharFilter},
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueCharFilter},

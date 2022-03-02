@@ -9,7 +9,7 @@ from rest_framework import status
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.choices import *
+from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
@@ -112,10 +112,15 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
             "name": "RIR 6",
             "slug": "rir-6",
         },
+        {
+            "name": "RIR 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -180,10 +185,14 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
             "name": "Role 6",
             "slug": "role-6",
         },
+        {
+            "name": "Role 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -217,6 +226,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["status"]
 
     def setUp(self):
         super().setUp()
@@ -466,6 +476,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["assigned_object_type", "role", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -513,10 +524,14 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "name": "VLAN Group 6",
             "slug": "vlan-group-6",
         },
+        {
+            "name": "VLAN Group 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -535,6 +550,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -604,6 +620,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["protocol"]
 
     @classmethod
     def setUpTestData(cls):

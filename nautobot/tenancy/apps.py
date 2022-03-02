@@ -1,5 +1,5 @@
-from django.apps import AppConfig
+from nautobot.core.apps import NautobotConfig
 
 
-class TenancyConfig(AppConfig):
+class TenancyConfig(NautobotConfig):
     name = "nautobot.tenancy"

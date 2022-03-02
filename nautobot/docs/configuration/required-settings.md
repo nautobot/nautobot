@@ -33,14 +33,15 @@ ALLOWED_HOSTS = ['*']
 
 ## DATABASES
 
-Nautobot requires access to a PostgreSQL 9.6 or later database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
+Nautobot requires access to a supported database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
 
 * `NAME` - Database name
-* `USER` - PostgreSQL username
-* `PASSWORD` - PostgreSQL password
+* `USER` - Database username
+* `PASSWORD` - Database password
 * `HOST` - Name or IP address of the database server (use `localhost` if running locally)
-* `PORT` - TCP port of the PostgreSQL service; leave blank for default port (TCP/5432)
+* `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
 * `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
+* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
 
 The following environment variables may also be set for each of the above values:
 
@@ -50,10 +51,10 @@ The following environment variables may also be set for each of the above values
 * `NAUTOBOT_DB_HOST`
 * `NAUTOBOT_DB_PORT`
 * `NAUTOBOT_DB_TIMEOUT`
+* `NAUTOBOT_DB_ENGINE`
 
 !!! warning
-    Nautobot only supports PostgreSQL as a database backend. Do not modify the `ENGINE` setting or you
-    will be unable to connect to the database.
+    Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
 
 Example:
 
@@ -61,18 +62,43 @@ Example:
 DATABASES = {
     'default': {
         'NAME': 'nautobot',                         # Database name
-        'USER': 'nautobot',                         # PostgreSQL username
-        'PASSWORD': 'awesome_password',             # PostgreSQL password
+        'USER': 'nautobot',                         # Database username
+        'PASSWORD': 'awesome_password',             # Database password
         'HOST': 'localhost',                        # Database server
         'PORT': '',                                 # Database port (leave blank for default)
         'CONN_MAX_AGE': 300,                        # Max database connection age
-        'ENGINE': 'django.db.backends.postgresql',  # Database driver (Do not change this!)
+        'ENGINE': 'django.db.backends.postgresql',  # Database driver ("mysql" or "postgresql")
     }
 }
 ```
 
 !!! note
-    Nautobot supports all PostgreSQL database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
+    Nautobot supports all database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
+
+### MySQL Unicode Settings
+
+!!! tip
+    By default, MySQL is case-insensitive in its handling of text strings. This is different from PostgreSQL which is case-sensitive by default. We strongly recommend that you configure MySQL to be case-sensitive for use with Nautobot, either when you enable the MySQL server, or when you create the Nautobot database in MySQL. If you follow the provided installation instructions for CentOS or Ubuntu, the recommended steps there will include the appropriate database configuration.
+
+When using MySQL as a database backend, and you want to enable support for Unicode characters like the beloved poop emoji, you'll need to update your settings.
+
+If you try to use emojis without this setting, you will encounter a server error along the lines of `Incorrect string value`, because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. The `utf8` encoding in MySQL is limited to 3-bytes per character. Newer Unicode emoji require 4-bytes. 
+
+To properly support using such characters, you will need to create an entry in `DATABASES` -> `default` -> `OPTIONS` with the value `{"charset": "utf8mb4"}` in your `nautobot_config.py` and restart all Nautobot services. This will tell MySQL to always use `utf8mb4` character set for database client connections.
+
+For example:
+
+```python
+DATABASES = {
+    "default": {
+        # Other setttings...
+        "OPTIONS": {"charset": "utf8mb4"},  # Add this line
+    }
+}
+```
+
+!!! tip
+    Starting in v1.1.0, if you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it! 
 
 ---
 
@@ -118,29 +144,11 @@ This setting may also be a dictionary style, but that is not covered here. Pleas
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning
     [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
-
-Example:
-
-```python
-# Set CACHEOPS_REDIS to an empty value
-CACHEOPS_REDIS = False
-
-# If you want to use Sentinel, specify this variable
-CACHEOPS_SENTINEL = {
-    "locations": [("localhost", 26379)], # Sentinel locations, required
-    "service_name": "nautobot",          # Sentinel service name, required
-    "socket_timeout": 10,                # Connection timeout in seconds, optional
-    "db": 0                              # Redis database, default: 0
-    # ...                                # Everything else is passed to `Sentinel()`
-}
-```
-
-For more details on how to configure Cacheops to use Redis Sentinel see the official guide on [Cacheops
-setup](https://github.com/Suor/django-cacheops#setup).
 
 ---
 
@@ -179,6 +187,9 @@ CACHES = {
 The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
 
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
+
+!!! note
+    The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in a future release.
 
 Default:
 
@@ -259,56 +270,6 @@ The following environment variables may also be set for some of the above values
 
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
-#### Using Redis Sentinel
-
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must be using dictionary-style settings, and modify the connection settings. This requires the removal of the `HOST`, `PORT`, and `DEFAULT_TIMEOUT` keys from the example above and the addition of three new keys.
-
-* `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
-of the Redis server and port for each sentinel instance to connect to
-* `MASTER_NAME`: Name of the master / service to connect to
-* `SOCKET_TIMEOUT`: Timeout in seconds for a connection to timeout
-* `CONNECTION_KWARGS`: Connection timeout, in seconds
-
-Example:
-
-```python
-RQ_QUEUES = {
-    "default": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    },
-    "check_releases": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    }
-}
-```
-
-!!! note
-    It is permissible to use Sentinel for only one database and not the other.
-
-For more details on configuring RQ with Redis Sentinel, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
-
 ---
 
 ## SECRET_KEY
@@ -331,7 +292,14 @@ $ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
+Alternatively use the following command to generate a secret even before `nautobot-server` is runable:
+
+```no-highlight
+$ LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1
+9.V$@Kxkc@@Kd@z<a/=.J-Y;rYc79<y@](9o9(L(*sS)Q+ud5P
+```
+
 !!! warning
     In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
 
-For more details see [Nautobot Configuration](..).
+For more details see [Nautobot Configuration](index.md).

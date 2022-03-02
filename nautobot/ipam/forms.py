@@ -33,11 +33,18 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
-from .choices import *
-from .constants import *
+from .choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from .constants import (
+    IPADDRESS_MASK_LENGTH_MIN,
+    IPADDRESS_MASK_LENGTH_MAX,
+    PREFIX_LENGTH_MAX,
+    PREFIX_LENGTH_MIN,
+    SERVICE_PORT_MAX,
+    SERVICE_PORT_MIN,
+)
 from .models import (
     Aggregate,
     IPAddress,
@@ -213,8 +220,6 @@ class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RIRCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = RIR
         fields = RIR.csv_headers
@@ -329,8 +334,6 @@ class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RoleCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = Role
         fields = Role.csv_headers
@@ -710,33 +713,44 @@ class IPAddressForm(
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
             raise forms.ValidationError("Cannot select both a device interface and a virtual machine interface")
+
+        # Stash a copy of `assigned_object` before we replace it, so we can use it in `save()`.
+        self.instance._original_assigned_object = self.instance.assigned_object
         self.instance.assigned_object = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
 
         # Primary IP assignment is only available if an interface has been assigned.
         interface = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-        if self.cleaned_data.get("primary_for_parent") and not interface:
+        primary_for_parent = self.cleaned_data.get("primary_for_parent")
+        if primary_for_parent and not interface:
             self.add_error(
                 "primary_for_parent",
                 "Only IP addresses assigned to an interface can be designated as primary IPs.",
             )
 
+        # If `primary_for_parent` is unset, clear the `primary_ip{version}` for the
+        # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
+        # also checks for the `_primary_ip_unset_by_form` value.
+        if not primary_for_parent and self.instance._original_assigned_object is not None:
+            self.instance._primary_ip_unset_by_form = True
+
     def save(self, *args, **kwargs):
         ipaddress = super().save(*args, **kwargs)
 
-        # Assign/clear this IPAddress as the primary for the associated Device/VirtualMachine.
-        interface = self.instance.assigned_object
+        interface = ipaddress.assigned_object
+        primary_ip_attr = f"primary_ip{ipaddress.address.version}"  # e.g. `primary_ip4` or `primary_ip6`
+        primary_ip_unset_by_form = getattr(ipaddress, "_primary_ip_unset_by_form", False)
+
+        # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
         if interface and self.cleaned_data["primary_for_parent"]:
-            if ipaddress.address.version == 4:
-                interface.parent.primary_ip4 = ipaddress
-            else:
-                interface.parent.primary_ip6 = ipaddress
+            setattr(interface.parent, primary_ip_attr, ipaddress)
             interface.parent.save()
-        elif interface and ipaddress.address.version == 4 and interface.parent.primary_ip4 == ipaddress:
-            interface.parent.primary_ip4 = None
-            interface.parent.save()
-        elif interface and ipaddress.address.version == 6 and interface.parent.primary_ip6 == ipaddress:
-            interface.parent.primary_ip6 = None
-            interface.parent.save()
+
+        # Or clear it as the primary, saving the `original_assigned_object.parent` if
+        # `_primary_ip_unset_by_form` was set in `clean()`
+        elif primary_ip_unset_by_form:
+            parent = ipaddress._original_assigned_object.parent
+            setattr(parent, primary_ip_attr, None)
+            parent.save()
 
         return ipaddress
 
@@ -997,7 +1011,6 @@ class VLANGroupCSVForm(CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Assigned site",
     )
-    slug = SlugField()
 
     class Meta:
         model = VLANGroup

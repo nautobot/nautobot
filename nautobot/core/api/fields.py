@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from django.core.exceptions import ObjectDoesNotExist
-import pytz
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
@@ -100,22 +99,6 @@ class ContentTypeField(RelatedField):
 
     def to_representation(self, obj):
         return f"{obj.app_label}.{obj.model}"
-
-
-class TimeZoneField(serializers.Field):
-    """
-    Represent a pytz time zone.
-    """
-
-    def to_representation(self, obj):
-        return obj.zone if obj else None
-
-    def to_internal_value(self, data):
-        if not data:
-            return ""
-        if data not in pytz.common_timezones:
-            raise ValidationError('Unknown time zone "{}" (see pytz.common_timezones for all options)'.format(data))
-        return pytz.timezone(data)
 
 
 class SerializedPKRelatedField(PrimaryKeyRelatedField):

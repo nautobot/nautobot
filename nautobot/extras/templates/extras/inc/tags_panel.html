@@ -1,4 +1,6 @@
 {% load helpers %}
+{% with list_url=object|validated_viewname:"list" tags=object.tags %}
+{% if tags %}
 <div class="panel panel-default">
     <div class="panel-heading">
         <strong>Tags</strong>
@@ -11,3 +13,5 @@
         {% endfor %}
     </div>
 </div>
+{% endif %}
+{% endwith %}

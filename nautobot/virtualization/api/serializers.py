@@ -17,13 +17,13 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
+from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
 )
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.virtualization.choices import *
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -31,8 +31,16 @@ from nautobot.virtualization.models import (
     VirtualMachine,
     VMInterface,
 )
-from .nested_serializers import *
 
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
+    NestedClusterGroupSerializer,
+    NestedClusterSerializer,
+    NestedClusterTypeSerializer,
+    NestedVirtualMachineSerializer,
+    NestedVMInterfaceSerializer,
+)
 
 #
 # Clusters
@@ -55,7 +63,9 @@ class ClusterTypeSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class ClusterGroupSerializer(CustomFieldModelSerializer):
@@ -74,7 +84,9 @@ class ClusterGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -103,7 +115,9 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "last_updated",
             "device_count",
             "virtualmachine_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -121,6 +135,7 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
     primary_ip = NestedIPAddressSerializer(read_only=True)
     primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
     primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)
+    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VirtualMachine
@@ -142,16 +157,20 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
             "disk",
             "comments",
             "local_context_data",
+            "local_context_schema",
             "tags",
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         validators = []
+        opt_in_fields = ["computed_fields"]
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
     config_context = serializers.SerializerMethodField()
+    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta(VirtualMachineSerializer.Meta):
         fields = [
@@ -172,6 +191,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
             "disk",
             "comments",
             "local_context_data",
+            "local_context_schema",
             "tags",
             "custom_fields",
             "config_context",

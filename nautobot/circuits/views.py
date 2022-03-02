@@ -263,7 +263,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
 
             if termination_a and termination_z:
                 # Use a placeholder to avoid an IntegrityError on the (circuit, term_side) unique constraint
-                print("swapping")
                 with transaction.atomic():
                     termination_a.term_side = "_"
                     termination_a.save()

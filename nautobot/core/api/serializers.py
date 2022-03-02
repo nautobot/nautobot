@@ -13,7 +13,66 @@ from rest_framework.exceptions import ValidationError
 from nautobot.utilities.utils import dict_to_filter_params
 
 
-class BaseModelSerializer(serializers.ModelSerializer):
+class OptInFieldsMixin:
+    """
+    A serializer mixin that takes an additional `opt_in_fields` argument that controls
+    which fields should be displayed.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__pruned_fields = None
+
+    @property
+    def fields(self):
+        """
+        Removes all serializer fields specified in a serializers `opt_in_fields` list that aren't specified in the
+        `include` query parameter.
+
+        As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
+        but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
+        from the list of fields.
+        """
+        if self.__pruned_fields is None:
+            fields = dict(super().fields)
+            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
+
+            if not serializer_opt_in_fields:
+                # This serializer has no defined opt_in_fields, so we never need to go further than this
+                self.__pruned_fields = fields
+                return self.__pruned_fields
+
+            if not hasattr(self, "_context"):
+                # We are being called before a request cycle
+                return fields
+
+            try:
+                request = self.context["request"]
+            except KeyError:
+                # No available request?
+                return fields
+
+            # NOTE: drf test framework builds a request object where the query
+            # parameters are found under the GET attribute.
+            params = getattr(request, "query_params", getattr(request, "GET", None))
+
+            try:
+                user_opt_in_fields = params.get("include", None).split(",")
+            except AttributeError:
+                # include parameter was not specified
+                user_opt_in_fields = []
+
+            # Drop any fields that are not specified in the users opt in fields
+            for field in serializer_opt_in_fields:
+                if field not in user_opt_in_fields:
+                    fields.pop(field, None)
+
+            self.__pruned_fields = fields
+
+        return self.__pruned_fields
+
+
+class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
     Namely it defines the `display` field which exposes a human friendly value for the given object.
@@ -77,7 +136,8 @@ class ValidatedModelSerializer(BaseModelSerializer):
 
 class WritableNestedSerializer(BaseModelSerializer):
     """
-    Returns a nested representation of an object on read, but accepts only a primary key on write.
+    Returns a nested representation of an object on read, but accepts either the nested representation or the
+    primary key value on write operations.
     """
 
     def to_internal_value(self, data):

@@ -5,8 +5,9 @@ from django.contrib.auth.admin import UserAdmin as UserAdmin_
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
-from django.db.models import Q
+from django.db import models
 
+from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
 
@@ -57,7 +58,7 @@ admin.site.unregister(Group)
 
 
 @admin.register(AdminGroup)
-class GroupAdmin(admin.ModelAdmin):
+class GroupAdmin(NautobotModelAdmin):
     fields = ("name",)
     list_display = ("name", "user_count")
     ordering = ("name",)
@@ -96,6 +97,7 @@ class UserAdmin(UserAdmin_):
         ("User Preferences", {"fields": ("config_data",)}),
     )
     filter_horizontal = ("groups",)
+    formfield_overrides = NautobotModelAdmin.formfield_overrides
     readonly_fields = ("config_data",)
 
     def get_inlines(self, request, obj):
@@ -121,7 +123,7 @@ class TokenAdminForm(forms.ModelForm):
 
 
 @admin.register(Token)
-class TokenAdmin(admin.ModelAdmin):
+class TokenAdmin(NautobotModelAdmin):
     form = TokenAdminForm
     list_display = ["key", "user", "created", "expires", "write_enabled", "description"]
 
@@ -196,7 +198,7 @@ class ObjectPermissionForm(forms.ModelForm):
             for ct in object_types:
                 model = ct.model_class()
                 try:
-                    model.objects.filter(*[Q(**c) for c in constraints]).exists()
+                    model.objects.filter(*[models.Q(**c) for c in constraints]).exists()
                 except FieldError as e:
                     raise ValidationError({"constraints": f"Invalid filter for {model}: {e}"})
 
@@ -231,7 +233,7 @@ class ObjectTypeListFilter(admin.SimpleListFilter):
 
 
 @admin.register(ObjectPermission)
-class ObjectPermissionAdmin(admin.ModelAdmin):
+class ObjectPermissionAdmin(NautobotModelAdmin):
     actions = ("enable", "disable")
     fieldsets = (
         (None, {"fields": ("name", "description", "enabled")}),

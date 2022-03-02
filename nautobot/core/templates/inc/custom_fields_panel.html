@@ -31,3 +31,15 @@
         </div>
     {% endif %}
 {% endwith %}
+
+{% if object.has_computed_fields %}
+    {% load computed_fields %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Computed Fields</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            {% computed_fields object %}
+        </table>
+    </div>
+{% endif %}

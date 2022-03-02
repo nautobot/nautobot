@@ -42,3 +42,11 @@ class CheckCoreSettingsTest(TestCase):
     def test_check_storage_config_and_backend(self):
         """Warn if STORAGE_CONFIG and STORAGE_BACKEND aren't mutually set."""
         self.assertEqual(checks.check_storage_config_and_backend(None), [checks.W005])
+
+    @override_settings(
+        MAINTENANCE_MODE=True,
+        SESSION_ENGINE="django.contrib.sessions.backends.db",
+    )
+    def test_check_maintenance_mode(self):
+        """Error if MAINTENANCE_MODE is set and yet SESSION_ENGINE is still storing sessions in the db."""
+        self.assertEqual(checks.check_maintenance_mode(None), [checks.E005])

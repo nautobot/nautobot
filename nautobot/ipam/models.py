@@ -5,19 +5,26 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import ObjectChange, Status, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
-from .choices import *
-from .constants import *
+from .choices import IPAddressRoleChoices, ServiceProtocolChoices
+from .constants import (
+    IPADDRESS_ASSIGNMENT_MODELS,
+    IPADDRESS_ROLES_NONUNIQUE,
+    SERVICE_PORT_MAX,
+    SERVICE_PORT_MIN,
+    VRF_RD_MAX_LENGTH,
+)
 from .fields import VarbinaryIPField
 from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet
 from .validators import DNSValidator
@@ -172,7 +179,7 @@ class RIR(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
@@ -265,9 +272,15 @@ class Aggregate(PrimaryModel):
         if pre:
             if isinstance(pre, str):
                 pre = netaddr.IPNetwork(pre)
-            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
-            # then |address.broadcast| is None
-            broadcast = pre.broadcast if pre.broadcast else pre.network
+            # Note that our "broadcast" field is actually the last IP address in this prefix.
+            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
+            # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
+            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
+            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the prefix.
+            #    We store this address as both the network and the "broadcast".
+            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
+            # of addresses and prefixes, not for packet forwarding. :-)
+            broadcast = pre.broadcast if pre.broadcast else pre[-1]
             self.network = str(pre.network)
             self.broadcast = str(broadcast)
             self.prefix_length = pre.prefixlen
@@ -375,7 +388,7 @@ class Role(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     weight = models.PositiveSmallIntegerField(default=1000)
     description = models.CharField(
         max_length=200,
@@ -516,9 +529,15 @@ class Prefix(PrimaryModel, StatusModel):
         if pre:
             if isinstance(pre, str):
                 pre = netaddr.IPNetwork(pre)
-            # if |prefix.prefixlen| is 32 (ip4) or 128 (ip6)
-            # then |prefix.broadcast| is None
-            broadcast = pre.broadcast if pre.broadcast else pre.network
+            # Note that our "broadcast" field is actually the last IP address in this prefix.
+            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
+            # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
+            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
+            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the prefix.
+            #    We store this address as both the network and the "broadcast".
+            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
+            # of addresses and prefixes, not for packet forwarding. :-)
+            broadcast = pre.broadcast if pre.broadcast else pre[-1]
             self.network = str(pre.network)
             self.broadcast = str(broadcast)
             self.prefix_length = pre.prefixlen
@@ -541,16 +560,6 @@ class Prefix(PrimaryModel, StatusModel):
             # /0 masks are not acceptable
             if self.prefix.prefixlen == 0:
                 raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
-
-            # Disallow host masks
-            if self.prefix.version == 4 and self.prefix.prefixlen == 32:
-                raise ValidationError(
-                    {"prefix": "Cannot create host addresses (/32) as prefixes. Create an IPv4 address instead."}
-                )
-            elif self.prefix.version == 6 and self.prefix.prefixlen == 128:
-                raise ValidationError(
-                    {"prefix": "Cannot create host addresses (/128) as prefixes. Create an IPv6 address instead."}
-                )
 
             # Enforce unique IP space (if applicable)
             if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
@@ -649,24 +658,18 @@ class Prefix(PrimaryModel, StatusModel):
         child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()])
         available_ips = prefix - child_ips
 
-        # All IP addresses within a pool are considered usable
-        if self.is_pool:
-            return available_ips
-
-        # All IP addresses within a point-to-point prefix (IPv4 /31 or IPv6 /127) are considered usable
-        if (self.prefix.version == 4 and self.prefix.prefixlen == 31) or (  # RFC 3021
-            self.prefix.version == 6 and self.prefix.prefixlen == 127  # RFC 6164
-        ):
+        # IPv6, pool, or IPv4 /31-32 sets are fully usable
+        if self.family == 6 or self.is_pool or (self.family == 4 and self.prefix.prefixlen >= 31):
             return available_ips
 
         # Omit first and last IP address from the available set
+        # For "normal" IPv4 prefixes, omit first and last addresses
         available_ips -= netaddr.IPSet(
             [
                 netaddr.IPAddress(self.prefix.first),
                 netaddr.IPAddress(self.prefix.last),
             ]
         )
-
         return available_ips
 
     def get_first_available_prefix(self):
@@ -826,9 +829,15 @@ class IPAddress(PrimaryModel, StatusModel):
         if address:
             if isinstance(address, str):
                 address = netaddr.IPNetwork(address)
-            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
-            # then |address.broadcast| is None
-            broadcast = address.broadcast if address.broadcast else address.network
+            # Note that our "broadcast" field is actually the last IP address in this network.
+            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
+            # 1. For a point-to-point address (IPv4 /31 or IPv6 /127), there are two addresses in the network,
+            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
+            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the network.
+            #    We store this address as both the host and the "broadcast".
+            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
+            # of addresses and prefixes, not for packet forwarding. :-)
+            broadcast = address.broadcast if address.broadcast else address[-1]
             self.host = str(address.ip)
             self.broadcast = str(broadcast)
             self.prefix_length = address.prefixlen
@@ -870,8 +879,13 @@ class IPAddress(PrimaryModel, StatusModel):
                         }
                     )
 
-        # Check for primary IP assignment that doesn't match the assigned device/VM
-        if self.present_in_database:
+        # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
+        # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
+        primary_ip_unset_by_form = getattr(self, "_primary_ip_unset_by_form", False)
+
+        # Check for primary IP assignment that doesn't match the assigned device/VM if and only if
+        # "_primary_ip_unset" has not been set by the caller.
+        if self.present_in_database and not primary_ip_unset_by_form:
             device = Device.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
             if device:
                 if getattr(self.assigned_object, "device", None) != device:
@@ -889,12 +903,8 @@ class IPAddress(PrimaryModel, StatusModel):
         if self.status == IPAddress.STATUS_SLAAC and self.family != 6:
             raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})
 
-    def save(self, *args, **kwargs):
-
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
-
-        super().save(*args, **kwargs)
 
     def to_objectchange(self, action):
         # Annotate the assigned object, if any
@@ -974,7 +984,8 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    slug = AutoSlugField(populate_from="name", unique=None)
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -993,6 +1004,7 @@ class VLANGroup(OrganizationalModel):
         )  # (site, name) may be non-unique
         unique_together = [
             ["site", "name"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
         verbose_name = "VLAN group"

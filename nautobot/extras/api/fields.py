@@ -38,6 +38,12 @@ class StatusSerializerField(serializers.SlugRelatedField):
             data = data.lower()
         return super().to_internal_value(data)
 
+    def get_queryset(self):
+        """Only emit status options for this model/field combination."""
+        queryset = super().get_queryset()
+        model = self.parent.Meta.model
+        return queryset.get_for_model(model)
+
     def get_choices(self, cutoff=None):
         """
         Return a nested list of dicts for enum choices.

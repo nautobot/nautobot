@@ -1486,7 +1486,9 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
 
 
 class DeviceBulkEditView(generic.BulkEditView):
-    queryset = Device.objects.prefetch_related("tenant", "site", "rack", "device_role", "device_type__manufacturer")
+    queryset = Device.objects.prefetch_related(
+        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group"
+    )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
     form = forms.DeviceBulkEditForm

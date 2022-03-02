@@ -18,7 +18,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import COL_TENANT
+from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     BooleanColumn,
@@ -170,7 +170,7 @@ class PlatformTable(BaseTable):
 class DeviceTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     site = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_role = ColoredLabelColumn(verbose_name="Role")
@@ -187,6 +187,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
+    secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
     class Meta(BaseTable.Meta):
@@ -212,6 +213,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "virtual_chassis",
             "vc_position",
             "vc_priority",
+            "secrets_group",
             "tags",
         )
         default_columns = (
@@ -230,7 +232,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
 class DeviceImportTable(BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
     status = ColoredLabelColumn()
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     site = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_role = tables.Column(verbose_name="Role")

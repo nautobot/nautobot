@@ -2,11 +2,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
-from django.test import override_settings
+from django.test import override_settings, tag
+from django.utils.text import slugify
 from rest_framework import status
 from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.models import ObjectChange
 from .utils import disable_warnings
 from .views import ModelTestCase
 
@@ -63,6 +66,7 @@ class APITestCase(ModelTestCase):
         return reverse(viewname)
 
 
+@tag("unit")
 class APIViewTestCases:
     class GetObjectViewTestCase(APITestCase):
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -134,6 +138,7 @@ class APIViewTestCases:
 
     class ListObjectsViewTestCase(APITestCase):
         brief_fields = []
+        choices_fields = None
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -162,6 +167,7 @@ class APIViewTestCases:
             url = f"{self._get_list_url()}?brief=1"
             response = self.client.get(url, **self.header)
 
+            self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
             self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
 
@@ -233,9 +239,57 @@ class APIViewTestCases:
                     self.assertIn("display", choice, f"A choice in {field} is missing the display key")
                     self.assertIn("value", choice, f"A choice in {field} is missing the value key")
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_returns_expected_choices(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choice fields match expected choice fields for serializer.
+            """
+            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            # Grab any field name that has choices defined (fields with enums)
+            field_choices = {k for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+
+            self.assertEqual(set(self.choices_fields), field_choices)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_status_options_returns_expected_choices(self):
+            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
+
+            # Don't bother testing if there's no `status` field.
+            if "status" not in self.choices_fields:
+                self.skipTest("Object does not contain a `status` field.")
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            actions = response.json()["actions"]["POST"]
+            choices = actions["status"]["choices"]
+
+            # Import Status here to avoid circular import issues w/ test utilities.
+            from nautobot.extras.models import Status  # noqa
+
+            # Assert that the expected Status objects matches what is emitted.
+            statuses = Status.objects.get_for_model(self.model)
+            expected = [{"value": v, "display": d} for (v, d) in statuses.values_list("slug", "name")]
+            self.assertListEqual(choices, expected)
+
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
+        slug_source = None
 
         def test_create_object_without_permission(self):
             """
@@ -263,12 +317,26 @@ class APIViewTestCases:
                 response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_201_CREATED)
                 self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
+                instance = self._get_queryset().get(pk=response.data["id"])
                 self.assertInstanceEqual(
-                    self._get_queryset().get(pk=response.data["id"]),
+                    instance,
                     create_data,
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
+                # Check if Slug field is automatically created
+                if self.slug_source is not None and "slug" not in create_data:
+                    object = self._get_queryset().get(pk=response.data["id"])
+                    expected_slug = slugify(getattr(object, self.slug_source))
+                    self.assertEqual(object.slug, expected_slug)
+
+                # Verify ObjectChange creation
+                if hasattr(self.model, "to_objectchange"):
+                    objectchanges = ObjectChange.objects.filter(
+                        changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
+                    )
+                    self.assertEqual(len(objectchanges), 1)
+                    self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
         def test_bulk_create_objects(self):
             """
@@ -300,6 +368,10 @@ class APIViewTestCases:
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
+                if self.slug_source is not None and "slug" not in self.create_data[i]:
+                    object = self._get_queryset().get(pk=obj["id"])
+                    expected_slug = slugify(getattr(object, self.slug_source))
+                    self.assertEqual(object.slug, expected_slug)
 
     class UpdateObjectViewTestCase(APITestCase):
         update_data = {}
@@ -336,6 +408,14 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_200_OK)
             instance.refresh_from_db()
             self.assertInstanceEqual(instance, update_data, exclude=self.validation_excluded_fields, api=True)
+
+            # Verify ObjectChange creation
+            if hasattr(self.model, "to_objectchange"):
+                objectchanges = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
+                )
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
 
         def test_bulk_update_objects(self):
             """
@@ -400,6 +480,14 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
             self.assertFalse(self._get_queryset().filter(pk=instance.pk).exists())
 
+            # Verify ObjectChange creation
+            if hasattr(self.model, "to_objectchange"):
+                objectchanges = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
+                )
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
+
         def test_bulk_delete_objects(self):
             """
             DELETE a set of objects in a single request.
@@ -427,6 +515,7 @@ class APIViewTestCases:
         pass
 
 
+@tag("unit")
 class APITransactionTestCase(_APITransactionTestCase):
     def setUp(self):
         """

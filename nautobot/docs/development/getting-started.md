@@ -2,14 +2,13 @@
 
 ## Git Branches
 
-The Nautobot project follows a branching model based on [Git-flow](https://nvie.com/posts/a-successful-git-branching-model/). As such, there are two persistent git branches:
+The Nautobot project follows a branching model based on [Git-flow](https://nvie.com/posts/a-successful-git-branching-model/). As such, there are three persistent git branches:
 
 * `main` - Serves as a snapshot of the current stable release
-* `develop` - All development on the upcoming stable release occurs here
+* `develop` - All bug fixes and minor feature development on the upcoming stable release occurs here
+* `next` - All major new feature development for the next feature release occurs here.
 
-At any given time, there may additionally be zero or more long-lived branches of the form `develop-X.Y.Z`, where `X.Y.Z` is a future stable release later than the one currently being worked on in the main `develop` branch.
-
-You will always base pull requests off of the `develop` branch, or off of `develop-X.Y.Z` if you're working on a feature targeted for a later release. **Never** target pull requests into the `main` branch, which receives merges only from the `develop` branch.
+You will always base pull requests off of either the `develop` branch, for fixes and minor features, or `next`, if you're working on a feature targeted for a later release. **Never** target fix or feature pull requests into the `main` branch, which receives merges only from the `develop` branch and only for new stable releases of Nautobot.
 
 ## Forking the Repo
 
@@ -78,9 +77,9 @@ You're now ready to proceed to the next steps.
 
 ### Creating a Branch
 
-Before you make any changes, always create a new branch. In the majority of cases, you'll always want to create your branches from the `develop` branch.
+Before you make any changes, always create a new branch. Again, for bug fixes and minor features, you'll want to create your branches from the `develop` branch, while for major new features, you'll branch from `next` instead.
 
-Before you ever create a new branch, always  checkout the `develop` branch and make sure you you've got the latest changes from `upstream`.
+Before you ever create a new branch, always checkout the appropriate branch and make sure you you've got the latest changes from `upstream`:
 
 ```no-highlight
 $ git checkout develop
@@ -90,10 +89,10 @@ $ git pull upstream develop
 !!! warning
 	If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
 
-Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username, separated by hyphens. For example:
+Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username or your initials, and suffix it with the issue number if appropriate, separated by hyphens. For example:
 
 ```no-highlight
-$ git checkout -b yourusername-myfeature
+$ git checkout -b yourusername-myfeature-1234
 ```
 
 ## Enabling Pre-Commit Hooks
@@ -119,6 +118,9 @@ Getting started with Nautobot development is pretty straightforward, and should 
 This workflow uses [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) and assumes that you have them installed.
 
 For the Docker Compose workflow, Nautobot uses [Invoke](http://docs.pyinvoke.org/en/latest/index.html) as a replacement for Make. Invoke was chosen because it is less arcane than make. Instead of a `Makefile`, Invoke reads the `tasks.py` in the project root.
+
+!!! note
+    Although the Docker Compose workflow uses containers, it is important to note that the containers are running the local repository code on your machine. Changes you make to your local code will be picked up and executed by the containers.
 
 #### Install Invoke
 
@@ -171,123 +173,27 @@ Available tasks:
 A development environment can be easily started up from the root of the project using the following commands:
 
 - `invoke build` - Builds Nautobot docker images
+- `invoke migrate` - Performs database migration operation in Django
 - `invoke createsuperuser` - Creates a superuser account for the Nautobot application
-- `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, and the Jobs worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
+- `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
 
 Additional useful commands for the development environment:
 
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
 - `invoke stop` - Stops all containers created by `invoke start`
 
-#### Invoke Configuration
-
-The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html) which you may want to override. Configuration properties include:
-
-- `python_ver`: the Python version which is used to build the Docker container (default: `3.7`)
-- `local`: run the commands in the local environment vs the Docker container (default: `False`)
-- `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
-- `compose_file`: the Docker Compose YAML file to use (default: `"docker-compose.yml"`)
-- `compose_override_file`: the default Docker Compose override file to use if it exists (default: `"docker-compose.override.yml"`)
-
-These setting may be overridden several different ways (from highest to lowest precedence):
-
-- Command line argument on the individual commands (see `invoke $command --help`) if available
-- Using environment variables such as `INVOKE_NAUTOBOT_PYTHON_VER`; the variables are prefixed with `INVOKE_NAUTOBOT_` and must be uppercase
-- Using an `invoke.yml` file (see `invoke.yml.example`)
-
-#### Working with Docker Compose
-
-The files related to the Docker development environment can be found inside of the `development` directory at the root of the project.
-
-In this directory you'll find the following core files:
-
-- `docker-compose.build.yml` - Docker compose override file used to start/build the production docker images for local testing.
-- `docker-compose.debug.yml` - Docker compose override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
-- `docker-compose.dev.yml` - Docker compose override file used to mount the Nautobot source code inside the container at `/source` and the `nautobot_config.py` from the same directory as `/opt/nautobot/nautobot_config.py` for the active configuration.
-- `docker-compose.yml` - Docker service containers and their relationships to the Nautobot container
-- `dev.env` - Environment variables used to setup the container services
-- `nautobot_config.py` - Nautobot configuration file
-
-In addition to the development environment the `Dockerfile` which is used to build the Nautobot containers is located in the `docker` directory at the root of the project.  The development container is actually used to install the development tools necessary to build the packages which are used to install Nautobot in the production image as a separate build stage.
-
-In the `docker` directory you will find the following files:
-
-- `Dockerfile` - Docker container definition for Nautobot containers
-- `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
-- `uwsgi.ini` - The [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) ini file used in the production docker container
-
-#### Docker-Compose Overrides
-
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml``` and set the environment variable `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.override.yml`.
-
-This file will override any configuration in the main `docker-compose.yml` file, without making changes to the repository.
-
-Please see the [official documentation on extending Docker Compose](https://docs.docker.com/compose/extends/) for more information.
-
-##### Automatically Creating a Superuser
-
-There may be times where you want to bootstrap Nautobot with a superuser account and API token already created for quick access or for running within a CI/CD pipeline. Below will detail the steps required to bootstrap Nautobot with a user and token.
-
-Create `development/docker-compose.override.yml` with the following contents:
-
-```yaml
----
-services:
-  nautobot:
-    env_file:
-      - "override.env"
-```
-
-The `docker-entrypoint.sh` script will run any migrations and then look for specific variables set to create the superuser. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
-
- Any variables defined in this file will override the defaults. The `override.env` should look like the following:
-
-```bash
-# Superuser information. CREATE_SUPERUSER defaults to false.
-CREATE_SUPERUSER=true
-SUPERUSER_NAME=admin
-SUPERUSER_EMAIL=admin@example.com
-SUPERUSER_PASSWORD=admin
-SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
-```
-
-!!! warning
-    Please name the **.env** file ``override.env`` to prevent credentials from accidentally being checked into Git as ``override.env`` is set in the ``.gitignore`` file.
-
-The variables defined above within `override.env` will signal the `docker-entrypoint.sh` script to create the superuser with the specified username, email, password, and API token.
-
-After these two files are created, you can use the `invoke` tasks to manage the development containers.
-
-#### Microsoft Visual Studio Code Integration
-
-For users of Microsoft Visual Studio Code, several files are included to ease development and integrate with the [VS Code Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). The following related files are found relative to the root of the project:
-
-- `.devcontainers/devcontainer.json` - Dev. container definition
-- `nautobot.code-workspace` - VS Code workspace configuration for Nautobot
-- `development/docker-compose.debug.yml` - Docker Compose file with debug configuration for VS Code
-
-After opening the project directory in VS Code in a supported environment, you will be prompted by VS Code to **Reopen in Container** and **Open Workspace**. Select **Reopen in Container** to build and start the development containers. Once your window is connected to the container, you can open the workspace which enables support for Run/Debug.
-
-To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
+!!! tip
+    To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
 
 !!! note
-    You can run tests with `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` while inside the Container.
+    If you are making edits to Nautobot's documentation in the Docker Compose workflow or otherwise needing to serve the docs locally, it is necessary to run a Python virtual environment:
 
-##### Special Workflow for Containers on Remote Servers
+    - Follow the steps in the Nautobot docs to [install poetry](#install-poetry)
+    - `poetry shell`
+    - `poetry install`
+    - `mkdocs serve`
 
-A slightly different workflow is needed when your development container is running on a remotely-connected server (such as with SSH). VS Code will not offer the **Reopen in Container** option on a remote server.
-
-To work with remote containers, after `invoke build` use `docker-compose` as follows to start the containers. This prevents the HTTP service from automatically starting inside the container:
-
-```no-highlight
-$ cd development
-$ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
-```
-
-- Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.
-- The **Select the container to attach VS Code** input field provides a list of running containers.
-- Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
-- As a last step open the folder `/opt/nautobot` in VS Code.
+Proceed to the [Working in your Development Environment](#working-in-your-development-environment) section
 
 ### Python Virtual Environment Workflow
 
@@ -296,7 +202,7 @@ This workflow uses Python and Poetry to work with your development environment l
 There are a few things you'll need:
 
 - A Linux system or environment
-- A PostgreSQL server, which can be installed locally [per the documentation](../../installation/#installing-nautobot-dependencies)
+- A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../installation/#installing-nautobot-dependencies)
 - A Redis server, which can also be [installed locally](../../installation/#installing-nautobot-dependencies)
 - A supported version of Python
 - A recent version of [Poetry](https://python-poetry.org/docs/#installation)
@@ -332,6 +238,9 @@ Bootstrap your virtual environment using `poetry install`:
 ```no-highlight
 $ poetry install
 ```
+
+!!! hint
+    If you are doing development or testing using MySQL, you may quickly install the `mysqlclient` library along with Nautobot by running `poetry install --extras mysql`.
 
 This will create automatically create a virtualenv in your home directory, which houses a virtual copy of the Python executable and its related libraries and tooling. When running Nautobot for development, it will be run using the Python binary at found within the virtualenv.
 
@@ -416,7 +325,7 @@ $ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 A newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
 
 * [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
-* [`DATABASES`](../../configuration/required-settings/#databases): PostgreSQL database connection parameters, if different from the defaults
+* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters, if different from the defaults
 * **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues). The defaults should be fine for development.
 * [`DEBUG`](../../configuration/optional-settings/#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
 * [`EXTRA_INSTALLED_APPS`](../../configuration/optional-settings/#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
@@ -424,6 +333,14 @@ A newly created configuration includes sane defaults. If you need to customize t
 ## Working in your Development Environment
 
 Below are common commands for working your development environment.
+
+### Creating a Superuser
+
+You'll need to create a administrative superuser account to be able to log into the Nautobot Web UI for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
+
+| Docker Compose Workflow | Virtual Environment Workflow   |
+|-------------------------|--------------------------------|
+| `invoke createsuperuser`| `nautobot-server createsuperuser` |
 
 ### Starting the Development Server
 
@@ -455,6 +372,8 @@ Quit the server with CONTROL-C.
     Do not use `poetry run nautobot-server runserver` as it will crash unless you also pass the `--noreload` flag, which somewhat defeats the purpose of using the development server. It is recommended to use `nautobot-server runserver` from within an active virtualenv (e.g. `poetry shell`). This is a [known issue with Django and Poetry](https://github.com/python-poetry/poetry/issues/2435).
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
+
+You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
 
 ### Starting the Interactive Shell
 
@@ -517,26 +436,115 @@ Installing the current project: nautobot (1.0.0-beta.2)
 
 ### Running Tests
 
-Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
+Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests come in two primary flavors: Unit tests and integration tests.
 
-| Docker Compose Workflow | Virtual Environment Workflow                                           |
-|-------------------------|------------------------------------------------------------------------|
-| `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
+#### Unit Tests
+
+Unit tests are automated tests written and run to ensure that a section of the Nautobot application (known as the "unit") meets its design and behaves as intended and expected. Most commonly as a developer of or contributor to Nautobot you will be writing unit tests to exercise the code you have written. Unit tests are not meant to test how the application behaves, only the individual blocks of code, therefore use of mock data and phony connections is common in unit test code. As a guiding principle, unit tests should be fast, because they will be executed quite often.
+
+By Nautobot convention, unit tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `unit`. The base test case class `nautobot.utilities.testing.TestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing view and API test cases in the Nautobot test suite utilities inherit from this class.
+
+!!! warning
+    New unit tests **must always** inherit from `nautobot.utilities.testing.TestCase`. Do not use `django.test.TestCase`.
+
+Wrong:
+```python
+from django.test import TestCase
+
+
+class MyTestCase(TestCase):
+    ...
+```
+
+Right:
+```python
+from nautobot.utilities.testing import TestCase
+
+
+class MyTestCase(TestCase):
+    ...
+```
+
+Unit tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
+
+| Docker Compose Workflow | Virtual Environment Workflow                                                    |
+|-------------------------|---------------------------------------------------------------------------------|
+| `invoke unittest`       | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
 
 !!! info
     By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.  See the [Invoke configuration](#invoke-configuration) for more information.
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
-| Docker Compose Workflow    | Virtual Environment Workflow                                                    |
-|----------------------------|---------------------------------------------------------------------------------|
-| `invoke unittest --keepdb` | `nautobot-server test --keepdb --config=nautobot/core/tests/nautobot_config.py` |
+| Docker Compose Workflow    | Virtual Environment Workflow                                                             |
+|----------------------------|------------------------------------------------------------------------------------------|
+| `invoke unittest --keepdb` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --keepdb nautobot` |
 
 !!! note
-	Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
+    Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
 
 !!! warning
 	In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
+
+#### Integration Tests
+
+Integration tests are automated tests written and run to ensure that the Nautobot application behaves as expected when being used as it would be in practice. By contrast to unit tests, where individual units of code are being tested, integration tests rely upon the server code actually running, and web UI clients or API clients to make real connections to the service to exercise actual workflows, such as navigating to the login page, filling out the username/passwords fields, and clicking the "Log In" button.
+
+Integration testing is much more involved, and builds on top of the foundation laid by unit testing. As a guiding principle, integration tests should be comprehensive, because they are the last mile to asserting that Nautobot does what it is advertised to do. Without integration testing, we have to do it all manually, and that's no fun for anyone!
+
+Running integrations tests requires the use of Docker at this time. They can be directly invoked using `nautobot-server test` just as unit tests can, however, a headless Firefox browser provided by Selenium is required. Because Selenium installation and setup is complicated, we have included a configuration for this to work out of the box using Docker.
+
+The Selenium container is running a standalone, headless Firefox "web driver" browser that can be remotely controlled by Nautobot for use in integration testing.
+
+Before running integration tests, the `selenium` container must be running. If you are using the Docker Compose workflow, it is automatically started for you. For the Virtual Environment workflow, you must start it manually.
+
+| Docker Compose Workflow   | Virtual Environment Workflow      |
+|---------------------------|-----------------------------------|
+| (automatic)               | `invoke start --service selenium` |
+
+By Nautobot convention, integration tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `integration`. The base test case class `nautobot.utilities.testing.integration.SeleniumTestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing integration test cases in the Nautobot test suite utilities inherit from this class.
+
+!!! warning
+    New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SeleniumTestCase` and added in the `integration` directory in the `tests` directory of an inner Nautobot application. Do not use any other base class for integration tests.
+
+We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and managable continuous development cycle.
+
+Wrong:
+```python
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+
+
+class MyIntegrationTestCase(StaticLiveServerTestCase):
+    ...
+```
+
+Right:
+```python
+from nautobot.utilities.testing.integration import SeleniumTestCase
+
+
+class MyIntegrationTestCase(SeleniumTestCase):
+    ...
+```
+
+Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
+
+| Docker Compose Workflow   | Virtual Environment Workflow                                                                      |
+|---------------------------|---------------------------------------------------------------------------------------------------|
+| `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
+
+!!! info
+    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
+
+!!! tip
+    You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
+
+##### Customizing Integration Test Executions
+
+The following environment variables can be provided when running tests to customize where Nautobot looks for Selenium and where Selenium looks for Nautobot. If using the default setup documented above, there is no need to customize these.
+
+- `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
+- `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
 
 ### Verifying Code Style
 
@@ -546,6 +554,39 @@ To enforce best practices around consistent [coding style](style-guide.md), Naut
 |-------------------------|------------------------------|
 | `invoke flake8`         | `flake8`                     |
 | `invoke black`          | `black`                      |
+
+### Handling Migrations
+
+If your branch modifies a Django model (and as a result requires a database schema modification), please be sure to provide a meaningful name to the migration before pushing.
+
+- If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
+- If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
+
+You’ll also want to run `black` against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
+
+When modifying model field attributes, modify the test data in the tests too to reflect these changes and also any forms which refer to the model.
+
+
+## Working on Documentation
+
+Some features require documentation updates or new documentation to be written. The documentation files can be found in the `docs` directory. To preview these changes locally, you can use `mkdocs`.
+
+### Installing `mkdocs`
+
+If you are using the poetry-based workflow, `mkdocs` should already be installed in your environment. This section mostly applies if you are using Docker to manage your development environment.
+
+The `mkdocs` command can be installed via pip, either globally or in your virtual environment.
+
+```no-highlight
+$ pip3 install mkdocs mkdocs-include-markdown-plugin
+```
+
+### Writing Documentation
+
+Once the `mkdocs` command has been installed, you can preview the documentation
+using `mkdocs serve`,  which should start a web server at `http://localhost:8001`.
+
+Documentation is written in Markdown. If you need to add additional pages or sections to the documentation, you can add them to `mkdocs.yml` at the root of the repository.
 
 ## Submitting Pull Requests
 
@@ -562,3 +603,22 @@ Once submitted, a maintainer will review your pull request and either merge it o
 
 !!! note
     Remember, pull requests are entertained only for **accepted** issues. If an issue you want to work on hasn't been approved by a maintainer yet, it's best to avoid risking your time and effort on a change that might not be accepted.
+
+## Troubleshooting
+
+Below are common issues you might encounter in your development environment and how to address them.
+
+### FATAL: sorry, too many clients already
+
+When using `nautobot-server runserver` to do development you might run into a traceback that looks something like this:
+
+```no-highlight
+Exception Type: OperationalError at /extras/tags/
+Exception Value: FATAL:  sorry, too many clients already
+```
+
+The `runserver` development server is multi-threaded by default, which means that every request is creating its own connection. If you are doing some local testing or development that is resulting in a lot of connections to the database, pass `--nothreading` to the runserver command to disable threading:
+
+```no-highlight
+$ nautobot-server runserver --nothreading
+```

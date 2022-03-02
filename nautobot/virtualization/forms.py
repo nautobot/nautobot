@@ -8,10 +8,14 @@ from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
+    CustomFieldBulkCreateForm,
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
+    LocalContextFilterForm,
+    LocalContextModelForm,
+    LocalContextModelBulkEditForm,
     RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
@@ -34,14 +38,12 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
-    JSONField,
     SlugField,
     SmallTextarea,
     StaticSelect2,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
-from .choices import *
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 
@@ -63,8 +65,6 @@ class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFor
 
 
 class ClusterTypeCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterType
         fields = ClusterType.csv_headers
@@ -88,8 +88,6 @@ class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFo
 
 
 class ClusterGroupCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterGroup
         fields = ClusterGroup.csv_headers
@@ -259,7 +257,9 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 #
 
 
-class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VirtualMachineForm(
+    BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm
+):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -273,7 +273,6 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
         query_params={"vm_role": "True"},
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    local_context_data = JSONField(required=False, label="")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -295,6 +294,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
             "comments",
             "tags",
             "local_context_data",
+            "local_context_schema",
         ]
         help_texts = {
             "local_context_data": "Local config context data overwrites all sources contexts in the final rendered "
@@ -378,7 +378,9 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = VirtualMachine.csv_headers
 
 
-class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class VirtualMachineBulkEditForm(
+    BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
     role = DynamicModelChoiceField(
@@ -405,7 +407,9 @@ class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEd
         ]
 
 
-class VirtualMachineFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class VirtualMachineFilterForm(
+    BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm, LocalContextFilterForm
+):
     model = VirtualMachine
     field_order = [
         "q",
@@ -676,18 +680,24 @@ class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class VirtualMachineBulkAddComponentForm(BootstrapMixin, forms.Form):
+class VirtualMachineBulkAddComponentForm(CustomFieldBulkCreateForm, BootstrapMixin, forms.Form):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     name_pattern = ExpandableNameField(label="Name")
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
-    def clean_tags(self):
-        # Because we're feeding TagField data (on the bulk edit form) to another TagField (on the model form), we
-        # must first convert the list of tags to a string.
-        return ",".join(self.cleaned_data.get("tags"))
+    class Meta:
+        nullable_fields = []
 
 
 class VMInterfaceBulkCreateForm(
-    form_from_model(VMInterface, ["enabled", "mtu", "description", "tags"]),
+    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode"]),
     VirtualMachineBulkAddComponentForm,
 ):
-    pass
+    field_order = (
+        "name_pattern",
+        "enabled",
+        "mtu",
+        "description",
+        "mode",
+        "tags",
+    )

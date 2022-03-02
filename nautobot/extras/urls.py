@@ -2,32 +2,51 @@ from django.urls import path
 
 from nautobot.extras import views
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
-    Tag,
+    GraphQLQuery,
+    Secret,
+    SecretsGroup,
     Status,
+    Tag,
     Webhook,
 )
 
 
 app_name = "extras"
 urlpatterns = [
-    # Tags
-    path("tags/", views.TagListView.as_view(), name="tag_list"),
-    path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
-    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),
-    path("tags/edit/", views.TagBulkEditView.as_view(), name="tag_bulk_edit"),
-    path("tags/delete/", views.TagBulkDeleteView.as_view(), name="tag_bulk_delete"),
-    path("tags/<str:slug>/", views.TagView.as_view(), name="tag"),
-    path("tags/<str:slug>/edit/", views.TagEditView.as_view(), name="tag_edit"),
-    path("tags/<str:slug>/delete/", views.TagDeleteView.as_view(), name="tag_delete"),
+    # Change logging
+    path("changelog/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
+    path("changelog/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
+    # Computed Fields
+    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
+    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
     path(
-        "tags/<str:slug>/changelog/",
+        "computed-fields/delete/",
+        views.ComputedFieldBulkDeleteView.as_view(),
+        name="computedfield_bulk_delete",
+    ),
+    path("computed-fields/<slug:slug>/", views.ComputedFieldView.as_view(), name="computedfield"),
+    path(
+        "computed-fields/<slug:slug>/edit/",
+        views.ComputedFieldEditView.as_view(),
+        name="computedfield_edit",
+    ),
+    path(
+        "computed-fields/<slug:slug>/delete/",
+        views.ComputedFieldDeleteView.as_view(),
+        name="computedfield_delete",
+    ),
+    path(
+        "computed-fields/<slug:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
-        name="tag_changelog",
-        kwargs={"model": Tag},
+        name="computedfield_changelog",
+        kwargs={"model": ComputedField},
     ),
     # Config contexts
     path(
@@ -70,6 +89,141 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="configcontext_changelog",
         kwargs={"model": ConfigContext},
+    ),
+    # Config context schema
+    path(
+        "config-context-schemas/",
+        views.ConfigContextSchemaListView.as_view(),
+        name="configcontextschema_list",
+    ),
+    path(
+        "config-context-schemas/add/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_add",
+    ),
+    path(
+        "config-context-schemas/edit/",
+        views.ConfigContextSchemaBulkEditView.as_view(),
+        name="configcontextschema_bulk_edit",
+    ),
+    path(
+        "config-context-schemas/delete/",
+        views.ConfigContextSchemaBulkDeleteView.as_view(),
+        name="configcontextschema_bulk_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/",
+        views.ConfigContextSchemaView.as_view(),
+        name="configcontextschema",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/validation/",
+        views.ConfigContextSchemaObjectValidationView.as_view(),
+        name="configcontextschema_object_validation",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/edit/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_edit",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/delete/",
+        views.ConfigContextSchemaDeleteView.as_view(),
+        name="configcontextschema_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="configcontextschema_changelog",
+        kwargs={"model": ConfigContextSchema},
+    ),
+    # Custom fields
+    path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
+    path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
+    path(
+        "custom-fields/delete/",
+        views.CustomFieldBulkDeleteView.as_view(),
+        name="customfield_bulk_delete",
+    ),
+    # TODO: Migrate custom field model from name to slug #464
+    path("custom-fields/<str:name>/", views.CustomFieldView.as_view(), name="customfield"),
+    path(
+        "custom-fields/<str:name>/edit/",
+        views.CustomFieldEditView.as_view(),
+        name="customfield_edit",
+    ),
+    path(
+        "custom-fields/<str:name>/delete/",
+        views.CustomFieldDeleteView.as_view(),
+        name="customfield_delete",
+    ),
+    path(
+        "custom-fields/<str:name>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="customfield_changelog",
+        kwargs={"model": CustomField},
+    ),
+    # Custom links
+    path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
+    path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
+    path(
+        "custom-links/delete/",
+        views.CustomLinkBulkDeleteView.as_view(),
+        name="customlink_bulk_delete",
+    ),
+    path("custom-links/<uuid:pk>/", views.CustomLinkView.as_view(), name="customlink"),
+    path(
+        "custom-links/<uuid:pk>/edit/",
+        views.CustomLinkEditView.as_view(),
+        name="customlink_edit",
+    ),
+    path(
+        "custom-links/<uuid:pk>/delete/",
+        views.CustomLinkDeleteView.as_view(),
+        name="customlink_delete",
+    ),
+    path(
+        "custom-links/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="customlink_changelog",
+        kwargs={"model": CustomLink},
+    ),
+    # Export Templates
+    path(
+        "export-templates/",
+        views.ExportTemplateListView.as_view(),
+        name="exporttemplate_list",
+    ),
+    path(
+        "export-templates/add/",
+        views.ExportTemplateEditView.as_view(),
+        name="exporttemplate_add",
+    ),
+    path(
+        "export-templates/delete/",
+        views.ExportTemplateBulkDeleteView.as_view(),
+        name="exporttemplate_bulk_delete",
+    ),
+    path(
+        "export-templates/<uuid:pk>/",
+        views.ExportTemplateView.as_view(),
+        name="exporttemplate",
+    ),
+    path(
+        "export-templates/<uuid:pk>/edit/",
+        views.ExportTemplateEditView.as_view(),
+        name="exporttemplate_edit",
+    ),
+    path(
+        "export-templates/<uuid:pk>/delete/",
+        views.ExportTemplateDeleteView.as_view(),
+        name="exporttemplate_delete",
+    ),
+    path(
+        "export-templates/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="exporttemplate_changelog",
+        kwargs={"model": ExportTemplate},
     ),
     # Git repositories
     path(
@@ -128,6 +282,31 @@ urlpatterns = [
         views.GitRepositorySyncView.as_view(),
         name="gitrepository_sync",
     ),
+    # GraphQL Queries
+    path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
+    path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
+    path(
+        "graphql-queries/delete/",
+        views.GraphQLQueryBulkDeleteView.as_view(),
+        name="GraphQLQuery_bulk_delete",
+    ),
+    path("graphql-queries/<str:slug>/", views.GraphQLQueryView.as_view(), name="graphqlquery"),
+    path(
+        "graphql-queries/<str:slug>/edit/",
+        views.GraphQLQueryEditView.as_view(),
+        name="graphqlquery_edit",
+    ),
+    path(
+        "graphql-queries/<str:slug>/delete/",
+        views.GraphQLQueryDeleteView.as_view(),
+        name="graphqlquery_delete",
+    ),
+    path(
+        "graphql-queries/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="graphqlquery_changelog",
+        kwargs={"model": GraphQLQuery},
+    ),
     # Image attachments
     path(
         "image-attachments/<uuid:pk>/edit/",
@@ -139,20 +318,36 @@ urlpatterns = [
         views.ImageAttachmentDeleteView.as_view(),
         name="imageattachment_delete",
     ),
-    # Change logging
-    path("changelog/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
-    path("changelog/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
     # Jobs
     path("jobs/", views.JobListView.as_view(), name="job_list"),
     path(
         "jobs/results/<uuid:pk>/",
-        views.JobJobResultView.as_view(),
+        views.JobResultView.as_view(),
         name="job_jobresult",
+    ),
+    path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
+    path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
+    path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
+    path(
+        "jobs/scheduled-jobs/delete/",
+        views.ScheduledJobBulkDeleteView.as_view(),
+        name="scheduledjob_bulk_delete",
+    ),
+    path(
+        "jobs/scheduled-jobs/approval-queue/",
+        views.ScheduledJobApprovalQueueListView.as_view(),
+        name="scheduledjob_approval_queue_list",
+    ),
+    path(
+        "jobs/scheduled-jobs/approval-queue/<uuid:scheduled_job>/",
+        views.JobApprovalRequestView.as_view(),
+        name="scheduledjob_approval_request_view",
     ),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
+    path("job-results/<uuid:pk>/log-table/", views.JobLogEntryTableView.as_view(), name="jobresult_log-table"),
     path(
         "job-results/delete/",
         views.JobResultBulkDeleteView.as_view(),
@@ -163,88 +358,73 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
-    # Export Templates
+    # Custom relationships
+    path("relationships/", views.RelationshipListView.as_view(), name="relationship_list"),
     path(
-        "export-templates/",
-        views.ExportTemplateListView.as_view(),
-        name="exporttemplate_list",
+        "relationships/add/",
+        views.RelationshipEditView.as_view(),
+        name="relationship_add",
     ),
     path(
-        "export-templates/add/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_add",
+        "relationships/delete/",
+        views.RelationshipBulkDeleteView.as_view(),
+        name="relationship_bulk_delete",
     ),
     path(
-        "export-templates/delete/",
-        views.ExportTemplateBulkDeleteView.as_view(),
-        name="exporttemplate_bulk_delete",
+        "relationships/<uuid:pk>/edit/",
+        views.RelationshipEditView.as_view(),
+        name="relationship_edit",
     ),
     path(
-        "export-templates/<uuid:pk>/",
-        views.ExportTemplateView.as_view(),
-        name="exporttemplate",
+        "relationships/<uuid:pk>/delete/",
+        views.RelationshipDeleteView.as_view(),
+        name="relationship_delete",
     ),
     path(
-        "export-templates/<uuid:pk>/edit/",
-        views.ExportTemplateEditView.as_view(),
-        name="exporttemplate_edit",
+        "relationships/associations/",
+        views.RelationshipAssociationListView.as_view(),
+        name="relationshipassociation_list",
     ),
     path(
-        "export-templates/<uuid:pk>/delete/",
-        views.ExportTemplateDeleteView.as_view(),
-        name="exporttemplate_delete",
+        "relationships/associations/delete/",
+        views.RelationshipAssociationBulkDeleteView.as_view(),
+        name="relationshipassociation_bulk_delete",
     ),
     path(
-        "export-templates/<uuid:pk>/changelog/",
+        "relationships/associations/<uuid:pk>/delete/",
+        views.RelationshipAssociationDeleteView.as_view(),
+        name="relationshipassociation_delete",
+    ),
+    # Secrets
+    path("secrets/", views.SecretListView.as_view(), name="secret_list"),
+    path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
+    path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
+    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),
+    path(
+        "secrets/provider/<str:provider_slug>/form/",
+        views.SecretProviderParametersFormView.as_view(),
+        name="secret_provider_parameters_form",
+    ),
+    path("secrets/<str:slug>/", views.SecretView.as_view(), name="secret"),
+    path("secrets/<str:slug>/edit/", views.SecretEditView.as_view(), name="secret_edit"),
+    path("secrets/<str:slug>/delete/", views.SecretDeleteView.as_view(), name="secret_delete"),
+    path(
+        "secrets/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
-        name="exporttemplate_changelog",
-        kwargs={"model": ExportTemplate},
+        name="secret_changelog",
+        kwargs={"model": Secret},
     ),
-    # Custom links
-    path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
-    path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
+    path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
+    path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),
+    path("secrets-groups/delete/", views.SecretsGroupBulkDeleteView.as_view(), name="secretsgroup_bulk_delete"),
+    path("secrets-groups/<str:slug>/", views.SecretsGroupView.as_view(), name="secretsgroup"),
+    path("secrets-groups/<str:slug>/edit/", views.SecretsGroupEditView.as_view(), name="secretsgroup_edit"),
+    path("secrets-groups/<str:slug>/delete/", views.SecretsGroupDeleteView.as_view(), name="secretsgroup_delete"),
     path(
-        "custom-links/delete/",
-        views.CustomLinkBulkDeleteView.as_view(),
-        name="customlink_bulk_delete",
-    ),
-    path("custom-links/<uuid:pk>/", views.CustomLinkView.as_view(), name="customlink"),
-    path(
-        "custom-links/<uuid:pk>/edit/",
-        views.CustomLinkEditView.as_view(),
-        name="customlink_edit",
-    ),
-    path(
-        "custom-links/<uuid:pk>/delete/",
-        views.CustomLinkDeleteView.as_view(),
-        name="customlink_delete",
-    ),
-    path(
-        "custom-links/<uuid:pk>/changelog/",
+        "secrets-groups/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
-        name="customlink_changelog",
-        kwargs={"model": CustomLink},
-    ),
-    # Webhook
-    path("webhooks/", views.WebhookListView.as_view(), name="webhook_list"),
-    path("webhooks/add/", views.WebhookEditView.as_view(), name="webhook_add"),
-    path(
-        "webhooks/delete/",
-        views.WebhookBulkDeleteView.as_view(),
-        name="webhook_bulk_delete",
-    ),
-    path("webhooks/<uuid:pk>/", views.WebhookView.as_view(), name="webhook"),
-    path("webhooks/<uuid:pk>/edit/", views.WebhookEditView.as_view(), name="webhook_edit"),
-    path(
-        "webhooks/<uuid:pk>/delete/",
-        views.WebhookDeleteView.as_view(),
-        name="webhook_delete",
-    ),
-    path(
-        "webhooks/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="webhook_changelog",
-        kwargs={"model": Webhook},
+        name="secretsgroup_changelog",
+        kwargs={"model": SecretsGroup},
     ),
     # Custom statuses
     path("statuses/", views.StatusListView.as_view(), name="status_list"),
@@ -269,31 +449,40 @@ urlpatterns = [
         name="status_changelog",
         kwargs={"model": Status},
     ),
-    # Custom relationships
-    path("relationships/", views.RelationshipListView.as_view(), name="relationship_list"),
+    # Tags
+    path("tags/", views.TagListView.as_view(), name="tag_list"),
+    path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
+    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),
+    path("tags/edit/", views.TagBulkEditView.as_view(), name="tag_bulk_edit"),
+    path("tags/delete/", views.TagBulkDeleteView.as_view(), name="tag_bulk_delete"),
+    path("tags/<str:slug>/", views.TagView.as_view(), name="tag"),
+    path("tags/<str:slug>/edit/", views.TagEditView.as_view(), name="tag_edit"),
+    path("tags/<str:slug>/delete/", views.TagDeleteView.as_view(), name="tag_delete"),
     path(
-        "relationships/add/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_add",
+        "tags/<str:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="tag_changelog",
+        kwargs={"model": Tag},
+    ),
+    # Webhook
+    path("webhooks/", views.WebhookListView.as_view(), name="webhook_list"),
+    path("webhooks/add/", views.WebhookEditView.as_view(), name="webhook_add"),
+    path(
+        "webhooks/delete/",
+        views.WebhookBulkDeleteView.as_view(),
+        name="webhook_bulk_delete",
+    ),
+    path("webhooks/<uuid:pk>/", views.WebhookView.as_view(), name="webhook"),
+    path("webhooks/<uuid:pk>/edit/", views.WebhookEditView.as_view(), name="webhook_edit"),
+    path(
+        "webhooks/<uuid:pk>/delete/",
+        views.WebhookDeleteView.as_view(),
+        name="webhook_delete",
     ),
     path(
-        "relationships/<uuid:pk>/edit/",
-        views.RelationshipEditView.as_view(),
-        name="relationship_edit",
-    ),
-    path(
-        "relationships/<uuid:pk>/delete/",
-        views.RelationshipDeleteView.as_view(),
-        name="relationship_delete",
-    ),
-    path(
-        "relationships/associations/",
-        views.RelationshipAssociationListView.as_view(),
-        name="relationshipassociation_list",
-    ),
-    path(
-        "relationships/associations/<uuid:pk>/delete/",
-        views.RelationshipAssociationDeleteView.as_view(),
-        name="relationshipassociation_delete",
+        "webhooks/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="webhook_changelog",
+        kwargs={"model": Webhook},
     ),
 ]

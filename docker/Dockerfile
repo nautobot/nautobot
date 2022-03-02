@@ -11,11 +11,13 @@ ENV PYTHONUNBUFFERED=1 \
 # hadolint ignore=DL3005,DL3008,DL3013
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git mime-support && \
+    apt-get install --no-install-recommends -y git mime-support curl libxml2 libmariadb3 && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
     pip --no-cache-dir install --upgrade pip wheel
+
+HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
 
 ################################ Stage: dev
 # The dev container is used for development purposes but also to build the .whl for the final image
@@ -23,12 +25,12 @@ RUN apt-get update && \
 FROM base as dev
 
 # Modify the PATH here because otherwise poetry fails 100% of the time. WAT??
-ENV PATH="${PATH}:/root/.poetry/bin"
+ENV PATH="${PATH}:/root/.local/bin"
 
 # Install development OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y curl openssl && \
+    apt-get install --no-install-recommends -y openssl build-essential libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -40,17 +42,17 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 # Install Poetry manually from GitHub because otherwise it installs its own
 # dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/#osx-linux-bashonwindows-install-instructions
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -o /tmp/get-poetry.py && \
-    python /tmp/get-poetry.py && \
-    rm -f /tmp/get-poetry.py
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -o /tmp/install-poetry.py && \
+    python /tmp/install-poetry.py && \
+    rm -f /tmp/install-poetry.py
 
 # Poetry shouldn't create a venv as we want global install
 # Poetry 1.1.0 added parallel installation as an option;
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
 # For now we disable it.
-RUN /root/.poetry/bin/poetry config virtualenvs.create false && \
-    /root/.poetry/bin/poetry config installer.parallel false
+RUN poetry config virtualenvs.create false && \
+    poetry config installer.parallel false
 
 # Keep the project source code from NAUTOBOT_ROOT
 COPY pyproject.toml poetry.lock /source/
@@ -65,7 +67,7 @@ WORKDIR /source
 # Local source code is mounted as volume into container. This approach does not require
 # to rebuild a container when source code change occurs.
 # -------------------------------------------------------------------------------------
-RUN poetry install --no-root --no-ansi
+RUN poetry install --no-root --no-ansi --extras all
 
 # Generate required dirs and self signed ssl certificates
 RUN mkdir /opt/nautobot /prom_cache && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
@@ -88,14 +90,14 @@ COPY nautobot /source/nautobot
 
 # Build the whl for use in the final container and install for the dev container
 RUN poetry build && \
-    poetry install --no-ansi
+    poetry install --no-ansi --extras all
 
 ################################ Stage: cleaninstall
 # Build an image with required dependencies to pull the installation from
 FROM base as cleaninstall
 
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install --no-install-recommends -y build-essential libssl-dev
+RUN apt-get update && apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev
 
 # pyuwsgi doesn't support ssl so we build it from source
 # https://github.com/nautobot/nautobot/issues/193
@@ -103,7 +105,8 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi
 
 COPY --from=dev /source/dist/*.whl /tmp
 
-RUN pip install --no-cache-dir /tmp/nautobot*.whl
+# hadolint ignore=DL3013,SC2102
+RUN for whl in /tmp/nautobot*.whl; do pip install --no-cache-dir ${whl}[all]; done
 
 ################################ Stage: final
 # This image will be the production ready image
@@ -137,8 +140,6 @@ WORKDIR /opt/nautobot
 RUN nautobot-server init && \
     cat /opt/nautobot/nautobot_config.append.py >> /opt/nautobot/nautobot_config.py && \
     rm -f /opt/nautobot/nautobot_config.append.py
-
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "nautobot-server", "check" ]
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nautobot-server", "start", "--ini", "/opt/nautobot/uwsgi.ini"]

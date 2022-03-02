@@ -193,7 +193,7 @@ The results of the query look like:
 
 ### Filtering Queries
 
-These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Currently, Nautobot allows users to filter queries at the top level of the query. In our previous examples, the top level would be the `devices` query.
+These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 
 As an example. We can query devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 <div>
@@ -204,7 +204,7 @@ As an example. We can query devices by their site location. This is done by addi
 </div>
 
 <br />
-GraphiQL allows you to add multiple attributes to the filter criteria. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`. 
+GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`.
 
 ```graphql
 query {
@@ -213,6 +213,7 @@ query {
   }
 }
 ```
+
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
@@ -221,13 +222,39 @@ query {
 </div>
 
 <br />
+You can also filter at deeper levels of the query. On many to one relationships you can filter the results based on an attribute of the field. Any attribute that relates to a GraphQLType can be filtered.
+
+```graphql
+query {
+  devices(site: "ams", role: "edge") {
+    name
+    interfaces(name: "Ethernet1/1") {
+      name
+    }
+  }
+}
+```
+
+```graphql
+query {
+  sites(name: "ams") {
+    devices(role: "edge") {
+      name
+      interfaces(name: "Ethernet1/1") {
+        name
+      }
+    }
+  }
+}
+```
+
 ## Using the GraphQL API in Nautobot
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.
 
 <img src="../images/graphql/10-graphql-swagger.png" alt="GraphQL: Swagger" width="400">
 
-From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is a required. The `query` field is where we put the GraphQL query. The `variables` field is optional. It's where we define filters, if we choose to do so. 
+From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is required, as it is where we specify the GraphQL query. The `variables` field is optional; it's where we can assign values to any variables included in the query, if we choose to do so.
 
 To simplify the process even more, we'll utilize the [PyNautobot SDK](https://pynautobot.readthedocs.io/en/latest/index.html).
 
@@ -296,6 +323,16 @@ print(json.dumps(gql.json, indent=2))
 ```
 
 In the updated script, we add the `variables = {"site_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `site`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` site. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
+
+### Saving Queries
+
+Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
+
+Inside of **Extensibility -> Data Management -> GraphQL Queries**, there are views to create and manage GraphQL queries.
+
+Saved queries can be executed from the detailed query view or via a REST API request. The queries can also be populated from the detailed query view into GraphiQL by using the "Open in GraphiQL" button. Additionally, in the GraphiQL UI, there is now a menu item, "Queries", which can be used to populate GraphiQL with any previously saved query.
+
+To execute a stored query via the REST API, a POST request can be sent to `/api/extras/graphql-queries/[slug]/run/`. Any GraphQL variables required by the query can be passed in as JSON data within the request body.
 
 ## Closing
 

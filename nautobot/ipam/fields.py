@@ -1,9 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.datastructures import DictWrapper
 import netaddr
 
 from .formfields import IPNetworkFormField
+from . import lookups
 
 
 class VarbinaryIPField(models.BinaryField):
@@ -39,12 +39,17 @@ class VarbinaryIPField(models.BinaryField):
         Parse `str`, `bytes` (varbinary), or `netaddr.IPAddress to `netaddr.IPAddress`.
         """
         try:
-            value = int.from_bytes(value, "big")
+            int_value = int.from_bytes(value, "big")
+            # Distinguish between
+            # \x00\x00\x00\x01 (IPv4 0.0.0.1) and
+            # \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01 (IPv6 ::1), among other cases
+            version = 4 if len(value) == 4 else 6
+            value = int_value
         except TypeError:
-            pass  # It's a string
+            version = None  # It's a string, IP version should be self-evident
 
         try:
-            return netaddr.IPAddress(value)
+            return netaddr.IPAddress(value, version=version)
         except netaddr.AddrFormatError:
             raise ValidationError("Invalid IP address format: {}".format(value))
         except (TypeError, ValueError) as e:
@@ -85,3 +90,21 @@ class VarbinaryIPField(models.BinaryField):
         defaults = {"form_class": self.form_class()}
         defaults.update(kwargs)
         return super().formfield(**defaults)
+
+
+VarbinaryIPField.register_lookup(lookups.IExact)
+VarbinaryIPField.register_lookup(lookups.EndsWith)
+VarbinaryIPField.register_lookup(lookups.IEndsWith)
+VarbinaryIPField.register_lookup(lookups.StartsWith)
+VarbinaryIPField.register_lookup(lookups.IStartsWith)
+VarbinaryIPField.register_lookup(lookups.Regex)
+VarbinaryIPField.register_lookup(lookups.IRegex)
+VarbinaryIPField.register_lookup(lookups.NetContained)
+VarbinaryIPField.register_lookup(lookups.NetContainedOrEqual)
+VarbinaryIPField.register_lookup(lookups.NetContains)
+VarbinaryIPField.register_lookup(lookups.NetContainsOrEquals)
+VarbinaryIPField.register_lookup(lookups.NetEquals)
+VarbinaryIPField.register_lookup(lookups.NetHost)
+VarbinaryIPField.register_lookup(lookups.NetIn)
+VarbinaryIPField.register_lookup(lookups.NetHostContained)
+VarbinaryIPField.register_lookup(lookups.NetFamily)

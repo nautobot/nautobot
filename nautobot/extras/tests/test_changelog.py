@@ -1,9 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.test import override_settings
 from rest_framework import status
 
+from nautobot.core.graphql import execute_query
 from nautobot.dcim.models import Site
-from nautobot.extras.choices import *
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
 from nautobot.utilities.testing import APITestCase
 from nautobot.utilities.testing.utils import post_data
@@ -53,24 +55,18 @@ class ChangeLogViewTest(ModelViewTestCase):
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
+        # Verify the creation of a new ObjectChange record
         site = Site.objects.get(name="Test Site 1")
         # First OC is the creation; second is the tags update
-        oc_list = ObjectChange.objects.filter(
+        oc = ObjectChange.objects.get(
             changed_object_type=ContentType.objects.get_for_model(Site),
             changed_object_id=site.pk,
-        ).order_by("time")
-        self.assertEqual(oc_list[0].changed_object, site)
-        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
-        self.assertEqual(
-            oc_list[0].object_data["custom_fields"]["my_field"],
-            form_data["cf_my_field"],
         )
-        self.assertEqual(
-            oc_list[0].object_data["custom_fields"]["my_field_select"],
-            form_data["cf_my_field_select"],
-        )
-        self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_UPDATE)
-        self.assertEqual(oc_list[1].object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.changed_object, site)
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
+        self.assertEqual(oc.object_data["custom_fields"]["my_field"], form_data["cf_my_field"])
+        self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], form_data["cf_my_field_select"])
+        self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
 
     def test_update_object(self):
         site = Site(
@@ -99,8 +95,8 @@ class ChangeLogViewTest(ModelViewTestCase):
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
+        # Verify the creation of a new ObjectChange record
         site.refresh_from_db()
-        # Get only the most recent OC
         oc = ObjectChange.objects.filter(
             changed_object_type=ContentType.objects.get_for_model(Site),
             changed_object_id=site.pk,
@@ -192,24 +188,22 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
         site = Site.objects.get(pk=response.data["id"])
-        # First OC is the creation; second is the tags update
-        oc_list = ObjectChange.objects.filter(
+        oc = ObjectChange.objects.get(
             changed_object_type=ContentType.objects.get_for_model(Site),
             changed_object_id=site.pk,
-        ).order_by("time")
-        self.assertEqual(oc_list[0].changed_object, site)
-        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
-        self.assertEqual(oc_list[0].object_data["custom_fields"], data["custom_fields"])
-        self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_UPDATE)
-        self.assertEqual(oc_list[1].object_data["tags"], ["Tag 1", "Tag 2"])
+        )
+        self.assertEqual(oc.changed_object, site)
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
+        self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
+        self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
 
     def test_update_object(self):
-        site = Site(
+        """Test PUT with changelogs."""
+        site = Site.objects.create(
             name="Test Site 1",
             slug="test-site-1",
             status=self.statuses.get(slug="planned"),
         )
-        site.save()
 
         data = {
             "name": "Test Site X",
@@ -229,14 +223,51 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
         site = Site.objects.get(pk=response.data["id"])
+        oc = ObjectChange.objects.get(
+            changed_object_type=ContentType.objects.get_for_model(Site),
+            changed_object_id=site.pk,
+        )
+        self.assertEqual(oc.changed_object, site)
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
+        self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+
+    def test_partial_update_object(self):
+        """Test PATCH with changelogs."""
+        site = Site.objects.create(
+            name="Test Site 1",
+            slug="test-site-1",
+            status=self.statuses.get(slug="planned"),
+            _custom_field_data={
+                "my_field": "DEF",
+                "my_field_select": "Foo",
+            },
+        )
+        site.tags.add(Tag.objects.get(name="Tag 3"))
+
+        # We only want to update a single field.
+        data = {
+            "description": "new description",
+        }
+
+        self.assertEqual(ObjectChange.objects.count(), 0)
+        self.add_permissions("dcim.change_site", "extras.view_status")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+
+        # Perform a PATCH (partial update)
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        site = Site.objects.get(pk=response.data["id"])
+
         # Get only the most recent OC
         oc = ObjectChange.objects.filter(
             changed_object_type=ContentType.objects.get_for_model(Site),
             changed_object_id=site.pk,
         ).first()
         self.assertEqual(oc.changed_object, site)
+        self.assertEqual(oc.object_data["description"], data["description"])
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
-        self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
+        self.assertEqual(oc.object_data["custom_fields"], site.custom_field_data)
         self.assertEqual(oc.object_data["tags"], ["Tag 3"])
 
     def test_delete_object(self):
@@ -263,3 +294,22 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
         self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_graphql_object(self):
+        """Test GET with changelogs via GraphQL."""
+        site_payload = {
+            "name": "Test Site 1",
+            "slug": "test-site-1",
+            "status": "active",
+        }
+        self.add_permissions("dcim.add_site")
+
+        sites_url = reverse("dcim-api:site-list")
+        new_site_response = self.client.post(sites_url, site_payload, format="json", **self.header)
+        self.assertHttpStatus(new_site_response, status.HTTP_201_CREATED)
+
+        gql_payload = '{query: object_changes(q: "") { object_repr } }'
+        resp = execute_query(gql_payload, user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+        self.assertEqual(first=site_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))

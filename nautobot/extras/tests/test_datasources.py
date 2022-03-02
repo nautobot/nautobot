@@ -11,15 +11,24 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.ipam.models import VLAN
 
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     ExportTemplate,
     GitRepository,
     JobResult,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
 )
 
@@ -28,7 +37,11 @@ from nautobot.extras.models import (
 User = get_user_model()
 
 
+# Override the JOB_LOGS to None so that the Log Objects are created in the default database.
+# This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
+# database cleanup will fail and cause tests to fail as this is not a real database.
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
+@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class GitTest(TestCase):
 
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
@@ -65,11 +78,37 @@ class GitTest(TestCase):
         )
         self.repo.save(trigger_resync=False)
 
-        self.job_result = JobResult(
+        self.job_result = JobResult.objects.create(
             name=self.repo.name,
             obj_type=ContentType.objects.get_for_model(GitRepository),
             job_id=uuid.uuid4(),
         )
+
+        self.config_context_schema = {
+            "_metadata": {
+                "name": "Config Context Schema 1",
+                "description": "Schema for defining first names, last names and ages.",
+            },
+            "data_schema": {
+                "title": "Person",
+                "type": "object",
+                "properties": {
+                    "firstName": {
+                        "type": "string",
+                        "description": "The person's first name.",
+                    },
+                    "lastName": {
+                        "type": "string",
+                        "description": "The person's last name.",
+                    },
+                    "age": {
+                        "description": "Age in years which must be equal to or greater than zero.",
+                        "type": "integer",
+                        "minimum": 0,
+                    },
+                },
+            },
+        }
 
     def test_pull_git_repository_and_refresh_data_with_no_data(self, MockGitRepo):
         """
@@ -85,7 +124,9 @@ class GitTest(TestCase):
                 MockGitRepo.side_effect = create_empty_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -97,17 +138,34 @@ class GitTest(TestCase):
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
                 # TODO: inspect the logs in job_result.data?
 
+    def test_pull_git_repository_and_refresh_data_with_token(self, MockGitRepo):
+        """
+        The pull_git_repository_and_refresh_data job should correctly make use of a token.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+
+                def create_empty_repo(path, url):
+                    os.makedirs(path, exist_ok=True)
+                    return mock.DEFAULT
+
+                MockGitRepo.side_effect = create_empty_repo
+                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+
                 # Check that token-based authentication is handled as expected
                 self.repo._token = "1:3@/?=ab@"
                 self.repo.save()
                 # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
-                self.job_result = JobResult(
+                self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -118,17 +176,35 @@ class GitTest(TestCase):
                     os.path.join(tempdir, self.repo.slug), "http://1%3A3%40%2F%3F%3Dab%40@localhost/git.git"
                 )
 
+    def test_pull_git_repository_and_refresh_data_with_username_and_token(self, MockGitRepo):
+        """
+        The pull_git_repository_and_refresh_data job should correctly make use of a username + token.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+
+                def create_empty_repo(path, url):
+                    os.makedirs(path, exist_ok=True)
+                    return mock.DEFAULT
+
+                MockGitRepo.side_effect = create_empty_repo
+                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+
                 # Check that username/password authentication is handled as expected
                 self.repo.username = "núñez"
+                self.repo._token = "1:3@/?=ab@"
                 self.repo.save()
                 # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
-                self.job_result = JobResult(
+                self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -138,6 +214,76 @@ class GitTest(TestCase):
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
                     "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
+                )
+
+    def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
+        """
+        The pull_git_repository_and_refresh_data job should correctly make use of secrets.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+
+                def create_empty_repo(path, url):
+                    os.makedirs(path, exist_ok=True)
+                    return mock.DEFAULT
+
+                MockGitRepo.side_effect = create_empty_repo
+                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+
+                with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
+                    handle.write("user1234")
+
+                with open(os.path.join(tempdir, "token.txt"), "wt") as handle:
+                    handle.write("1234abcd5678ef90")
+
+                username_secret = Secret.objects.create(
+                    name="Git Username",
+                    slug="git-username",
+                    provider="text-file",
+                    parameters={"path": os.path.join(tempdir, "username.txt")},
+                )
+                token_secret = Secret.objects.create(
+                    name="Git Token",
+                    slug="git-token",
+                    provider="text-file",
+                    parameters={"path": os.path.join(tempdir, "token.txt")},
+                )
+                secrets_group = SecretsGroup.objects.create(name="Git Credentials", slug="git-credentials")
+                SecretsGroupAssociation.objects.create(
+                    secret=username_secret,
+                    group=secrets_group,
+                    access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                    secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                )
+                SecretsGroupAssociation.objects.create(
+                    secret=token_secret,
+                    group=secrets_group,
+                    access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                    secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+                )
+
+                self.repo.secrets_group = secrets_group
+                self.repo.validated_save()
+
+                self.dummy_request.id = uuid.uuid4()
+                self.job_result = JobResult.objects.create(
+                    name=self.repo.name,
+                    obj_type=ContentType.objects.get_for_model(GitRepository),
+                    job_id=uuid.uuid4(),
+                )
+
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
+
+                self.assertEqual(
+                    self.job_result.status,
+                    JobResultStatusChoices.STATUS_COMPLETED,
+                    self.job_result.data,
+                )
+                MockGitRepo.assert_called_with(
+                    os.path.join(tempdir, self.repo.slug),
+                    "http://user1234:1234abcd5678ef90@localhost/git.git",
                 )
 
     def test_pull_git_repository_and_refresh_data_with_valid_data(self, MockGitRepo):
@@ -152,15 +298,19 @@ class GitTest(TestCase):
                     # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "config_contexts", "devices"))
+                    os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
+                    os.makedirs(os.path.join(path, "export_templates", "ipam", "vlan"))
                     with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
                         yaml.dump(
                             {
                                 "_metadata": {
-                                    "name": "Region NYC servers",
+                                    "name": "Frobozz 1000 NTP servers",
                                     "weight": 1500,
-                                    "description": "NTP servers for region NYC",
+                                    "description": "NTP servers for Frobozz 1000 devices **only**",
                                     "is_active": True,
+                                    "schema": "Config Context Schema 1",
+                                    "device_types": [{"slug": self.device_type.slug}],
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
                             },
@@ -171,17 +321,31 @@ class GitTest(TestCase):
                         "w",
                     ) as fd:
                         json.dump({"dns-servers": ["8.8.8.8"]}, fd)
+                    with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
+                        yaml.dump(self.config_context_schema, fd)
                     with open(
                         os.path.join(path, "export_templates", "dcim", "device", "template.j2"),
                         "w",
                     ) as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    with open(
+                        os.path.join(path, "export_templates", "dcim", "device", "template2.html"),
+                        "w",
+                    ) as fd:
+                        fd.write("<!DOCTYPE html>/n{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    with open(
+                        os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"),
+                        "w",
+                    ) as fd:
+                        fd.write("{% for vlan in queryset %}\n{{ vlan.name }}\n{% endfor %}")
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -191,18 +355,32 @@ class GitTest(TestCase):
 
                 # Make sure ConfigContext was successfully loaded from file
                 config_context = ConfigContext.objects.get(
-                    name="Region NYC servers",
+                    name="Frobozz 1000 NTP servers",
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
                 self.assertIsNotNone(config_context)
                 self.assertEqual(1500, config_context.weight)
-                self.assertEqual("NTP servers for region NYC", config_context.description)
+                self.assertEqual("NTP servers for Frobozz 1000 devices **only**", config_context.description)
                 self.assertTrue(config_context.is_active)
+                self.assertEqual(list(config_context.device_types.all()), [self.device_type])
                 self.assertEqual(
                     {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
                     config_context.data,
                 )
+                self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
+
+                # Make sure ConfigContextSchema was successfully loaded from file
+                config_context_schema_record = ConfigContextSchema.objects.get(
+                    name="Config Context Schema 1",
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                )
+                config_context_schema = self.config_context_schema
+                config_context_schema_metadata = config_context_schema["_metadata"]
+                self.assertIsNotNone(config_context_schema_record)
+                self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
+                self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
@@ -211,31 +389,56 @@ class GitTest(TestCase):
                 self.assertEqual(device.local_context_data_owner, self.repo)
 
                 # Make sure ExportTemplate was successfully loaded from file
-                export_template = ExportTemplate.objects.get(
+                export_template_device = ExportTemplate.objects.get(
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                     content_type=ContentType.objects.get_for_model(Device),
                     name="template.j2",
                 )
-                self.assertIsNotNone(export_template)
+                self.assertIsNotNone(export_template_device)
+                self.assertEqual(export_template_device.mime_type, "text/plain")
+
+                export_template_html = ExportTemplate.objects.get(
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    content_type=ContentType.objects.get_for_model(Device),
+                    name="template2.html",
+                )
+                self.assertIsNotNone(export_template_html)
+                self.assertEqual(export_template_html.mime_type, "text/html")
+
+                # Make sure ExportTemplate was successfully loaded from file
+                # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
+                export_template_vlan = ExportTemplate.objects.get(
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    content_type=ContentType.objects.get_for_model(VLAN),
+                    name="template.j2",
+                )
+                self.assertIsNotNone(export_template_vlan)
 
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 def empty_repo(path, url):
                     os.remove(os.path.join(path, "config_contexts", "context.yaml"))
                     os.remove(os.path.join(path, "config_contexts", "devices", "test-device.json"))
+                    os.remove(os.path.join(path, "config_context_schemas", "schema-1.yaml"))
                     os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))
+                    os.remove(os.path.join(path, "export_templates", "dcim", "device", "template2.html"))
+                    os.remove(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"))
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = empty_repo
                 # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
-                self.job_result = JobResult(
+                self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -278,6 +481,7 @@ class GitTest(TestCase):
                     # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "config_contexts", "devices"))
+                    os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "nosuchapp", "device"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "nosuchmodel"))
                     # Malformed JSON
@@ -285,6 +489,11 @@ class GitTest(TestCase):
                         fd.write('{"data": ')
                     # Valid JSON but missing required keys
                     with open(os.path.join(path, "config_contexts", "context2.json"), "w") as fd:
+                        fd.write("{}")
+                    with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
+                        fd.write('{"data": ')
+                    # Valid JSON but missing required keys
+                    with open(os.path.join(path, "config_context_schemas", "schema-2.yaml"), "w") as fd:
                         fd.write("{}")
                     # No such device
                     with open(
@@ -320,7 +529,9 @@ class GitTest(TestCase):
                 MockGitRepo.side_effect = populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -340,6 +551,7 @@ class GitTest(TestCase):
                     # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "config_contexts", "devices"))
+                    os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
                     with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
                         yaml.dump(
@@ -349,6 +561,7 @@ class GitTest(TestCase):
                                     "weight": 1500,
                                     "description": "NTP servers for region NYC",
                                     "is_active": True,
+                                    "schema": "Config Context Schema 1",
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
                             },
@@ -359,6 +572,8 @@ class GitTest(TestCase):
                         "w",
                     ) as fd:
                         json.dump({"dns-servers": ["8.8.8.8"]}, fd)
+                    with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
+                        yaml.dump(self.config_context_schema, fd)
                     with open(
                         os.path.join(path, "export_templates", "dcim", "device", "template.j2"),
                         "w",
@@ -369,7 +584,9 @@ class GitTest(TestCase):
                 MockGitRepo.side_effect = populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -392,6 +609,20 @@ class GitTest(TestCase):
                     config_context.data,
                 )
 
+                # Make sure ConfigContextSchema was successfully loaded from file
+                config_context_schema_record = ConfigContextSchema.objects.get(
+                    name="Config Context Schema 1",
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                )
+                self.assertEqual(config_context_schema_record, config_context.schema)
+
+                config_context_schema = self.config_context_schema
+                config_context_schema_metadata = config_context_schema["_metadata"]
+                self.assertIsNotNone(config_context_schema_record)
+                self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
+                self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
+
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
                 self.assertIsNotNone(device.local_context_data)
@@ -412,6 +643,12 @@ class GitTest(TestCase):
 
                 with self.assertRaises(ConfigContext.DoesNotExist):
                     config_context = ConfigContext.objects.get(
+                        owner_object_id=self.repo.pk,
+                        owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    )
+
+                with self.assertRaises(ConfigContextSchema.DoesNotExist):
+                    config_context_schema = ConfigContextSchema.objects.get(
                         owner_object_id=self.repo.pk,
                         owner_content_type=ContentType.objects.get_for_model(GitRepository),
                     )

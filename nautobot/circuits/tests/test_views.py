@@ -1,6 +1,5 @@
 import datetime
 
-from nautobot.circuits.choices import *
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.extras.models import Status
 from nautobot.utilities.testing import ViewTestCases
@@ -15,6 +14,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001)
         Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002)
         Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003)
+        Provider.objects.create(name="Provider 8", asn=65003)
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -35,6 +35,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "Provider 4,provider-4",
             "Provider 5,provider-5",
             "Provider 6,provider-6",
+            "Provider 7,",
         )
 
         cls.bulk_edit_data = {
@@ -46,6 +47,9 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
         }
 
+        cls.slug_source = "name"
+        cls.slug_test_object = "Provider 8"
+
 
 class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = CircuitType
@@ -56,6 +60,7 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
         CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
         CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
+        CircuitType.objects.create(name="Circuit Type 8")
 
         cls.form_data = {
             "name": "Circuit Type X",
@@ -68,7 +73,11 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Circuit Type 4,circuit-type-4",
             "Circuit Type 5,circuit-type-5",
             "Circuit Type 6,circuit-type-6",
+            "Circuit Type 7,",
         )
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Circuit Type 8"
 
 
 class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):

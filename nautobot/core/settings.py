@@ -2,8 +2,10 @@ import os
 import platform
 
 from django.contrib.messages import constants as messages
+import django.forms
 
 from nautobot import __version__
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
 
 #
 # Environment setup
@@ -21,6 +23,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
+
+# Set the default AutoField for 3rd party apps
+# N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
+#      we can’t do that yet
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 ###############################################################
@@ -46,16 +53,11 @@ ALLOWED_URL_SCHEMES = (
     "vnc",
     "xmpp",
 )
-BANNER_BOTTOM = ""
-BANNER_LOGIN = ""
-BANNER_TOP = ""
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.environ.get("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
-CHANGELOG_RETENTION = 90
-DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), "docs")
-HIDE_RESTRICTED_UI = False
+DOCS_ROOT = os.path.join(BASE_DIR, "docs")
 
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
 # table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
@@ -71,11 +73,10 @@ EXEMPT_EXCLUDE_MODELS = (
 )
 
 EXEMPT_VIEW_PERMISSIONS = []
-GIT_ROOT = os.environ.get("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
+GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
-JOBS_ROOT = os.environ.get("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
-MAX_PAGE_SIZE = 1000
 
 # Metrics
 METRICS_ENABLED = False
@@ -86,20 +87,9 @@ NAPALM_PASSWORD = ""
 NAPALM_TIMEOUT = 30
 NAPALM_USERNAME = ""
 
-# Pagination
-PAGINATE_COUNT = 50
-PER_PAGE_DEFAULTS = [25, 50, 100, 250, 500, 1000]
-
 # Plugins
 PLUGINS = []
 PLUGINS_CONFIG = {}
-
-# IPv4?
-PREFER_IPV4 = False
-
-# Racks
-RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
-RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
 # Global 3rd-party authentication settings
 EXTERNAL_AUTH_DEFAULT_GROUPS = []
@@ -109,17 +99,18 @@ EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 REMOTE_AUTH_AUTO_CREATE_USER = False
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 
-# Releases
-RELEASE_CHECK_URL = None
-RELEASE_CHECK_TIMEOUT = 24 * 3600
-
 # SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
+# Nautobot related - May be overridden if using custom social auth backend
+SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 
 # Storage
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
 
+# Test runner that is aware of our use of "integration" tags and only runs
+# integration tests if explicitly passed in with `nautobot-server test --tag integration`.
+TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 
 #
 # Django cryptography
@@ -167,7 +158,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_VERSION": REST_FRAMEWORK_VERSION,
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
-    "PAGE_SIZE": PAGINATE_COUNT,
+    "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings
         "retrieve": "read",
@@ -241,34 +232,13 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
-#
-# Redis (Caching/Queuing)
-#
-
-REDIS = {
-    "tasks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 0,
-        "SSL": False,
-    },
-    "caching": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 1,
-        "SSL": False,
-    },
-}
-
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # Default overrides
 ALLOWED_HOSTS = []
@@ -286,7 +256,6 @@ TIME_ZONE = "UTC"
 
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -296,6 +265,7 @@ INSTALLED_APPS = [
     "cacheops",
     "corsheaders",
     "django_filters",
+    "django_jinja",
     "django_tables2",
     "django_prometheus",
     "mptt",
@@ -303,7 +273,11 @@ INSTALLED_APPS = [
     "social_django",
     "taggit",
     "timezone_field",
+    "nautobot.core.apps.NautobotServerConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
+    "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
+    "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
+    "db_file_storage",
     "nautobot.circuits",
     "nautobot.dcim",
     "nautobot.ipam",
@@ -315,6 +289,12 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "health_check",
+    "health_check.cache",
+    "health_check.storage",
+    "django_extensions",
+    "constance.backends.database",
+    "django_ajax_tables",
 ]
 
 # Middleware
@@ -340,9 +320,29 @@ ROOT_URLCONF = "nautobot.core.urls"
 
 TEMPLATES = [
     {
+        "NAME": "django",
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.template.context_processors.media",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.sso_auth",
+            ],
+        },
+    },
+    {
+        "NAME": "jinja",
+        "BACKEND": "django_jinja.backend.Jinja2",
+        "DIRS": [],
+        "APP_DIRS": False,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -374,7 +374,7 @@ USE_TZ = True
 WSGI_APPLICATION = "nautobot.core.wsgi.application"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
-X_FRAME_OPTIONS = "SAMEORIGIN"
+X_FRAME_OPTIONS = "DENY"
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
@@ -398,6 +398,117 @@ LOGIN_URL = "login"
 
 # This is the URL route name for the home page (index) view.
 LOGIN_REDIRECT_URL = "home"
+
+#
+# django-constance
+#
+
+CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
+CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
+CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
+
+CONSTANCE_ADDITIONAL_FIELDS = {
+    "per_page_defaults_field": [
+        "nautobot.utilities.forms.fields.JSONArrayFormField",
+        {
+            "widget": "django.forms.TextInput",
+            "base_field": django.forms.IntegerField(min_value=1),
+        },
+    ],
+    "release_check_timeout_field": [
+        "django.forms.IntegerField",
+        {
+            "min_value": 3600,
+        },
+    ],
+    "release_check_url_field": [
+        "django.forms.URLField",
+        {
+            "required": False,
+        },
+    ],
+}
+
+CONSTANCE_CONFIG = {
+    "BANNER_BOTTOM": [
+        "",
+        "Custom HTML to display in a banner at the bottom of all pages.",
+    ],
+    "BANNER_LOGIN": [
+        "",
+        "Custom HTML to display in a banner at the top of the login page.",
+    ],
+    "BANNER_TOP": [
+        "",
+        "Custom HTML to display in a banner at the top of all pages.",
+    ],
+    "CHANGELOG_RETENTION": [
+        90,
+        "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
+    ],
+    "DISABLE_PREFIX_LIST_HIERARCHY": [
+        False,
+        "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
+    ],
+    "HIDE_RESTRICTED_UI": [
+        False,
+        "If set to True, users with limited permissions will not be shown menu items and home-page elements that "
+        "they do not have permission to access.",
+    ],
+    "MAX_PAGE_SIZE": [
+        1000,
+        "Maximum number of objects that a user can list in one UI page or one API call.\n"
+        "If set to 0, a user can retrieve an unlimited number of objects.",
+    ],
+    "PAGINATE_COUNT": [
+        50,
+        "Default number of objects to display per page when listing objects in the UI and/or REST API.",
+    ],
+    "PER_PAGE_DEFAULTS": [
+        [25, 50, 100, 250, 500, 1000],
+        "Pagination options to present to the user to choose amongst.\n"
+        "For proper user experience, this list should include the PAGINATE_COUNT and MAX_PAGE_SIZE values as options.",
+        # Use custom field type defined above
+        "per_page_defaults_field",
+    ],
+    "PREFER_IPV4": [
+        False,
+        "Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
+    ],
+    "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": [
+        22,
+        "Default height (in pixels) of a rack unit in a rack elevation diagram",
+    ],
+    "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": [
+        230,
+        "Default width (in pixels) of a rack unit in a rack elevation diagram",
+    ],
+    "RELEASE_CHECK_TIMEOUT": [
+        24 * 3600,
+        "Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
+        "before checking again for a new release.",
+        # Use custom field type defined above
+        "release_check_timeout_field",
+    ],
+    "RELEASE_CHECK_URL": [
+        "",
+        "URL of GitHub repository REST API endpoint to poll periodically for availability of new Nautobot releases.\n"
+        'This can be set to the official repository "https://api.github.com/repos/nautobot/nautobot/releases" or '
+        "a custom fork.\nSet this to an empty string to disable automatic update checks.",
+        # Use custom field type defined above
+        "release_check_url_field",
+    ],
+}
+
+CONSTANCE_CONFIG_FIELDSETS = {
+    "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
+    "Change Logging": ["CHANGELOG_RETENTION"],
+    "Device Connectivity": ["PREFER_IPV4"],
+    "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
+    "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
+    "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
+    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
+}
 
 #
 # From django-cors-headers
@@ -426,6 +537,7 @@ GRAPHENE = {
 }
 GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 GRAPHQL_RELATIONSHIP_PREFIX = "rel"
+GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 
 
 #
@@ -470,7 +582,7 @@ CACHES = {
 }
 
 #
-# Django RQ (Webhooks backend)
+# Django RQ (used for legacy background processesing)
 #
 
 # These defaults utilize the Django caches setting defined for django-redis.
@@ -489,3 +601,64 @@ RQ_QUEUES = {
         "USE_REDIS_CACHE": "default",
     },
 }
+
+#
+# Celery (used for background processing)
+#
+
+# Celery broker URL used to tell workers where queues are located
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
+
+# Celery results backend URL to tell workers where to publish task results
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
+
+# Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
+CELERY_TASK_TRACK_STARTED = True
+
+# Global task time limits (seconds)
+# Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,
+# while exceeding the hard limit will result in a SIGKILL.
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", 5 * 60))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 10 * 60))
+
+# These settings define the custom nautobot serialization encoding as an accepted data encoding format
+# and register that format for task input and result serialization
+CELERY_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_RESULT_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_TASK_SERIALIZER = "nautobot_json"
+CELERY_RESULT_SERIALIZER = "nautobot_json"
+
+CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
+
+#
+# Custom branding (logo and title)
+#
+
+# Branding logo locations. The logo takes the place of the Nautobot logo in the top right of the nav bar.
+# The filepath should be relative to the `MEDIA_ROOT`.
+BRANDING_FILEPATHS = {
+    "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
+    "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
+    "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
+    "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
+    "icon_180": os.getenv(
+        "NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None
+    ),  # 180x180px icon - used for the apple-touch-icon header
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
+    "icon_mask": os.getenv(
+        "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
+    ),  # mono-chrome icon used for the mask-icon header
+}
+
+# Title to use in place of "Nautobot"
+BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
+
+# Branding URLs (links in the bottom right of the footer)
+BRANDING_URLS = {
+    "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),
+    "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
+}
+
+# Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
+BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"

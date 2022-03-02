@@ -23,10 +23,10 @@ If you are using OpenID Connect or SAML you will also need to install the extra 
 
 #### OpenID Connect
 
-For OpenID connect, you'll need to install the `openidconnect` Python extra.
+For OpenID connect, you'll need to install the `sso` Python extra.
 
 ```no-highlight
-$ pip3 install "social-auth-core[openidconnect]"
+$ pip3 install "nautobot[sso]"
 ```
 
 #### SAML
@@ -42,10 +42,10 @@ Install the system dependencies as `root`:
 $ sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
 ```
 
-Install the `saml` Python extra as the`nautobot` user.
+Install the `sso` Python extra as the `nautobot` user.
 
 ```no-highlight
-$ pip3 install "social-auth-core[saml]"
+$ pip3 install "nautobot[sso]"
 ```
 
 Please see the SAML configuration guide below for an example of how to configure Nautobot to authenticate using SAML with Google as the identity provider.
@@ -54,9 +54,9 @@ Please see the SAML configuration guide below for an example of how to configure
 
 ### Authentication Backends
 
-To use external authentcation, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
+To use external authentication, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
 
-- Insert the desired external authentication backend as the first item in the list.
+- Insert the desired external authentication backend as the first item in the list. This step is key to properly redirecting when users click the login button.
 - You must also ensure that `nautobot.core.authentication.ObjectPermissionBackend` is always the second item in the list. It is an error to exclude this backend.
 
 !!! note
@@ -76,6 +76,22 @@ AUTHENTICATION_BACKENDS = [
 
 !!! warning
 	You should only enable one social authentication authentication backend. It is technically possible to use multiple backends but we cannot officially support more than one at this time.
+
+
+### Custom Authentication Backends
+
+The default external authentication supported is [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) as stated above. If you have developed your own external authentication backend, you will need to configure `SOCIAL_AUTH_BACKEND_PREFIX` to use your backend instead and correctly enable the SSO redirect when the login button is clicked. For example, if your custom authentication backend is available at `custom_auth.backends.custom.Oauth2`, you would set things as follows:
+
+```python
+SOCIAL_AUTH_BACKEND_PREFIX = "custom_auth.backends"
+
+AUTHENTICATION_BACKENDS = [
+    "custom_auth.backends.custom.Oauth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+```
+
+In the example above, `SOCIAL_AUTH_BACKEND_PREFIX` was set to `custom_auth.backends` within the `nautobot_config.py` for our custom authentication plugin we created (**custom_auth.backends.custom.Oauth2**). This will enable the SSO redirect for users when they click the login button.
 
 ---
 
@@ -113,7 +129,7 @@ Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configura
 
 The following guides are provided for some of the most common authentication methods.
 
-### Okta - OpenID
+### Okta
 
 1. In the Okta admin portal, create a new *Web* application
 2. Configure the application as follows:
@@ -122,7 +138,26 @@ The following guides are provided for some of the most common authentication met
     * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
     * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
 
-3. Once the application is configured in Okta, edit your `nautobot_config.py` as follows:
+3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC).  When using an organization's authentication server OAuth2 is preferred; with custom Okta authentication backends, use OIDC.
+
+#### Okta - OAuth2
+
+Edit your `nautobot_config.py` as follows:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.okta.OktaOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+SOCIAL_AUTH_OKTA_OAUTH2_KEY = '<Client ID from Okta>'
+SOCIAL_AUTH_OKTA_OAUTH2_SECRET = '<Client Secret From Okta>'
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = 'https://<Okta URL>'
+```
+
+#### Okta - OpenID
+
+Edit your `nautobot_config.py` as follows:
 
 ```python
 AUTHENTICATION_BACKENDS = [
@@ -135,7 +170,25 @@ SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = '<Client Secret From Okta>'
 SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = 'https://<Okta URL>/oauth2/<Authentication Server>'
 ```
 
-The default authentication server can be used for testing, however, it should not be used in production.
+The `/default` authentication server can be used for testing, however, it should not be used in production.
+
+#### Okta - Additional Scopes
+
+It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list.  For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
+
+```python
+SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ['groups']
+```
+
+for OpenID:
+
+```python
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ['groups']
+```
+
+In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [`python-social-auth` authentication pipeline documentation](https://python-social-auth.readthedocs.io/en/stable/pipeline.html).
+
+An example to sync groups with Okta is provided in the [`examples/okta`](https://github.com/nautobot/nautobot/tree/develop/examples/okta) folder in the root of the Nautobot repository.
 
 ### Google - OAuth2
 
@@ -308,3 +361,58 @@ This should be the URL that is mapped to the "Log in" button on the top right of
 ---
 
 Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+
+### Azure AD
+
+1. In the Azure admin portal, search for and select *Azure Active Directory*.
+2. Under *Manage*, select *App registrations -> New registration*.
+3. Configure the application as follows:
+
+    * *Name*: This is the user-facing display name for the app.
+    * *Supported account types*: This specifies the AD directories that you're allowing to authenticate with this app.
+    * *Redirect URIs*: Don't fill this out yet, it will be configured in the following steps.
+
+4. Once the application is configured in Azure, you'll be shown the app registration's *Overview* page. Please take note of the *Application (client) ID* for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC).  When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
+5. From the App registration page, click on *Authentication*. Under *Platform configurations*, select *Add a platform* and select *Web*.
+6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
+
+    * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
+
+7. Once the Redirect URI is set, the last thing you'll need is to generate a *client secret*. To do so, click on *Certificates & secrets* and then the *New client secret* option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
+
+8. With the client secret generated, edit your `nautobot_config.py` as follows:
+
+#### Azure AD - OAuth2
+
+If your app is linked to the common tenant, you'll want to edit your `nautobot_config.py` as follows:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.azuread.AzureADOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = "<Client ID from Azure>"
+SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = "<Client Secret From Azure>"
+```
+
+#### Azure - Tenant Support
+
+If your app is linked to a specific tenant instead of the common tenant, you'll want to edit your `nautobot_config.py` as follows:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.azuread.AzureADOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_KEY = "<Client ID from Azure>"
+SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_SECRET = "<Client Secret From Azure>"
+SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_TENANT_ID = "<Tenant ID from Azure>"
+```
+
+---
+
+With those settings in place your users should be able to authenticate against Azure AD and successfully login to Nautobot. However, that user will not be placed in any groups or given any permissions. In order to do so, you'll need to utilize a script to synchronize the groups passed from Azure to Nautobot after authentication succeeds. Any group permissions will need to be set manually in the Nautobot admin panel.
+
+An example to sync groups with Azure is provided in the [`examples/azure_ad`](https://github.com/nautobot/nautobot/tree/main/examples/azure_ad) folder in the root of the Nautobot repository.

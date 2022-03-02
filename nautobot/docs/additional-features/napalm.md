@@ -1,6 +1,6 @@
 # NAPALM
 
-Nautobot supports integration with the [NAPALM automation](https://napalm-automation.net/) library. NAPALM allows Nautobot to serve a proxy for operational data, fetching live data from network devices and returning it to a requester via its REST API. Note that Nautobot does not store any NAPALM data locally.
+Nautobot supports integration with the [NAPALM automation](https://github.com/napalm-automation/napalm/) library. NAPALM allows Nautobot to serve a proxy for operational data, fetching live data from network devices and returning it to a requester via its REST API. Note that Nautobot does not store any NAPALM data locally.
 
 !!! note
     To enable this integration, the NAPALM library must be installed. See [installation steps](../../installation/nautobot/#napalm) for more information.
@@ -22,7 +22,25 @@ GET /api/dcim/devices/1/napalm/?method=get_environment
 
 ## Authentication
 
-By default, the [`NAPALM_USERNAME`](../../configuration/optional-settings/#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings/#napalm_password) configuration parameters are used for NAPALM authentication. They can be overridden for an individual API call by specifying the `X-NAPALM-Username` and `X-NAPALM-Password` headers.
+As of Nautobot 1.2, there are three ways to specify the authentication credentials to use for a given device:
+
+1. `NAPALM_USERNAME` and `NAPALM_PASSWORD` configuration parameters, setting global defaults to use for all devices.
+2. Assigning an appropriately defined [secrets group](../../models/extras/secretsgroup/) to the device to specify its specific credentials.
+3. In a REST API call, specifying the credentials as HTTP headers.
+
+### Configuration Parameters
+
+By default, the [`NAPALM_USERNAME`](../../configuration/optional-settings/#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings/#napalm_password) configuration parameters are used for NAPALM authentication.
+
+### Secrets Groups
+
+If a given device has an associated secrets group, and that secrets group contains [secrets](../../models/extras/secret/) assigned as *access type* `Generic` and *secrets types* `Username` and `Password` (and optionally an additional `Secret` entry as well, which will be used for a Cisco enable secret as needed), these credentials will be used for NAPALM authentication, overriding any global defaults specified in `nautobot_config.py`.
+
+Note that in the case where many devices in your network share common credentials (such as a standardized service account), it's straightforward to define an appropriate secrets group and then use the device "bulk editing" functionality in Nautobot to quickly assign this group to a collection of devices.
+
+### REST API HTTP Headers
+
+The NAPALM credentials specified by either of the above methods can be overridden for an individual REST API call by specifying the `X-NAPALM-Username` and `X-NAPALM-Password` headers.
 
 ```
 $ curl "http://localhost/api/dcim/devices/1/napalm/?method=get_environment" \

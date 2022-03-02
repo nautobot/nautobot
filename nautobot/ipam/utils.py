@@ -1,6 +1,6 @@
 import netaddr
 
-from .constants import *
+from .constants import VLAN_VID_MAX, VLAN_VID_MIN
 from .models import Prefix, VLAN
 
 

@@ -1,65 +1,7 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load static %}
-{% load custom_links %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
 
-{% block title %}{{ object }}{% endblock %}
-
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'ipam:role_list' %}">Roles</a></li>
-                <li>{{ object }}</li>
-            </ol>
-        </div>
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url 'ipam:role_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.ipam.add_role %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.ipam.change_role %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.ipam.delete_role %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-    <h1>{{ object }}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Role</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'ipam:role_changelog' slug=object.slug %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-{% endblock %}
-
-{% block content %}
-<div class="row">
-	<div class="col-md-4">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Role</strong>
@@ -87,11 +29,9 @@
                 </tr>
             </table>
         </div>
-        {% include 'inc/custom_fields_panel.html' %}
-        {% include 'inc/relationships_panel.html' %}
-        {% plugin_left_page object %}
-	</div>
-	<div class="col-md-8">
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Prefixes</strong>
@@ -118,13 +58,6 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
-    {% plugin_right_page object %}
-    </div>
-</div>
-<div class="row">
-    <div class="col-md-12">
-        {% plugin_full_width_page object %}
-    </div>
-</div>
-{% endblock %}
+        {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
+        <div class="row"></div>
+{% endblock content_full_width_page %}

@@ -183,6 +183,6 @@ Content-Length: 18698
 Connection: keep-alive
 X-Content-Type-Options: nosniff
 Referrer-Policy: same-origin
-X-Frame-Options: SAMEORIGIN
+X-Frame-Options: DENY
 Vary: Cookie, Origin
 ```

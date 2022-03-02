@@ -1,0 +1,78 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static bootstrapped_goodies_tags %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb">
+<li>{% trans 'Admin Home' %}</li>
+</ol>
+{% endblock %}
+
+
+{% block object-tools %}
+<ul class="nav navbar-nav">
+    <li class="dropdown">
+        <ul class="dropdown-menu" role="menu">
+            {% for app in app_list %}
+            <li>
+                <a href="#"><strong>{% render_app_name app %}</strong></a>
+            </li>
+            {% for model in app.models %}
+            <li>
+                {% if model.admin_url %}
+                    <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                {% else %}
+                    {{ model.name }}
+                {% endif %}
+            </li>
+            {% endfor %}
+            {% if not forloop.last %}
+            <li role="presentation" class="divider"></li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </li>
+</ul>
+{% endblock %}
+
+
+{% block content %}
+<div class="row">
+    <div id="content-main" class="col-sm-12">
+
+        <div class="tabbable">
+            {% for app in app_list %}
+                {% include "admin/bootstrapped_extra/app_name.html" %}
+                {% render_app_description app %}
+                <table summary="{% blocktrans with name=app.name %}Models available in the {{ name }} application.{% endblocktrans %}" class="table table-striped table-bordered">
+                {% for model in app.models %}
+                    <tr>
+                        <th scope="row">
+                            {% if model.admin_url %}
+                            <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                            {% else %}
+                            {{ model.name }}
+                            {% endif %}
+
+                            {% if model.add_url or model.admin_url%}
+                            <div class="pull-right">
+                                {% if model.add_url %}
+                                <a href="{{ model.add_url }}" class="btn btn-xs btn-primary"><span class="glyphicon glyphicon-plus"></span>
+                                {% trans 'Add' %}</a>
+                                {% endif %}
+                                {% if model.admin_url %}
+                                <a href="{{ model.admin_url }}" class="btn btn-xs btn-warning"><span class="glyphicon glyphicon-edit"></span>
+                                {% trans 'Edit' %}</a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </th>
+                    </tr>
+                {% endfor %}
+                </table>
+            {% empty %}
+                <p>{% trans "You don't have permission to edit anything." %}</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

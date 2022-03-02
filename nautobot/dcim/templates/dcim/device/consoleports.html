@@ -1,7 +1,7 @@
 {% extends 'dcim/device/base.html' %}
-{% load render_table from django_tables2 %}
 {% load helpers %}
 {% load static %}
+{% load render_table from django_tables2 %}
 
 {% block content %}
     <form method="post">
@@ -45,9 +45,10 @@
         </div>
     </form>
     {% table_config_form consoleport_table %}
-{% endblock %}
+{% endblock content %}
 
 {% block javascript %}
-  <script src="{% static 'js/connection_toggles.js' %}?v{{ settings.VERSION }}"></script>
-  <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
-{% endblock %}
+    {{ block.super }}
+    <script src="{% static 'js/connection_toggles.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+{% endblock javascript %}

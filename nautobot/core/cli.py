@@ -4,14 +4,13 @@ Utilities and primitives for the `nautobot-server` CLI command.
 
 from pathlib import Path
 import os
-import warnings
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
 
-from nautobot.extras.plugins.utils import load_plugins, get_sso_backend_name
-from .runner import run_app
+from nautobot.core.runner import run_app
+from nautobot.extras.plugins.utils import load_plugins
 
 
 # Default file location for the generated config emitted by `init`
@@ -133,13 +132,9 @@ def _configure_settings(config):
     if settings.METRICS_ENABLED and "postgres" in settings.DATABASES["default"]["ENGINE"]:
         settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
 
-    #
-    # Pagination
-    #
-
-    if settings.PAGINATE_COUNT not in settings.PER_PAGE_DEFAULTS:
-        settings.PER_PAGE_DEFAULTS.append(settings.PAGINATE_COUNT)
-        settings.PER_PAGE_DEFAULTS = sorted(settings.PER_PAGE_DEFAULTS)
+    # Create fake db for job logs. This uses the default db, but allows us to save logs within
+    # transaction.atomic().
+    settings.DATABASES["job_logs"] = settings.DATABASES["default"]
 
     #
     # Media storage
@@ -161,11 +156,11 @@ def _configure_settings(config):
                     )
                 raise e
 
-            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG
+            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG or fall back to settings
             def _setting(name, default=None):
                 if name in settings.STORAGE_CONFIG:
                     return settings.STORAGE_CONFIG[name]
-                return globals().get(name, default)
+                return getattr(settings, name, default)
 
             storages.utils.setting = _setting
 

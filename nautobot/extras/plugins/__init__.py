@@ -1,23 +1,36 @@
 import collections
 import inspect
+from importlib import import_module
+
 from packaging import version
 
-from django.apps import AppConfig
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
+from django.urls import URLPattern
 
+from nautobot.core.apps import (
+    NautobotConfig,
+    NavMenuButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+    register_menu_items,
+    register_homepage_panels,
+)
+from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.secrets import register_secrets_provider
 from nautobot.utilities.choices import ButtonColorChoices
 
 
 # Initialize plugin registry stores
-# registry['datasource_content'] is a non-plugin-exclusive registry and is initialized in extras.registry
+# registry["datasource_content"], registry["secrets_providers"] are not plugin-exclusive; initialized in extras.registry
+registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
-registry["plugin_menu_items"] = {}
 registry["plugin_template_extensions"] = collections.defaultdict(list)
 
 
@@ -26,7 +39,7 @@ registry["plugin_template_extensions"] = collections.defaultdict(list)
 #
 
 
-class PluginConfig(AppConfig):
+class PluginConfig(NautobotConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
@@ -62,26 +75,60 @@ class PluginConfig(AppConfig):
         "*": {"ops": "all"},
     }
 
+    # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure"
+    home_view_name = None
+    config_view_name = None
+
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
+    banner_function = "banner.banner"
     custom_validators = "custom_validators.custom_validators"
     datasource_contents = "datasources.datasource_contents"
     graphql_types = "graphql.types.graphql_types"
+    homepage_layout = "homepage.layout"
+    jinja_filters = "jinja_filters"
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
+    secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
 
     def ready(self):
+        """Callback after plugin app is loaded."""
+        # We don't call super().ready here because we don't need or use the on-ready behavior of a core Nautobot app
+
+        # Introspect URL patterns and models to make available to the installed-plugins detail UI view.
+        urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")
+        api_urlpatterns = import_object(f"{self.__module__}.api.urls.urlpatterns")
+
+        self.features = {
+            "api_urlpatterns": sorted(
+                (urlp for urlp in (api_urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
+            ),
+            "models": sorted(model._meta.verbose_name for model in self.get_models()),
+            "urlpatterns": sorted(
+                (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
+            ),
+        }
+
+        # Register banner function (if defined)
+        banner_function = import_object(f"{self.__module__}.{self.banner_function}")
+        if banner_function is not None:
+            register_banner_function(banner_function)
+            self.features["banner"] = True
 
         # Register model validators (if defined)
         validators = import_object(f"{self.__module__}.{self.custom_validators}")
         if validators is not None:
             register_custom_validators(validators)
+            self.features["custom_validators"] = sorted(set(validator.model for validator in validators))
 
         # Register datasource contents (if defined)
         datasource_contents = import_object(f"{self.__module__}.{self.datasource_contents}")
         if datasource_contents is not None:
             register_datasource_contents(datasource_contents)
+            self.features["datasource_contents"] = datasource_contents
 
         # Register GraphQL types (if defined)
         graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
@@ -92,16 +139,38 @@ class PluginConfig(AppConfig):
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
             register_jobs(jobs)
+            self.features["jobs"] = jobs
 
-        # Register navigation menu items (if defined)
+        # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
         if menu_items is not None:
-            register_menu_items(self.verbose_name, menu_items)
+            register_plugin_menu_items(self.verbose_name, menu_items)
+            self.features["nav_menu"] = menu_items
+
+        homepage_layout = import_object(f"{self.__module__}.{self.homepage_layout}")
+        if homepage_layout is not None:
+            register_homepage_panels(self.path, self.label, homepage_layout)
+            self.features["home_page"] = homepage_layout
 
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+            self.features["template_extensions"] = sorted(set(extension.model for extension in template_extensions))
+
+        # Register custom jinja filters
+        try:
+            import_module(f"{self.__module__}.{self.jinja_filters}")
+            self.features["jinja_filters"] = True
+        except ModuleNotFoundError:
+            pass
+
+        # Register secrets providers (if any)
+        secrets_providers = import_object(f"{self.__module__}.{self.secrets_providers}")
+        if secrets_providers is not None:
+            for secrets_provider in secrets_providers:
+                register_secrets_provider(secrets_provider)
+            self.features["secrets_providers"] = secrets_providers
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -236,6 +305,23 @@ def register_template_extensions(class_list):
         registry["plugin_template_extensions"][template_extension.model].append(template_extension)
 
 
+class PluginBanner:
+    """Class that may be returned by a registered plugin_banners function."""
+
+    def __init__(self, content, banner_class=BannerClassChoices.CLASS_INFO):
+        self.content = content
+        if banner_class not in BannerClassChoices.values():
+            raise ValueError("Banner class must be a choice within BannerClassChoices.")
+        self.banner_class = banner_class
+
+
+def register_banner_function(function):
+    """
+    Register a function that may return a Banner object.
+    """
+    registry["plugin_banners"].append(function)
+
+
 def register_graphql_types(class_list):
     """
     Register a list of DjangoObjectType classes
@@ -322,19 +408,74 @@ class PluginMenuButton:
             self.color = color
 
 
-def register_menu_items(section_name, class_list):
+def register_plugin_menu_items(section_name, menu_items):
     """
     Register a list of PluginMenuItem instances for a given menu section (e.g. plugin name)
     """
-    # Validation
-    for menu_link in class_list:
-        if not isinstance(menu_link, PluginMenuItem):
-            raise TypeError(f"{menu_link} must be an instance of extras.plugins.PluginMenuItem")
-        for button in menu_link.buttons:
-            if not isinstance(button, PluginMenuButton):
-                raise TypeError(f"{button} must be an instance of extras.plugins.PluginMenuButton")
+    new_menu_items = []
+    new_menu_item_weight = 100
 
-    registry["plugin_menu_items"][section_name] = class_list
+    nav_menu_items = set()
+
+    permissions = set()
+
+    for menu_item in menu_items:
+        if isinstance(menu_item, PluginMenuItem):
+            # translate old-style plugin menu definitions into the new nav-menu items and buttons
+
+            new_menu_button_weight = 100
+            new_menu_buttons = []
+            for button in menu_item.buttons:
+                new_menu_buttons.append(
+                    NavMenuButton(
+                        link=button.link,
+                        title=button.title,
+                        icon_class=button.icon_class,
+                        button_class=button.color,
+                        permissions=button.permissions,
+                        weight=new_menu_button_weight,
+                    )
+                )
+                new_menu_button_weight += 100
+
+            new_menu_items.append(
+                NavMenuItem(
+                    link=menu_item.link,
+                    name=menu_item.link_text,
+                    permissions=menu_item.permissions,
+                    weight=new_menu_item_weight,
+                    buttons=new_menu_buttons,
+                )
+            )
+            new_menu_item_weight += 100
+            permissions = permissions.union(menu_item.permissions)
+        elif isinstance(menu_item, NavMenuTab):
+            nav_menu_items.add(menu_item)
+        else:
+            raise TypeError("Top level objects need to be an instance of NavMenuTab or PluginMenuItem: {menu_tab}")
+
+    if new_menu_items:
+        # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
+        if registry["nav_menu"]["tabs"].get("Plugins"):
+            weight = (
+                registry["nav_menu"]["tabs"]["Plugins"]["groups"][
+                    list(registry["nav_menu"]["tabs"]["Plugins"]["groups"])[-1]
+                ]["weight"]
+                + 100
+            )
+        else:
+            weight = 100
+        nav_menu_items.add(
+            NavMenuTab(
+                name="Plugins",
+                weight=5000,
+                # Permissions cast to tuple to match development pattern.
+                permissions=tuple(permissions),
+                groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
+            ),
+        )
+
+    register_menu_items(nav_menu_items)
 
 
 #

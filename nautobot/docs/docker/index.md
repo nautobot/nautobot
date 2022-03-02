@@ -4,44 +4,59 @@ Nautobot is packaged as a Docker image for use in a production environment. The 
 
 ## Tags
 
-The Docker image is published to Docker Hub.
+A set of Docker images are built for each Nautobot release and published to both [Docker Hub](https://hub.docker.com/r/networktocode/nautobot/) and the [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot).
 
-To get the image from Docker Hub run:
+Additionally, GitHub Actions are used to automatically build images corresponding to each commit to the `develop` and `next` branches; these images are only published to the GitHub Container Registry.
 
-```no-highlight
-docker image pull networktocode/nautobot
-```
-
-The following tags are available:
-
-* `X.Y.Z` these images are built with the same baseline as the released Python packages based on the default python version (3.6) docker container
-* `latest` these images are built from the latest code in the main branch (should be the latest released version) based on the default python version (3.6) docker container
-* `X.Y.Z-py${PYTHON_VER}` these images are built with the same baseline as the released Python packages based on the python version ($PYTHON_VER) docker container
-* `latest-py${PYTHON_VER}` these images are built from the latest code in the main branch (should be the latest released version) based on the python version ($PYTHON_VER) docker container
-* `develop` these images are built from the latest code in the develop branch on each commit based on the default python version (3.6) docker container
-* `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch based on the default python version (3.6) docker container
-* `develop-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
-* `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the develop branch based on the python version ($PYTHON_VER) docker container
-
-To pull a specific tag you can append the image name with `:tag` for example, to pull the 1.0.0 image:
+To get a specific tagged image from Docker Hub or the GitHub Container Registry run:
 
 ```no-highlight
-$ docker image pull networktocode/nautobot:1.0.0
+docker image pull networktocode/nautobot:${TAG}
 ```
+
+or
+
+```no-highlight
+docker pull ghcr.io/nautobot/nautobot:${TAG}
+```
+
+The following tags are available on both Docker Hub and the GitHub Container Registry:
+
+| Tag                               | Nautobot Version      | Python Version | Example        |
+| --------------------------------- | --------------------- | -------------- | -------------- |
+| `${NAUTOBOT_VER}`                 | As specified          | 3.6            | `1.1.6`        |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}` | As specified          | As specified   | `1.1.6-py3.8`  |
+| `stable`                          | Latest stable release | 3.6            | `stable`       |
+| `stable-py${PYTHON_VER}`          | Latest stable release | As specified   | `stable-py3.8` |
+
+The following additional tags are only available from the GitHub Container Registry:
+
+| Tag                                                  | Nautobot Branch              | Python Version |
+| ---------------------------------------------------- | ---------------------------- | -------------- |
+| `latest`                                             | `develop`, the latest commit | 3.6            |
+| `latest-py${PYTHON_VER}`                             | `develop`, the latest commit | As specified   |
+| `develop`                                            | `develop`, the latest commit | 3.6            |
+| `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
+| `develop-${GIT_SHA:0:7}-$(date +%s)`                 | `develop`, a specific commit | 3.6            |
+| `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` | `develop`, a specific commit | As specified   |
+| `next`                                               | `next`, the latest commit    | 3.6            |
+| `next-py${PYTHON_VER}`                               | `next`, the latest commit    | As specified   |
+| `next-${GIT_SHA:0:7}-$(date +%s)`                    | `next`, a specific commit    | 3.6            |
+| `next-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}`    | `next`, a specific commit    | As specified   |
 
 Currently images are pushed for the following python versions:
 
 * 3.6
 * 3.7
 * 3.8
-* 3.9 _For Testing Only_
+* 3.9
 
 !!! info
-    A dev image `networktocode/nautobot-dev` is also provided with the same tags, this image provides the development dependencies needed to build Nautobot.  This container can be used as a base for development to develop additional Nautobot plugins but should **NOT** be used in production.
+    Developer images `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}` are also provided with the same tags as above. These images provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop additional Nautobot plugins but should **NOT** be used in production.
 
 ## Getting Started
 
-Nautobot requires a PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with `docker-compose`.
+Nautobot requires a MySQL or PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with `docker-compose`, which will install and configure PostgreSQL and Redis containers for you automatically.
 
 ## Configuration
 
@@ -60,6 +75,58 @@ services:
     volumes:
       - /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py:ro
 ```
+
+### Docker only configuration
+
+The entry point for the Docker container has some additional features that can be configured via additional environment variables. The following are all optional variables:
+
+#### `NAUTOBOT_CREATE_SUPERUSER`
+
+Default: unset
+
+Enables creation of a super user specified by [`NAUTOBOT_SUPERUSER_NAME`](#nautobot_superuser_name), [`NAUTOBOT_SUPERUSER_EMAIL`](#nautobot_superuser_email), [`NAUTOBOT_SUPERUSER_PASSWORD`](#nautobot_superuser_password), and [`NAUTOBOT_SUPERUSER_API_TOKEN`](#nautobot_superuser_api_token).
+
+---
+
+#### `NAUTOBOT_DOCKER_SKIP_INIT`
+
+Default: unset
+
+When starting, the container attempts to connect to the database and run database migrations and upgrade steps necessary when upgrading versions.  In normal operation this is harmless to run on every startup and validates the database is operating correctly.  However, in certain circumstances such as database maintenance when the database is in a read-only mode it may make sense to start Nautobot but skip these steps.  Setting this variable to `true` will start Nautobot without running these initial steps.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_API_TOKEN`
+
+Default: unset
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_API_TOKEN` specifies the API token of the super user to be created; alternatively the `/run/secrets/superuser_api_token` file contents are read for the token.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_EMAIL`
+
+Default: `admin@example.com`
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_EMAIL` specifies the email address of the super user to be created.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_NAME`
+
+Default: `admin`
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_NAME` specifies the username of the super user to be created.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_PASSWORD`
+
+Default: unset
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_PASSWORD` specifies the password of the super user to be created; alternatively the `/run/secrets/superuser_password` file contents are read for the password.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+
+---
 
 ### uWSGI
 
@@ -128,10 +195,19 @@ REPOSITORY                                                                TAG   
 networktocode/nautobot-dev                                                local                  25487d93fc1f   16 seconds ago   630MB
 ```
 
-If you need to build or test the final image set the `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE` environment variable:
+If you need to build or test the final image, you must set your `invoke.yml` to use `docker-compose.build.yml` in place of `docker-compose.dev.yml`:
+
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.build.yml"
+```
+
+Then you can re-run the `invoke build` command:
 
 ```no-highlight
-$ export INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
 $ invoke build
 ...
 $ docker images
@@ -144,3 +220,7 @@ If you do not have a development environment created you can also build the cont
 ```no-highlight
 $ docker build -t networktocode/nautobot -f ./docker/Dockerfile --build-arg PYTHON_VER=3.6 .
 ```
+
+## Docker Compose
+
+An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using plugins.

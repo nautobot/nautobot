@@ -127,4 +127,82 @@ Result
 }
 ```
 
+## Working with Relationships
 
+Defined [relationships](../models/extras/relationship.md) are available in GraphQL as well. In most cases, the associated objects for a given relationship will be available under the key `rel_<relationship_slug>`. The one exception is for relationships between objects of the same type that are not defined as symmetric; for these relationships it's important to be able to distinguish between the two "sides" of the relationship, and so the associated objects will be available under `rel_<relationship_slug>_source` and/or `rel_<relationship_slug>_destination` as appropriate.
+
+```graphql
+query {
+  ip_addresses {
+    address
+    rel_peer_address {
+      address
+    }
+    rel_parent_child_source {
+      address
+    }
+    rel_parent_child_destination {
+      address
+    }
+  }
+}
+```
+
+Result
+```json
+{
+  "data": {
+    "ip_addresses": [
+      {
+        "address": "10.1.1.1/24",
+        "rel_peer_address": {
+          "address": "10.1.1.2/24"
+        },
+        "rel_parent_child_source": null,
+        "rel_parent_child_destination": [
+          {
+            "address": "10.1.1.1/30"
+          },
+          {
+            "address": "10.1.1.1/32"
+          }
+        ]
+      },
+      {
+        "address": "10.1.1.1/30",
+        "rel_peer_address": null,
+        "rel_parent_child_source": {
+          "address": "10.1.1.1/24"
+        },
+        "rel_parent_child_destination": []
+      },
+      {
+        "address": "10.1.1.1/32",
+        "rel_peer_address": null,
+        "rel_parent_child_source": {
+          "address": "10.1.1.1/24"
+        },
+        "rel_parent_child_destination": []
+      },
+      {
+        "address": "10.1.1.2/24",
+        "rel_peer_address": {
+          "address": "10.1.1.1/24"
+        },
+        "rel_parent_child_source": null,
+        "rel_parent_child_destination": []
+      }
+    ]
+  }
+}
+```
+
+## Saved Queries
+
+Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
+
+Inside of **Extensibility -> Data Management -> GraphQL Queries**, there are views to create and manage GraphQL queries.
+
+Saved queries can be executed from the detailed query view or via a REST API request. The queries can also be populated from the detailed query view into GraphiQL by using the "Open in GraphiQL" button. Additionally, in the GraphiQL UI, there is now a menu item, "Queries", which can be used to populate GraphiQL with any previously saved query.
+
+To execute a stored query via the REST API, a POST request can be sent to `/api/extras/graphql-queries/[slug]/run/`. Any GraphQL variables required by the query can be passed in as JSON data within the request body.

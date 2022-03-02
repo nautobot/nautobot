@@ -1,6 +1,6 @@
 # Used to integrate with Microsoft VS Code dev containers feature.
 ---
-version: "3"
+version: "3.4"
 services:
   nautobot:
     command: "sleep infinity"

@@ -28,6 +28,12 @@ E004 = Error(
     obj=settings,
 )
 
+E005 = Error(
+    "MAINTENANCE_MODE has been set but SESSION_ENGINE is still using the database.  Nautobot can not enter Maintenance mode.",
+    id="nautobot.core.E005",
+    obj=settings,
+)
+
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
@@ -57,7 +63,7 @@ def check_object_permissions_backend(app_configs, **kwargs):
 
 @register(Tags.compatibility)
 def check_release_check_timeout(app_configs, **kwargs):
-    if settings.RELEASE_CHECK_TIMEOUT < 3600:
+    if hasattr(settings, "RELEASE_CHECK_TIMEOUT") and settings.RELEASE_CHECK_TIMEOUT < 3600:
         return [E003]
     return []
 
@@ -65,7 +71,7 @@ def check_release_check_timeout(app_configs, **kwargs):
 @register(Tags.compatibility)
 def check_release_check_url(app_configs, **kwargs):
     validator = URLValidator()
-    if settings.RELEASE_CHECK_URL:
+    if hasattr(settings, "RELEASE_CHECK_URL") and settings.RELEASE_CHECK_URL:
         try:
             validator(settings.RELEASE_CHECK_URL)
         except ValidationError:
@@ -95,3 +101,10 @@ def check_minimum_rq_queues(app_configs, **kwargs):
                 )
             )
     return errors
+
+
+@register(Tags.compatibility)
+def check_maintenance_mode(app_configs, **kwargs):
+    if settings.MAINTENANCE_MODE and settings.SESSION_ENGINE == "django.contrib.sessions.backends.db":
+        return [E005]
+    return []

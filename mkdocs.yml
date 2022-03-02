@@ -19,13 +19,14 @@ markdown_extensions:
     - toc:
         permalink: true
 plugins:
-  - include-markdown
+    - search
+    - include-markdown
 nav:
     - Introduction: 'index.md'
     - Installation:
         - Installing Prerequisites: 'installation/index.md'
         - Installing Nautobot: 'installation/nautobot.md'
-        - Deploying Nautobot: 'installation/wsgi.md'
+        - Deploying Nautobot Services: 'installation/services.md'
         - Configuring an HTTP Server: 'installation/http-server.md'
         - External Authentication (Optional): 'installation/external-authentication.md'
     - Docker:
@@ -44,31 +45,46 @@ nav:
     - User Guides:
         - Git as a Data Source: 'user-guides/git-data-source.md'
         - GraphQL: 'user-guides/graphql.md'
+    - Getting Started In the Web UI:
+        - 'user-guides/getting-started/index.md'
+        - Creating Devices: 'user-guides/getting-started/creating-devices.md'
+        - Regions: 'user-guides/getting-started/regions.md'
+        - Platforms: 'user-guides/getting-started/platforms.md'
+        - Tenants: 'user-guides/getting-started/tenants.md'
+        - Interfaces: 'user-guides/getting-started/interfaces.md'
+        - VLANS and VLAN Groups: 'user-guides/getting-started/vlans-and-vlan-groups.md'
+        - IP Address Management: 'user-guides/getting-started/ipam.md'
+        - The Search Bar: 'user-guides/getting-started/search-bar.md'
     - Core Functionality:
-        - IP Address Management: 'core-functionality/ipam.md'
-        - VLAN Management: 'core-functionality/vlans.md'
-        - Sites and Racks: 'core-functionality/sites-and-racks.md'
+        - Circuits: 'core-functionality/circuits.md'
         - Devices and Cabling: 'core-functionality/devices.md'
         - Device Types: 'core-functionality/device-types.md'
-        - Virtualization: 'core-functionality/virtualization.md'
-        - Service Mapping: 'core-functionality/services.md'
-        - Circuits: 'core-functionality/circuits.md'
+        - IP Address Management: 'core-functionality/ipam.md'
         - Power Tracking: 'core-functionality/power.md'
+        - Secrets: 'core-functionality/secrets.md'
+        - Service Mapping: 'core-functionality/services.md'
+        - Sites and Racks: 'core-functionality/sites-and-racks.md'
         - Tenancy: 'core-functionality/tenancy.md'
+        - Virtualization: 'core-functionality/virtualization.md'
+        - VLAN Management: 'core-functionality/vlans.md'
     - Additional Features:
         - Caching: 'additional-features/caching.md'
         - Change Logging: 'additional-features/change-logging.md'
-        - Context Data: 'models/extras/configcontext.md'
+        - Computed Fields: 'additional-features/computed-fields.md'
+        - Context Data: 'additional-features/config-contexts.md'
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'
         - Export Templates: 'models/extras/exporttemplate.md'
         - Git Repositories: 'models/extras/gitrepository.md'
+        - Health Check: 'additional-features/healthcheck.md'
         - Jobs: 'additional-features/jobs.md'
+        - Job Scheduling and Approvals: 'additional-features/job-scheduling-and-approvals.md'
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
         - Relationships: 'models/extras/relationship.md'
         - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
+        - Template Filters: 'additional-features/template-filters.md'
         - Webhooks: 'models/extras/webhook.md'
     - Plugins:
         - Using Plugins: 'plugins/index.md'
@@ -88,11 +104,17 @@ nav:
     - Development:
         - Introduction: 'development/index.md'
         - Getting Started: 'development/getting-started.md'
+        - Advanced Docker Compose Usage: 'development/docker-compose-advanced-use-cases.md'
         - Best Practices: 'development/best-practices.md'
         - Style Guide: 'development/style-guide.md'
         - Extending Models: 'development/extending-models.md'
         - Application Registry: 'development/application-registry.md'
+        - Page Templates: 'development/templates.md'
+        - Navigation Menu: 'development/navigation-menu.md'
+        - Home Page Panels: 'development/homepage.md'
         - User Preferences: 'development/user-preferences.md'
         - Release Checklist: 'development/release-checklist.md'
     - Release Notes:
         - Version 1.0: 'release-notes/version-1.0.md'
+        - Version 1.1: 'release-notes/version-1.1.md'
+        - Version 1.2: 'release-notes/version-1.2.md'

@@ -3,13 +3,102 @@ from django_tables2.utils import Accessor
 
 from nautobot.utilities.tables import BaseTable, BooleanColumn
 from nautobot.dcim.models import ConsolePort, Interface, PowerPort
-from .cables import *
-from .devices import *
-from .devicetypes import *
-from .power import *
-from .racks import *
-from .sites import *
+from .cables import CableTable
+from .devices import (
+    ConsolePortTable,
+    ConsoleServerPortTable,
+    DeviceBayTable,
+    DeviceConsolePortTable,
+    DeviceConsoleServerPortTable,
+    DeviceDeviceBayTable,
+    DeviceFrontPortTable,
+    DeviceImportTable,
+    DeviceInterfaceTable,
+    DeviceInventoryItemTable,
+    DevicePowerPortTable,
+    DevicePowerOutletTable,
+    DeviceRearPortTable,
+    DeviceRoleTable,
+    DeviceTable,
+    FrontPortTable,
+    InterfaceTable,
+    InventoryItemTable,
+    PlatformTable,
+    PowerOutletTable,
+    PowerPortTable,
+    RearPortTable,
+    VirtualChassisTable,
+)
+from .devicetypes import (
+    ConsolePortTemplateTable,
+    ConsoleServerPortTemplateTable,
+    DeviceBayTemplateTable,
+    DeviceTypeTable,
+    FrontPortTemplateTable,
+    InterfaceTemplateTable,
+    ManufacturerTable,
+    PowerOutletTemplateTable,
+    PowerPortTemplateTable,
+    RearPortTemplateTable,
+)
+from .power import PowerFeedTable, PowerPanelTable
+from .racks import (
+    RackTable,
+    RackDetailTable,
+    RackGroupTable,
+    RackReservationTable,
+    RackRoleTable,
+)
+from .sites import RegionTable, SiteTable
 
+__all__ = (
+    "CableTable",
+    "ConsoleConnectionTable",
+    "ConsolePortTable",
+    "ConsolePortTemplateTable",
+    "ConsoleServerPortTable",
+    "ConsoleServerPortTemplateTable",
+    "DeviceBayTable",
+    "DeviceBayTemplateTable",
+    "DeviceConsolePortTable",
+    "DeviceConsoleServerPortTable",
+    "DeviceDeviceBayTable",
+    "DeviceFrontPortTable",
+    "DeviceImportTable",
+    "DeviceInterfaceTable",
+    "DeviceInventoryItemTable",
+    "DevicePowerOutletTable",
+    "DevicePowerPortTable",
+    "DeviceRearPortTable",
+    "DeviceRoleTable",
+    "DeviceTable",
+    "DeviceTypeTable",
+    "FrontPortTable",
+    "FrontPortTemplateTable",
+    "InterfaceConnectionTable",
+    "InterfaceTable",
+    "InterfaceTemplateTable",
+    "InventoryItemTable",
+    "ManufacturerTable",
+    "PlatformTable",
+    "PowerConnectionTable",
+    "PowerFeedTable",
+    "PowerOutletTable",
+    "PowerOutletTemplateTable",
+    "PowerPanelTable",
+    "PowerPortTable",
+    "PowerPortTemplateTable",
+    "RackDetailTable",
+    "RackGroupTable",
+    "RackReservationTable",
+    "RackRoleTable",
+    "RackTable",
+    "RearPortTable",
+    "RearPortTemplateTable",
+    "RegionTable",
+    "SiteTable",
+    "VirtualChassisTable",
+)
 
 #
 # Device connections

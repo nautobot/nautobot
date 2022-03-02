@@ -19,7 +19,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
-from nautobot.ipam.choices import *
+from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
@@ -38,8 +38,22 @@ from nautobot.utilities.api import get_serializer_for_model
 from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
 )
-from .nested_serializers import *
 
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
+    IPFieldSerializer,
+    NestedAggregateSerializer,
+    NestedIPAddressSerializer,
+    NestedPrefixSerializer,
+    NestedRIRSerializer,
+    NestedRoleSerializer,
+    NestedRouteTargetSerializer,
+    NestedServiceSerializer,
+    NestedVLANGroupSerializer,
+    NestedVLANSerializer,
+    NestedVRFSerializer,
+)
 
 #
 # VRFs
@@ -82,7 +96,9 @@ class VRFSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "last_updated",
             "ipaddress_count",
             "prefix_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -106,7 +122,9 @@ class RouteTargetSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -131,7 +149,9 @@ class RIRSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -156,8 +176,10 @@ class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         read_only_fields = ["family"]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -184,7 +206,9 @@ class RoleSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class VLANGroupSerializer(CustomFieldModelSerializer):
@@ -205,12 +229,17 @@ class VLANGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = []
+
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
 
         # Validate uniqueness of name and slug if a site has been assigned.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("site", None):
             for field in ["name", "slug"]:
                 validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("site", field))
@@ -248,8 +277,10 @@ class VLANSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "created",
             "last_updated",
             "prefix_count",
+            "computed_fields",
         ]
         validators = []
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
 
@@ -299,8 +330,10 @@ class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         read_only_fields = ["family"]
+        opt_in_fields = ["computed_fields"]
 
 
 class PrefixLengthSerializer(serializers.Serializer):
@@ -392,8 +425,10 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         read_only_fields = ["family"]
+        opt_in_fields = ["computed_fields"]
 
     @swagger_serializer_method(serializer_or_field=serializers.DictField)
     def get_assigned_object(self, obj):
@@ -466,4 +501,6 @@ class ServiceSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
