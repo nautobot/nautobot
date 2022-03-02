@@ -74,7 +74,7 @@ class RelationshipModel(models.Model):
             }
         """
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
-        if advanced_ui is not None and advanced_ui in [True, False]:
+        if advanced_ui is not None:
             src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
             dst_relationships = dst_relationships.filter(advanced_ui=advanced_ui)
         content_type = ContentType.objects.get_for_model(self)
