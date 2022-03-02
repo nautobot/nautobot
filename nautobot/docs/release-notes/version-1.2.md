@@ -142,7 +142,9 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ## v1.2.8 (2022-MM-DD)
 
+### Added
 
+- [#1299](https://github.com/nautobot/nautobot/issues/1299) - Add SECURITY.md to repository 
 
 ## v1.2.7 (2022-02-22)
 
