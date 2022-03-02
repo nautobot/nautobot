@@ -20,7 +20,7 @@ from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 __all__ = (
@@ -460,13 +460,15 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             )
 
     def to_objectchange(self, action):
+
         # Annotate the parent VirtualMachine
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
-            related_object=self.virtual_machine,
             object_data=serialize_object(self),
+            object_data_v2=serialize_object_v2(self),
+            related_object=self.virtual_machine,
         )
 
     @property

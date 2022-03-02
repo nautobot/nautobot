@@ -40,8 +40,7 @@ from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import UtilizationData, serialize_object
-
+from nautobot.utilities.utils import UtilizationData, serialize_object, serialize_object_v2
 
 __all__ = (
     "BaseInterface",
@@ -86,12 +85,14 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
         except ObjectDoesNotExist:
             # The parent Device has already been deleted
             device = None
+
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
-            related_object=device,
             object_data=serialize_object(self),
+            object_data_v2=serialize_object_v2(self),
+            related_object=device,
         )
 
     @property
