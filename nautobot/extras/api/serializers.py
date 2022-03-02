@@ -81,6 +81,7 @@ from .nested_serializers import (  # noqa: F401
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
+    NestedJobSerializer,
     NestedJobResultSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
@@ -639,6 +640,7 @@ class JobResultSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+    job_model = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
     schedule = NestedScheduledJobSerializer(read_only=True)
 
@@ -650,6 +652,7 @@ class JobResultSerializer(serializers.ModelSerializer):
             "created",
             "completed",
             "name",
+            "job_model",
             "obj_type",
             "status",
             "user",
@@ -667,6 +670,7 @@ class JobResultSerializer(serializers.ModelSerializer):
 class ScheduledJobSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
     user = NestedUserSerializer(read_only=True)
+    job_model = NestedJobSerializer(read_only=True)
     approved_by_user = NestedUserSerializer(read_only=True)
 
     class Meta:
@@ -676,6 +680,7 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
             "url",
             "name",
             "user",
+            "job_model",
             "task",
             "interval",
             "queue",

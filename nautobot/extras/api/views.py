@@ -17,7 +17,13 @@ from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
-from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
+from nautobot.core.api.views import (
+    BulkDestroyModelMixin,
+    BulkUpdateModelMixin,
+    ModelViewSetMixin,
+    ModelViewSet,
+    ReadOnlyModelViewSet,
+)
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
@@ -368,21 +374,28 @@ def _run_job(request, job_model):
         )
         job.result = job_result
 
+    # TODO: this isn't ideal for the new job-model API views!
     serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
 
     return Response(serializer.data)
 
 
 class JobModelViewSet(
+    # DRF mixins:
     # note no CreateModelMixin
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
+    # Nautobot mixins:
+    BulkUpdateModelMixin,
+    BulkDestroyModelMixin,
+    ModelViewSetMixin,
+    # Base class
     viewsets.GenericViewSet,
 ):
     queryset = Job.objects.all()
-    serializer_class = serializers.JobModelSerializer
+    serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
     @swagger_auto_schema(responses={"200": serializers.JobVariableSerializer(many=True)})

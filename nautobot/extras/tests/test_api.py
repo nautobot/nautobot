@@ -32,6 +32,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobLogEntry,
     JobResult,
     Relationship,
@@ -845,9 +846,63 @@ class ImageAttachmentTest(
         )
 
 
+class JobModelTestCase(
+    # note no CreateObjectViewTestCase
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+    APIViewTestCases.UpdateObjectViewTestCase,
+    APIViewTestCases.DeleteObjectViewTestCase,
+):
+    model = Job
+    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "source", "url"]
+    choices_fields = None
+    update_data = {
+        # source, module_name, job_class_name, installed are NOT editable
+        "grouping_override": True,
+        "grouping": "Overridden grouping",
+        "name_override": True,
+        "name": "Overridden name",
+        "slug": "overridden-slug",
+        "description_override": True,
+        "description": "This is an overridden description.",
+        "enabled": True,
+        "approval_required_override": True,
+        "approval_required": True,
+        "commit_default_override": True,
+        "commit_default": False,
+        "hidden_override": True,
+        "hidden": True,
+        "read_only_override": True,
+        "read_only": True,
+        "soft_time_limit_override": True,
+        "soft_time_limit": 350.1,
+        "time_limit_override": True,
+        "time_limit": 650,
+    }
+    bulk_update_data = {
+        "enabled": True,
+        "approval_required_override": True,
+        "approval_required": True,
+    }
+    validation_excluded_fields = []
+
+    def _get_detail_url(self, instance):
+        """
+        Override default implementation as we're under "jobmodel-detail" rather than "job-detail".
+        """
+        viewname = f"{self._get_view_namespace()}:jobmodel-detail"
+        return reverse(viewname, kwargs={"pk": instance.pk})
+
+    def _get_list_url(self):
+        """
+        Override default implementation as we're under "jobmodel-list" rather than "job-list".
+        """
+        viewname = f"{self._get_view_namespace()}:jobmodel-list"
+        return reverse(viewname)
+
+
 class JobTest(APITestCase):
-    def setUp(self):
-        super().setUp()
+    """Tests for deprecated Job-class-based views."""
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_jobs_anonymous(self):
