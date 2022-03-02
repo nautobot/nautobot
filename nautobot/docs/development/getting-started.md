@@ -502,12 +502,12 @@ Before running integration tests, the `selenium` container must be running. If y
 |---------------------------|-----------------------------------|
 | (automatic)               | `invoke start --service selenium` |
 
-By Nautobot convention, integration tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `integration`. The base test case class `nautobot.utilities.testing.integration.SeleniumTestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing integration test cases in the Nautobot test suite utilities inherit from this class.
+By Nautobot convention, integration tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `integration`. The base test case class `nautobot.utilities.testing.integration.SplinterTestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing integration test cases in the Nautobot test suite utilities inherit from this class.
 
 !!! warning
-    New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SeleniumTestCase` and added in the `integration` directory in the `tests` directory of an inner Nautobot application. Do not use any other base class for integration tests.
+    New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SplinterTestCase` and added in the `integration` directory in the `tests` directory of an inner Nautobot application. Do not use any other base class for integration tests.
 
-We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and managable continuous development cycle.
+We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and manageable continuous development cycle.
 
 Wrong:
 ```python
@@ -520,14 +520,14 @@ class MyIntegrationTestCase(StaticLiveServerTestCase):
 
 Right:
 ```python
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.utilities.testing.integration import SplinterTestCase
 
 
-class MyIntegrationTestCase(SeleniumTestCase):
+class MyIntegrationTestCase(SplinterTestCase):
     ...
 ```
 
-Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
+Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.utilities.testing.integration.SplinterTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                                      |
 |---------------------------|---------------------------------------------------------------------------------------------------|
