@@ -5,7 +5,6 @@ from django.utils.safestring import mark_safe
 
 from nautobot.extras.models import ComputedField
 
-
 register = template.Library()
 
 
@@ -18,18 +17,19 @@ def has_computed_fields(context, obj):
     return ComputedField.objects.filter(content_type=content_type).exists()
 
 
-def _computed_fields(obj, advanced_ui=None):
+@register.simple_tag(takes_context=True)
+def computed_fields(context, obj, advanced_ui=None):
     """
     Render all applicable links for the given object.
     This can also check whether the advanced_ui attribute is True or False for UI display purposes.
     """
-    computed_fields = obj.get_computed_fields(label_as_key=True, advanced_ui=advanced_ui)
+    fields = obj.get_computed_fields(label_as_key=True, advanced_ui=advanced_ui)
     if not computed_fields:
         return ""
 
     template_code = ""
 
-    for label, value in computed_fields.items():
+    for label, value in fields.items():
         escaped_label = escape(label)
         template_code += f"""
             <tr>
@@ -38,28 +38,3 @@ def _computed_fields(obj, advanced_ui=None):
             <tr>
             """
     return mark_safe(template_code)
-
-
-@register.simple_tag(takes_context=True)
-def computed_fields(context, obj):
-    """
-    Render all applicable links for the given object.
-    This will ignore any advanced_ui setting.
-    """
-    return _computed_fields(obj)
-
-
-@register.simple_tag(takes_context=True)
-def computed_fields_basic(context, obj):
-    """
-    Render all applicable links for the given object which will display in the object's primary information tab.
-    """
-    return _computed_fields(obj, advanced_ui=False)
-
-
-@register.simple_tag(takes_context=True)
-def computed_fields_advanced(context, obj):
-    """
-    Render all applicable links for the given object which will display in the object's "Advanced" tab.
-    """
-    return _computed_fields(obj, advanced_ui=True)
