@@ -491,13 +491,13 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "name",
             "description",
             "required",
+            "advanced_ui",
             "filter_logic",
             "default",
             "weight",
             "validation_minimum",
             "validation_maximum",
             "validation_regex",
-            "advanced_ui",
         )
 
 
@@ -1019,6 +1019,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "slug",
             "description",
             "type",
+            "advanced_ui",
             "source_type",
             "source_label",
             "source_hidden",
@@ -1027,7 +1028,6 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "destination_label",
             "destination_hidden",
             "destination_filter",
-            "advanced_ui",
         ]
 
     def save(self, commit=True):
