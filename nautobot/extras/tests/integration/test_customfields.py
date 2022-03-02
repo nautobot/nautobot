@@ -5,7 +5,7 @@ from nautobot.dcim.models import Device
 from nautobot.extras.models import CustomField
 from nautobot.utilities.testing.integration import SplinterTestCase
 
-from . import _create_test_device
+from . import create_test_device
 
 
 class CustomFieldTestCase(SplinterTestCase):
@@ -191,7 +191,7 @@ class CustomFieldTestCase(SplinterTestCase):
         tab in the UI and checks it is there.
         It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it appears ONLY there!.
         """
-        device = _create_test_device()
+        device = create_test_device()
         custom_field = CustomField(
             type="text",
             label="Device Custom Field",

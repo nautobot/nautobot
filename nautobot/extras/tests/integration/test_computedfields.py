@@ -5,7 +5,7 @@ from nautobot.dcim.models import Device
 from nautobot.extras.models import ComputedField
 from nautobot.utilities.testing.integration import SplinterTestCase
 
-from . import _create_test_device
+from . import create_test_device
 
 
 class ComputedFieldsTestCase(SplinterTestCase):
@@ -31,7 +31,7 @@ class ComputedFieldsTestCase(SplinterTestCase):
         It secondly sets the computed field to be shown only in the "Advanced" tab in the UI
         and checks it appears ONLY there!.
         """
-        device = _create_test_device()
+        device = create_test_device()
         computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
             slug="device_computed_field",

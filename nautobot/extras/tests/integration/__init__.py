@@ -4,7 +4,7 @@ from nautobot.extras.models import Status
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 
 
-def _create_test_device():
+def create_test_device():
     test_uuid = str(uuid.uuid4())
     device_role = DeviceRole.objects.create(
         name=f"Test Role {test_uuid}",

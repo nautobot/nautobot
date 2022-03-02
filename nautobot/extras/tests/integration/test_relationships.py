@@ -6,7 +6,7 @@ from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation
 from nautobot.utilities.testing.integration import SplinterTestCase
 
-from . import _create_test_device
+from . import create_test_device
 
 
 class RelationshipsTestCase(SplinterTestCase):
@@ -31,7 +31,7 @@ class RelationshipsTestCase(SplinterTestCase):
         tab in the UI and checks it is there.
         It secondly sets the relationship to be shown only in the "Advanced" tab in the UI and checks it appears ONLY there!.
         """
-        device = _create_test_device()
+        device = create_test_device()
         power_panel = PowerPanel.objects.create(
             site=device.site,
             name="Test Power Panel",
