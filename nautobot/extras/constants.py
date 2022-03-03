@@ -16,6 +16,19 @@ EXTRAS_FEATURES = [
     "webhooks",
 ]
 
+# Field names that can be inherited from the Job source code or overridden in the Job database model
+JOB_OVERRIDABLE_FIELDS = (
+    "grouping",
+    "name",
+    "description",
+    "commit_default",
+    "hidden",
+    "read_only",
+    "approval_required",
+    "soft_time_limit",
+    "time_limit",
+)
+
 # JobLogEntry Truncation Length
 JOB_LOG_MAX_GROUPING_LENGTH = 100
 JOB_LOG_MAX_LOG_OBJECT_LENGTH = 200

@@ -40,6 +40,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -568,6 +569,53 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 #
+# Jobs
+#
+
+
+class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+    # TODO: enable this once we have an updated Job REST API
+    # url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+
+    class Meta:
+        model = Job
+        fields = [
+            "id",
+            # "url", TODO: enable this
+            "source",
+            "module_name",
+            "job_class_name",
+            "grouping",
+            "grouping_override",
+            "name",
+            "name_override",
+            "slug",
+            "description",
+            "description_override",
+            "installed",
+            "enabled",
+            "approval_required",
+            "approval_required_override",
+            "commit_default",
+            "commit_default_override",
+            "hidden",
+            "hidden_override",
+            "read_only",
+            "read_only_override",
+            "soft_time_limit",
+            "soft_time_limit_override",
+            "time_limit",
+            "time_limit_override",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+#
 # Job Results
 #
 
@@ -633,7 +681,7 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
 #
 
 
-class JobSerializer(serializers.Serializer):
+class JobClassSerializer(serializers.Serializer):
     url = serializers.HyperlinkedIdentityField(
         view_name="extras-api:job-detail",
         lookup_field="class_path",
@@ -650,7 +698,7 @@ class JobSerializer(serializers.Serializer):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
 
 
-class JobDetailSerializer(JobSerializer):
+class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
 
 

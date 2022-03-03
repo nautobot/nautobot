@@ -32,12 +32,13 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    ScheduledJob,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -59,6 +60,7 @@ __all__ = (
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
+    "JobFilterSet",
     "JobLogEntryFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
@@ -542,6 +544,53 @@ class ImageAttachmentFilterSet(BaseFilterSet):
 #
 # Jobs
 #
+
+
+class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    tag = TagFilter()
+
+    class Meta:
+        model = Job
+        fields = [
+            "id",
+            "source",
+            "module_name",
+            "job_class_name",
+            "slug",
+            "name",
+            "grouping",
+            "installed",
+            "enabled",
+            "approval_required",
+            "commit_default",
+            "hidden",
+            "read_only",
+            "soft_time_limit",
+            "time_limit",
+            "grouping_override",
+            "name_override",
+            "approval_required_override",
+            "description_override",
+            "commit_default_override",
+            "hidden_override",
+            "read_only_override",
+            "soft_time_limit_override",
+            "time_limit_override",
+        ]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(grouping__icontains=value)
+            | Q(description__icontains=value)
+        )
 
 
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):

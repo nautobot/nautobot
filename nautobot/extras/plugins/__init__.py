@@ -354,6 +354,9 @@ def register_jobs(class_list):
 
         registry["plugin_jobs"].append(job)
 
+    # Note that we do not (and cannot) update the Job records in the Nautobot database at this time.
+    # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
+
 
 #
 # Navigation menu links

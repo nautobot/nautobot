@@ -17,6 +17,7 @@ import yaml
 from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import (
+    JobSourceChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
@@ -27,11 +28,13 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    Job,
     JobLogEntry,
     JobResult,
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
+from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.git import GitRepo
 from nautobot.utilities.utils import copy_safe_request
@@ -908,7 +911,45 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
-    # No-op as jobs are not currently stored in the DB but are instead refreshed on-request.
+    installed_jobs = []
+    if not delete:
+        jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
+        if os.path.isdir(jobs_path):
+            for job_info in jobs_in_directory(jobs_path):
+                job_model, created = refresh_job_model_from_job_class(
+                    Job,
+                    f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}",
+                    job_info.job_class,
+                )
+                if created:
+                    message = f'Created Job model "{job_model}"'
+                else:
+                    message = f'Refreshed Job model "{job_model}"'
+                job_result.log(
+                    message,
+                    grouping="jobs",
+                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    logger=logger,
+                )
+                installed_jobs.append(job_model)
+        else:
+            job_result.log(
+                "No `jobs` subdirectory found in Git repository",
+                grouping="jobs",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                logger=logger,
+            )
+
+    for job_model in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
+        if job_model.installed and job_model not in installed_jobs:
+            job_result.log(
+                f'Marking Job model "{job_model}" as no longer installed',
+                grouping="jobs",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                logger=logger,
+            )
+            job_model.installed = False
+            job_model.save()
 
 
 #
