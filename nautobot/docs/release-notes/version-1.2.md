@@ -157,6 +157,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ## Fixed
 
 - [#1301](https://github.com/nautobot/nautobot/issues/1301) - Fixed window history handling for views with tabs in Safari/Firefox.
+- [#1399](https://github.com/nautobot/nautobot/issues/1399) - Fixed not being able to set master to `null` on Virtual Chassis API.
 - [#1405](https://github.com/nautobot/nautobot/issues/1405) - Fixed incorrect import in 'startplugin' template code.
 
 ## v1.2.7 (2022-02-22)
