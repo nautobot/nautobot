@@ -922,11 +922,12 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     job_info.job_class,
                 )
                 if created:
-                    message = f'Created Job model "{job_model}"'
+                    message = f"Created Job record"
                 else:
-                    message = f'Refreshed Job model "{job_model}"'
+                    message = f"Refreshed Job record"
                 job_result.log(
-                    message,
+                    message=message,
+                    obj=job_model,
                     grouping="jobs",
                     level_choice=LogLevelChoices.LOG_SUCCESS,
                     logger=logger,
@@ -943,7 +944,8 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     for job_model in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{repository_record.slug}"):
         if job_model.installed and job_model not in installed_jobs:
             job_result.log(
-                f'Marking Job model "{job_model}" as no longer installed',
+                message=f"Marking Job record as no longer installed",
+                obj=job_model,
                 grouping="jobs",
                 level_choice=LogLevelChoices.LOG_WARNING,
                 logger=logger,

@@ -55,6 +55,7 @@ JOB_LOGS = "job_logs"
     "graphql",
     "job_results",
     "relationships",
+    "webhooks",
 )
 class Job(PrimaryModel):
     """
@@ -503,6 +504,9 @@ class JobResult(BaseModel, CustomFieldModel):
                     celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
                 if hasattr(job_class.Meta, "time_limit"):
                     celery_kwargs["time_limit"] = job_class.Meta.time_limit
+            else:
+                # This may be OK - GitRepository sync for example doesn't (currently) have a related Job instance
+                pass
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 
