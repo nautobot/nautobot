@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 import logging
+import os
 import uuid
 
 from celery import schedules
@@ -10,6 +11,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import signals
 from django.urls import reverse
@@ -19,17 +21,25 @@ from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import LogLevelChoices, JobExecutionType, JobResultStatusChoices
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import ScheduledJobExtendedQuerySet
-from nautobot.extras.utils import extras_features, FeatureQuery
+from nautobot.extras.utils import extras_features, FeatureQuery, jobs_in_directory
 
 from .customfields import CustomFieldModel
+
+
+logger = logging.getLogger(__name__)
+
 
 # The JOB_LOGS variable is used to tell the JobLogEntry model the database to store to.
 # We default this to job_logs, and creating at the Global level allows easy override
@@ -39,14 +49,236 @@ from .customfields import CustomFieldModel
 JOB_LOGS = "job_logs"
 
 
-@extras_features("job_results")
-class Job(models.Model):
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "graphql",
+    "job_results",
+    "relationships",
+)
+class Job(PrimaryModel):
     """
-    Virtual model used to generate permissions for jobs. Does not exist in the database.
+    Database model representing an installed Job class.
     """
 
+    # Information used to locate the Job source code
+    source = models.CharField(
+        max_length=110,
+        editable=False,
+        db_index=True,
+        help_text="Source of the Python code for this job - local, Git repository, or plugins",
+    )
+    # source does not use choices=JobSourceChoices directly as for Git repositories, it must include the
+    # Git repository slug as part of the source value, in order to remain backwards-compatible.
+    # This is also why it maxes at 110 characters rather than 100 - "git.<100-character-repo-slug>"
+    module_name = models.CharField(
+        max_length=100,
+        editable=False,
+        db_index=True,
+        help_text="Dotted name of the Python module providing this job",
+    )
+    job_class_name = models.CharField(
+        max_length=100,
+        editable=False,
+        db_index=True,
+        help_text="Name of the Python class providing this job",
+    )
+
+    slug = AutoSlugField(
+        max_length=320,
+        populate_from=["source", "module_name", "job_class_name"],
+        slugify_function=slugify_dots_to_dashes,
+    )
+
+    # Human-readable information, potentially inherited from the source code
+    # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
+    grouping = models.CharField(max_length=255, help_text="Human-readable grouping that this job belongs to")
+    name = models.CharField(max_length=100, help_text="Human-readable name of this job")
+    description = models.TextField(blank=True, help_text="Markdown formatting is supported")
+
+    # Control flags
+    installed = models.BooleanField(
+        default=True,
+        db_index=True,
+        editable=False,
+        help_text="Whether the Python module and class providing this job are presently installed and loadable",
+    )
+    enabled = models.BooleanField(default=False, help_text="Whether this job can be executed by users")
+
+    # Additional properties, potentially inherited from the source code
+    # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
+    approval_required = models.BooleanField(
+        default=False, help_text="Whether the job requires approval from another user before running"
+    )
+    commit_default = models.BooleanField(
+        default=True, help_text="Whether the job defaults to committing changes when run, or defaults to a dry-run"
+    )
+    hidden = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether the job defaults to not being shown in the UI",
+    )
+    # Job.Meta.field_order is not overridable in this model
+    read_only = models.BooleanField(
+        default=False, help_text="Whether the job is prevented from making lasting changes to the database"
+    )
+    soft_time_limit = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will receive a <code>SoftTimeLimitExceeded</code> "
+        "exception.<br>Set to 0 to use Nautobot system default",
+    )
+    time_limit = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will be forcibly terminated."
+        "<br>Set to 0 to use Nautobot system default",
+    )
+
+    # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
+    grouping_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured grouping will remain even if the underlying Job source code changes",
+    )
+    name_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured name will remain even if the underlying Job source code changes",
+    )
+    description_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured description will remain even if the underlying Job source code changes",
+    )
+
+    approval_required_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    commit_default_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    hidden_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    read_only_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    soft_time_limit_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    time_limit_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+
     class Meta:
-        managed = False
+        managed = True
+        ordering = ["grouping", "name"]
+        unique_together = [
+            ("source", "module_name", "job_class_name"),
+            ("grouping", "name"),
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._job_class = None
+        self._latest_result = None
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def job_class(self):
+        """Get the Job class (source code) associated with this Job model."""
+        if not self.installed:
+            return None
+        if self._job_class is None:
+            if self.source == JobSourceChoices.SOURCE_LOCAL:
+                path = settings.JOBS_ROOT
+                for job_info in jobs_in_directory(settings.JOBS_ROOT, module_name=self.module_name):
+                    if job_info.job_class_name == self.job_class_name:
+                        self._job_class = job_info.job_class
+                        break
+                else:
+                    logger.warning("Module %s job class %s not found!", self.module_name, self.job_class_name)
+            elif self.source.startswith(JobSourceChoices.SOURCE_GIT):
+                path = settings.GIT_ROOT
+                repo_slug = self.source.split(".", 1)[1]
+                from .datasources import GitRepository
+                from nautobot.extras.datasources.git import ensure_git_repository
+
+                try:
+                    repository_record = GitRepository.objects.get(slug=repo_slug)
+                    # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
+                    # they are not required to share a common filesystem; therefore, we may need to refresh our local
+                    # clone of the Git repository to ensure that it is in sync with the latest repository clone
+                    # from any instance.
+                    ensure_git_repository(
+                        repository_record,
+                        head=repository_record.current_head,
+                        logger=logger,
+                    )
+                    path = os.path.join(repository_record.filesystem_path, "jobs")
+                    for job_info in jobs_in_directory(path, module_name=self.module_name):
+                        if job_info.job_class_name == self.job_class_name:
+                            self._job_class = job_info.job_class
+                            break
+                    else:
+                        logger.warning(
+                            "Module %s job class %s not found in repository %s",
+                            self.module_name,
+                            self.job_class_name,
+                            repository_record,
+                        )
+                except GitRepository.DoesNotExist:
+                    return None
+                except Exception as exc:
+                    logger.error(f"Error during local clone/refresh of Git repository {repository_record}: {exc}")
+                    return None
+            elif self.source == JobSourceChoices.SOURCE_PLUGIN:
+                # pkgutil.resolve_name is only available in Python 3.9 and later
+                self._job_class = import_object(f"{self.module_name}.{self.job_class_name}")
+
+        return self._job_class
+
+    @property
+    def class_path(self):
+        return f"{self.source}/{self.module_name}/{self.job_class_name}"
+
+    @property
+    def latest_result(self):
+        if self._latest_result is None:
+            self._latest_result = self.results.last()
+        return self._latest_result
+
+    @property
+    def description_first_line(self):
+        return self.description.splitlines()[0]
+
+    @property
+    def git_repository(self):
+        """The GitRepository providing this Job, if applicable."""
+        if self.source.startswith(JobSourceChoices.SOURCE_GIT):
+            from .datasources import GitRepository
+
+            try:
+                return GitRepository.objects.get(slug=self.source.split(".")[1])
+            except GitRepository.DoesNotExist:
+                return None
+        return None
+
+    def clean(self):
+        """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
+        if self.job_class is not None:
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                if not getattr(self, f"{field_name}_override", False):
+                    setattr(self, field_name, getattr(self.job_class, field_name))
+
+    def get_absolute_url(self):
+        return reverse("extras:job_detail", kwargs={"slug": self.slug})
 
 
 @extras_features(
@@ -86,8 +318,15 @@ class JobLogEntry(BaseModel):
 )
 class JobResult(BaseModel, CustomFieldModel):
     """
-    This model stores the results from running a user-defined report.
+    This model stores the results from running a Job.
     """
+
+    # Note that we allow job_model to be null and use models.SET_NULL here.
+    # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
+    # deleting the corresponding Job record.
+    job_model = models.ForeignKey(
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
+    )
 
     name = models.CharField(max_length=255)
     obj_type = models.ForeignKey(
@@ -171,18 +410,19 @@ class JobResult(BaseModel, CustomFieldModel):
 
         model_class = self.obj_type.model_class()
 
-        if hasattr(model_class, "name"):
-            # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
+        if model_class is not None:
+            if hasattr(model_class, "name"):
+                # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
+                try:
+                    return model_class.objects.get(name=self.name)
+                except model_class.DoesNotExist:
+                    pass
+
+            # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
             try:
-                return model_class.objects.get(name=self.name)
+                return model_class.objects.get(id=self.job_id)
             except model_class.DoesNotExist:
                 pass
-
-        # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
-        try:
-            return model_class.objects.get(id=self.job_id)
-        except model_class.DoesNotExist:
-            pass
 
         return None
 
@@ -341,6 +581,12 @@ class ScheduledJob(BaseModel):
         max_length=200,
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
+    )
+    # Note that we allow job_model to be null and use models.SET_NULL here.
+    # This is because we want to be able to keep ScheduledJob records for tracking and auditing purposes even after
+    # deleting the corresponding Job record.
+    job_model = models.ForeignKey(
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
     )
     job_class = models.CharField(
         max_length=255, verbose_name="Job Class", help_text="Name of the fully qualified Nautobot Job class path"

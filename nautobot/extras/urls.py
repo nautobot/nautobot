@@ -10,6 +10,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
+    Job,
     Secret,
     SecretsGroup,
     Status,
@@ -348,6 +349,22 @@ urlpatterns = [
         views.JobApprovalRequestView.as_view(),
         name="scheduledjob_approval_request_view",
     ),
+    # 2.0 TODO: JobDetailView should be just JobView, but see below
+    path(
+        "jobs/<slug:slug>/",
+        views.JobDetailView.as_view(),
+        name="job_detail",  # 2.0 TODO: name="job",
+    ),
+    path("jobs/<slug:slug>/edit/", views.JobEditView.as_view(), name="job_edit"),
+    path("jobs/<slug:slug>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
+    path(
+        "jobs/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="job_changelog",
+        kwargs={"model": Job},
+    ),
+    # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
+    path("jobs/<slug:slug>/run/", views.JobView.as_view(), name="job_run"),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),

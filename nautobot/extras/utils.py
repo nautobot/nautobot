@@ -1,6 +1,10 @@
 import collections
 import hashlib
 import hmac
+import inspect
+import logging
+import pkgutil
+import sys
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -8,8 +12,12 @@ from django.db.models import Q
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
-from nautobot.extras.constants import EXTRAS_FEATURES
+from nautobot.core.fields import slugify_dots_to_dashes
+from nautobot.extras.constants import EXTRAS_FEATURES, JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.registry import registry
+
+
+logger = logging.getLogger(__name__)
 
 
 def is_taggable(obj):
@@ -122,3 +130,83 @@ def get_worker_count(request=None):
             messages.warning(request, "RQ workers are deprecated. Please migrate your workers to Celery.")
 
     return celery_count
+
+
+# namedtuple class yielded by the jobs_in_directory generator function, below
+# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">)
+JobClassInfo = collections.namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
+
+
+def jobs_in_directory(path, module_name=None, reload_modules=True):
+    """
+    Walk the available Python modules in the given directory, and for each module, walk its Job class members.
+
+    Args:
+        path (str): Directory to import modules from, outside of sys.path
+        module_name (str): Specific module name to select; if unspecified, all modules will be inspected
+        reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
+
+    Yields:
+        JobClassInfo: (module_name, module, job_class_name, job_class)
+    """
+    from .jobs import is_job  # avoid circular import
+
+    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
+        if module_name and discovered_module_name != module_name:
+            continue
+        if reload_modules and discovered_module_name in sys.modules:
+            del sys.modules[discovered_module_name]
+        try:
+            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+        except Exception as exc:
+            logger.error(f"Unable to load module {module_name} from {path}: {exc}")
+            # TODO: we want to be able to report these errors to the UI in some fashion?
+            continue
+        # Get all members of the module that are Job subclasses
+        for job_class_name, job_class in inspect.getmembers(module, is_job):
+            yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
+
+
+def refresh_job_model_from_job_class(job_model_class, job_source, job_class):
+    """
+    Create or update a job_model record based on the metadata of the provided job_class.
+
+    Note that job_model_class is a parameter (rather than doing a "from nautobot.extras.models import Job") because
+    this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
+    and in that case we need to not import models ourselves.
+    """
+    job_model, created = job_model_class.objects.get_or_create(
+        source=job_source,
+        module_name=job_class.__module__,
+        job_class_name=job_class.__name__,
+        defaults={
+            "slug": slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}"),
+            "grouping": job_class.grouping,
+            "name": job_class.name,
+            "installed": True,
+            "enabled": False,
+        },
+    )
+
+    for field_name in JOB_OVERRIDABLE_FIELDS:
+        # Was this field directly inherited from the job before, or was it overridden in the database?
+        if not getattr(job_model, f"{field_name}_override", False):
+            # It was inherited and not overridden
+            setattr(job_model, field_name, getattr(job_class, field_name))
+
+    if not created:
+        # Mark it as installed regardless
+        job_model.installed = True
+
+    job_model.save()
+
+    logger.info(
+        '%s Job "%s: %s" from <%s: %s>',
+        "Created" if created else "Refreshed",
+        job_model.grouping,
+        job_model.name,
+        job_source,
+        job_class.__name__,
+    )
+
+    return (job_model, created)

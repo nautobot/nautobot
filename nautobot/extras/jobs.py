@@ -4,8 +4,6 @@ import inspect
 import json
 import logging
 import os
-import pkgutil
-import sys
 import shutil
 from textwrap import dedent
 import traceback
@@ -36,6 +34,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, ScheduledJob
 from .registry import registry
+from .utils import jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -174,8 +173,9 @@ class BaseJob:
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
-    def hidden(cls):
-        return getattr(cls.Meta, "hidden", False)
+    def grouping(cls):
+        module = inspect.getmodule(cls)
+        return getattr(module, "name", module.__name__)
 
     @classproperty
     def name(cls):
@@ -192,12 +192,51 @@ class BaseJob:
         return ""
 
     @classproperty
+    def commit_default(cls):
+        return getattr(cls.Meta, "commit_default", True)
+
+    @classproperty
+    def hidden(cls):
+        return getattr(cls.Meta, "hidden", False)
+
+    @classproperty
+    def field_order(cls):
+        return getattr(cls.Meta, "field_order", None)
+
+    @classproperty
     def read_only(cls):
         return getattr(cls.Meta, "read_only", False)
 
     @classproperty
     def approval_required(cls):
         return getattr(cls.Meta, "approval_required", False)
+
+    @classproperty
+    def soft_time_limit(cls):
+        return getattr(cls.Meta, "soft_time_limit", 0)
+
+    @classproperty
+    def time_limit(cls):
+        return getattr(cls.Meta, "time_limit", 0)
+
+    @classproperty
+    def properties_dict(cls):
+        """
+        Return all relevant classproperties as a dict.
+
+        Used for convenient rendering into job_edit.html via the `json_script` template tag.
+        """
+        return {
+            "name": cls.name,
+            "grouping": cls.grouping,
+            "description": cls.description,
+            "approval_required": cls.approval_required,
+            "commit_default": cls.commit_default,
+            "hidden": cls.hidden,
+            "read_only": cls.read_only,
+            "soft_time_limit": cls.soft_time_limit,
+            "time_limit": cls.time_limit,
+        }
 
     @classmethod
     def _get_vars(cls):
@@ -264,12 +303,10 @@ class BaseJob:
             form.fields["_commit"].initial = False
         else:
             # Set initial "commit" checkbox state based on the Meta parameter
-            form.fields["_commit"].initial = getattr(self.Meta, "commit_default", True)
+            form.fields["_commit"].initial = self.commit_default
 
-        field_order = getattr(self.Meta, "field_order", None)
-
-        if field_order:
-            form.order_fields(field_order)
+        if self.field_order:
+            form.order_fields(self.field_order)
 
         if approval_view:
             # Set `disabled=True` on all fields
@@ -817,39 +854,18 @@ def get_jobs():
 
     paths = _get_job_source_paths()
 
-    # Iterate over all groupings (local, git.<slug1>, git.<slug2>, etc.)
-    for grouping, path_list in paths.items():
-        # Iterate over all modules (Python files) found in any of the directory paths identified for the given grouping
-        for importer, module_name, _ in pkgutil.iter_modules(path_list):
-            try:
-                # Remove cached module to ensure consistency with filesystem
-                if module_name in sys.modules:
-                    del sys.modules[module_name]
-
-                # Dynamically import this module to make its contents (job(s)) available to Python
-                module = importer.find_module(module_name).load_module(module_name)
-            except Exception as exc:
-                logger.error(f"Unable to load job {module_name}: {exc}")
-                continue
-
-            # For each module, we construct a dict {"name": module_name, "jobs": {"job_name": job_class, ...}}
-            human_readable_name = module.name if hasattr(module, "name") else module_name
-            module_jobs = {"name": human_readable_name, "jobs": OrderedDict()}
-            # Get all Job subclasses (which includes Script and Report subclasses as well) in this module,
-            # and add them to the dict
-            for name, cls in inspect.getmembers(module, is_job):
-                module_jobs["jobs"][name] = cls
-
-            # If there were any Job subclasses found, add the module_jobs dict to the overall jobs dict
-            # (otherwise skip it since there aren't any jobs in this module to report)
-            if module_jobs["jobs"]:
-                jobs.setdefault(grouping, {})[module_name] = module_jobs
+    # Iterate over all filesystem sources (local, git.<slug1>, git.<slug2>, etc.)
+    for source, path in paths.items():
+        for job_info in jobs_in_directory(path):
+            jobs.setdefault(source, {})
+            if job_info.module_name not in jobs[source]:
+                jobs[source][job_info.module_name] = {"name": job_info.job_class.grouping, "jobs": OrderedDict()}
+            jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
 
     # Add jobs from plugins (which were already imported at startup)
     for cls in registry["plugin_jobs"]:
         module = inspect.getmodule(cls)
-        human_readable_name = module.name if hasattr(module, "name") else module.__name__
-        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": human_readable_name, "jobs": OrderedDict()})
+        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
         jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
 
     return jobs
@@ -859,14 +875,14 @@ def _get_job_source_paths():
     """
     Helper function to get_jobs().
 
-    Constructs a dict of {"grouping": [filesystem_path, ...]}.
+    Constructs a dict of {"grouping": filesystem_path, ...}.
     Current groupings are "local", "git.<repository_slug>".
     Plugin jobs aren't loaded dynamically from a source_path and so are not included in this function
     """
     paths = {}
     # Locally installed jobs
     if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
-        paths.setdefault("local", []).append(settings.JOBS_ROOT)
+        paths["local"] = settings.JOBS_ROOT
 
     # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
@@ -890,7 +906,7 @@ def _get_job_source_paths():
 
             jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
             if os.path.isdir(jobs_path):
-                paths[f"git.{repository_record.slug}"] = [jobs_path]
+                paths[f"git.{repository_record.slug}"] = jobs_path
             else:
                 logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
 
@@ -995,14 +1011,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    if hasattr(job.Meta, "soft_time_limit"):
-        soft_time_limit = job.Meta.soft_time_limit
-    else:
-        soft_time_limit = settings.CELERY_TASK_SOFT_TIME_LIMIT
-    if hasattr(job.Meta, "time_limit"):
-        time_limit = job.Meta.time_limit
-    else:
-        time_limit = settings.CELERY_TASK_TIME_LIMIT
+    soft_time_limit = job.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+    time_limit = job.time_limit or settings.CELERY_TASK_TIME_LIMIT
     if time_limit <= soft_time_limit:
         job_result.log(
             f"The hard time limit of {time_limit} seconds is less than "
