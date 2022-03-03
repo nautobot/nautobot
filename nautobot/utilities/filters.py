@@ -97,7 +97,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=False, exclude=True, **kwargs
     ):
         if field_name is None:
-            raise ValueError(f"Field name is required for {__self__.__class__.__name__}")
+            raise ValueError(f"Field name is required for {self.__class__.__name__}")
 
         super().__init__(
             field_name=field_name,

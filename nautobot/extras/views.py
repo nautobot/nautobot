@@ -514,6 +514,22 @@ class DynamicGroupView(generic.ObjectView):
         return context
 
 
+def _generate_filter_form(filterform_class, filter_fields):
+    """
+    Closure to generate a dynamic FilterForm that can be used to validate teh filter fields
+    that get saved on `DynamicGroup.filter`.
+    """
+
+    class FilterForm(filterform_class):
+        prefix = "filter"
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.fields = filter_fields
+
+    return FilterForm
+
+
 class DynamicGroupEditView(generic.ObjectEditView):
     queryset = DynamicGroup.objects.all()
     model_form = forms.DynamicGroupForm
@@ -522,55 +538,13 @@ class DynamicGroupEditView(generic.ObjectEditView):
     def get_extra_context(self, request, instance):
         ctx = super().get_extra_context(request, instance)
 
-        from django.forms.models import BaseModelForm, ModelFormOptions
-
-        def _generate_filter_form(filterform_class, filter_fields, exclude_fields):
-            """
-            Closure to generate a dynamic FilterForm that can be used to validate teh filter fields
-            that get saved on `DynamicGroup.filter`.
-            """
-
-            class FilterForm(filterform_class, BaseModelForm):
-                def __init__(self, *args, **kwargs):
-                    self._meta = ModelFormOptions(self.Meta)
-                    super().__init__(*args, **kwargs)
-                    self._append_filters()
-
-                class Meta:
-                    model = DynamicGroup
-                    fields = list(filter_fields)
-                    exclude = exclude_fields
-
-                def _append_filters(self):
-                    """Dynamically add the fields from the associated DynamicGroupMap to the form."""
-                    filter_fields = self.instance.get_filter_fields()
-                    if filter_fields is None:
-                        return
-
-                    self.fields = filter_fields
-
-                def save(self, commit=True):
-                    # FIXME(jathan): Don't call parent `save()` and instaed literally just save the
-                    # filters on this instance and return it.
-                    # obj = super().save(commit)
-                    if commit:
-                        self.instance.save_filters(self)
-
-                    self.instance.save()
-
-                    # return obj
-                    return self.instance
-
-            return FilterForm
-
         # FIXME(jathan); This is a stopgap for the moment just to keep things
         # moving. This must be revisited for clarity. Too many things in this
         # `try...except.`
         try:
             filterform_class = instance.map and instance.map.filterform
-            filter_fields = filterform_class().fields
-            exclude_fields = list(instance.custom_field_data)
-            FilterForm = _generate_filter_form(filterform_class, filter_fields, exclude_fields)
+            filter_fields = instance.get_filter_fields()
+            FilterForm = _generate_filter_form(filterform_class, filter_fields)
         except (AttributeError, TypeError):
             FilterForm = None
 
@@ -580,9 +554,9 @@ class DynamicGroupEditView(generic.ObjectEditView):
             # See: https://sentry.io/share/issue/fb41c6afb40248f6931021574bc38a0d/
             extra_form = None
         elif request.POST:
-            extra_form = FilterForm(data=request.POST, instance=instance)
+            extra_form = FilterForm(data=request.POST)
         else:
-            extra_form = FilterForm(instance=instance)
+            extra_form = FilterForm(initial=instance.filter)
 
         # FIXME(jathan): Currently replaced with dynamic FilterForm generation (see
         # `_generate_filter_form` above)
@@ -603,18 +577,22 @@ class DynamicGroupEditView(generic.ObjectEditView):
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
-                    obj = form.save()
+                    obj = form.save(commit=False)
 
                     # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
+                    # self.queryset.get(pk=obj.pk)
 
                     # Process the extra form
                     ctx = self.get_extra_context(request, obj)
                     extra_form = ctx["extra_form"]
                     if extra_form.is_valid():
-                        extra_form.save()
+                        obj.save_filters(extra_form)
                     else:
                         raise RuntimeError(extra_form.errors)
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    obj.save()
+                    self.queryset.get(pk=obj.pk)
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",
