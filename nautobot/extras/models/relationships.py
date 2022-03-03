@@ -294,7 +294,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
     )
     advanced_ui = models.BooleanField(
         default=False,
-        verbose_name="Hide from main detail tab",
+        verbose_name="Move to Advanced tab",
         help_text="Hide this field from the object's primary information tab. "
         'It will appear in the "Advanced" tab instead.',
     )
