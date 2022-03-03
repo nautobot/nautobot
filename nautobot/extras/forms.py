@@ -42,6 +42,7 @@ from .choices import (
     RelationshipSideChoices,
     RelationshipTypeChoices,
 )
+from .constants import JOB_OVERRIDABLE_FIELDS
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
@@ -54,6 +55,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobResult,
     ObjectChange,
     Relationship,
@@ -883,6 +885,70 @@ class JobForm(BootstrapMixin, forms.Form):
         A boolean indicating whether the form requires user input (ignore the _commit field).
         """
         return bool(len(self.fields) > 1)
+
+
+class JobEditForm(NautobotModelForm):
+    slug = SlugField()
+
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = Job
+        fields = [
+            "slug",
+            "enabled",
+            "name_override",
+            "name",
+            "grouping_override",
+            "grouping",
+            "description_override",
+            "description",
+            "commit_default_override",
+            "commit_default",
+            "hidden_override",
+            "hidden",
+            "read_only_override",
+            "read_only",
+            "approval_required_override",
+            "approval_required",
+            "soft_time_limit_override",
+            "soft_time_limit",
+            "time_limit_override",
+            "time_limit",
+            "tags",
+        ]
+
+    def clean(self):
+        """
+        For all overridable fields, if they aren't marked as overridden, revert them to the underlying value if known.
+        """
+        cleaned_data = super().clean() or self.cleaned_data
+        job_class = self.instance.job_class
+        if job_class is not None:
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                if not cleaned_data.get(f"{field_name}_override", False):
+                    cleaned_data[field_name] = getattr(job_class, field_name)
+        return cleaned_data
+
+
+class JobFilterForm(BootstrapMixin, forms.Form):
+    model = Job
+    q = forms.CharField(required=False, label="Search")
+    installed = forms.NullBooleanField(
+        initial=True,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    commit_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    hidden = forms.NullBooleanField(
+        initial=False,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    approval_required = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    tag = TagFilterField(model)
 
 
 class JobScheduleForm(BootstrapMixin, forms.Form):

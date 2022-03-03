@@ -1,13 +1,10 @@
 from datetime import datetime, timedelta
-import os.path
 import urllib.parse
 import uuid
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.http import Http404
-from django.test import override_settings, SimpleTestCase
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from unittest import mock
@@ -21,7 +18,6 @@ from nautobot.extras.choices import (
     SecretsGroupSecretTypeChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
-from nautobot.extras.jobs import Job
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -30,6 +26,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
+    Job,
     JobResult,
     ObjectChange,
     Relationship,
@@ -43,7 +40,6 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
-from nautobot.extras.views import JobView, ScheduledJobView
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import post_data
@@ -51,9 +47,6 @@ from nautobot.utilities.testing.utils import post_data
 
 # Use the proper swappable User model
 User = get_user_model()
-
-THIS_DIRECTORY = os.path.dirname(__file__)
-TEST_JOBS = os.path.join(settings.BASE_DIR, "extras/tests/example_jobs")
 
 
 class ComputedFieldTestCase(
@@ -798,35 +791,7 @@ query ($device: String!) {
 #
 
 
-@override_settings(JOBS_ROOT=THIS_DIRECTORY)
-class TestJobMixin(SimpleTestCase):
-    class TestJob(Job):
-        pass
-
-    @staticmethod
-    def get_test_job_class(self, class_path):
-        if class_path.startswith("local/test_view"):
-            return TestJobMixin.TestJob
-        raise Http404
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # Monkey-patch the viewsets' _get_job methods to return our test class above
-        cls.original_method = JobView._get_job
-        JobView._get_job = TestJobMixin.get_test_job_class
-        ScheduledJobView._get_job = TestJobMixin.get_test_job_class
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        # Undo monkey-patch
-        JobView._get_job = cls.original_method
-        ScheduledJobView._get_job = cls.original_method
-
-
 class ScheduledJobTestCase(
-    TestJobMixin,
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -840,7 +805,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test1",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
+            job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=datetime.now(),
@@ -848,7 +813,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test2",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
+            job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=datetime.now(),
@@ -856,7 +821,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test3",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
+            job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=datetime.now(),
@@ -870,7 +835,7 @@ class ScheduledJobTestCase(
             enabled=False,
             name="test4",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
+            job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=datetime.now(),
@@ -941,7 +906,6 @@ class ApprovalQueueTestCase(
 
 
 class JobResultTestCase(
-    TestJobMixin,
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -953,37 +917,71 @@ class JobResultTestCase(
     def setUpTestData(cls):
         obj_type = ContentType.objects.get(app_label="extras", model="job")
         JobResult.objects.create(
-            name="local/test_view/TestJob",
+            name="local/test_pass/TestPass",
             job_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
-            name="local/test_view/TestJob2",
+            name="local/test_fail/TestFail",
             job_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
-            name="local/test_view/TestJob3",
+            name="local/test_read_only_fail/TestReadOnlyFail",
             job_id=uuid.uuid4(),
             obj_type=obj_type,
         )
 
 
 class JobTestCase(
-    TestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
 ):
     """
     The Job view test cases.
-
-    Since Job is not an actual model, we have to improvise and test the views
-    manually.
     """
+
+    model = Job
+
+    def _get_queryset(self):
+        """Don't include hidden or non-installed Jobs as they won't appear in the UI by default."""
+        return self.model.objects.filter(installed=True, hidden=False)
+
+    @classmethod
+    def setUpTestData(cls):
+        # Job model objects are automatically created during database migrations
+
+        cls.form_data = {
+            "slug": "custom-job-slug",
+            "enabled": True,
+            "grouping_override": True,
+            "grouping": "Overridden Grouping",
+            "name_override": True,
+            "name": "Overridden Name",
+            "description_override": True,
+            "description": "This is an overridden description of a job.",
+            "commit_default_override": True,
+            "commit_default": False,
+            "hidden_override": True,
+            "hidden": False,
+            "read_only_override": True,
+            "read_only": False,
+            "approval_required_override": True,
+            "approval_required": True,
+            "soft_time_limit_override": True,
+            "soft_time_limit": 350,
+            "time_limit_override": True,
+            "time_limit": 650,
+        }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_without_permission(self):
         self.assertHttpStatus(self.client.get(reverse("extras:job_list")), 403)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list(self):
         response = self.client.get(reverse("extras:job_list"))
         self.assertHttpStatus(response, 200)
@@ -991,12 +989,12 @@ class JobTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("TestPass", response_body)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_without_permission(self):
         response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
         self.assertHttpStatus(response, 403)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_get(self):
         response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
         self.assertHttpStatus(response, 200)
@@ -1004,12 +1002,12 @@ class JobTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("TestPass", response_body)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_post_without_permission(self):
         response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
         self.assertHttpStatus(response, 403)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_without_schedule(self):
         self.add_permissions("extras.run_job")
 
@@ -1019,7 +1017,7 @@ class JobTestCase(
         errors = extract_form_failures(response.content.decode(response.charset))
         self.assertEqual(errors, ["_schedule_type: This field is required."])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_now_no_worker(self, patched):
         self.add_permissions("extras.run_job")
@@ -1035,7 +1033,7 @@ class JobTestCase(
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn("Celery worker process not running.", content)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_now(self, patched):
         self.add_permissions("extras.run_job")
@@ -1050,7 +1048,7 @@ class JobTestCase(
         result = JobResult.objects.last()
         self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
 
@@ -1066,7 +1064,7 @@ class JobTestCase(
         errors = extract_form_failures(response.content.decode(response.charset))
         self.assertEqual(errors, ["var: This field is required."])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_now_with_args(self, patched):
         self.add_permissions("extras.run_job")
@@ -1084,7 +1082,7 @@ class JobTestCase(
         result = JobResult.objects.last()
         self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later_missing_name(self, patched):
         self.add_permissions("extras.run_job")
@@ -1100,7 +1098,7 @@ class JobTestCase(
         errors = extract_form_failures(response.content.decode(response.charset))
         self.assertEqual(errors, ["_schedule_name: Please provide a name for the job schedule."])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later_missing_date(self, patched):
         self.add_permissions("extras.run_job")
@@ -1122,7 +1120,7 @@ class JobTestCase(
             ],
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later_date_passed(self, patched):
         self.add_permissions("extras.run_job")
@@ -1145,7 +1143,7 @@ class JobTestCase(
             ],
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=TEST_JOBS)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later(self, patched):
         self.add_permissions("extras.run_job")

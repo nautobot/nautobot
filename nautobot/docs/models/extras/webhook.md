@@ -39,6 +39,7 @@ The following data is available as context for Jinja2 templates:
 * `username` - The name of the user account associated with the change.
 * `request_id` - The unique request ID. This may be used to correlate multiple changes associated with a single request.
 * `data` - A serialized representation of the object _after_ the change was made. This is typically equivalent to the model's representation in Nautobot's REST API.
+* `snapshots` - snapshots of the serialized object state both before and after the change was made; provided as a dictionary with keys named `prechange`, `postchange` and `differences`.
 
 ### Default Request Body
 
@@ -62,6 +63,26 @@ If no body template is specified, the request body will be populated with a JSON
         },
         "region": null,
         ...
+    },
+    "snapshots": {
+        "prechange": null,
+        "postchange": {
+            "created": "2020-02-25",
+            "last_updated": "2020-02-25 15:10:26.010582+00:00",
+            "name": "Site 1",
+            "slug": "site-1",
+            ...
+        },
+        "differences": {
+            "removed": null,
+            "added": {
+                "created": "2020-02-25",
+                "last_updated": "2020-02-25 15:10:26.010582+00:00",
+                "name": "Site 1",
+                "slug": "site-1",
+                ...
+            }
+        }
     }
 }
 ```

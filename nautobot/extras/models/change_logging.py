@@ -5,10 +5,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
-from nautobot.utilities.utils import serialize_object
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.utils import extras_features
+from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 #
@@ -28,16 +29,19 @@ class ChangeLoggedModel(models.Model):
     class Meta:
         abstract = True
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, object_data_extra=None, object_data_exclude=None):
         """
         Return a new ObjectChange representing a change made to this object. This will typically be called automatically
         by ChangeLoggingMiddleware.
         """
+
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
-            object_data=serialize_object(self),
+            object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
+            object_data_v2=serialize_object_v2(self),
+            related_object=related_object,
         )
 
 
@@ -74,6 +78,7 @@ class ObjectChange(BaseModel):
     related_object = GenericForeignKey(ct_field="related_object_type", fk_field="related_object_id")
     object_repr = models.CharField(max_length=200, editable=False)
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
+    object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
     csv_headers = [
         "time",

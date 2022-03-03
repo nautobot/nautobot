@@ -17,6 +17,7 @@ from nautobot.extras.filters import (
     ExportTemplateFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
+    JobFilterSet,
     JobLogEntryFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
@@ -28,7 +29,6 @@ from nautobot.extras.filters import (
     TagFilterSet,
     WebhookFilterSet,
 )
-
 from nautobot.extras.models import (
     ConfigContext,
     CustomLink,
@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -510,6 +511,53 @@ class ImageAttachmentTestCase(TestCase):
             "object_id": [Site.objects.first().pk],
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class JobFilterSetTestCase(TestCase):
+    queryset = Job.objects.all()
+    filterset = JobFilterSet
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["File Upload Success", "File Upload Failure"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_grouping(self):
+        params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_installed(self):
+        params = {"installed": True}
+        # 18 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 21)
+
+    def test_enabled(self):
+        params = {"enabled": False}
+        # 18 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 21)
+
+    def test_commit_default(self):
+        params = {"commit_default": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_hidden(self):
+        params = {"hidden": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_read_only(self):
+        params = {"read_only": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_approval_required(self):
+        params = {"approval_required": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_search(self):
+        params = {"q": "file"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class JobLogEntryTestCase(TestCase):

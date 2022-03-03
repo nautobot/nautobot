@@ -14,5 +14,6 @@ In other words, this signal is **not** emitted during the actual server executio
 when setting up the database prior to running the server.
 
 The intended purpose of this signal is for apps and plugins that need to populate or modify the database contents
-(**not** the database schema itself!), for example to ensure the existence of certain CustomFields, Relationships, etc.
+(**not** the database schema itself!), for example to ensure the existence of certain CustomFields, Jobs,
+Relationships, etc.
 """
