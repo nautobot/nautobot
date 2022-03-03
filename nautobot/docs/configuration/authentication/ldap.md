@@ -75,13 +75,14 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
 AUTH_LDAP_BIND_DN = "CN=NAUTOBOTSA, OU=Service Accounts,DC=example,DC=com"
 AUTH_LDAP_BIND_PASSWORD = "demo"
 
-# Include this `ldap.set_option` call if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
-ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-
 # Include the following to validate the certificate of your ldap server.
-# This should not be used with the option to ignore certificate errors above.
+# This should not be used with the option to ignore certificate errors below.
 ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, "/path/to/ca.pem")
 ldap.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
+
+# Include this `ldap.set_option` call if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
+# WARNING: You should not do this in production!
+ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 ```
 
 ### TLS Options
