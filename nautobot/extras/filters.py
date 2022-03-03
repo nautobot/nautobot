@@ -328,12 +328,11 @@ class CustomFieldFilter(django_filters.Filter):
             self.lookup_expr = "contains"
 
     def filter(self, qs, value):
-        NULL_FIELDS = ("null", "0")
 
-        if "_custom_field_data" in self.field_name and value in NULL_FIELDS:
-            lookup_exact = "%s__%s" % (self.field_name, "exact")
-            lookup_isnull = "%s__%s" % (self.field_name, "isnull")
-            return self.get_method(qs)(Q(**{lookup_exact: None}) | Q(**{lookup_isnull: True}))
+        if "_custom_field_data" in self.field_name and value == "null":
+            return self.get_method(qs)(
+                Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
+            )
         return super().filter(qs, value)
 
 
