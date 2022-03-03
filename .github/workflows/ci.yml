@@ -237,6 +237,8 @@ jobs:
             type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=latest,enable=${{ matrix.python-version == 3.6 && github.ref == 'refs/heads/develop' }}
             type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
+          labels: |
+            org.opencontainers.image.title=Nautobot
       - name: "Build"
         uses: "docker/build-push-action@v2"
         with:
@@ -244,6 +246,7 @@ jobs:
           target: final
           file: "docker/Dockerfile"
           tags: "${{ steps.dockermeta.outputs.tags }}"
+          labels: "${{ steps.dockermeta.outputs.labels }}"
           cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           context: "."
@@ -263,6 +266,8 @@ jobs:
             type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=latest,enable=${{ matrix.python-version == 3.6 && github.ref == 'refs/heads/develop' }}
             type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
+          labels: |
+            org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"
         uses: "docker/build-push-action@v2"
         with:
@@ -270,6 +275,7 @@ jobs:
           target: final-dev
           file: "docker/Dockerfile"
           tags: "${{ steps.dockerdevmeta.outputs.tags }}"
+          labels: "${{ steps.dockerdevmeta.outputs.labels }}"
           cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           context: "."
