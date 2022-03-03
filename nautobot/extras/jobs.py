@@ -1001,15 +1001,28 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         return False
 
     job_model = job_result.job_model
+    initialization_failure = None
     if not job_model:
         # 2.0 TODO: remove this fallback logic
-        job_model = JobModel.objects.get_for_class_path(job_result.name)
+        try:
+            job_model = JobModel.objects.get_for_class_path(job_result.name)
+        except JobModel.DoesNotExist:
+            initialization_failure = f'Unable to locate Job database record for "{job_result.name}" to run it!'
 
-    job_class = job_model.job_class
+    if not initialization_failure:
+        if not job_model.enabled:
+            initialization_failure = f"Job {job_model} is not enabled to be run!"
+        else:
+            job_class = job_model.job_class
 
-    if not job_class:
+            if not job_model.installed or not job_class:
+                initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
+                initialized = False
+
+    if initialization_failure:
         job_result.log(
-            f'Unable to locate job "{job_result.name}" to run it!',
+            message=initialization_failure,
+            obj=job_model,
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="initialization",
             logger=logger,

@@ -13,7 +13,7 @@ from django.test.client import RequestFactory
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, JobResult, Status, CustomField
+from nautobot.extras.models import FileProxy, Job, JobResult, Status, CustomField
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase
 
@@ -47,9 +47,15 @@ class JobTest(TransactionTestCase):
         module = "test_soft_time_limit_greater_than_time_limit"
         name = "TestSoftTimeLimitGreaterThanHardTimeLimit"
         job_class = get_job(f"local/{module}/{name}")
+
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            # for now intentionally do NOT set job_model=job_model, as we have code in place to look it up if needed
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -72,9 +78,14 @@ class JobTest(TransactionTestCase):
         name = "TestPass"
         job_class = get_job(f"local/{module}/{name}")
 
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -90,9 +101,15 @@ class JobTest(TransactionTestCase):
         module = "test_fail"
         name = "TestFail"
         job_class = get_job(f"local/{module}/{name}")
+
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -149,7 +166,7 @@ class JobTest(TransactionTestCase):
 <br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
         )
 
-    def test_ready_only_job_pass(self):
+    def test_read_only_job_pass(self):
         """
         Job read only test with pass result.
         """
@@ -157,9 +174,14 @@ class JobTest(TransactionTestCase):
         name = "TestReadOnlyPass"
         job_class = get_job(f"local/{module}/{name}")
 
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -176,9 +198,15 @@ class JobTest(TransactionTestCase):
         module = "test_read_only_fail"
         name = "TestReadOnlyFail"
         job_class = get_job(f"local/{module}/{name}")
+
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -222,6 +250,10 @@ class JobTest(TransactionTestCase):
         name = "TestIPAddresses"
         job_class = get_job(f"local/{module}/{name}")
 
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         # Fill out the form
         form_data = dict(
             ipv4_address="1.2.3.4",
@@ -238,6 +270,7 @@ class JobTest(TransactionTestCase):
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -252,7 +285,7 @@ class JobTest(TransactionTestCase):
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
         ).first()
 
-        job_result_data = json.loads(log_info.log_object)
+        job_result_data = json.loads(log_info.log_object) if log_info.log_object else None
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
@@ -266,12 +299,17 @@ class JobTest(TransactionTestCase):
         name = "TestObjectVars"
         job_class = get_job(f"local/{module}/{name}")
 
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         d = DeviceRole.objects.create(name="role", slug="role")
 
         # Prepare the job data
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -304,10 +342,15 @@ class JobTest(TransactionTestCase):
         name = "TestOptionalObjectVar"
         job_class = get_job(f"local/{module}/{name}")
 
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         # Prepare the job data
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -336,10 +379,15 @@ class JobTest(TransactionTestCase):
         name = "TestRequiredObjectVar"
         job_class = get_job(f"local/{module}/{name}")
 
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         # Prepare the job data
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -362,10 +410,15 @@ class JobTest(TransactionTestCase):
         name = "TestObjectVars"
         job_class = get_job(f"local/{module}/{name}")
 
+        job_model = Job.objects.get_for_class_path(f"local/{module}/{name}")
+        job_model.enabled = True
+        job_model.validated_save()
+
         # Prepare the job data
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -404,9 +457,14 @@ class JobFileUploadTest(TransactionTestCase):
         job_name = "local/test_file_upload_pass/TestFileUploadPass"
         job_class = get_job(job_name)
 
+        job_model = Job.objects.get_for_class_path(job_name)
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -441,9 +499,14 @@ class JobFileUploadTest(TransactionTestCase):
         job_name = "local/test_file_upload_fail/TestFileUploadFail"
         job_class = get_job(job_name)
 
+        job_model = Job.objects.get_for_class_path(job_name)
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=self.job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
@@ -499,6 +562,10 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+
         out, err = self.run_command("local/test_pass/TestPass")
         self.assertIn("Running local/test_pass/TestPass...", out)
         self.assertIn("test_pass: 1 success, 1 info, 0 warning, 0 failure", out)
@@ -511,6 +578,10 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """A job that changes the DB, when run with commit=False, doesn't modify the database."""
         with self.assertRaises(ObjectDoesNotExist):
             Status.objects.get(slug="test-status")
+
+        job_model = Job.objects.get_for_class_path("local/test_modify_db/TestModifyDB")
+        job_model.enabled = True
+        job_model.validated_save()
 
         out, err = self.run_command("local/test_modify_db/TestModifyDB")
         self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
@@ -539,6 +610,10 @@ class RunJobManagementCommandTest(CeleryTestCase):
     def test_runjob_db_change_commit_and_username(self):
         """A job that chagnes the DB, when run with commit=True and a username, successfully updates the DB."""
         get_user_model().objects.create(username="test_user")
+
+        job_model = Job.objects.get_for_class_path("local/test_modify_db/TestModifyDB")
+        job_model.enabled = True
+        job_model.validated_save()
 
         out, err = self.run_command("--commit", "--username", "test_user", "local/test_modify_db/TestModifyDB")
         self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
@@ -576,9 +651,14 @@ class JobSiteCustomFieldTest(CeleryTestCase):
         job_name = "local/test_site_with_custom_field/TestCreateSiteWithCustomField"
         job_class = get_job(job_name)
 
+        job_model = Job.objects.get_for_class_path(job_name)
+        job_model.enabled = True
+        job_model.validated_save()
+
         job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=job_content_type,
+            job_model=job_model,
             user=None,
             job_id=uuid.uuid4(),
         )
