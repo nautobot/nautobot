@@ -23,9 +23,14 @@ DATABASES = {
     }
 }
 
+JOBS_ROOT = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "tests", "example_jobs"
+)
+
 PLUGINS = [
     "example_plugin",
 ]
+
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 

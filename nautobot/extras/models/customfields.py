@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.extras.models import ChangeLoggedModel, ObjectChange
+from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
@@ -30,7 +30,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.templatetags.helpers import render_markdown
-from nautobot.utilities.utils import render_jinja2, serialize_object
+from nautobot.utilities.utils import render_jinja2
 from nautobot.utilities.validators import validate_regex
 
 logger = logging.getLogger(__name__)
@@ -577,10 +577,5 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         except ObjectDoesNotExist:
             # The parent field has already been deleted
             field = None
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            related_object=field,
-            object_data=serialize_object(self),
-        )
+
+        return super().to_objectchange(action, related_object=field)

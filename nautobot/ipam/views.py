@@ -399,7 +399,6 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    # `queryset` is implemented as a property, see below
 
     def __init__(self, *args, **kwargs):
         # Set the internal queryset value
@@ -417,7 +416,7 @@ class PrefixListView(generic.ObjectListView):
 
         TODO(john): When the base views support a formal `get_queryset()` method, this approach is not needed
         """
-        if self._queryset:
+        if self._queryset is not None:
             return self._queryset
 
         if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
@@ -434,7 +433,7 @@ class PrefixListView(generic.ObjectListView):
     @queryset.setter
     def queryset(self, value):
         """
-        Property setter for `queryset`
+        Property setter for 'queryset'
         """
         self._queryset = value
 

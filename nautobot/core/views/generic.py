@@ -243,13 +243,22 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         }
         RequestConfig(request, paginate).configure(table)
 
+        filter_form = None
+        if self.filterset_form:
+            if request.GET:
+                # Bind form to the values specified in request.GET
+                filter_form = self.filterset_form(request.GET, label_suffix="")
+            else:
+                # Use unbound form with default (initial) values
+                filter_form = self.filterset_form(label_suffix="")
+
         context = {
             "content_type": content_type,
             "table": table,
             "permissions": permissions,
             "action_buttons": self.action_buttons,
             "table_config_form": TableConfigForm(table=table),
-            "filter_form": self.filterset_form(request.GET, label_suffix="") if self.filterset_form else None,
+            "filter_form": filter_form,
         }
         context.update(self.extra_context())
 

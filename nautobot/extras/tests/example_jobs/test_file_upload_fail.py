@@ -5,8 +5,8 @@ class TestFileUploadFail(Job):
     """Uploads and reads the file but then deliberately fails."""
 
     class Meta:
-        name = "File Upload"
-        description = "Upload a file`"
+        name = "File Upload Failure"
+        description = "Upload a file then throw an unrelated exception"
 
     file = FileVar(
         description="File to upload",
@@ -16,6 +16,6 @@ class TestFileUploadFail(Job):
         blob = data["file"]
 
         contents = str(blob.read())
-        self.log_warning(f"File contents: {contents}")
+        self.log_warning(message=f"File contents: {contents}")
 
         raise Exception("Test failure")

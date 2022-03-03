@@ -1,18 +1,28 @@
 import json
 import uuid
+from copy import deepcopy
+from unittest import mock
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from requests import Session
 
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
+from nautobot.dcim.models.sites import Region
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.context_managers import change_logging
 from nautobot.extras.models import Webhook
+from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
+from nautobot.extras.webhooks import get_snapshots
 from nautobot.utilities.testing import APITestCase
+
+
+User = get_user_model()
 
 
 class WebhookTest(APITestCase):
@@ -35,7 +45,12 @@ class WebhookTest(APITestCase):
         for webhook in webhooks:
             webhook.content_types.set([site_ct])
 
-    def test_webhooks_process_webhook(self):
+        cls.active_status = Status.objects.get_for_model(Site).get(slug="active")
+        cls.planned_status = Status.objects.get_for_model(Site).get(slug="planned")
+        cls.region_one = Region.objects.create(name="Region One", slug="region-one")
+        cls.region_two = Region.objects.create(name="Region Two", slug="region-two")
+
+    def test_webhooks_process_webhook_on_update(self):
         """
         Mock a Session.send to inspect the result of `process_webhook()`.
         Note that process_webhook is called directly, not via a celery task.
@@ -64,7 +79,17 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["model"], "site")
             self.assertEqual(body["username"], "testuser")
             self.assertEqual(body["request_id"], str(request_id))
-            self.assertEqual(body["data"]["name"], "Site 1")
+            self.assertEqual(body["data"]["name"], "Site Update")
+            self.assertEqual(body["data"]["status"]["value"], self.planned_status.slug)
+            self.assertEqual(body["data"]["region"]["slug"], self.region_two.slug)
+            self.assertEqual(body["snapshots"]["prechange"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["prechange"]["status"]["value"], self.active_status.slug)
+            self.assertEqual(body["snapshots"]["prechange"]["region"]["slug"], self.region_one.slug)
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site Update")
+            self.assertEqual(body["snapshots"]["postchange"]["status"]["value"], self.planned_status.slug)
+            self.assertEqual(body["snapshots"]["postchange"]["region"]["slug"], self.region_two.slug)
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site Update")
 
             class FakeResponse:
                 ok = True
@@ -74,18 +99,124 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-            site = Site.objects.create(name="Site 1", slug="site-1")
-            serializer_context = {
-                "request": None,
-            }
-            serializer = SiteSerializer(site, context=serializer_context)
+            self.client.force_login(self.user)
 
-            process_webhook(
-                webhook.pk,
-                serializer.data,
-                Site._meta.model_name,
-                ObjectChangeActionChoices.ACTION_CREATE,
-                timestamp,
-                self.user.username,
-                request_id,
-            )
+            request = mock.MagicMock()
+            request.user = self.user
+            request.id = request_id
+
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
+                site.save()
+
+                site.name = "Site Update"
+                site.status = self.planned_status
+                site.region = self.region_two
+                site.save()
+
+                serializer = SiteSerializer(site, context={"request": None})
+                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    Site._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                    snapshots,
+                )
+
+    def test_webhooks_snapshot_on_create(self):
+        request_id = uuid.uuid4()
+        webhook = Webhook.objects.get(type_create=True)
+        timestamp = str(timezone.now())
+
+        def mock_send(_, request, **kwargs):
+            # Validate the outgoing request body
+            body = json.loads(request.body)
+            self.assertEqual(body["data"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["prechange"], None)
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["removed"], None)
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site 1")
+
+            class FakeResponse:
+                ok = True
+                status_code = 200
+
+            return FakeResponse()
+
+        # Patch the Session object with our mock_send() method, then process the webhook for sending
+        with patch.object(Session, "send", mock_send):
+
+            request = mock.MagicMock()
+            request.user = self.user
+            request.id = request_id
+
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1")
+                site.save()
+
+                serializer = SiteSerializer(site, context={"request": None})
+                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    Site._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                    snapshots,
+                )
+
+    def test_webhooks_snapshot_on_delete(self):
+        request_id = uuid.uuid4()
+        webhook = Webhook.objects.get(type_create=True)
+        timestamp = str(timezone.now())
+
+        def mock_send(_, request, **kwargs):
+            # Validate the outgoing request body
+            body = json.loads(request.body)
+            self.assertEqual(body["data"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["prechange"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["postchange"], None)
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"], None)
+
+            class FakeResponse:
+                ok = True
+                status_code = 200
+
+            return FakeResponse()
+
+        # Patch the Session object with our mock_send() method, then process the webhook for sending
+        with patch.object(Session, "send", mock_send):
+            request = mock.MagicMock()
+            request.user = self.user
+            request.id = request_id
+
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1")
+                site.save()
+
+                # deepcopy instance state to be used by SiteSerializer and get_snapshots
+                temp_site = deepcopy(site)
+                site.delete()
+
+                serializer = SiteSerializer(temp_site, context={"request": None})
+                snapshots = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    Site._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                    snapshots,
+                )

@@ -8,7 +8,8 @@ from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import serialize_object, serialize_object_v2
+
 from .choices import CircuitTerminationSideChoices
 
 
@@ -327,6 +328,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
             raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
 
     def to_objectchange(self, action):
+
         # Annotate the parent Circuit
         try:
             related_object = self.circuit
@@ -338,8 +340,9 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
             changed_object=self,
             object_repr=str(self),
             action=action,
-            related_object=related_object,
             object_data=serialize_object(self),
+            object_data_v2=serialize_object_v2(self),
+            related_object=related_object,
         )
 
     @property

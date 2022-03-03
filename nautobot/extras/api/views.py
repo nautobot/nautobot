@@ -356,7 +356,7 @@ class JobViewSet(viewsets.ViewSet):
                     job.result = results.get(job.class_path, None)
                     jobs_list.append(job)
 
-        serializer = serializers.JobSerializer(jobs_list, many=True, context={"request": request})
+        serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
 
         return Response(serializer.data)
 
@@ -372,7 +372,7 @@ class JobViewSet(viewsets.ViewSet):
             status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
         ).first()
 
-        serializer = serializers.JobDetailSerializer(job, context={"request": request})
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
 
         return Response(serializer.data)
 
@@ -421,7 +421,7 @@ class JobViewSet(viewsets.ViewSet):
             )
             job.result = job_result
 
-        serializer = serializers.JobDetailSerializer(job, context={"request": request})
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
 
         return Response(serializer.data)
 
