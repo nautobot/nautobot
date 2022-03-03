@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import reverse
@@ -1988,6 +1990,27 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "domain": "newdomain",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_null_master(self):
+        """Test setting the virtual chassis master to null."""
+        url = reverse("dcim-api:virtualchassis-list")
+        response = self.client.get(url + "?name=Virtual Chassis 1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        virtual_chassis_1 = response.json()["results"][0]
+
+        # Make sure the master is set
+        self.assertNotEqual(virtual_chassis_1["master"], None)
+
+        # Set the master of Virtual Chassis 1 to null
+        url = reverse("dcim-api:virtualchassis-detail", kwargs={"pk": virtual_chassis_1["id"]})
+        payload = {"name": "Virtual Chassis 1", "master": None}
+        self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+        response = self.client.patch(url, data=json.dumps(payload), content_type="application/json", **self.header)
+
+        # Make sure the master is now null
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.json()["master"], None)
 
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):

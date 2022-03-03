@@ -1371,7 +1371,7 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
 
 class VirtualChassisSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:virtualchassis-detail")
-    master = NestedDeviceSerializer(required=False)
+    master = NestedDeviceSerializer(required=False, allow_null=True)
     member_count = serializers.IntegerField(read_only=True)
 
     class Meta:
