@@ -142,7 +142,23 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ## v1.2.8 (2022-MM-DD)
 
+### Added
 
+- [#839](https://github.com/nautobot/nautobot/issues/839) - Add CODE_OF_CONDUCT.md to repository.
+- [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add SECURITY.md to repository.
+- [#1388](https://github.com/nautobot/nautobot/pull/1388) - Added beta version of GitHub Issue Form style for feature request.
+- [#1419](https://github.com/nautobot/nautobot/pull/1419) - Add Documentation for Specifying CA Cert File for LDAP Auth Backend.
+
+## Changed
+
+- [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version.
+- [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update django-redis to `5.2.x` to address `5.1.x` blocking redis `4.x` versions.
+
+## Fixed
+
+- [#1301](https://github.com/nautobot/nautobot/issues/1301) - Fixed window history handling for views with tabs in Safari/Firefox.
+- [#1399](https://github.com/nautobot/nautobot/issues/1399) - Fixed not being able to set master to `null` on Virtual Chassis API.
+- [#1405](https://github.com/nautobot/nautobot/issues/1405) - Fixed incorrect import in 'startplugin' template code.
 
 ## v1.2.7 (2022-02-22)
 
