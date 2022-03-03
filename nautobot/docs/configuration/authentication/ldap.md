@@ -96,8 +96,7 @@ AUTH_LDAP_START_TLS = True
 SSL can also be used by using the `ldaps://` URI scheme.
 
 ```python
-AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
-AUTH_LDAP_START_TLS = True
+AUTH_LDAP_SERVER_URI = "ldaps://ad.example.com"
 ```
 
 #### Certificate Validation
@@ -115,7 +114,6 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
 If you prefer you can ignore the certificate, however, this is only recommended in development and not production.
 
 ```python
-# Include this `ldap.set_option` call if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
 # WARNING: You should not do this in production!
 AUTH_LDAP_CONNECTION_OPTIONS = {
     ldap.OPT_X_TLS_REQUIRE_CERT: ldap.OPT_X_TLS_NEVER,
