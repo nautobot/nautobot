@@ -469,18 +469,24 @@ def get_filterset_for_model(model):
     return get_object_for_model(model, module_name="filters", object_suffix="FilterSet")
 
 
-def get_filterform_for_model(model):
-    """Return the `FilterForm` class associated with a given `model`.
+def get_form_for_model(model, form_prefix=""):
+    """Return the `Form` class associated with a given `model`.
 
-    The `FilterForm` class is expected to be in the `forms` module within the application
-    associated with the model and its name is expected to be `{ModelName}FilterForm`.
+    The `Form` class is expected to be in the `forms` module within the application
+    associated with the model and its name is expected to be `{ModelName}{form_prefix}Form`.
 
-    If a matching `FilterForm` is not found, this will return `None`.
+    If a matching `Form` is not found, this will return `None`.
+
+    Args:
+        form_prefix (str):
+            An additional prefix for the form name (e.g. `Filter`, such as to retrieve
+            `FooFilterForm`) that will come after the model name.
 
     Returns:
-        Either the `FilterForm` class or `None`
+        Either the `Form` class or `None`
     """
-    return get_object_for_model(model, module_name="forms", object_suffix="FilterForm")
+    object_suffix = f"{form_prefix}Form"
+    return get_object_for_model(model, module_name="forms", object_suffix=object_suffix)
 
 
 def get_table_for_model(model):

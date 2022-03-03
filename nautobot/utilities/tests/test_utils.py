@@ -5,7 +5,7 @@ from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.utils import (
     deepmerge,
     dict_to_filter_params,
-    get_filterform_for_model,
+    get_form_for_model,
     get_filterset_for_model,
     get_route_for_model,
     get_table_for_model,
@@ -13,7 +13,7 @@ from nautobot.utilities.utils import (
 )
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
-from nautobot.dcim.forms import DeviceFilterForm, SiteFilterForm
+from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
 from nautobot.dcim.tables import DeviceTable, SiteTable
 
 from example_plugin.models import ExampleModel
@@ -148,9 +148,11 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)
 
-    def test_get_filterform_for_model(self):
-        self.assertEqual(get_filterform_for_model(Device), DeviceFilterForm)
-        self.assertEqual(get_filterform_for_model(Site), SiteFilterForm)
+    def test_get_form_for_model(self):
+        self.assertEqual(get_form_for_model(Device, "Filter"), DeviceFilterForm)
+        self.assertEqual(get_form_for_model(Site, "Filter"), SiteFilterForm)
+        self.assertEqual(get_form_for_model(Device), DeviceForm)
+        self.assertEqual(get_form_for_model(Site), SiteForm)
 
     def test_get_route_for_model(self):
         self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
