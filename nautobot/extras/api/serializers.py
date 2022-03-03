@@ -616,6 +616,8 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 
 
 class JobVariableSerializer(serializers.Serializer):
+    """Serializer used for responses from the JobModelViewSet.variables() detail endpoint."""
+
     name = serializers.CharField(read_only=True)
     type = serializers.CharField(read_only=True)
     label = serializers.CharField(read_only=True, required=False)
@@ -629,6 +631,13 @@ class JobVariableSerializer(serializers.Serializer):
     max_value = serializers.IntegerField(read_only=True, required=False)
     choices = serializers.JSONField(read_only=True, required=False)
     model = serializers.CharField(read_only=True, required=False)
+
+
+class JobRunResponseSerializer(serializers.Serializer):
+    """Serializer representing responses from the JobModelViewSet.run() POST endpoint."""
+
+    schedule = NestedScheduledJobSerializer(read_only=True, required=False)
+    job_result = NestedJobResultSerializer(read_only=True, required=False)
 
 
 #

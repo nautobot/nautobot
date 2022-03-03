@@ -329,7 +329,8 @@ def _create_schedule(serializer, data, commit, job, approval_required, request):
     return scheduled_job
 
 
-def _run_job(request, job_model):
+def _run_job(request, job_model, legacy_response=False):
+    """An internal function providing logic shared between JobModelViewSet.run() and JobViewSet.run()."""
     if not request.user.has_perm("extras.run_job"):
         raise PermissionDenied("This user does not have permission to run jobs.")
     if not job_model.enabled:
@@ -363,10 +364,13 @@ def _run_job(request, job_model):
 
     job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
-    schedule = input_serializer.data.get("schedule")
-    if schedule:
-        schedule = _create_schedule(schedule, data, commit, job, job_model.approval_required, request)
+    schedule_data = input_serializer.data.get("schedule")
+    # BUG TODO: it looks like by omitting "schedule" you can immediately run an approval_required job here...
+    if schedule_data:
+        schedule = _create_schedule(schedule_data, data, commit, job, job_model.approval_required, request)
+        job_result = None
     else:
+        schedule = None
         job_result = JobResult.enqueue_job(
             run_job,
             job.class_path,
@@ -378,10 +382,22 @@ def _run_job(request, job_model):
         )
         job.result = job_result
 
-    # TODO: this isn't ideal for the new job-model API views!
-    serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
-
-    return Response(serializer.data)
+    if legacy_response:
+        # Old-style JobViewSet response - serialize the Job class in the response for some reason?
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
+        return Response(serializer.data)
+    else:
+        # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
+        data = {"schedule": None, "job_result": None}
+        if schedule:
+            data["schedule"] = nested_serializers.NestedScheduledJobSerializer(
+                schedule, context={"request": request}
+            ).data
+        if job_result:
+            data["job_result"] = nested_serializers.NestedJobResultSerializer(
+                job_result, context={"request": request}
+            ).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 class JobModelViewSet(
@@ -433,7 +449,11 @@ class JobModelViewSet(
             data.append(entry)
         return Response(data)
 
-    @swagger_auto_schema(method="post", request_body=serializers.JobInputSerializer)
+    @swagger_auto_schema(
+        method="post",
+        request_body=serializers.JobInputSerializer,
+        responses={"201": serializers.JobRunResponseSerializer},
+    )
     @action(detail=True, methods=["post"])
     def run(self, request, pk):
         job_model = self.get_object()
@@ -501,7 +521,7 @@ class JobViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def run(self, request, class_path):
         job_model = Job.objects.get_for_class_path(class_path)
-        return _run_job(request, job_model)
+        return _run_job(request, job_model, legacy_response=True)
 
 
 #

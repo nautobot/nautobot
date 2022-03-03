@@ -19,6 +19,7 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - The Jobs listing UI view can now be filtered and searched like most other Nautobot table/list views.
 - Job attributes (name, description, approval requirements, etc.) can now be managed via the Nautobot UI by an administrator or user with appropriate permissions to customize or override the attributes defined in the Job source code.
 - Jobs can now be identified by a `slug` as well as by their `class_path`.
+- A new set of REST API endpoints have been added at `api/extras/job-models`. The existing `api/extras/jobs` REST API continues to work but should be considered as deprecated.
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
