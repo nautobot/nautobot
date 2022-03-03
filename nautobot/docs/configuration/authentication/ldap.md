@@ -84,8 +84,6 @@ It is recommended when using LDAP to use STARTTLS, however SSL can also be used.
 
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
 
-Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`.
-
 ```python
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
 AUTH_LDAP_START_TLS = True
