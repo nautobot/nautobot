@@ -59,9 +59,9 @@ class JobTest(TransactionTestCase):
         ).first()
         self.assertEqual(
             log_warning.message,
-            "The hard time limit of 5 seconds is less than "
-            "or equal to the soft time limit of 10 seconds. "
-            "This job will fail silently after 5 seconds.",
+            "The hard time limit of 5.0 seconds is less than "
+            "or equal to the soft time limit of 10.0 seconds. "
+            "This job will fail silently after 5.0 seconds.",
         )
 
     def test_job_pass(self):

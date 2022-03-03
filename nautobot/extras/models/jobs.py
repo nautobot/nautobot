@@ -469,7 +469,8 @@ class JobResult(BaseModel, CustomFieldModel):
         Create a JobResult instance and enqueue a job using the given callable
 
         func: The callable object to be enqueued for execution
-        name: Name for the JobResult instance - corresponds to the desired Job class's "class_path" attribute
+        name: Name for the JobResult instance - corresponds to the desired Job class's "class_path" attribute,
+            if obj_type is extras.Job; for other funcs and obj_types it may differ.
         obj_type: ContentType to link to the JobResult instance obj_type
         user: User object to link to the JobResult instance
         celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
@@ -485,28 +486,28 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is None:
             celery_kwargs = {}
 
-        try:
-            job_model = Job.objects.get_for_class_path(name)
-            if job_model.soft_time_limit > 0:
-                celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-            if job_model.time_limit > 0:
-                celery_kwargs["time_limit"] = job_model.time_limit
-            job_result.job_model = job_model
-            job_result.save()
-        except Job.DoesNotExist:
-            # 2.0 TODO: remove this fallback logic, database records should always exist
-            from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+        if obj_type.app_label == "extras" and obj_type.model.lower() == "job":
+            try:
+                job_model = Job.objects.get_for_class_path(name)
+                if job_model.soft_time_limit > 0:
+                    celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+                if job_model.time_limit > 0:
+                    celery_kwargs["time_limit"] = job_model.time_limit
+                job_result.job_model = job_model
+                job_result.save()
+            except Job.DoesNotExist:
+                # 2.0 TODO: remove this fallback logic, database records should always exist
+                from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
 
-            job_class = get_job(name)
-            if job_class is not None:
-                logger.error("No Job instance found in the database corresponding to %s", name)
-                if hasattr(job_class.Meta, "soft_time_limit"):
-                    celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
-                if hasattr(job_class.Meta, "time_limit"):
-                    celery_kwargs["time_limit"] = job_class.Meta.time_limit
-            else:
-                # This may be OK - GitRepository sync for example doesn't (currently) have a related Job instance
-                pass
+                job_class = get_job(name)
+                if job_class is not None:
+                    logger.error("No Job instance found in the database corresponding to %s", name)
+                    if hasattr(job_class.Meta, "soft_time_limit"):
+                        celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
+                    if hasattr(job_class.Meta, "time_limit"):
+                        celery_kwargs["time_limit"] = job_class.Meta.time_limit
+                else:
+                    logger.error("Neither a Job database record nor a Job source class were found for %s", name)
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 
