@@ -1017,7 +1017,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
             if not job_model.installed or not job_class:
                 initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
-                initialized = False
 
     if initialization_failure:
         job_result.log(

@@ -238,7 +238,7 @@ class APIViewTestCases:
             elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
                 field_choices = {k: v["choices"] for k, v in data["actions"]["PUT"].items() if "choices" in v}
             else:
-                self.fail(f"Neither PUT nor POST are available actions in: {actions}")
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
             # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
             # Broken down to provide better failure messages
@@ -272,7 +272,7 @@ class APIViewTestCases:
             elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
                 field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
             else:
-                self.fail(f"Neither PUT nor POST are available actions in: {actions}")
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
             self.assertEqual(set(self.choices_fields), field_choices)
 
