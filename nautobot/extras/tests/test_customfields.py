@@ -1193,6 +1193,10 @@ class CustomFieldFilterTest(TestCase):
         self.assertEqual(self.filterset({"cf_cf9": "Foo"}, self.queryset).qs.count(), 2)
         self.assertEqual(self.filterset({"cf_cf9": "Bar"}, self.queryset).qs.count(), 1)
 
+    def test_filter_null_values(self):
+        self.assertEquals(self.filterset({"cf_cf8": "null"}, self.queryset).qs.count(), 2)
+        self.assertEquals(self.filterset({"cf_cf9": "null"}, self.queryset).qs.count(), 1)
+
 
 class CustomFieldChoiceTest(TestCase):
     def setUp(self):
