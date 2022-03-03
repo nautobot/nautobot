@@ -137,6 +137,7 @@ class GitRepository(PrimaryModel):
         if self.__initial_slug and self.slug != self.__initial_slug:
             # Need to update the "source" of any Job records originating from this repository
             from .jobs import Job  # avoid circular import
+
             for job in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{self.__initial_slug}"):
                 job.source = f"{JobSourceChoices.SOURCE_GIT}.{self.slug}"
                 job.validated_save()

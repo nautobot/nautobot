@@ -904,6 +904,12 @@ class JobModelTestCase(
 class JobTest(APITestCase):
     """Tests for deprecated Job-class-based views."""
 
+    def setUp(self):
+        super().setUp()
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.enabled = True
+        job_model.validated_save()
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_jobs_anonymous(self):
         url = reverse("extras-api:job-list")
@@ -976,6 +982,46 @@ class JobTest(APITestCase):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_not_enabled(self, mock_get_worker_count):
+        """Job run request enforces the Job.enabled flag."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.enabled = False
+        job_model.save()
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
+        with disable_warnings("django.request"):
+            response = self.client.post(url, {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_not_installed(self, mock_get_worker_count):
+        """Job run request enforces the Job.installed flag."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job(
+            source="local",
+            module_name="uninstalled_module",
+            job_class_name="NoSuchJob",
+            grouping="Uninstalled Module",
+            name="No such job",
+            installed=False,
+            enabled=True,
+        )
+        job_model.validated_save()
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/uninstalled_module/NoSuchJob"})
+        with disable_warnings("django.request"):
+            response = self.client.post(url, {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_no_worker(self, mock_get_worker_count):
         """Job run cannot be requested if Celery is not running."""

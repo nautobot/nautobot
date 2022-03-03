@@ -279,6 +279,16 @@ class Job(PrimaryModel):
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(self.job_class, field_name))
 
+        # Protect against invalid input when auto-creating Job records
+        if len(self.module_name) > 100:
+            raise ValidationError("Module name may not exceed 100 characters in length")
+        if len(self.job_class_name) > 100:
+            raise ValidationError("Job class name may not exceed 100 characters in length")
+        if len(self.grouping) > 255:
+            raise ValidationError("Grouping may not exceed 255 characters in length")
+        if len(self.name) > 100:
+            raise ValidationError("Name may not exceed 100 characters in length")
+
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})
 

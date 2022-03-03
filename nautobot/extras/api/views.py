@@ -332,6 +332,10 @@ def _create_schedule(serializer, data, commit, job, approval_required, request):
 def _run_job(request, job_model):
     if not request.user.has_perm("extras.run_job"):
         raise PermissionDenied("This user does not have permission to run jobs.")
+    if not job_model.enabled:
+        raise PermissionDenied("This job is not enabled to be run.")
+    if not job_model.installed:
+        raise Http404
 
     job_class = job_model.job_class
     if job_class is None:

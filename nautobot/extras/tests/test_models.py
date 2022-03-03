@@ -707,7 +707,7 @@ class JobModelTest(TestCase):
                 self.assertFalse(getattr(job_model, f"{field_name}_override"))
                 self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
 
-    def test_clean(self):
+    def test_clean_overrides(self):
         """Verify that cleaning resets non-overridden fields to their appropriate default values."""
         overridden_attrs = {
             "grouping": "Overridden Grouping",
@@ -739,6 +739,48 @@ class JobModelTest(TestCase):
         for field_name in overridden_attrs:
             self.assertEqual(getattr(self.local_job, field_name), getattr(self.local_job.job_class, field_name))
             self.assertFalse(getattr(self.local_job, f"{field_name}_override"))
+
+    def test_clean_input_validation(self):
+        """Verify that cleaning enforces validation of potentially unsanitized user input."""
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name",
+                job_class_name="JobClass",
+                grouping="grouping",
+                name="name",
+            ).clean()
+        self.assertIn("Module name", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="ThisIsARidiculouslyLongJobClassNameWhoWouldEverDoSuchAnUtterlyRidiculousThingButBetterSafeThanSorrySinceWeAreDealingWithUserInputHere",
+                grouping="grouping",
+                name="name",
+            ).clean()
+        self.assertIn("Job class name", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="JobClassName",
+                grouping="OK now this is just ridiculous. Why would you ever want to deal with typing in 255+ characters of grouping information and have to copy-paste it to the other jobs in the same grouping or risk dealing with typos when typing out such a ridiculously long grouping string? Still, once again, better safe than sorry!",
+                name="name",
+            ).clean()
+        self.assertIn("Grouping", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="JobClassName",
+                grouping="grouping",
+                name="Similarly, let us hope that no one really wants to specify a job name that is over 100 characters long, it would be a pain to type at the very least and it won't look good in the UI either",
+            ).clean()
+        self.assertIn("Name", str(handler.exception))
 
 
 class JobResultTest(TestCase):
