@@ -85,6 +85,8 @@ ldap.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 ```
 
+Additional ldap connection options can be found in the [python-ldap documentation](https://www.python-ldap.org/en/python-ldap-3.3.0/reference/ldap.html?highlight=cacert#options).
+
 ### TLS Options
 
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
