@@ -78,6 +78,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.6 }}
+            type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
@@ -105,6 +107,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.6 }}
+            type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable,enable=${{ matrix.python-version == 3.6 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
