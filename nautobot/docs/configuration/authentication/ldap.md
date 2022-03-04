@@ -99,7 +99,7 @@ AUTH_LDAP_SERVER_URI = "ldaps://ad.example.com"
 
 #### Certificate Validation
 
-When using eithe RLS or SSL it is necessary to validate the certifiacte from your LDAP server.  Copy your CA cert to `/opt/nautobot/ca.pem`.
+When using either TLS or SSL it is necessary to validate the certificate from your LDAP server.  Copy your CA cert to `/opt/nautobot/ca.pem`.
 
 ```python
 # Set the path to the trusted CA certificates and create a new internal SSL context.

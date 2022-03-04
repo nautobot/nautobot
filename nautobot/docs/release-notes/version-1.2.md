@@ -148,7 +148,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1242](https://github.com/nautobot/nautobot/issues/1242) - Add MAJOR.MINOR tags to Docker images upon release.
 - [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add SECURITY.md to repository.
 - [#1388](https://github.com/nautobot/nautobot/pull/1388) - Added beta version of GitHub Issue Form style for feature request.
-- [#1419](https://github.com/nautobot/nautobot/pull/1419) - Add Documentation for Specifying CA Cert File for LDAP Auth Backend.
+- [#1419](https://github.com/nautobot/nautobot/pull/1419) - Add documentation for specifying a CA cert file for LDAP authentication backend.
 - [#1446](https://github.com/nautobot/nautobot/pull/1446) - Apply title labels to Docker images.
 
 ## Changed
