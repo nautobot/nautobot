@@ -46,6 +46,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
@@ -1182,7 +1183,46 @@ class JobModelTestCase(
         return reverse(viewname)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_anonymous_not_permitted(self):
+        """The run_job endpoint should NOT allow anonymous users to submit jobs."""
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    # test_run_job_without_permission is in JobAPIRunTestMixin
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_permissions(self, mock_get_worker_count):
+        """The run_job endpoint should enforce object-level permissions."""
+        mock_get_worker_count.return_value = 1
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"module_name__in": ["test_pass", "test_fail"]},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        # Try post to unpermitted job
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+        # Try post to permitted job
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_object_var(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_object_var()
 
         self.assertIn("schedule", response.data)
@@ -1192,6 +1232,7 @@ class JobModelTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_object_var_lookup(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, job_result = super().test_run_job_object_var_lookup()
 
         self.assertIn("schedule", response.data)
@@ -1208,6 +1249,7 @@ class JobModelTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_future(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_future()
 
         self.assertIn("schedule", response.data)
@@ -1217,6 +1259,7 @@ class JobModelTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_interval(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_interval()
 
         self.assertIn("schedule", response.data)
