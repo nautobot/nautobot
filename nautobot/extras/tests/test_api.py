@@ -20,6 +20,7 @@ from nautobot.dcim.models import (
     RackRole,
     Site,
 )
+from nautobot.extras.api.nested_serializers import NestedJobResultSerializer, NestedScheduledJobSerializer
 from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -846,7 +847,275 @@ class ImageAttachmentTest(
         )
 
 
+class JobAPIRunTestMixin:
+    """Mixin providing test cases for the "run" API endpoint, shared between JobModelTestCase and JobTest."""
+
+    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+        """To be implemented by classes using this mixin."""
+        raise NotImplementedError
+
+    # Status code for successful submission of a job or schedule - to be set by subclasses
+    run_success_response_status = None
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_without_permission(self, mock_get_worker_count):
+        """Job run request enforces user permissions."""
+        mock_get_worker_count.return_value = 1
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url, {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_not_enabled(self, mock_get_worker_count):
+        """Job run request enforces the Job.enabled flag."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.enabled = False
+        job_model.save()
+
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url, {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_not_installed(self, mock_get_worker_count):
+        """Job run request enforces the Job.installed flag."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job(
+            source="local",
+            module_name="uninstalled_module",
+            job_class_name="NoSuchJob",
+            grouping="Uninstalled Module",
+            name="No such job",
+            installed=False,
+            enabled=True,
+        )
+        job_model.validated_save()
+
+        url = self.get_run_url("local/uninstalled_module/NoSuchJob")
+        with disable_warnings("django.request"):
+            response = self.client.post(url, {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_no_worker(self, mock_get_worker_count):
+        """Job run cannot be requested if Celery is not running."""
+        mock_get_worker_count.return_value = 0
+        self.add_permissions("extras.run_job")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": device_role.pk,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_var(self, mock_get_worker_count):
+        """Job run requests can reference objects by their primary keys."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": device_role.pk,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+            "schedule": {
+                "name": "test",
+                "interval": "future",
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+            },
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        schedule = ScheduledJob.objects.last()
+        self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_var_lookup(self, mock_get_worker_count):
+        """Job run requests can reference objects by their attributes."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": {"name": "role"},
+        }
+
+        self.assertEqual(
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_data),
+            {"var1": "FooBar", "var2": 123, "var3": False, "var4": device_role},
+        )
+
+        url = self.get_run_url()
+        response = self.client.post(url, {"data": job_data}, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        job_result = JobResult.objects.last()
+
+        return (response, job_result)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_future(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        schedule = ScheduledJob.objects.last()
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_future_past(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() - timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_interval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "hourly",
+                "name": "test",
+            },
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        schedule = ScheduledJob.objects.last()
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_invalid_data(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "data": "invalid",
+            "commit": True,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"errors": ["Job data needs to be a dict"]})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_wrong_data(self):
+        self.add_permissions("extras.run_job")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var5": "wrong",
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"errors": {"var5": ["Job data contained an unknown property"]}})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_missing_data(self):
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var1": "FooBar",
+            "var3": False,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
+        )
+
+
 class JobModelTestCase(
+    JobAPIRunTestMixin,
     # note no CreateObjectViewTestCase
     APIViewTestCases.GetObjectViewTestCase,
     APIViewTestCases.ListObjectsViewTestCase,
@@ -886,6 +1155,18 @@ class JobModelTestCase(
     }
     validation_excluded_fields = []
 
+    run_success_response_status = status.HTTP_201_CREATED
+
+    def setUp(self):
+        super().setUp()
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.enabled = True
+        job_model.validated_save()
+
+    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+        job_model = Job.objects.get_for_class_path(class_path)
+        return reverse("extras-api:jobmodel-run", kwargs={"pk": job_model.pk})
+
     def _get_detail_url(self, instance):
         """
         Override default implementation as we're under "jobmodel-detail" rather than "job-detail".
@@ -900,15 +1181,66 @@ class JobModelTestCase(
         viewname = f"{self._get_view_namespace()}:jobmodel-list"
         return reverse(viewname)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_object_var(self):
+        response, schedule = super().test_run_job_object_var()
 
-class JobTest(APITestCase):
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertIsNone(response.data["job_result"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_object_var_lookup(self):
+        response, job_result = super().test_run_job_object_var_lookup()
+
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertIsNone(response.data["schedule"])
+        # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
+        data_job_result = response.data["job_result"]
+        del data_job_result["url"]
+        del data_job_result["user"]["url"]
+        expected_data_job_result = NestedJobResultSerializer(job_result, context={"request": None}).data
+        del expected_data_job_result["url"]
+        del expected_data_job_result["user"]["url"]
+        self.assertEqual(data_job_result, expected_data_job_result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_future(self):
+        response, schedule = super().test_run_job_future()
+
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertIsNone(response.data["job_result"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_interval(self):
+        response, schedule = super().test_run_job_interval()
+
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertIsNone(response.data["job_result"])
+
+
+class JobTest(
+    JobAPIRunTestMixin,
+    APITestCase,
+):
     """Tests for deprecated Job-class-based views."""
+
+    run_success_response_status = status.HTTP_200_OK
 
     def setUp(self):
         super().setUp()
         job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
         job_model.enabled = True
         job_model.validated_save()
+
+    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+        return reverse("extras-api:job-run", kwargs={"class_path": class_path})
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_jobs_anonymous(self):
@@ -971,248 +1303,6 @@ class JobTest(APITestCase):
         url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/NoSuchJob"})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_without_permission(self, mock_get_worker_count):
-        """Job run request enforces user permissions."""
-        mock_get_worker_count.return_value = 1
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        with disable_warnings("django.request"):
-            response = self.client.post(url, {}, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_not_enabled(self, mock_get_worker_count):
-        """Job run request enforces the Job.enabled flag."""
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        job_model.enabled = False
-        job_model.save()
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        with disable_warnings("django.request"):
-            response = self.client.post(url, {}, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_not_installed(self, mock_get_worker_count):
-        """Job run request enforces the Job.installed flag."""
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-
-        job_model = Job(
-            source="local",
-            module_name="uninstalled_module",
-            job_class_name="NoSuchJob",
-            grouping="Uninstalled Module",
-            name="No such job",
-            installed=False,
-            enabled=True,
-        )
-        job_model.validated_save()
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/uninstalled_module/NoSuchJob"})
-        with disable_warnings("django.request"):
-            response = self.client.post(url, {}, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_no_worker(self, mock_get_worker_count):
-        """Job run cannot be requested if Celery is not running."""
-        mock_get_worker_count.return_value = 0
-        self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
-        job_data = {
-            "var1": "FooBar",
-            "var2": 123,
-            "var3": False,
-            "var4": device_role.pk,
-        }
-
-        data = {
-            "data": job_data,
-            "commit": True,
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_object_var(self, mock_get_worker_count):
-        """Job run requests can reference objects by their primary keys."""
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
-        job_data = {
-            "var1": "FooBar",
-            "var2": 123,
-            "var3": False,
-            "var4": device_role.pk,
-        }
-
-        data = {
-            "data": job_data,
-            "commit": True,
-            "schedule": {
-                "name": "test",
-                "interval": "future",
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
-            },
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-        job = ScheduledJob.objects.last()
-        self.assertEqual(job.kwargs["data"]["var4"], str(device_role.pk))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_object_var_lookup(self, mock_get_worker_count):
-        """Job run requests can reference objects by their attributes."""
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
-        job_data = {
-            "var1": "FooBar",
-            "var2": 123,
-            "var3": False,
-            "var4": {"name": "role"},
-        }
-
-        self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_data),
-            {"var1": "FooBar", "var2": 123, "var3": False, "var4": device_role},
-        )
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, {"data": job_data}, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_future(self, mock_get_worker_count):
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
-        data = {
-            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
-            "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
-                "interval": "future",
-                "name": "test",
-            },
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_future_past(self, mock_get_worker_count):
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
-        data = {
-            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
-            "schedule": {
-                "start_time": str(datetime.now() - timedelta(minutes=1)),
-                "interval": "future",
-                "name": "test",
-            },
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_interval(self, mock_get_worker_count):
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
-        data = {
-            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
-            "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
-                "interval": "hourly",
-                "name": "test",
-            },
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_job_with_invalid_data(self):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "data": "invalid",
-            "commit": True,
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"errors": ["Job data needs to be a dict"]})
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_job_with_wrong_data(self):
-        self.add_permissions("extras.run_job")
-        job_data = {
-            "var1": "FooBar",
-            "var2": 123,
-            "var3": False,
-            "var5": "wrong",
-        }
-
-        data = {
-            "data": job_data,
-            "commit": True,
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"errors": {"var5": ["Job data contained an unknown property"]}})
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_job_with_missing_data(self):
-        self.add_permissions("extras.run_job")
-
-        job_data = {
-            "var1": "FooBar",
-            "var3": False,
-        }
-
-        data = {
-            "data": job_data,
-            "commit": True,
-        }
-
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
-        )
 
 
 class JobResultTest(APITestCase):

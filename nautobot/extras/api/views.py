@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
+from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
@@ -449,12 +450,28 @@ class JobModelViewSet(
             data.append(entry)
         return Response(data)
 
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special "run_job" permission as queryset filter on the /run/ endpoint, otherwise as ModelViewSetMixin.
+        """
+        if request.user.is_authenticated and self.action == "run":
+            self.queryset = self.queryset.restrict(request.user, "run")
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class JobRunTokenPermissions(TokenPermissions):
+        """As nautobot.core.api.authentication.TokenPermissions, but enforcing run_job instead of add_job."""
+
+        perms_map = {
+            "POST": ["%(app_label)s.run_%(model_name)s"],
+        }
+
     @swagger_auto_schema(
         method="post",
         request_body=serializers.JobInputSerializer,
         responses={"201": serializers.JobRunResponseSerializer},
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
     def run(self, request, pk):
         job_model = self.get_object()
         return _run_job(request, job_model)
