@@ -623,6 +623,8 @@ class ObjectChangeFilterSet(BaseFilterSet):
         label="Search",
     )
     time = django_filters.DateTimeFromToRangeFilter()
+    time_before = django_filters.DateTimeFilter(field_name="time", lookup_expr="lte")
+    time_after = django_filters.DateTimeFilter(field_name="time", lookup_expr="gte")
     changed_object_type = ContentTypeFilter()
     user_id = django_filters.ModelMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -641,12 +643,15 @@ class ObjectChangeFilterSet(BaseFilterSet):
             "id",
             "user",
             "user_name",
+            "time",
             "request_id",
             "action",
             "changed_object_type_id",
             "changed_object_id",
             "object_repr",
         ]
+        
+        
 
     def search(self, queryset, name, value):
         if not value.strip():
