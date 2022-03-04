@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import uuid
-from unittest import mock, skipIf
+from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -858,6 +858,14 @@ class JobAPIRunTestMixin:
     # Status code for successful submission of a job or schedule - to be set by subclasses
     run_success_response_status = None
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_anonymous_not_permitted(self):
+        """The run_job endpoint should NOT allow anonymous users to submit jobs."""
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_without_permission(self, mock_get_worker_count):
@@ -867,6 +875,34 @@ class JobAPIRunTestMixin:
         with disable_warnings("django.request"):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_permissions(self, mock_get_worker_count):
+        """The run_job endpoint should enforce object-level permissions."""
+        mock_get_worker_count.return_value = 1
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"module_name__in": ["test_pass", "test_fail"]},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        # Try post to unpermitted job
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+        # Try post to permitted job
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1183,44 +1219,6 @@ class JobModelTestCase(
         return reverse(viewname)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_anonymous_not_permitted(self):
-        """The run_job endpoint should NOT allow anonymous users to submit jobs."""
-        url = self.get_run_url()
-        with disable_warnings("django.request"):
-            response = self.client.post(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
-
-    # test_run_job_without_permission is in JobAPIRunTestMixin
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_object_permissions(self, mock_get_worker_count):
-        """The run_job endpoint should enforce object-level permissions."""
-        mock_get_worker_count.return_value = 1
-        obj_perm = ObjectPermission(
-            name="Test permission",
-            constraints={"module_name__in": ["test_pass", "test_fail"]},
-            actions=["run"],
-        )
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        # Try post to unpermitted job
-        url = self.get_run_url()
-        with disable_warnings("django.request"):
-            response = self.client.post(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-
-        # Try post to permitted job
-        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
-        job_model.enabled = True
-        job_model.validated_save()
-        url = self.get_run_url("local/test_pass/TestPass")
-        response = self.client.post(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_201_CREATED)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_object_var(self):
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_object_var()
@@ -1299,10 +1297,6 @@ class JobTest(
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @skipIf(
-        "example_plugin" not in settings.PLUGINS,
-        "example_plugin not in settings.PLUGINS",
-    )
     def test_list_jobs_with_permission(self):
         self.add_permissions("extras.view_job")
         url = reverse("extras-api:job-list")

@@ -54,7 +54,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.jobs import get_job, get_jobs, run_job
+from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
@@ -484,13 +484,6 @@ class JobViewSet(viewsets.ViewSet):
     lookup_field = "class_path"
     lookup_value_regex = "[^/]+/[^/]+/[^/]+"  # e.g. "git.repo_name/module_name/JobName"
 
-    def _get_job_class(self, class_path):
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
-
-        return job_class
-
     def list(self, request):
         if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
@@ -505,14 +498,14 @@ class JobViewSet(viewsets.ViewSet):
             .order_by("created")
         }
 
-        jobs = get_jobs()
-        jobs_list = []
-        for grouping, modules in jobs.items():
-            for module_name, entry in modules.items():
-                for job_class in entry["jobs"].values():
-                    job = job_class()
-                    job.result = results.get(job.class_path, None)
-                    jobs_list.append(job)
+        job_models = Job.objects.restrict(request.user, "view")
+        jobs_list = [
+            job_model.job_class()  # TODO: why do we need to instantiate the job_class?
+            for job_model in job_models
+            if job_model.installed and job_model.job_class is not None
+        ]
+        for job_instance in jobs_list:
+            job_instance.result = results.get(job_instance.class_path, None)
 
         serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
 
@@ -521,9 +514,14 @@ class JobViewSet(viewsets.ViewSet):
     def retrieve(self, request, class_path):
         if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
-        job_class = self._get_job_class(class_path)
+        try:
+            job_model = Job.objects.restrict(request.user, "view").get_for_class_path(class_path)
+        except Job.DoesNotExist:
+            raise Http404
+        if not job_model.installed or job_model.job_class is None:
+            raise Http404
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        job = job_class()
+        job = job_model.job_class()  # TODO: why do we need to instantiate the job_class?
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
             name=job.class_path,
@@ -537,7 +535,12 @@ class JobViewSet(viewsets.ViewSet):
     @swagger_auto_schema(method="post", request_body=serializers.JobInputSerializer)
     @action(detail=True, methods=["post"])
     def run(self, request, class_path):
-        job_model = Job.objects.get_for_class_path(class_path)
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied("This user does not have permission to run jobs.")
+        try:
+            job_model = Job.objects.restrict(request.user, "run").get_for_class_path(class_path)
+        except Job.DoesNotExist:
+            raise Http404
         return _run_job(request, job_model, legacy_response=True)
 
 
@@ -655,6 +658,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             raise PermissionDenied()
 
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        # TODO enforce object-level permissions on run_job here as well?
         job_class = get_job(scheduled_job.job_class)
         if job_class is None:
             raise Http404
