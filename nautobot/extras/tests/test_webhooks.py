@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from requests import Session
 
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.dcim.models.sites import Region
@@ -209,6 +210,66 @@ class WebhookTest(APITestCase):
 
                 serializer = SiteSerializer(temp_site, context={"request": None})
                 snapshots = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    Site._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                    snapshots,
+                )
+
+    @patch("nautobot.utilities.api.get_serializer_for_model")
+    def test_webhooks_snapshot_without_model_api_serializer(self, get_serializer_for_model):
+        def get_serializer(model_class):
+            raise SerializerNotFound
+
+        get_serializer_for_model.side_effect = get_serializer
+
+        request_id = uuid.uuid4()
+        webhook = Webhook.objects.get(type_create=True)
+        timestamp = str(timezone.now())
+
+        def mock_send(_, request, **kwargs):
+
+            # Validate the outgoing request body
+            body = json.loads(request.body)
+
+            self.assertEqual(body["snapshots"]["prechange"]["status"], str(self.active_status.id))
+            self.assertEqual(body["snapshots"]["prechange"]["region"], str(self.region_one.id))
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site Update")
+            self.assertEqual(body["snapshots"]["postchange"]["status"], str(self.planned_status.id))
+            self.assertEqual(body["snapshots"]["postchange"]["region"], str(self.region_two.id))
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site Update")
+
+            class FakeResponse:
+                ok = True
+                status_code = 200
+
+            return FakeResponse()
+
+        with patch.object(Session, "send", mock_send):
+            self.client.force_login(self.user)
+
+            request = mock.MagicMock()
+            request.user = self.user
+            request.id = request_id
+
+            with change_logging(request):
+                site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
+                site.save()
+
+                site.name = "Site Update"
+                site.status = self.planned_status
+                site.region = self.region_two
+                site.save()
+
+                serializer = SiteSerializer(site, context={"request": None})
+                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
 
                 process_webhook(
                     webhook.pk,
