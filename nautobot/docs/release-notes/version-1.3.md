@@ -57,7 +57,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#1001](https://github.com/nautobot/nautobot/issues/1001) - Added Job database model and associated functionality.
 - [#1109](https://github.com/nautobot/nautobot/issues/1109) - Added pagination support for GraphQL list queries.
 - [#1255](https://github.com/nautobot/nautobot/pull/1255) - Added Python 3.10 support.
-- [#1350](https://github.com/nautobot/nautobot/pull/1350) - Added missing methods on Circuit Termination detail view.
+- [#1350](https://github.com/nautobot/nautobot/issues/1350) - Added missing methods on Circuit Termination detail view.
 - [#1411](https://github.com/nautobot/nautobot/pull/1411) - Added concrete Job database model; added database signals to populate Job records in the database; added detail, edit, and delete views for Job records.
 
 ### Changed
@@ -76,5 +76,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#1367](https://github.com/nautobot/nautobot/pull/1367) - Extracted Job-related models to submodule `nautobot.extras.models.jobs`; refined Job testing best practices.
 
 ### Fixed
+
+- [#1440](https://github.com/nautobot/nautobot/issues/1440) - Handle models missing serializer methods, dependent from adding pre-/post-change data to WebHooks.
 
 ### Removed
