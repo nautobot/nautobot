@@ -2012,6 +2012,35 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.json()["master"], None)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_remove_chassis_from_master_device(self):
+        """Test removing the virtual chassis from the master device."""
+        url = reverse("dcim-api:virtualchassis-list")
+        response = self.client.get(url + "?name=Virtual Chassis 1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.json()["count"], 1)
+        virtual_chassis_1 = response.json()["results"][0]
+
+        # Make sure the master is set
+        self.assertNotEqual(virtual_chassis_1["master"], None)
+
+        master_device = Device.objects.get(pk=virtual_chassis_1["master"]["id"])
+
+        # Set the virtual_chassis of the master device to null
+        url = reverse("dcim-api:device-detail", kwargs={"pk": master_device.id})
+        payload = {
+            "device_type": str(master_device.device_type.id),
+            "device_role": str(master_device.device_role.id),
+            "site": str(master_device.site.id),
+            "status": "active",
+            "virtual_chassis": None,
+        }
+        self.add_permissions("dcim.change_device")
+        response = self.client.patch(url, data=json.dumps(payload), content_type="application/json", **self.header)
+
+        # Make sure deletion attempt failed
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
