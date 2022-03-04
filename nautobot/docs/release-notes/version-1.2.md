@@ -157,6 +157,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ## Fixed
 
 - [#1301](https://github.com/nautobot/nautobot/issues/1301) - Fixed window history handling for views with tabs in Safari/Firefox.
+- [#1398](https://github.com/nautobot/nautobot/issues/1398) - Fixed missing safeguard for removing master from Virtual Chassis via API.
 - [#1399](https://github.com/nautobot/nautobot/issues/1399) - Fixed not being able to set master to `null` on Virtual Chassis API.
 - [#1405](https://github.com/nautobot/nautobot/issues/1405) - Fixed incorrect import in 'startplugin' template code.
 - [#1412](https://github.com/nautobot/nautobot/issues/1412) - Fixed not being able to query for prefix family via GraphQL.
