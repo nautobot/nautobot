@@ -13,9 +13,11 @@
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
             {% block breadcrumbs %}
+                {% if list_url %}
                 <li><a href="{% url list_url %}">
                     {{ verbose_name_plural|bettertitle }}
                 </a></li>
+                {% endif %}
                 {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
                 {% if object.name %}
                     <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
@@ -25,6 +27,7 @@
             {% endblock breadcrumbs %}
             </ol>
         </div>
+        {% if list_url %}
         <div class="col-sm-4 col-md-3">
             <form action="{% url list_url %}" method="get">
                 <div class="input-group">
@@ -37,6 +40,7 @@
                 </div>
             </form>
         </div>
+        {% endif%}
         {% endwith %}
     </div>
 

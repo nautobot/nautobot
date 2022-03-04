@@ -1,5 +1,5 @@
 {% load helpers %}
-{% with list_url=object|validated_viewname:"list" tags=object.tags %}
+{% with tags=object.tags %}
 {% if tags %}
 <div class="panel panel-default">
     <div class="panel-heading">
