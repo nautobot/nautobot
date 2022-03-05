@@ -514,22 +514,6 @@ class DynamicGroupView(generic.ObjectView):
         return context
 
 
-def _generate_filter_form(filterform_class, filter_fields):
-    """
-    Closure to generate a dynamic FilterForm that can be used to validate teh filter fields
-    that get saved on `DynamicGroup.filter`.
-    """
-
-    class FilterForm(filterform_class):
-        prefix = "filter"
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.fields = filter_fields
-
-    return FilterForm
-
-
 class DynamicGroupEditView(generic.ObjectEditView):
     queryset = DynamicGroup.objects.all()
     model_form = forms.DynamicGroupForm
@@ -538,30 +522,20 @@ class DynamicGroupEditView(generic.ObjectEditView):
     def get_extra_context(self, request, instance):
         ctx = super().get_extra_context(request, instance)
 
-        # FIXME(jathan); This is a stopgap for the moment just to keep things
-        # moving. This must be revisited for clarity. Too many things in this
-        # `try...except.`
-        try:
-            filterform_class = instance.map and instance.map.filterform
-            filter_fields = instance.get_filter_fields()
-            FilterForm = _generate_filter_form(filterform_class, filter_fields)
-        except (AttributeError, TypeError):
-            FilterForm = None
+        filterform_class = instance.generate_filter_form()
 
-        if FilterForm is None:
+        if filterform_class is None:
             # FIXME(jathan): There is currently an edge case here that needs to be addressed:
             # `AttributeError: 'NoneType' object has no attribute 'is_valid'`
             # See: https://sentry.io/share/issue/fb41c6afb40248f6931021574bc38a0d/
-            extra_form = None
+            filter_form = None
         elif request.POST:
-            extra_form = FilterForm(data=request.POST)
+            filter_form = filterform_class(data=request.POST)
         else:
-            extra_form = FilterForm(initial=instance.filter)
+            initial = instance.get_initial()
+            filter_form = filterform_class(initial=initial)
 
-        # FIXME(jathan): Currently replaced with dynamic FilterForm generation (see
-        # `_generate_filter_form` above)
-        # extra_form._append_filters()
-        ctx["extra_form"] = extra_form
+        ctx["filter_form"] = filter_form
 
         return ctx
 
@@ -579,16 +553,13 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     object_created = not form.instance.present_in_database
                     obj = form.save(commit=False)
 
-                    # Check that the new object conforms with any assigned object-level permissions
-                    # self.queryset.get(pk=obj.pk)
-
                     # Process the extra form
                     ctx = self.get_extra_context(request, obj)
-                    extra_form = ctx["extra_form"]
-                    if extra_form.is_valid():
-                        obj.save_filters(extra_form)
+                    filter_form = ctx["filter_form"]
+                    if filter_form.is_valid():
+                        obj.save_filters(filter_form)
                     else:
-                        raise RuntimeError(extra_form.errors)
+                        raise RuntimeError(filter_form.errors)
 
                     # Check that the new object conforms with any assigned object-level permissions
                     obj.save()

@@ -29,6 +29,11 @@ def multivalue_field_factory(field_class):
         def to_python(self, value):
             if not value:
                 return []
+
+            # Make it a list if it's a string.
+            if isinstance(value, str):
+                value = [value]
+
             return [
                 # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
                 super(field_class, self).to_python(v)

@@ -11,14 +11,14 @@
             {% render_field form.content_type %}
         </div>
     </div>
-   {% if extra_form %}
+   {% if filter_form %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Filter Fields</strong></div>
         <div class="panel-body">
             <span class="help-block">
-                Select the filtering criteria to determine membership of objects matching the Content Type for this Dynamic Group. The filter fields available here are the same that you would find in the landing page for that object in the web interface. 
+                Select the filtering criteria to determine membership of objects matching the Content Type for this Dynamic Group. Fields that are not a dropdown are expected to have string inputs and do not support multiple values.
             </span>
-	    {% render_form extra_form %}
+	    {% render_form filter_form %}
         </div>
     </div>
     {% endif %}
