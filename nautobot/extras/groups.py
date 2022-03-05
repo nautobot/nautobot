@@ -3,7 +3,6 @@ import logging
 import urllib
 
 from django import forms
-from django.db import models
 from django.urls import reverse
 from django.utils.functional import classproperty
 
