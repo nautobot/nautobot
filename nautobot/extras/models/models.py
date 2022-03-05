@@ -59,7 +59,7 @@ class ConfigContextSchemaValidationMixin:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
 
-@extras_features("graphql")
+@extras_features("dynamic_groups", "graphql")
 class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
@@ -216,6 +216,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
 @extras_features(
     "custom_fields",
     "custom_validators",
+    "dynamic_groups",
     "graphql",
     "relationships",
 )
@@ -507,7 +508,7 @@ class FileProxy(BaseModel):
 #
 
 
-@extras_features("graphql")
+@extras_features("dynamic_groups", "graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
@@ -634,7 +635,7 @@ class ImageAttachment(BaseModel):
 #
 
 
-@extras_features("graphql")
+@extras_features("dynamic_groups", "graphql")
 class Webhook(BaseModel, ChangeLoggedModel):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or

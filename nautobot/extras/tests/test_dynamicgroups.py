@@ -129,5 +129,4 @@ class DynamicGroupTest(DynamicGroupTestBase):
 - Test common views
 - Test `members` endpoint
 
-
 """
