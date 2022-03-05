@@ -13,35 +13,6 @@ from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 logger = logging.getLogger(__name__)
 
 
-def extract_value_from_object_field(obj, field_parts):
-    # FIXME(jathan): Document this and fix the variable names for readability.
-
-    if not field_parts:
-        raise ValueError("A list of attribute must be provided")
-
-    # Extract the field name and value.
-    field_name = field_parts.pop(0)
-    value = getattr(obj, field_name, None)
-
-    # Only proceed if the field is found.
-    if value is None:
-        return None
-
-    # Keep iterating over field parts recursively.
-    if field_parts:
-        return extract_value_from_object_field(value, field_parts)
-
-    # Stringify model instances
-    if isinstance(value, models.Model):
-        value = str(value)
-
-    # If it's a related manager return a boolean of whether there are related objects.
-    if isinstance(value, models.Manager):
-        value = value.exists()
-
-    return value
-
-
 def dynamicgroup_map_factory(model):
     """Generate a `FooDynamicGroupMap` class for a given `model`."""
 
