@@ -181,39 +181,119 @@ class DynamicGroup(OrganizationalModel):
         :param form:
             A validated instance of `DynamicGroupForm`
         """
-        filter = {}
         filter_fields = self.get_filter_fields()
-        for field_name in filter_fields:
-            if field_name not in form.fields:
-                continue
 
-            field = form.fields[field_name]
+        # Populate the filterset from the incoming form's cleaned_data.
+        filterset_class = self.map.filterset_class
+        filterset_class.form_prefix = "filter"
+        filterset = filterset_class(form.cleaned_data)
+
+        # Use the auto-generated filterset form perform creation of the
+        # filter dictionary that will be saved on the instance.
+        filterset_form = filterset.form
+        filterset_form_fields = list(filterset_form.fields)
+
+        # Keep only the fields we desire for the filter.
+        for extra_field_name in filterset_form_fields:
+            if extra_field_name not in filter_fields:
+                print(f"Deleting {extra_field_name} from extra_form")
+                del filterset_form.fields[extra_field_name]
+
+        # Validate the filter.
+        filterset_form.is_valid()
+        new_filter = {}
+
+        # Perform some type coercions so that they are URL-friendly and reversible.
+        for field_name in list(filterset_form.fields):
+            field = filterset_form.fields[field_name]
+            field_value = filterset_form.cleaned_data[field_name]
 
             if isinstance(field, forms.ModelMultipleChoiceField):
-                qs = form.cleaned_data[field_name]
+                # qs = field_value
                 field_to_query = field.to_field_name or "pk"
-                logger.debug("%s - %s", form.cleaned_data[field_name], field_to_query)
-                values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
-                filter[field_name] = values or []
+                logger.debug("%s - %s", field_value, field_to_query)
+                try:
+                    # Filterset form validation cleans up related fields.
+                    # values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
+                    values = [getattr(item, field_to_query) for item in field_value]
+                except AttributeError:
+                    breakpoint()
+                new_filter[field_name] = values
 
             elif isinstance(field, forms.ModelChoiceField):
                 field_to_query = field.to_field_name or "pk"
-                value = getattr(form.cleaned_data[field_name], field_to_query, None)
-                filter[field_name] = value or None
+                value = getattr(field_value, field_to_query, None)
+                new_filter[field_name] = value or None
 
-            # TODO(jathan): Decide if we need this before removing this code.
+            # NullBooleanFields require a singular value
             # elif isinstance(field, forms.NullBooleanField):
-            #     filter[field_name] = form.cleaned_data[field_name]
-
             else:
-                filter[field_name] = form.cleaned_data[field_name]
-                logger.debug("%s: %s", field_name, form.cleaned_data[field_name])
+                new_filter[field_name] = field_value
+                logger.debug("%s: %s", field_name, field_value)
 
-        self.filter = filter
-        # FIXME(jathan): Don't call save here. Just dynamically update `.filter`
-        # and let the caller worry about save. This also aligns with the current
-        # dynamic `FilterForm` pattern which may or may not persist.
-        # self.save()
+        self.filter = new_filter
+
+    # FIXME(jathan): Yes, this is GHETTO, but there is discrepancy between
+    # explicitly declared fields on `DeviceFilterForm` (for example) vs. the
+    # `DeviceFilterSet` filters. For example `Device.name` becomes a
+    # `MultiValueCharFilter` that emits a `MultiValueCharField` which expects a
+    # list of strings as input. The inverse is not true. It's easier to munge
+    # this dictionary when we go to send it to the form, than it is to
+    # dynamically coerce the form field types coming and going... For now.
+    def get_initial(self):
+        """
+        Return an form-friendly version of `self.filter` for initial form data.
+
+        This is intended for use to populate the dynamically-generated filter form created by
+        `generate_filter_form()`.
+        """
+        filter_fields = self.get_filter_fields()
+        initial_data = self.filter.copy()
+
+        # Brute force to capture the names of any `*CharField` fields.
+        char_fields = [f for (f, ftype) in filter_fields.items() if ftype.__class__.__name__.endswith("CharField")]
+
+        # Iterate the char fields and coerce their type to a singular value or
+        # an empty string in the case of an empty list.
+        for cf in char_fields:
+            field_value = initial_data.get(cf, "not_found")
+            if field_value == "not_found":
+                continue
+
+            if isinstance(field_value, list):
+                # Either the first (and should be only) item in this list.
+                if field_value:
+                    new_value = field_value[0]
+                # Or empty string if there isn't.
+                else:
+                    new_value = ""
+                initial_data[cf] = new_value
+
+        return initial_data
+
+    def generate_filter_form(self):
+        """
+        Generate a `FilterForm` class for use in `DynamicGroup` edit view.
+
+        This form is used popoulate and validate the filter dictionary.
+        """
+        filterform_class = self.map and self.map.filterform_class
+        filter_fields = self.get_filter_fields()
+
+        # FIXME(jathan): Account for field_order in the newly generated class.
+        try:
+
+            class FilterForm(filterform_class):
+                prefix = "filter"
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.fields = filter_fields
+
+        except (AttributeError, TypeError):
+            return None
+
+        return FilterForm
 
     def clean(self):
         super().clean()
@@ -227,21 +307,3 @@ class DynamicGroup(OrganizationalModel):
 
         if not isinstance(self.filter, dict):
             raise ValidationError({"filter": "Filter must be a dict"})
-
-    # def clean(self):
-    #     """Group Model clean method."""
-    #     model = self.content_type.model_class()
-
-    #     if self.filter:
-    #         try:
-    #             filterset_class = get_filterset_for_model(model)
-    #         except AttributeError:
-    #             raise ValidationError(  # pylint: disable=raise-missing-from
-    #                 {"filter": "Unable to find a FilterSet for this model."}
-    #             )
-
-    #         filterset = filterset_class(self.filter, model.objects.all())
-
-    #         if filterset.errors:
-    #             for key in filterset.errors:
-    #                 raise ValidationError({"filter": f"{key}: {filterset.errors[key]}"})
