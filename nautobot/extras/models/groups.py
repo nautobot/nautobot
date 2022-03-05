@@ -209,15 +209,9 @@ class DynamicGroup(OrganizationalModel):
             field_value = filterset_form.cleaned_data[field_name]
 
             if isinstance(field, forms.ModelMultipleChoiceField):
-                # qs = field_value
                 field_to_query = field.to_field_name or "pk"
                 logger.debug("%s - %s", field_value, field_to_query)
-                try:
-                    # Filterset form validation cleans up related fields.
-                    # values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
-                    values = [getattr(item, field_to_query) for item in field_value]
-                except AttributeError:
-                    breakpoint()
+                values = [getattr(item, field_to_query) for item in field_value]
                 new_filter[field_name] = values
 
             elif isinstance(field, forms.ModelChoiceField):
@@ -225,15 +219,13 @@ class DynamicGroup(OrganizationalModel):
                 value = getattr(field_value, field_to_query, None)
                 new_filter[field_name] = value or None
 
-            # NullBooleanFields require a singular value
-            # elif isinstance(field, forms.NullBooleanField):
             else:
                 new_filter[field_name] = field_value
                 logger.debug("%s: %s", field_name, field_value)
 
         self.filter = new_filter
 
-    # FIXME(jathan): Yes, this is GHETTO, but there is discrepancy between
+    # FIXME(jathan): Yes, this is "something", but there is discrepancy between
     # explicitly declared fields on `DeviceFilterForm` (for example) vs. the
     # `DeviceFilterSet` filters. For example `Device.name` becomes a
     # `MultiValueCharFilter` that emits a `MultiValueCharField` which expects a
