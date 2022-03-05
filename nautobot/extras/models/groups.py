@@ -172,7 +172,7 @@ class DynamicGroup(OrganizationalModel):
 
         return fields
 
-    def save_filters(self, form):
+    def set_filter(self, form):
         """
         Extract all data from `form` fields into `filter` dictionary and call `save()`.
 
@@ -247,8 +247,8 @@ class DynamicGroup(OrganizationalModel):
 
         # Iterate the char fields and coerce their type to a singular value or
         # an empty string in the case of an empty list.
-        for cf in char_fields:
-            field_value = initial_data.get(cf, "not_found")
+        for char_field in char_fields:
+            field_value = initial_data.get(char_field, "not_found")
             if field_value == "not_found":
                 continue
 
@@ -259,7 +259,7 @@ class DynamicGroup(OrganizationalModel):
                 # Or empty string if there isn't.
                 else:
                     new_value = ""
-                initial_data[cf] = new_value
+                initial_data[char_field] = new_value
 
         return initial_data
 
@@ -287,6 +287,18 @@ class DynamicGroup(OrganizationalModel):
 
         return FilterForm
 
+    def clean_filter(self):
+        """Validations for `self.filter` that uses the generated filter form."""
+        if not isinstance(self.filter, dict):
+            raise ValidationError({"filter": "Filter must be a dict"})
+
+        # Validate against the generated filter form. It's pretty lenient so
+        # this would have to be very ugly.
+        form_class = self.generate_filter_form()
+        form = form_class(self.filter)
+        if not form.is_valid():
+            raise ValidationError(form.errors)
+
     def clean(self):
         super().clean()
 
@@ -297,5 +309,5 @@ class DynamicGroup(OrganizationalModel):
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
-        if not isinstance(self.filter, dict):
-            raise ValidationError({"filter": "Filter must be a dict"})
+        # Validate `filter` dict
+        self.clean_filter()

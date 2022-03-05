@@ -81,13 +81,19 @@ class BaseDynamicGroupMap:
         for missing_field in missing_fields:
             # Skip excluded fields
             if missing_field.startswith(cls.exclude_filter_fields):
-                print(f">> Skipping excluded filter field: {missing_field}\n")
+                logger.debug("Skipping excluded filter field: %s", missing_field)
                 continue
 
             # Try to fuzz fields that should be in the filter form. Sorted from
             # most to least common, so the loop break happens sooner than later.
             # FIXME(jathan): YES THIS IS GHETTO, but I'm just trying to get
             # something working that is backwards-compatible.
+            # FIXME(jathan); There is a bug with `asset_tag` -> `tag`. Will need
+            # to retrhink this fuzzing approach and/or replace it with a static
+            # mapping or something. "Dynamic" groups indeed.
+            #
+            # >>> Missing: asset_tag, Guess: tag found in filter fields
+            # >>> Missing: tags, Guess: tag found in filter fields
             guesses = [
                 missing_field,  # foo
                 missing_field + "_id",  # foo_id
@@ -97,7 +103,7 @@ class BaseDynamicGroupMap:
             ]
             for guess in guesses:
                 if guess in filter_fields:
-                    print(f">>> Missing: {missing_field}, Guess: {guess} found in filter fields")
+                    logger.debug("Missing: %s, Guess: %s found in filter fields", missing_field, guess)
                     break
 
             # If none of the missing ones are found in some other form, add the
@@ -107,7 +113,7 @@ class BaseDynamicGroupMap:
                 try:
                     filterset_field = filterset_fields[missing_field]
                 except KeyError:
-                    print(f">>> Skipping {missing_field}: doesn't have a filterset field")
+                    logger.debug("Skipping %s: doesn't have a filterset field", missing_field)
                     continue
 
                 # Get ready to replace the form field w/ correct widget.
@@ -123,14 +129,13 @@ class BaseDynamicGroupMap:
                 if to_field_name is not None:
                     modelform_field.to_field_name = to_field_name
 
-                field_type = modelform_field.__class__.__name__
-                print(f">> Added {missing_field} ({field_type}) to filter fields\n")
+                logger.debug("Added %s (%s) to filter fields", missing_field, modelform_field.__class__.__name__)
                 filter_fields[missing_field] = modelform_field
 
         for field_name, filter_field in filter_fields.items():
             # Skip excluded fields
             if field_name.startswith(cls.exclude_filter_fields):
-                print(f">> Skipping excluded filter field: {field_name}\n")
+                logger.debug("Skipping excluded filter field: %s", field_name)
                 continue
 
             _fields[field_name] = filter_field

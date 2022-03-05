@@ -659,61 +659,45 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=VirtualChassis.objects.all(),
         label="Virtual chassis (ID)",
     )
-    virtual_chassis_member = django_filters.BooleanFilter(
-        method="_virtual_chassis_member", label="Is a virtual chassis member"
+    is_virtual_chassis_member = RelatedMembershipBooleanFilter(
+        field_name="virtual_chassis",
+        label="Is a virtual chassis member",
     )
-    console_ports = django_filters.BooleanFilter(
-        method="_console_ports",
-        label="Has console ports",
-    )
+    virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
         field_name="consoleports",
         label="Has console ports",
     )
-    console_server_ports = django_filters.BooleanFilter(
-        method="_console_server_ports",
-        label="Has console server ports",
-    )
+    console_ports = has_console_ports
     has_console_server_ports = RelatedMembershipBooleanFilter(
         field_name="consoleserverports",
         label="Has console server ports",
     )
-    power_ports = django_filters.BooleanFilter(
-        method="_power_ports",
-        label="Has power ports",
-    )
+    console_server_ports = has_console_server_ports
     has_power_ports = RelatedMembershipBooleanFilter(
         field_name="powerports",
         label="Has power ports",
     )
-    power_outlets = django_filters.BooleanFilter(
-        method="_power_outlets",
-        label="Has power outlets",
-    )
+    power_ports = has_power_ports
     has_power_outlets = RelatedMembershipBooleanFilter(
         field_name="poweroutlets",
         label="Has power outlets",
     )
-    interfaces = django_filters.BooleanFilter(
-        method="_interfaces",
-        label="Has interfaces (deprecated)",
-    )
+    power_outlets = has_power_outlets
     has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",
         label="Has interfaces",
     )
+    interfaces = has_interfaces
     pass_through_ports = django_filters.BooleanFilter(
         method="_pass_through_ports",
         label="Has pass-through ports",
-    )
-    device_bays = django_filters.BooleanFilter(
-        method="_device_bays",
-        label="Has device bays",
     )
     has_device_bays = RelatedMembershipBooleanFilter(
         field_name="devicebays",
         label="Has device bays",
     )
+    device_bays = has_device_bays
     tag = TagFilter()
 
     class Meta:
@@ -745,29 +729,8 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
             return queryset.filter(params)
         return queryset.exclude(params)
 
-    def _virtual_chassis_member(self, queryset, name, value):
-        return queryset.exclude(virtual_chassis__isnull=value)
-
-    def _console_ports(self, queryset, name, value):
-        return queryset.exclude(consoleports__isnull=value)
-
-    def _console_server_ports(self, queryset, name, value):
-        return queryset.exclude(consoleserverports__isnull=value)
-
-    def _power_ports(self, queryset, name, value):
-        return queryset.exclude(powerports__isnull=value)
-
-    def _power_outlets(self, queryset, name, value):
-        return queryset.exclude(poweroutlets__isnull=value)
-
-    def _interfaces(self, queryset, name, value):
-        return queryset.exclude(interfaces__isnull=value)
-
     def _pass_through_ports(self, queryset, name, value):
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
-
-    def _device_bays(self, queryset, name, value):
-        return queryset.exclude(devicebays__isnull=value)
 
 
 class DeviceComponentFilterSet(CustomFieldModelFilterSet):

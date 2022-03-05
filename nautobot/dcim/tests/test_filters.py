@@ -1701,6 +1701,12 @@ class DeviceTestCase(TestCase):
         params = {"virtual_chassis_member": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_is_virtual_chassis_member(self):
+        params = {"is_virtual_chassis_member": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"is_virtual_chassis_member": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
     def test_console_ports(self):
         params = {"console_ports": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)

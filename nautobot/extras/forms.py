@@ -661,36 +661,6 @@ class DynamicGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFo
             "content_type",
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # FIXME(jathan): This is currently moved to dynamic `FilterForm`
-        # generated at UI render time. Yes, that means the API still needs to be
-        # considered.
-        # self._append_filters()
-
-    def _append_filters(self):
-        """Dynamically add the fields from the associated DynamicGroupMap to the form."""
-        filter_fields = self.instance.get_filter_fields()
-        if filter_fields is None:
-            return
-
-        self.fields.update(filter_fields)
-
-    def _save_filters(self):
-        self.instance.save_filters(self)
-
-    # FIXME(jathan): Temporarily disable having this form save its own filters
-    # since we it was moved to the dynamic FilterForm generation.
-    """
-    def save(self, commit=True):
-
-        obj = super().save(commit)
-        if commit:
-            self._save_filters()
-
-        return obj
-    """
-
 
 class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
     """DynamicGroup filter form."""

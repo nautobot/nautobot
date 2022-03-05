@@ -552,18 +552,20 @@ class DynamicGroupEditView(generic.ObjectEditView):
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
+                    # Obtain the instance, but do not yet `save()` it to the database.
                     obj = form.save(commit=False)
 
-                    # Process the extra form
+                    # Process the filter form and save the query filters to `obj.filter`.
                     ctx = self.get_extra_context(request, obj)
                     filter_form = ctx["filter_form"]
                     if filter_form.is_valid():
-                        obj.save_filters(filter_form)
+                        obj.set_filter(filter_form)
                     else:
                         raise RuntimeError(filter_form.errors)
 
-                    # Check that the new object conforms with any assigned object-level permissions
+                    # After filters have been set, now we save the object to the database.
                     obj.save()
+                    # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
 
                 msg = "{} {}".format(
