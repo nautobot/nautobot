@@ -7,7 +7,7 @@ from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 from nautobot.utilities.testing.integration import SplinterTestCase
 
 
-class RelationshipsTestCase(SplinterTestCase):
+class CircuitRelationshipsTestCase(SplinterTestCase):
     """
     Integration test to check relationships show on a circuit termination in the UI
     """

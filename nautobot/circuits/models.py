@@ -4,11 +4,12 @@ from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import ObjectChange, RelationshipModel, StatusModel
+from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import serialize_object, serialize_object_v2
+
 from .choices import CircuitTerminationSideChoices
 
 
@@ -270,11 +271,16 @@ class Circuit(PrimaryModel, StatusModel):
 
 
 @extras_features(
+    "custom_fields",
+    "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
     "relationships",
+    "statuses",
+    "webhooks",
 )
-class CircuitTermination(BaseModel, PathEndpoint, CableTermination, RelationshipModel):
+class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     site = models.ForeignKey(
@@ -310,13 +316,7 @@ class CircuitTermination(BaseModel, PathEndpoint, CableTermination, Relationship
         return f"Termination {self.term_side}: {self.site or self.provider_network}"
 
     def get_absolute_url(self):
-
-        # Circuit terminations can terminate on a site or a provider network.
-        # There is no separate view for Circuit Terminations,
-        # so we return the absolute URL of the corresponding terminal here.
-        if self.site:
-            return self.site.get_absolute_url()
-        return self.provider_network.get_absolute_url()
+        return reverse("circuits:circuittermination", args=[self.pk])
 
     def clean(self):
         super().clean()

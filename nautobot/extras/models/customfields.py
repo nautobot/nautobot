@@ -68,6 +68,12 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. "
+        'It will appear in the "Advanced" tab instead.',
+    )
 
     objects = ComputedFieldManager()
 
@@ -124,11 +130,27 @@ class CustomFieldModel(models.Model):
         """
         return self._custom_field_data
 
-    def get_custom_fields(self):
+    def get_custom_fields_basic(self):
+        """
+        Return a dictionary of custom fields for a single object in the form {<field>: value}
+        which have advanced_ui set to False
+        """
+        return self.get_custom_fields(advanced_ui=False)
+
+    def get_custom_fields_advanced(self):
+        """
+        Return a dictionary of custom fields for a single object in the form {<field>: value}
+        which have advanced_ui set to True
+        """
+        return self.get_custom_fields(advanced_ui=True)
+
+    def get_custom_fields(self, advanced_ui=None):
         """
         Return a dictionary of custom fields for a single object in the form {<field>: value}.
         """
         fields = CustomField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            fields = fields.filter(advanced_ui=advanced_ui)
         return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
     def clean(self):
@@ -151,11 +173,21 @@ class CustomFieldModel(models.Model):
                 raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
     # Computed Field Methods
-    def has_computed_fields(self):
+    def has_computed_fields(self, advanced_ui=None):
         """
         Return a boolean indicating whether or not this content type has computed fields associated with it.
+        This can also check whether the advanced_ui attribute is True or False for UI display purposes.
         """
-        return ComputedField.objects.get_for_model(self).exists()
+        computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
+        return computed_fields.exists()
+
+    def has_computed_fields_basic(self):
+        return self.has_computed_fields(advanced_ui=False)
+
+    def has_computed_fields_advanced(self):
+        return self.has_computed_fields(advanced_ui=True)
 
     def get_computed_field(self, slug, render=True):
         """
@@ -171,13 +203,15 @@ class CustomFieldModel(models.Model):
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
-    def get_computed_fields(self, label_as_key=False):
+    def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """
         Return a dictionary of all computed fields and their rendered values for this model.
         Keys are the `slug` value of each field. If label_as_key is True, `label` values of each field are used as keys.
         """
         computed_fields_dict = {}
         computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
         if not computed_fields:
             return {}
         for cf in computed_fields:
@@ -261,6 +295,12 @@ class CustomField(BaseModel, ChangeLoggedModel):
         help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
         "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters. Regular "
         "expression on select and multi-select will be applied at <code>Custom Field Choices</code> definition.",
+    )
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. "
+        'It will appear in the "Advanced" tab instead.',
     )
 
     objects = CustomFieldManager()

@@ -292,6 +292,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
             "template",
             "fallback_value",
             "weight",
+            "advanced_ui",
         )
 
 
@@ -492,6 +493,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "name",
             "description",
             "required",
+            "advanced_ui",
             "filter_logic",
             "default",
             "weight",
@@ -1090,6 +1092,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "slug",
             "description",
             "type",
+            "advanced_ui",
             "source_type",
             "source_label",
             "source_hidden",

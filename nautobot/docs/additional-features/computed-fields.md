@@ -26,6 +26,7 @@ Computed fields must define a template from which to render their values. The te
 
 A computed field must be assigned to an object type, or model, in Nautobot. Once created, a computed field will automatically appear as part of this model's display. See notes about viewing computed fields via the REST API below.
 
+When creating a computed field, if "Move to Advanced tab" is checked, this computed field won't appear on the object's main detail tab in the UI, but will appear in the "Advanced" tab. This is useful when the requirement is to hide this field from the main detail tab when, for instance, it is only required for machine-to-machine communication and not user consumption.
 
 ## Computed Field Template Context
 

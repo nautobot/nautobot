@@ -134,6 +134,7 @@ urlpatterns = [
         views.CircuitTerminationEditView.as_view(),
         name="circuittermination_add",
     ),
+    path("circuit-terminations/<uuid:pk>/", views.CircuitTerminationView.as_view(), name="circuittermination"),
     path(
         "circuit-terminations/<uuid:pk>/edit/",
         views.CircuitTerminationEditView.as_view(),
@@ -154,6 +155,12 @@ urlpatterns = [
         "circuit-terminations/<uuid:pk>/trace/",
         PathTraceView.as_view(),
         name="circuittermination_trace",
+        kwargs={"model": CircuitTermination},
+    ),
+    path(
+        "circuit-terminations/<uuid:pk>/changelog/",
+        ObjectChangeLogView.as_view(),
+        name="circuittermination_changelog",
         kwargs={"model": CircuitTermination},
     ),
 ]

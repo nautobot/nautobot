@@ -329,6 +329,13 @@ class CustomFieldFilter(django_filters.Filter):
             # Contains handles lists within the JSON data for multi select fields
             self.lookup_expr = "contains"
 
+    def filter(self, qs, value):
+        if value == "null":
+            return self.get_method(qs)(
+                Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
+            )
+        return super().filter(qs, value)
+
 
 class CustomFieldModelFilterSet(django_filters.FilterSet):
     """

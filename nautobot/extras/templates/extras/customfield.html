@@ -53,6 +53,10 @@
                         <td>Filter Logic</td>
                         <td><span>{{ object.filter_logic | capfirst }}</span></td>
                     </tr>
+                    <tr>
+                        <td>Move to Advanced Tab</td>
+                        <td><span>{{ object.advanced_ui | render_boolean }}</span></td>
+                    </tr>
                 </table>
             </div>
             {% if object.choices.exists %}
