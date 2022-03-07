@@ -13,8 +13,8 @@ body:
   - type: dropdown
     id: persona
     attributes:
-      label: As WHO, the USER PERSONA,
-      description: Please choose the appropriate [persona](https://github.com/nautobot/nautobot/wiki/Personas)
+      label: As ...
+      description: WHO, the USER PERSONA; Please choose the appropriate [persona](https://github.com/nautobot/nautobot/wiki/Personas)
       multiple: false
       options:
         - "Ozzie - Operator"
@@ -32,16 +32,16 @@ body:
   - type: textarea
     id: what
     attributes:
-      label: I want WHAT
-      description: Please enter the desired functionality to be implemented.
+      label: I want ...
+      description: WHAT; Please enter the desired functionality to be implemented.
       placeholder: To develop Nautobot plugins that can be inserted as a top-level item in the navigation bar
     validations:
       required: true
   - type: textarea
     id: why
     attributes:
-      label: So that WHY
-      description: Please enter the reason or value for the desired functionality.
+      label: So that ...
+      description: WHY; Please enter the reason or value for the desired functionality.
       placeholder: >
         My plugin is seen as first-class citizen by my users and so that the
         plugins drop-down menu isn't overloaded. When I use Nautobot as an App Platform,
@@ -52,8 +52,8 @@ body:
   - type: textarea
     id: acceptance_criteria
     attributes:
-      label: I know this is done when... HOW
-      description: The requirements/acceptance criteria (a list) as to how this functionality should be implemented.
+      label: I know this is done when...
+      description: HOW; The requirements/acceptance criteria (a list) as to how this functionality should be implemented.
       placeholder: |
         - I create a Nautobot plugin and have the option to inject it in the Plugins
           dropdown menu or create a new dedicated dropdown in the navigation bar.
