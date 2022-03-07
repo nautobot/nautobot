@@ -1248,7 +1248,6 @@ class CustomFieldChoiceTest(TestCase):
 
 
 class CustomFieldBackgroundTasks(CeleryTestCase):
-
     def test_provision_field_task(self):
         self.clear_worker()
 
