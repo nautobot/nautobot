@@ -140,6 +140,35 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.8 (2022-03-07)
+
+### Added
+
+- [#839](https://github.com/nautobot/nautobot/issues/839) - Add CODE_OF_CONDUCT.md to repository.
+- [#1242](https://github.com/nautobot/nautobot/issues/1242) - Add MAJOR.MINOR tags to Docker images upon release.
+- [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add SECURITY.md to repository.
+- [#1388](https://github.com/nautobot/nautobot/pull/1388) - Added beta version of GitHub Issue Form style for feature request.
+- [#1419](https://github.com/nautobot/nautobot/pull/1419) - Add documentation for specifying a CA cert file for LDAP authentication backend.
+- [#1446](https://github.com/nautobot/nautobot/pull/1446) - Apply title labels to Docker images.
+
+## Changed
+
+- [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version.
+- [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update django-redis to `5.2.x` to address `5.1.x` blocking redis `4.x` versions.
+- [#1447](https://github.com/nautobot/nautobot/pull/1447) - Minor `nit` on Github Issue Form styling.
+- [#1452](https://github.com/nautobot/nautobot/pull/1452) - Changed GitHub release workflow to not run on prerelease releases.
+- [#1453](https://github.com/nautobot/nautobot/pull/1453) - Changed feature request to use GitHub Issue Form.
+
+## Fixed
+
+- [#1301](https://github.com/nautobot/nautobot/issues/1301) - Fixed window history handling for views with tabs in Safari/Firefox.
+- [#1302](https://github.com/nautobot/nautobot/issues/1302) - Fixed missing Advanced tab on Virtual Machine detail view.
+- [#1398](https://github.com/nautobot/nautobot/issues/1398) - Fixed missing safeguard for removing master from Virtual Chassis via API.
+- [#1399](https://github.com/nautobot/nautobot/issues/1399) - Fixed not being able to set master to `null` on Virtual Chassis API.
+- [#1405](https://github.com/nautobot/nautobot/issues/1405) - Fixed incorrect import in 'startplugin' template code.
+- [#1412](https://github.com/nautobot/nautobot/issues/1412) - Fixed not being able to query for prefix family via GraphQL.
+- [#1442](https://github.com/nautobot/nautobot/issues/1442) - Fixed missing Advanced tab on Job Result, Git Repository, and Config Context Schema detail views.
+
 ## v1.2.7 (2022-02-22)
 
 ### Changed

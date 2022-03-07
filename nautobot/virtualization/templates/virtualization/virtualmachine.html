@@ -10,21 +10,15 @@
         {% endif %}
 {% endblock extra_buttons %}
 
-{% block nav_tabs %}
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Virtual Machine</a>
-        </li>
+
+{% block extra_nav_tabs %}
         {% if perms.extras.view_configcontext %}
             <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
                 <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}">Config Context</a>
             </li>
-        {% endif %}
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'virtualization:virtualmachine_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-{% endblock nav_tabs %}
+        {% endif %} 
+{% endblock extra_nav_tabs %}
+
 
 {% block content_left_page %}
         <div class="panel panel-default">
@@ -248,4 +242,5 @@
 {% block javascript %}
     <script src="{% static 'js/interface_filtering.js' %}?v{{ settings.VERSION }}"></script>
     <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+    {{ block.super }}
 {% endblock javascript %}
