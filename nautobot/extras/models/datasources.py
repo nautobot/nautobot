@@ -8,7 +8,6 @@ from django.db import models, transaction
 from django.urls import reverse
 from django_cryptography.fields import encrypt
 
-from nautobot.extras.choices import JobSourceChoices
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
@@ -133,14 +132,6 @@ class GitRepository(PrimaryModel):
         if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:
             # User edited the repo but did NOT specify a new token value. Make sure we keep the existing value.
             self._token = self.__initial_token
-
-        if self.__initial_slug and self.slug != self.__initial_slug:
-            # Need to update the "source" of any Job records originating from this repository
-            from .jobs import Job  # avoid circular import
-
-            for job in Job.objects.filter(source=f"{JobSourceChoices.SOURCE_GIT}.{self.__initial_slug}"):
-                job.source = f"{JobSourceChoices.SOURCE_GIT}.{self.slug}"
-                job.validated_save()
 
         super().save(*args, **kwargs)
 
