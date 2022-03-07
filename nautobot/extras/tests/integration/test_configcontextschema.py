@@ -3,11 +3,11 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Status
 from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class ConfigContextSchemaTestCase(SplinterTestCase):
+class ConfigContextSchemaTestCase(SeleniumTestCase):
     """
     Integration tests for the ConfigContextSchema model
     """

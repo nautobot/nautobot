@@ -3,12 +3,12 @@ from django.urls import reverse
 
 from nautobot.dcim.models import Device
 from nautobot.extras.models import CustomField
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 
 
-class CustomFieldTestCase(SplinterTestCase):
+class CustomFieldTestCase(SeleniumTestCase):
     """
     Integration tests for the CustomField and CustomFieldChoice models.
     """
@@ -110,16 +110,16 @@ class CustomFieldTestCase(SplinterTestCase):
             table = self.browser.find_by_id("custom-field-choices")
 
             # Assert that there are 5 choice rows before
-            self.assertEquals(len(table.find_by_css(".formset_row-choices")), 5)
+            self.assertEqual(len(table.find_by_css(".formset_row-choices")), 5)
 
             # And 6 after clicking "Add another..."
             self.browser.find_by_css(".add-row").click()
             rows = table.find_by_css(".formset_row-choices")
-            self.assertEquals(len(rows), 6)
+            self.assertEqual(len(rows), 6)
             self.browser.fill("choices-5-value", "choice3")
 
             # Make sure it the new row has default values while we're at it.
-            self.assertEquals(rows.last.find_by_name("choices-5-weight").value, "100")
+            self.assertEqual(rows.last.find_by_name("choices-5-weight").value, "100")
 
         self._create_custom_field(
             field_name="test-select", field_type="select", choices=choices, call_before_create=call_before_create
@@ -143,7 +143,7 @@ class CustomFieldTestCase(SplinterTestCase):
 
         # Null out the first choice, click "Update", expect it to fail.
         self.browser.fill("choices-0-value", "")
-        self.assertEquals(self.browser.find_by_name("choices-0-value").value, "")
+        self.assertEqual(self.browser.find_by_name("choices-0-value").value, "")
         self.browser.find_by_text("Update").click()
         self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
 
@@ -154,7 +154,7 @@ class CustomFieldTestCase(SplinterTestCase):
         # Fix it, save it, assert correctness.
         self.browser.fill("choices-0-value", "new_choice")
         self.browser.find_by_text("Update").click()
-        self.assertEquals(self.browser.url, detail_url)
+        self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
 
@@ -180,7 +180,7 @@ class CustomFieldTestCase(SplinterTestCase):
         # Fill the new row, save it, assert correctness.
         self.browser.fill("choices-5-value", "new_choice")  # Fill the last row
         self.browser.find_by_text("Update").click()
-        self.assertEquals(self.browser.url, detail_url)
+        self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
 

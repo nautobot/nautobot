@@ -2,8 +2,8 @@ from unittest import skipIf
 
 from django.conf import settings
 
-from nautobot.utilities.testing.integration import SeleniumTestCase
 from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 @skipIf(
@@ -78,17 +78,17 @@ class PluginNavBarTestCase(SeleniumTestCase):
         self.user.save()
 
         # Retrieve home page
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
         tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Example Menu')]"
-        tab = self.selenium.find_element_by_xpath(tab_xpath)
+        tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab.get_attribute("aria-expanded")))
+        self.assertTrue(bool(tab["aria-expanded"]))
 
-        group = tab.find_element_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), 'Example Group 1')]")
+        group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), 'Example Group 1')]")
 
         item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), 'Example Model')]]"
-        group.find_element_by_xpath(item_xpath)
+        group.find_by_xpath(item_xpath)
 
     def test_plugin_navbar_modify_circuits(self):
         """
@@ -99,32 +99,30 @@ class PluginNavBarTestCase(SeleniumTestCase):
         self.user.save()
 
         # Retrieve home page
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
         tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Circuits')]"
-        tab = self.selenium.find_element_by_xpath(tab_xpath)
+        tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab.get_attribute("aria-expanded")))
+        self.assertTrue(bool(tab["aria-expanded"]))
 
         for group_name, items in self.navbar["Circuits"].items():
-            group = tab.find_element_by_xpath(
-                f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]"
-            )
+            group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]")
             for item_name, item_details in items.items():
                 item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
-                item = group.find_element_by_xpath(item_xpath)
+                item = group.find_by_xpath(item_xpath)
 
                 for button_name in item_details["buttons"]:
-                    button = item.find_element_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
+                    button = item.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
                     # Ensure button has matching class for its name
                     button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
                     if button_class:
-                        self.assertIn(button_class, button.get_attribute("class"))
+                        self.assertIn(button_class, button["class"])
                     # Ensure button has matching icon for its name
                     button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
                     if button_icon:
-                        icon = button.find_element_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
-                        self.assertIn(button_icon, icon.get_attribute("class"))
+                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
+                        self.assertIn(button_icon, icon["class"])
 
     def test_plugin_navbar_plugin_tab(self):
         """
@@ -135,23 +133,21 @@ class PluginNavBarTestCase(SeleniumTestCase):
         self.user.save()
 
         # Retrieve home page
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
         tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Plugins')]"
-        tab = self.selenium.find_element_by_xpath(tab_xpath)
+        tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab.get_attribute("aria-expanded")))
+        self.assertTrue(bool(tab["aria-expanded"]))
 
         for group_name, items in self.navbar["Plugins"].items():
-            group = tab.find_element_by_xpath(
-                f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]"
-            )
+            group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]")
             for item_name, item_details in items.items():
                 item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
-                item = group.find_element_by_xpath(item_xpath)
+                item = group.find_by_xpath(item_xpath)
 
                 for button_name in item_details["buttons"]:
-                    button = item.find_element_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
+                    button = item.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
                     # Ensure button has matching class for its name
                     button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
                     if button_class:
@@ -159,5 +155,5 @@ class PluginNavBarTestCase(SeleniumTestCase):
                     # Ensure button has matching icon for its name
                     button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
                     if button_icon:
-                        icon = button.find_element_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
-                        self.assertIn(button_icon, icon.get_attribute("class"))
+                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
+                        self.assertIn(button_icon, icon["class"])

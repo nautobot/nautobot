@@ -1110,7 +1110,7 @@ class StatusTest(TestCase):
             self.status.name = test
             self.status.clean()
             self.status.save()
-            self.assertEquals(str(self.status), test)
+            self.assertEqual(str(self.status), test)
 
 
 class TagTest(TestCase):
