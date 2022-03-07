@@ -151,7 +151,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1419](https://github.com/nautobot/nautobot/pull/1419) - Add documentation for specifying a CA cert file for LDAP authentication backend.
 - [#1446](https://github.com/nautobot/nautobot/pull/1446) - Apply title labels to Docker images.
 
-## Changed
+### Changed
 
 - [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version.
 - [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update django-redis to `5.2.x` to address `5.1.x` blocking redis `4.x` versions.
@@ -159,7 +159,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1452](https://github.com/nautobot/nautobot/pull/1452) - Changed GitHub release workflow to not run on prerelease releases.
 - [#1453](https://github.com/nautobot/nautobot/pull/1453) - Changed feature request to use GitHub Issue Form.
 
-## Fixed
+### Fixed
 
 - [#1301](https://github.com/nautobot/nautobot/issues/1301) - Fixed window history handling for views with tabs in Safari/Firefox.
 - [#1302](https://github.com/nautobot/nautobot/issues/1302) - Fixed missing Advanced tab on Virtual Machine detail view.
