@@ -39,7 +39,6 @@ FIREFOX_PROFILE_PREFERENCES = {
     "content.notify.ontimer": True,
     "content.switch.threshold": 250000,
     "browser.cache.memory.capacity": 65536,  # Increase the cache capacity.
-    "browser.startup.homepage": "about:blank",
     "reader.parse-on-load.enabled": False,  # Disable reader: we won't need that.
     "browser.pocket.enabled": False,  # Firefox pocket too!
     "loop.enabled": False,
