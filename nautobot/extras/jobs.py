@@ -285,30 +285,28 @@ class BaseJob:
         """
         return self.job_result.data if self.job_result else None
 
-    @classmethod
-    def job_form(cls, data=None, files=None, initial=None, approval_view=False):
+    def as_form(self, data=None, files=None, initial=None, approval_view=False):
         """
         Return a Django form suitable for populating the context data required to run this Job.
 
         `approval_view` will disable all fields from modification and is used to display the form
         during a approval review workflow.
         """
-        fields = {name: var.as_field() for name, var in cls._get_vars().items()}
+        fields = {name: var.as_field() for name, var in self._get_vars().items()}
         FormClass = type("JobForm", (JobForm,), fields)
 
         form = FormClass(data, files, initial=initial)
 
         try:
-            job_model = JobModel.objects.get_for_class_path(cls.class_path)
-            read_only = job_model.read_only if job_model.read_only_override else cls.read_only
-            commit_default = job_model.commit_default if job_model.commit_default_override else cls.commit_default
+            job_model = JobModel.objects.get_for_class_path(self.class_path)
+            read_only = job_model.read_only if job_model.read_only_override else self.read_only
+            commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
         except JobModel.DoesNotExist:
             # 2.0 TODO: remove this fallback, Job records should always exist.
-            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
-            read_only = cls.read_only
-            commit_default = cls.commit_default
+            logger.error("No Job instance found in the database corresponding to %s", self.class_path)
+            read_only = self.read_only
+            commit_default = self.commit_default
 
-        # TODO: for an approval_view, shouldn't we preserve the provided `initial` value rather than overwriting?
         if read_only:
             # Hide the commit field for read only jobs
             form.fields["_commit"].widget = forms.HiddenInput()
@@ -317,8 +315,8 @@ class BaseJob:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
 
-        if cls.field_order:
-            form.order_fields(cls.field_order)
+        if self.field_order:
+            form.order_fields(self.field_order)
 
         if approval_view:
             # Set `disabled=True` on all fields
@@ -329,10 +327,6 @@ class BaseJob:
             form.fields["_commit"].help_text = "Commit changes to the database"
 
         return form
-
-    # 2.0 TODO: remove this entirely
-    def as_form(self, data=None, files=None, initial=None, approval_view=False):
-        return self.job_form(data=data, files=files, initial=initial, approval_view=approval_view)
 
     @staticmethod
     def serialize_data(data):

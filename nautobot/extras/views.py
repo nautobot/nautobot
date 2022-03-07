@@ -789,7 +789,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             )
             raise Http404
 
-        job_form = job_model.job_class.job_form(initial=normalize_querydict(request.GET))
+        job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
         schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
 
         return render(
@@ -804,6 +804,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
     def post(self, request, class_path=None, slug=None):
         if not request.user.has_perm("extras.run_job"):
+            # TODO enforce object-level permissions
             return HttpResponseForbidden()
 
         if class_path:
@@ -820,7 +821,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             )
             raise Http404
 
-        job_form = job_model.job_class.job_form(request.POST, request.FILES)
+        job_form = job_model.job_class().as_form(request.POST, request.FILES)
         schedule_form = forms.JobScheduleForm(request.POST)
 
         # Allow execution only if a worker process is running and the job is runnable.
@@ -962,7 +963,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         # Render the form with all fields disabled
         initial = scheduled_job.kwargs.get("data", {})
         initial["_commit"] = scheduled_job.kwargs.get("commit", True)
-        job_form = job_class.job_form(initial=initial, approval_view=True)
+        job_form = job_class().as_form(initial=initial, approval_view=True)
 
         post_data = request.POST
 
@@ -972,6 +973,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         dry_run = "_dry_run" in post_data
 
         if dry_run:
+            # TODO: enforce object-level run_job permissions
             # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
             job_content_type = ContentType.objects.get(app_label="extras", model="job")
             job_result = JobResult.enqueue_job(
@@ -1043,7 +1045,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         # Render the form will all fields disabled
         initial = scheduled_job.kwargs.get("data", {})
         initial["_commit"] = scheduled_job.kwargs.get("commit", True)
-        job_form = job_class.job_form(initial=initial, approval_view=True)
+        job_form = job_class().as_form(initial=initial, approval_view=True)
 
         return render(
             request,

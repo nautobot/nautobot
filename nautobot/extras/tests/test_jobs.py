@@ -110,7 +110,7 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
 
-        form = job_class.job_form()
+        form = job_class().as_form()
 
         self.assertHTMLEqual(
             form.as_table(),
@@ -136,7 +136,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
 
-        form = job_class.job_form()
+        form = job_class().as_form()
 
         self.assertHTMLEqual(
             form.as_table(),
@@ -183,7 +183,7 @@ class JobTest(TransactionTestCase):
         name = "TestReadOnlyNoCommitField"
         job_class = get_job(f"local/{module}/{name}")
 
-        form = job_class.job_form()
+        form = job_class().as_form()
 
         self.assertHTMLEqual(
             form.as_table(),
@@ -215,7 +215,7 @@ class JobTest(TransactionTestCase):
             ipv6_with_mask="2001:db8::1/64",
             ipv6_network="2001:db8::/64",
         )
-        form = job_class.job_form(form_data)
+        form = job_class().as_form(form_data)
         self.assertTrue(form.is_valid())
 
         # Prepare the job data
@@ -340,7 +340,7 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
-        form = job_class.job_form(files=data)
+        form = job_class().as_form(files=data)
         self.assertTrue(form.is_valid())
         serialized_data = job_class.serialize_data(form.cleaned_data)
 
@@ -372,7 +372,7 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
-        form = job_class.job_form(files=data)
+        form = job_class().as_form(files=data)
         self.assertTrue(form.is_valid())
         serialized_data = job_class.serialize_data(form.cleaned_data)
 
