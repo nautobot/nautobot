@@ -5,7 +5,7 @@ from unittest import skipIf
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.dcim.models import PowerFeed, PowerPanel, Site
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from example_plugin.models import ExampleModel
 
@@ -14,7 +14,7 @@ from example_plugin.models import ExampleModel
     "example_plugin" not in settings.PLUGINS,
     "example_plugin not in settings.PLUGINS",
 )
-class PluginHomeTestCase(SplinterTestCase):
+class PluginHomeTestCase(SeleniumTestCase):
     """Integration test the plugin homepage."""
 
     fixtures = ["user-data.json"]  # bob/bob

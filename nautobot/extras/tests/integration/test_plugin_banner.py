@@ -1,7 +1,7 @@
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
-class PluginBannerTestCase(SplinterTestCase):
+class PluginBannerTestCase(SeleniumTestCase):
     """Integration test for rendering of plugin-injected banner content."""
 
     fixtures = ["user-data.json"]

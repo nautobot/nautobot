@@ -1,10 +1,10 @@
 from django.test.utils import override_settings
 
 from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
-class NavBarTestCase(SplinterTestCase):
+class NavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 
     fixtures = ["user-data.json"]

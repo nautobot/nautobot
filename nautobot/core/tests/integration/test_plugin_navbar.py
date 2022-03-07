@@ -3,14 +3,14 @@ from unittest import skipIf
 from django.conf import settings
 
 from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 @skipIf(
     "example_plugin" not in settings.PLUGINS,
     "example_plugin not in settings.PLUGINS",
 )
-class PluginNavBarTestCase(SplinterTestCase):
+class PluginNavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 
     fixtures = ["user-data.json"]
