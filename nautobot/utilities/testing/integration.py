@@ -31,21 +31,6 @@ SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "host.docker.internal")
 LOGIN_URL = reverse(settings.LOGIN_URL)
 
 
-class NautobotRemote(webdriver.Remote):
-    """Custom WebDriver with helpers."""
-
-    def wait_for_html(self, tag_name, timeout=2):
-        """Wait for the page to render and make sure we find `tag_name`."""
-        WebDriverWait(self, timeout=timeout).until(lambda driver: driver.find_element_by_tag_name(tag_name))
-
-    def find_button(self, button_text):
-        """Return a `<button>` element with the given `button_text`."""
-        return self.find_element_by_xpath(f'//button[text()="{button_text}"]')
-
-    def find_elements_by_class_name(self, name):
-        return self.find_elements_by_xpath(f"//*[contains(@class, '{name}')]")
-
-
 FIREFOX_PROFILE_PREFERENCES = {
     "network.http.pipelining": True,
     "network.http.proxy.pipelining": True,
