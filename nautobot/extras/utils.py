@@ -167,7 +167,7 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
             yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
 
 
-def refresh_job_model_from_job_class(job_model_class, job_source, job_class):
+def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
@@ -175,12 +175,20 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class):
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
+    if git_repository is not None:
+        default_slug = slugify_dots_to_dashes(
+            f"{job_source}-{git_repository.slug}-{job_class.__module__}-{job_class.__name__}"
+        )
+    else:
+        default_slug = slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}")
+
     job_model, created = job_model_class.objects.get_or_create(
         source=job_source,
+        git_repository=git_repository,
         module_name=job_class.__module__,
         job_class_name=job_class.__name__,
         defaults={
-            "slug": slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}"),
+            "slug": default_slug,
             "grouping": job_class.grouping,
             "name": job_class.name,
             "installed": True,
@@ -201,11 +209,12 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class):
     job_model.save()
 
     logger.info(
-        '%s Job "%s: %s" from <%s: %s>',
+        '%s Job "%s: %s" from <%s%s: %s>',
         "Created" if created else "Refreshed",
         job_model.grouping,
         job_model.name,
         job_source,
+        f" {git_repository.name}" if git_repository is not None else "",
         job_class.__name__,
     )
 

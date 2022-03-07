@@ -26,13 +26,13 @@
                 <td>Source</td>
                 <td>{{ object.source | split:"." | first | bettertitle }}</td>
             </tr>
-            {% if "git." in object.source %}
+            {% if object.source == "git" %}
                 <tr>
                     <td>Repository</td>
                     {% if object.git_repository is not None %}
                         <td><a href="{{ object.git_repository.get_absolute_url }}">{{ object.git_repository }}</a></td>
                     {% else %}
-                        <td><code>{{ object.source | split:"." | last }}</code></td>
+                        <td><span class="text-muted">&mdash;</span></td>
                     {% endif %}
                 </tr>
             {% endif %}

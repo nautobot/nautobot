@@ -13,15 +13,11 @@
                     <span class="help-block">Source of the Python code for this job</span>
                 </div>
             </div>
-            {% if "git." in obj.source %}
+            {% if obj.source == "git" %}
                 <div class="form-group">
                     <label class="col-md-3 control-label">Repository</label>
                     <div class="col-md-9" style="padding-top: 7px">
-                        {% if obj.git_repository is not None %}
-                            <td>{{ obj.git_repository }}</td>
-                        {% else %}
-                            <td><code>{{ obj.source | split:"." | last }}</code></td>
-                        {% endif %}
+                        <td>{{ obj.git_repository | placeholder }}</td>
                     </div>
                 </div>
             {% endif %}

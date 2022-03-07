@@ -770,6 +770,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
     """
     View the parameters of a Job and enqueue it if desired.
     """
+
     queryset = JobModel.objects.all()
 
     def get_required_permission(self):
