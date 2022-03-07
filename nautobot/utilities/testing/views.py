@@ -130,7 +130,7 @@ class TestCase(_TestCase):
     # Custom assertions
     #
 
-    def assertHttpStatus(self, response, expected_status):
+    def assertHttpStatus(self, response, expected_status, msg=None):
         """
         TestCase method. Provide more detail in the event of an unexpected HTTP response.
         """
@@ -145,6 +145,8 @@ class TestCase(_TestCase):
                 form_errors = extract_form_failures(response.content.decode(response.charset))
                 err = form_errors or response.content.decode(response.charset) or "No data"
             err_message = f"Expected HTTP status {expected_status}; received {response.status_code}: {err}"
+            if msg:
+                err_message = f"{msg}\n{err_message}"
         self.assertEqual(response.status_code, expected_status, err_message)
 
     def assertInstanceEqual(self, instance, data, exclude=None, api=False):

@@ -42,6 +42,7 @@ from nautobot.extras.models import (
     ComputedField,
 )
 from nautobot.ipam.models import VLAN
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import post_data
 
@@ -956,12 +957,27 @@ class JobTestCase(
         # Job model objects are automatically created during database migrations
 
         # But we do need to make sure the ones we're testing are flagged appropriately
-        test_pass = Job.objects.get(job_class_name="TestPass")
-        test_pass.enabled = True
-        test_pass.save()
-        test_required_args = Job.objects.get(job_class_name="TestRequired")
-        test_required_args.enabled = True
-        test_required_args.save()
+        cls.test_pass = Job.objects.get(job_class_name="TestPass")
+        cls.test_pass.enabled = True
+        cls.test_pass.save()
+
+        cls.run_urls = (
+            # Legacy URL (job class path based)
+            reverse("extras:job", kwargs={"class_path": cls.test_pass.class_path}),
+            # Current URL (job model slug based)
+            reverse("extras:job_run", kwargs={"slug": cls.test_pass.slug}),
+        )
+
+        cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
+        cls.test_required_args.enabled = True
+        cls.test_required_args.save()
+
+        cls.extra_run_urls = (
+            # Legacy URL (job class path based)
+            reverse("extras:job", kwargs={"class_path": cls.test_required_args.class_path}),
+            # Current URL (job model slug based)
+            reverse("extras:job_run", kwargs={"slug": cls.test_required_args.slug}),
+        )
 
         # Create an entry for a non-installed Job as well
         cls.test_not_installed = Job(
@@ -974,6 +990,10 @@ class JobTestCase(
             installed=False,
         )
         cls.test_not_installed.validated_save()
+
+        cls.data_run_immediately = {
+            "_schedule_type": "immediately",
+        }
 
         cls.form_data = {
             "slug": "custom-job-slug",
@@ -998,168 +1018,186 @@ class JobTestCase(
             "time_limit": 650,
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_list_without_permission(self):
-        self.assertHttpStatus(self.client.get(reverse("extras:job_list")), 403)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_list(self):
-        response = self.client.get(reverse("extras:job_list"))
-        self.assertHttpStatus(response, 200)
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("TestPass", response_body)
+    #
+    # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow
+    #
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_without_permission(self):
-        response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
-        self.assertHttpStatus(response, 403)
+    def test_get_run_without_permission(self):
+        for run_url in self.run_urls:
+            self.assertHttpStatus(self.client.get(run_url), 403, msg=run_url)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_with_permission(self):
+    def test_get_run_with_permission(self):
         """
-        Get view with appropriate permissions.
+        Get view with appropriate global permissions.
 
         Note that this view is conditional on run_job permission, not view_job permission,
         so EXEMPT_VIEW_PERMISSIONS=["*"] does NOT apply here.
         """
         self.add_permissions("extras.run_job")
+        for run_url in self.run_urls:
+            response = self.client.get(run_url)
+            self.assertHttpStatus(response, 200, msg=run_url)
 
-        response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
-        self.assertHttpStatus(response, 200)
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("TestPass", response_body)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("TestPass", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_post_without_permission(self):
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
-        self.assertHttpStatus(response, 403)
+    def test_get_run_with_constrained_permission(self):
+        """Get view with appropriate object-based permissions."""
+        obj_perm = ObjectPermission(
+            name="Job permission",
+            constraints={"module_name": self.test_pass.module_name},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_without_schedule(self):
+        # Try GET with a permitted object
+        for run_url in self.run_urls:
+            self.assertHttpStatus(self.client.get(run_url), 200, msg=run_url)
+
+        # Try GET with a non-permitted object
+        for run_url in self.extra_run_urls:
+            self.assertHttpStatus(self.client.get(run_url), 404, msg=run_url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_without_permission(self):
+        for run_url in self.run_urls:
+            self.assertHttpStatus(self.client.post(run_url), 403, msg=run_url)
+
+    def test_run_missing_schedule(self):
         self.add_permissions("extras.run_job")
 
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
+        for run_url in self.run_urls:
+            response = self.client.post(run_url)
+            self.assertHttpStatus(response, 200, msg=run_url)
 
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(errors, ["_schedule_type: This field is required."])
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(errors, ["_schedule_type: This field is required."])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_now_no_worker(self, patched):
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=0)
+    def test_run_now_no_worker(self, _):
         self.add_permissions("extras.run_job")
 
-        data = {
-            "_schedule_type": "immediately",
-        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, self.data_run_immediately)
+            self.assertHttpStatus(response, 200, msg=run_url)
 
-        patched.return_value = 0
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Celery worker process not running.", content)
 
-        self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Celery worker process not running.", content)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_now(self, patched):
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
 
-        data = {
-            "_schedule_type": "immediately",
-        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, self.data_run_immediately)
 
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
 
-        result = JobResult.objects.last()
-        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_constrained_permissions(self, _):
+        obj_perm = ObjectPermission(
+            name="Job permission",
+            constraints={"module_name": self.test_pass.module_name},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        self.add_permissions("extras.view_jobresult")
+
+        # Try POST with a permitted object
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, self.data_run_immediately)
+
+            result = JobResult.objects.latest()
+            self.assertIsNotNone(result, msg=run_url)
+            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+
+        # Try POST with a non-permitted object
+        for run_url in self.extra_run_urls:
+            self.assertHttpStatus(self.client.post(run_url, self.data_run_immediately), 404, msg=run_url)
+
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_not_installed(self, _):
         self.add_permissions("extras.run_job")
-        data = {
-            "_schedule_type": "immediately",
-        }
 
-        response = self.client.post(reverse("extras:job_run", kwargs={"slug": self.test_not_installed.slug}), data)
-        self.assertEqual(response.status_code, 404)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Unable to find the Job class", response_body)
+        for run_url in (
+            reverse("extras:job", kwargs={"class_path": self.test_not_installed.class_path}),
+            reverse("extras:job_run", kwargs={"slug": self.test_not_installed.slug}),
+        ):
+            response = self.client.post(run_url, self.data_run_immediately)
+            self.assertEqual(response.status_code, 404, msg=run_url)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Unable to find the Job class", response_body)
 
-        self.assertEqual(0, len(JobResult.objects.all()))
+            self.assertEqual(0, len(JobResult.objects.all()))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_not_enabled(self, _):
         self.add_permissions("extras.run_job")
-        data = {
-            "_schedule_type": "immediately",
-        }
 
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}), data)
-        self.assertEqual(response.status_code, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Job is not enabled to be run", response_body)
+        for run_url in (
+            reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}),
+            reverse("extras:job_run", kwargs={"slug": Job.objects.get(job_class_name="TestFail").slug}),
+        ):
+            response = self.client.post(run_url, self.data_run_immediately)
+            self.assertEqual(response.status_code, 200, msg=run_url)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Job is not enabled to be run", response_body)
 
-        self.assertEqual(0, len(JobResult.objects.all()))
+            self.assertEqual(0, len(JobResult.objects.all()))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
 
-        data = {
-            "_schedule_type": "immediately",
-        }
+        for run_url in self.extra_run_urls:
+            response = self.client.post(run_url, self.data_run_immediately)
+            self.assertHttpStatus(response, 200, msg=run_url)
 
-        response = self.client.post(
-            reverse("extras:job", kwargs={"class_path": "local/test_required_args/TestRequired"}), data
-        )
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(errors, ["var: This field is required."])
 
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(errors, ["var: This field is required."])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_now_with_args(self, patched):
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_with_args(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
 
         data = {
             "_schedule_type": "immediately",
             "var": "12",
         }
 
-        patched.return_value = 1
-        response = self.client.post(
-            reverse("extras:job", kwargs={"class_path": "local/test_required_args/TestRequired"}), data
-        )
+        for run_url in self.extra_run_urls:
+            response = self.client.post(run_url, data)
 
-        result = JobResult.objects.last()
-        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later_missing_name(self, patched):
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_later_missing_name(self, _):
         self.add_permissions("extras.run_job")
 
         data = {
             "_schedule_type": "future",
         }
 
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
 
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(errors, ["_schedule_name: Please provide a name for the job schedule."])
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(errors, ["_schedule_name: Please provide a name for the job schedule."])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later_missing_date(self, patched):
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_later_missing_date(self, _):
         self.add_permissions("extras.run_job")
 
         data = {
@@ -1167,21 +1205,20 @@ class JobTestCase(
             "_schedule_name": "test",
         }
 
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
 
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(
-            errors,
-            [
-                "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
-            ],
-        )
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(
+                errors,
+                [
+                    "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
+                ],
+            )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later_date_passed(self, patched):
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_later_date_passed(self, _):
         self.add_permissions("extras.run_job")
 
         data = {
@@ -1190,22 +1227,22 @@ class JobTestCase(
             "_schedule_start_time": str(datetime.now() - timedelta(minutes=1)),
         }
 
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
 
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(
-            errors,
-            [
-                "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
-            ],
-        )
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(
+                errors,
+                [
+                    "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
+                ],
+            )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later(self, patched):
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_later(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
 
         start_time = timezone.now() + timedelta(minutes=1)
         data = {
@@ -1214,15 +1251,13 @@ class JobTestCase(
             "_schedule_start_time": str(start_time),
         }
 
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
 
-        self.assertRedirects(response, reverse("extras:scheduledjob_list"))
-
-        scheduled = ScheduledJob.objects.last()
-
-        self.assertEqual(scheduled.name, "test")
-        self.assertEqual(scheduled.start_time, start_time)
+            scheduled = ScheduledJob.objects.last()
+            self.assertEqual(scheduled.name, "test")
+            self.assertEqual(scheduled.start_time, start_time)
 
 
 # TODO: Convert to StandardTestCases.Views
