@@ -1015,8 +1015,16 @@ class JobTestCase(
         response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
         self.assertHttpStatus(response, 403)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_get(self):
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_with_permission(self):
+        """
+        Get view with appropriate permissions.
+
+        Note that this view is conditional on run_job permission, not view_job permission,
+        so EXEMPT_VIEW_PERMISSIONS=["*"] does NOT apply here.
+        """
+        self.add_permissions("extras.run_job")
+
         response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
         self.assertHttpStatus(response, 200)
 

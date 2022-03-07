@@ -33,7 +33,7 @@ from nautobot.utilities.utils import (
     shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.views import ContentTypePermissionRequiredMixin
+from nautobot.utilities.views import ContentTypePermissionRequiredMixin, ObjectPermissionRequiredMixin
 from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
@@ -766,22 +766,23 @@ class JobListView(generic.ObjectListView):
 
 
 # 2.0 TODO: this should really be "JobRunView"
-class JobView(ContentTypePermissionRequiredMixin, View):
+class JobView(ObjectPermissionRequiredMixin, View):
     """
     View the parameters of a Job and enqueue it if desired.
     """
+    queryset = JobModel.objects.all()
 
     def get_required_permission(self):
-        return "extras.view_job"
+        return "extras.run_job"
 
     def get(self, request, class_path=None, slug=None):
         if class_path:
             try:
-                job_model = JobModel.objects.get_for_class_path(class_path)
+                job_model = self.queryset.get_for_class_path(class_path)
             except JobModel.DoesNotExist:
                 raise Http404
         else:
-            job_model = get_object_or_404(JobModel, slug=slug)
+            job_model = get_object_or_404(self.queryset, slug=slug)
 
         if job_model.job_class is None:
             messages.error(
@@ -803,17 +804,13 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         )
 
     def post(self, request, class_path=None, slug=None):
-        if not request.user.has_perm("extras.run_job"):
-            # TODO enforce object-level permissions
-            return HttpResponseForbidden()
-
         if class_path:
             try:
-                job_model = JobModel.objects.get_for_class_path(class_path)
+                job_model = self.queryset.get_for_class_path(class_path)
             except JobModel.DoesNotExist:
                 raise Http404
         else:
-            job_model = get_object_or_404(JobModel, slug=slug)
+            job_model = get_object_or_404(self.queryset, slug=slug)
 
         if job_model.job_class is None:
             messages.error(
