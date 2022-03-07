@@ -114,7 +114,7 @@ class NavBarTestCase(SeleniumTestCase):
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     item = group.find_by_xpath(item_xpath)
                     if item_details["permission"] in user_permissions:
-                        self.assertnotEqual(item["class"], "disabled", f"Item `{item_name}` should not be disabled.")
+                        self.assertNotEqual(item["class"], "disabled", f"Item `{item_name}` should not be disabled.")
                     else:
                         self.assertEqual(item["class"], "disabled", f"Item `{item_name}` should be disabled.")
 
