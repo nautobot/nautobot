@@ -46,7 +46,6 @@ The following additional tags are only available from the GitHub Container Regis
 
 Currently images are pushed for the following python versions:
 
-* 3.6
 * 3.7
 * 3.8
 * 3.9

@@ -119,10 +119,7 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.0.0"
 # Image processing library
-Pillow = [
-    {version = "~9.0.0", python = "^3.7"},
-    {version = "~8.3.2", python = "<3.7"},
-]
+Pillow = {version = "~9.0.0", python = "^3.7"}
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.3"
