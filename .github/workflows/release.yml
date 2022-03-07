@@ -2,7 +2,7 @@
 name: "Release"
 on:
   release:
-    types: ["published"]
+    types: ["released"]
 
 jobs:
   # Ensure CI has passed
