@@ -15,7 +15,8 @@ from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, JobResult, Status, CustomField
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase
+from nautobot.utilities.testing import TransactionTestCase
+from nautobot.utilities.testing.integration import SplinterTestCase
 
 
 # Use the proper swappable User model
@@ -482,8 +483,10 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 0)
 
 
-class RunJobManagementCommandTest(CeleryTestCase):
+class RunJobManagementCommandTest(SplinterTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
+
+    requires_celery = True
 
     def run_command(self, *args):
         out = StringIO()
@@ -556,10 +559,11 @@ class RunJobManagementCommandTest(CeleryTestCase):
         status.delete()
 
 
-class JobSiteCustomFieldTest(CeleryTestCase):
+class JobSiteCustomFieldTest(SplinterTestCase):
     """Test a job that creates a site and a custom field."""
 
     databases = ("default", "job_logs")
+    requires_celery = True
 
     def setUp(self):
         super().setUp()

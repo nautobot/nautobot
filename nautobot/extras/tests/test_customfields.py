@@ -11,8 +11,9 @@ from nautobot.dcim.models import Site, Rack, Device
 from nautobot.dcim.tables import SiteTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
+from nautobot.utilities.testing.integration import SplinterTestCase
 from nautobot.utilities.tables import CustomFieldColumn
-from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
+from nautobot.utilities.testing import APITestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
 
@@ -1247,7 +1248,10 @@ class CustomFieldChoiceTest(TestCase):
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
 
-class CustomFieldBackgroundTasks(CeleryTestCase):
+class CustomFieldBackgroundTasks(SplinterTestCase):
+
+    requires_celery = True
+
     def test_provision_field_task(self):
         self.clear_worker()
 
