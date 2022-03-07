@@ -46,14 +46,3 @@
                 </div>
             </div>
 {% endblock content_right_page %}
-
-
-{% block javascript %}
-<script type="text/javascript">
-    // Set config context schema as selected tab on page load
-    if (location.pathname == "{{ object.get_absolute_url }}" && !location.search.includes("tab")){
-        $(`.nav.nav-tabs a[href="{{ object.get_absolute_url }}#main"]`).tab("show")
-    }
-</script>
-{{ block.super }}
-{% endblock javascript %}
