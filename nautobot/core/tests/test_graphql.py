@@ -89,14 +89,14 @@ class GraphQLTestCase(TestCase):
         query = "{ query: sites {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEquals(len(resp["data"]["query"]), 3)
+        self.assertEqual(len(resp["data"]["query"]), 3)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: [String!]) { sites(name:$name) {name} }"
         resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
         self.assertFalse(resp.get("error"))
-        self.assertEquals(len(resp["data"]["sites"]), 1)
+        self.assertEqual(len(resp["data"]["sites"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"

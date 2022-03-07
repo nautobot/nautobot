@@ -9,7 +9,6 @@ from django.test import tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
-from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
 
 from nautobot.core.celery import app

@@ -125,19 +125,31 @@ class HomeTestCase(SeleniumTestCase):
     def test_homepage_render_limit_permissions_with_restricted_ui(self):
         """
         Render homepage with limited permissions and restricted UI.
-        This restricts the user to be able to view sites and circuits but NOT power feeds.
+        This restricts the user to be able to view ONLY sites and circuits.
         It then checks the UI for these restrictions.
         """
         self.add_permissions("dcim.view_site")
         self.add_permissions("circuits.view_circuit")
+        user_permissions = self.user.get_all_permissions()
 
         self.browser.visit(self.live_server_url)
 
-        sites_links = self.browser.links.find_by_text("Sites")
-        self.assertEqual(len(sites_links), 1)
-
-        circuits_links = self.browser.links.find_by_text("Circuits")
-        self.assertEqual(len(circuits_links), 1)
-
-        power_feeds_links = self.browser.links.find_by_partial_text("Power Feeds")
-        self.assertEqual(len(power_feeds_links), 0)
+        for panel_name, panel_details in self.layout.items():
+            if any(perm in self.get_panel_permissions(panel_details) for perm in user_permissions):
+                for item_name, item_details in panel_details.items():
+                    panel_element_to_search = self.browser.find_by_xpath(
+                        f".//div[@class='homepage_column']"
+                        f"/div[@class='panel panel-default']"
+                        f"/div[@class='panel-heading']"
+                        f"/strong[contains(text(), '{panel_name}')]"
+                        f"/../.."
+                        f"/div[@class='list-group']"
+                    )
+                    links = panel_element_to_search.links.find_by_text(item_name)
+                    if item_details["permission"] in user_permissions:
+                        self.assertEqual(len(links), 1)
+                    else:
+                        self.assertEqual(len(links), 0)
+            else:
+                panel = self.browser.find_by_xpath(f".//div[@class='panel-heading']/strong[text()='{panel_name}']")
+                self.assertEqual(len(panel), 0)

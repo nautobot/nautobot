@@ -80,13 +80,13 @@ class NavBarTestCase(SeleniumTestCase):
                         button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
                         if button_class:
                             rendered_button_class = button["class"].split(" ")[-1].split("-")[-1]
-                            self.assertEquals(button_class, rendered_button_class)
+                            self.assertEqual(button_class, rendered_button_class)
                         # Ensure button has matching icon for its name
                         button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
                         if button_icon:
                             icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
                             rendered_button_icon = icon["class"].split(" ")[-1]
-                            self.assertEquals(button_icon, rendered_button_icon)
+                            self.assertEqual(button_icon, rendered_button_icon)
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_navbar_render_limit_permissions(self):
@@ -114,9 +114,9 @@ class NavBarTestCase(SeleniumTestCase):
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     item = group.find_by_xpath(item_xpath)
                     if item_details["permission"] in user_permissions:
-                        self.assertNotEquals(item["class"], "disabled", f"Item `{item_name}` should not be disabled.")
+                        self.assertnotEqual(item["class"], "disabled", f"Item `{item_name}` should not be disabled.")
                     else:
-                        self.assertEquals(item["class"], "disabled", f"Item `{item_name}` should be disabled.")
+                        self.assertEqual(item["class"], "disabled", f"Item `{item_name}` should be disabled.")
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_navbar_render_no_permissions(self):
@@ -139,23 +139,31 @@ class NavBarTestCase(SeleniumTestCase):
                 for item_name, _ in items.items():
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     item = group.find_by_xpath(item_xpath)
-                    self.assertEquals(item["class"], "disabled", f"Item `{item_name}` should be disabled.")
+                    self.assertEqual(item["class"], "disabled", f"Item `{item_name}` should be disabled.")
 
     @override_settings(HIDE_RESTRICTED_UI=True)
     def test_navbar_render_restricted_ui(self):
         """
         Render navbar from home page with restricted UI set to True.
-        This restricts the user to be able to view relationships but NOT sites or tags.
+        This restricts the user to be able to view ONLY relationships on the navbar.
         It then checks the UI for these restrictions.
         """
 
         self.add_permissions("extras.view_relationship")
+        user_permissions = self.user.get_all_permissions()
 
         self.browser.visit(self.live_server_url)
 
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        relationships_links = self.browser.links.find_by_partial_text("Relationships")
-        self.assertEqual(len(relationships_links), 1)
+        for tab_name, groups in self.navbar.items():
+            tab_flag = False
+            for _, items in groups.items():
+                for _, item_details in items.items():
+                    if item_details["permission"] in user_permissions:
+                        tab_flag = True
 
-        organization_links = self.browser.links.find_by_partial_text("Organization")
-        self.assertEqual(len(organization_links), 0)
+            # XPath to find tabs using the tab name
+            tabs = self.browser.find_by_xpath(f"//*[@id='navbar']//*[contains(text(), '{tab_name}')]")
+            if tab_flag:
+                self.assertEqual(len(tabs), 1)
+            else:
+                self.assertEqual(len(tabs), 0)
