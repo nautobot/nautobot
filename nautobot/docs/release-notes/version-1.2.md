@@ -156,6 +156,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version.
 - [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update django-redis to `5.2.x` to address `5.1.x` blocking redis `4.x` versions.
 - [#1447](https://github.com/nautobot/nautobot/pull/1447) - Minor `nit` on Github Issue Form styling.
+- [#1452](https://github.com/nautobot/nautobot/pull/1452) - Changed GitHub release workflow to not run on prerelease releases.
 - [#1453](https://github.com/nautobot/nautobot/pull/1453) - Changed feature request to use GitHub Issue Form.
 
 ## Fixed
