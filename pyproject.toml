@@ -98,7 +98,6 @@ importlib-metadata = {version = "~4.4", python = "<3.10"}
 # NOTE: Jinja2 3.x is available
 Jinja2 = "~2.11.3"
 # Optional data validation of config contexts
-# NOTE: jsonschema 4.x drops support for Python 3.6
 jsonschema = "~4.4.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.6"
@@ -145,8 +144,6 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-# NOTE: black 22.1.0 stable is out, but it requires click 8.0, and celery 5.1.2 requires click 7.x.
-# NOTE: adding different Blacks as conditional on Python version fails: https://github.com/python-poetry/poetry/issues/4947
 black = "~22.1.0"
 # Test code coverage measurement
 # NOTE: coverage 6.3 drops support for python 3.6
