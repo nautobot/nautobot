@@ -654,7 +654,7 @@ class NautobotServerConfig(ConstanceConfig):
     verbose_name = "Configuration"
 
 
-class NautobotConstanceDatabaseBackendAppConfig(AppConfig):
+class ConstanceDatabaseAppConfig(AppConfig):
     """
     Add an AppConfig for constance.backends.database
     to fix https://github.com/jazzband/django-constance/issues/454
