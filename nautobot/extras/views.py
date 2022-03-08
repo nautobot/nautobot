@@ -559,7 +559,7 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     ctx = self.get_extra_context(request, obj)
                     filter_form = ctx["filter_form"]
                     if filter_form.is_valid():
-                        obj.set_filter(filter_form)
+                        obj.set_filter(filter_form.cleaned_data)
                     else:
                         raise RuntimeError(filter_form.errors)
 

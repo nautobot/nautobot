@@ -1,5 +1,3 @@
-from unittest import skip
-
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
@@ -25,8 +23,8 @@ class DynamicGroupTestBase(TestCase):
         cls.manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         cls.device_type = DeviceType.objects.create(
             manufacturer=cls.manufacturer,
-            model="evice Type 1",
-            slug="evice-type-1",
+            model="device Type 1",
+            slug="device-type-1",
         )
         cls.device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
         cls.device_status = Status.objects.get_for_model(Device).get(slug="active")
@@ -80,7 +78,7 @@ class DynamicGroupTest(DynamicGroupTestBase):
             dg.validated_save()
 
     def test_clean_filter_not_dict(self):
-        """Test that `filter` validation works."""
+        """Test that invalid filter types raise errors."""
         dg = self.groups[0]
         with self.assertRaises(ValidationError):
             dg.filter = None
@@ -90,18 +88,32 @@ class DynamicGroupTest(DynamicGroupTestBase):
             dg.filter = []
             dg.validated_save()
 
-    # FIXME(jathan): Implement validation of the filter value "somehow"? using a
-    # Form and `set_filter()`.
+        with self.assertRaises(ValidationError):
+            dg.filter = "site=ams01"
+            dg.validated_save()
+
     def test_clean_filter_not_valid(self):
+        """Test that an invalid filter dict raises an error."""
         dg = self.groups[0]  # Site DG
-        # breakpoint()
         with self.assertRaises(ValidationError):
             dg.filter = {"site": -42}
             dg.validated_save()
 
-    @skip
     def test_clean_valid(self):
-        pass
+        """Test a clean validation."""
+        dg = self.groups[0]  # Site DG
+        dg.refresh_from_db()
+        old_filter = dg.filter
+
+        # Overload the filter and validate that it is the same afterward.
+        new_filter = {"interfaces": True}
+        dg.set_filter(new_filter)
+        dg.validated_save()
+        self.assertEqual(dg.filter, new_filter)
+
+        # Restore the old filter.
+        dg.filter = old_filter
+        dg.save()
 
 
 """

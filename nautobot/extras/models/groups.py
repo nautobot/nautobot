@@ -172,21 +172,19 @@ class DynamicGroup(OrganizationalModel):
 
         return fields
 
-    def set_filter(self, form):
+    def set_filter(self, form_data):
         """
-        Extract all data from `form` fields into `filter` dictionary and call `save()`.
+        Set all desired fields from `form_data` into `filter` dict.
 
-        This is called from `DynamicGroupForm.save()`.
-
-        :param form:
-            A validated instance of `DynamicGroupForm`
+        :param form_data:
+            Dict of filter parameters, generally from a filter form's `cleaned_data`
         """
         filter_fields = self.get_filter_fields()
 
         # Populate the filterset from the incoming form's cleaned_data.
         filterset_class = self.map.filterset_class
         filterset_class.form_prefix = "filter"
-        filterset = filterset_class(form.cleaned_data)
+        filterset = filterset_class(form_data)
 
         # Use the auto-generated filterset form perform creation of the
         # filter dictionary that will be saved on the instance.
@@ -196,7 +194,7 @@ class DynamicGroup(OrganizationalModel):
         # Keep only the fields we desire for the filter.
         for extra_field_name in filterset_form_fields:
             if extra_field_name not in filter_fields:
-                print(f"Deleting {extra_field_name} from extra_form")
+                logger.debug("Deleting %s from extra_form", extra_field_name)
                 del filterset_form.fields[extra_field_name]
 
         # Validate the filter.
@@ -211,17 +209,24 @@ class DynamicGroup(OrganizationalModel):
             if isinstance(field, forms.ModelMultipleChoiceField):
                 field_to_query = field.to_field_name or "pk"
                 logger.debug("%s - %s", field_value, field_to_query)
-                values = [getattr(item, field_to_query) for item in field_value]
-                new_filter[field_name] = values
+                new_value = [getattr(item, field_to_query) for item in field_value]
+                # new_filter[field_name] = value
 
             elif isinstance(field, forms.ModelChoiceField):
                 field_to_query = field.to_field_name or "pk"
-                value = getattr(field_value, field_to_query, None)
-                new_filter[field_name] = value or None
+                new_value = getattr(field_value, field_to_query, None)
+                # new_filter[field_name] = value
 
             else:
-                new_filter[field_name] = field_value
+                new_value = field_value
                 logger.debug("%s: %s", field_name, field_value)
+
+            # Don't store empty values like `None`, [], etc.
+            if new_value in (None, "", [], {}):
+                logger.debug("Not storing empty value (%s) for %s", field_value, field_name)
+                continue
+
+            new_filter[field_name] = new_value
 
         self.filter = new_filter
 
