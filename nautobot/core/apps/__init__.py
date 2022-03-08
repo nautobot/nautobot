@@ -657,7 +657,7 @@ class NautobotServerConfig(ConstanceConfig):
 class ConstanceDatabaseAppConfig(AppConfig):
     """
     Add an AppConfig for constance.backends.database
-    to fix https://github.com/jazzband/django-constance/issues/454
+    to work around https://github.com/jazzband/django-constance/issues/454
     """
 
     name = "constance.backends.database"
