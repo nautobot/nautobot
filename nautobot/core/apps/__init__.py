@@ -659,5 +659,6 @@ class NautobotConstanceDatabaseBackendAppConfig(AppConfig):
     Add an AppConfig for constance.backends.database
     to fix https://github.com/jazzband/django-constance/issues/454
     """
+
     name = "constance.backends.database"
     default_auto_field = "django.db.models.AutoField"
