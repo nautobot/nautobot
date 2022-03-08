@@ -147,10 +147,10 @@ sso = ["social-auth-core"]
 # Code style enforcement
 # NOTE: black 22.1.0 stable is out, but it requires click 8.0, and celery 5.1.2 requires click 7.x.
 # NOTE: adding different Blacks as conditional on Python version fails: https://github.com/python-poetry/poetry/issues/4947
-black = {version = "~21.12b0", python = ">3.6.2"}
+black = "~22.1.0"
 # Test code coverage measurement
 # NOTE: coverage 6.3 drops support for python 3.6
-coverage = "~6.2"
+coverage = "~6.3.2"
 # Tool for debugging Django
 django-debug-toolbar = "~3.2.4"
 # Nautobot example plugin used for testing
@@ -167,8 +167,7 @@ mkdocs = "~1.2.3"
 # Integration Tests
 requests = "~2.27.1"
 # Selenium web drivers for live integration testing
-# NOTE: selenium 4.x drops support for python 3.6
-selenium = "~3.141.0"
+selenium = "~4.1.2"
 # Abstraction layer for working with Selenium
 splinter = "~0.17.0"
 
