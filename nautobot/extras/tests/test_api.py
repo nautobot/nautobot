@@ -1195,9 +1195,9 @@ class JobModelTestCase(
 
     def setUp(self):
         super().setUp()
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        job_model.enabled = True
-        job_model.validated_save()
+        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        self.job_model.enabled = True
+        self.job_model.validated_save()
 
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
@@ -1216,6 +1216,22 @@ class JobModelTestCase(
         """
         viewname = f"{self._get_view_namespace()}:jobmodel-list"
         return reverse(viewname)
+
+    def test_get_job_variables(self):
+        """Test the job/<pk>/variables API endpoint."""
+        self.add_permissions("extras.view_job")
+        response = self.client.get(
+            reverse(f"{self._get_view_namespace()}:jobmodel-variables", kwargs={"pk": self.job_model.pk}),
+            **self.header,
+        )
+        self.assertEqual(4, len(response.data))  # 4 variables, in order
+        self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
+        self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
+        self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
+        self.assertEqual(
+            response.data[3],
+            {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.devicerole"},
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_object_var(self):
