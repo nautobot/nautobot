@@ -648,7 +648,7 @@ class CoreConfig(NautobotConfig):
         super().ready()
 
 
-class NautobotServerConfig(ConstanceConfig):
+class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
 
     verbose_name = "Configuration"
