@@ -293,7 +293,7 @@ INSTALLED_APPS = [
     "health_check.cache",
     "health_check.storage",
     "django_extensions",
-    "constance.backends.database",
+    "nautobot.core.apps.NautobotConstanceDatabaseBackendAppConfig",  # fix default_auto_field
     "django_ajax_tables",
 ]
 
