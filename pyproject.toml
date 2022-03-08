@@ -15,7 +15,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -31,12 +30,9 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 # Background task processing
-celery = [
-    {version = "~5.2.2", python = "^3.7"},
-    {version = "~5.1.2", python = "<3.7"},
-]
+celery = "~5.2.3"
 # Fundamental web framework for Nautobot
 # NOTE: some of our dependencies do not have releases compatible with Django 3.2's DEFAULT_AUTO_FIELD setting
 Django = "~3.1.14"
@@ -119,7 +115,7 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.0.0"
 # Image processing library
-Pillow = {version = "~9.0.0", python = "^3.7"}
+Pillow = "~9.0.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.3"
