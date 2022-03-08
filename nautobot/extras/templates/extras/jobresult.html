@@ -54,6 +54,9 @@
             <a href="#log" role="tab" data-toggle="tab" class="active">Log</a>
         </li>
         <li role="presentation">
+            <a href="{{ object.get_absolute_url }}#advanced" role="tab" data-toggle="tab">Advanced</a>
+        </li>
+        <li role="presentation">
             <a href="#json" role="tab" data-toggle="tab">Additional Data</a>
         </li>
         {% if result.data.output %}
@@ -87,6 +90,13 @@
                     <div class="panel-body">
                         {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
                     </div>
+                </div>
+            </div>
+        </div>
+        <div id="advanced" role="tabpanel" class="tab-pane">
+            <div class="row">
+                <div class="col-md-6">
+                    {% include 'inc/object_details_advanced_panel.html' %}
                 </div>
             </div>
         </div>

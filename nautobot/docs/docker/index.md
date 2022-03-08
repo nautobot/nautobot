@@ -22,12 +22,14 @@ docker pull ghcr.io/nautobot/nautobot:${TAG}
 
 The following tags are available on both Docker Hub and the GitHub Container Registry:
 
-| Tag                               | Nautobot Version      | Python Version | Example        |
-| --------------------------------- | --------------------- | -------------- | -------------- |
-| `${NAUTOBOT_VER}`                 | As specified          | 3.7            | `1.2.3`        |
-| `${NAUTOBOT_VER}-py${PYTHON_VER}` | As specified          | As specified   | `1.2.3-py3.8`  |
-| `stable`                          | Latest stable release | 3.7            | `stable`       |
-| `stable-py${PYTHON_VER}`          | Latest stable release | As specified   | `stable-py3.8` |
+| Tag                                                           | Nautobot Version      | Python Version | Example        |
+| ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
+| `${NAUTOBOT_VER}`                                             | As specified          | 3.7            | `1.2.7`        |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `1.2.7-py3.8`  |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.7            | `1.2`          |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `1.2-py3.8`    |
+| `stable`                                                      | Latest stable release | 3.7            | `stable`       |
+| `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.8` |
 
 The following additional tags are only available from the GitHub Container Registry:
 

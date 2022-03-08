@@ -218,7 +218,6 @@ class ConfigContextSchemaView(generic.ObjectView):
 
         return {
             "format": format,
-            "active_tab": "configcontextschema",
         }
 
 

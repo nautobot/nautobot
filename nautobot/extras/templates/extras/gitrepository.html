@@ -20,19 +20,11 @@
         {% endif %}
 {% endblock extra_buttons %}
 
-{% block nav_tabs %}
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Git Repository</a>
-        </li>
+{% block extra_nav_tabs %}
         <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
              <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
         </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:gitrepository_changelog' slug=object.slug %}">Change Log</a>
-            </li>
-        {% endif %}
-{% endblock nav_tabs %}
+{% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
             <div class="panel panel-default">

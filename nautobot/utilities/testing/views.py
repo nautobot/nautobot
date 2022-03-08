@@ -367,6 +367,23 @@ class ViewTestCases:
             # Try GET to non-permitted object
             self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_has_advanced_tab(self):
+            instance = self._get_queryset().first()
+
+            # Add model-level permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(instance.get_absolute_url())
+            response_body = extract_page_body(response.content.decode(response.charset))
+            advanced_tab_href = f"{instance.get_absolute_url()}#advanced"
+
+            self.assertIn(advanced_tab_href, response_body)
+            self.assertIn("Advanced", response_body)
+
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
         View the changelog for an instance.
