@@ -27,7 +27,6 @@ __all__ = (
 @extras_features(
     "custom_fields",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -87,7 +86,6 @@ class Region(MPTTModel, OrganizationalModel):
 @extras_features(
     "custom_fields",
     "custom_links",
-    "dynamic_groups",
     "export_templates",
     "custom_validators",
     "graphql",
