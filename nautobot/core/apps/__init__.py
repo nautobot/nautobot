@@ -652,3 +652,4 @@ class NautobotServerConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
 
     verbose_name = "Configuration"
+    default_auto_field = "django.db.models.AutoField"
