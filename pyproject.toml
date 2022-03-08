@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
 ]
 packages = [
     {include = "nautobot"}
@@ -86,7 +87,7 @@ djangorestframework = "~3.13.1"
 # Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
-GitPython = "3.1.27"
+GitPython = "~3.1.27"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -146,7 +147,6 @@ sso = ["social-auth-core"]
 # Code style enforcement
 black = "~22.1.0"
 # Test code coverage measurement
-# NOTE: coverage 6.3 drops support for python 3.6
 coverage = "~6.3.2"
 # Tool for debugging Django
 django-debug-toolbar = "~3.2.4"
@@ -177,7 +177,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version = ['py36']
+target-version = ['py37', 'py38', 'py39', 'py310']
 include = '\.pyi?$'
 exclude = '''
 (
