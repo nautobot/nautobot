@@ -86,9 +86,7 @@ djangorestframework = "~3.13.1"
 # Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
-# NOTE: GitPython 3.1.23 and later drop support for Python 3.6
-# NOTE: GitPython 3.1.19 through 3.1.23 are yanked from PyPI
-GitPython = "3.1.18"
+GitPython = "3.1.27"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -101,7 +99,7 @@ importlib-metadata = {version = "~4.4", python = "<3.10"}
 Jinja2 = "~2.11.3"
 # Optional data validation of config contexts
 # NOTE: jsonschema 4.x drops support for Python 3.6
-jsonschema = "~3.2.0"
+jsonschema = "~4.4.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.6"
 # Escape text to use HTML and XML. NOTE: later versions are not compatible with Jinja2 2.x
