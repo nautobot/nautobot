@@ -288,16 +288,16 @@ class DynamicGroup(OrganizationalModel):
         return FilterForm
 
     def clean_filter(self):
-        """Validations for `self.filter` that uses the generated filter form."""
+        """Clean for `self.filter` that uses the filterset_class to validate."""
         if not isinstance(self.filter, dict):
             raise ValidationError({"filter": "Filter must be a dict"})
 
         # Validate against the generated filter form. It's pretty lenient so
         # this would have to be very ugly.
-        form_class = self.generate_filter_form()
-        form = form_class(self.filter)
-        if not form.is_valid():
-            raise ValidationError(form.errors)
+        filterset_class = self.map.filterset_class
+        filterset = filterset_class(self.filter)
+        if not filterset.is_valid():
+            raise ValidationError(filterset.errors)
 
     def clean(self):
         super().clean()
