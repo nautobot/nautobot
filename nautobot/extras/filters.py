@@ -650,8 +650,6 @@ class ObjectChangeFilterSet(BaseFilterSet):
             "changed_object_id",
             "object_repr",
         ]
-        
-        
 
     def search(self, queryset, name, value):
         if not value.strip():
