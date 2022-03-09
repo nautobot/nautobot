@@ -728,6 +728,18 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                 {"vc_position": "A device assigned to a virtual chassis must have its position defined."}
             )
 
+        # Validate device isn't being removed from a virtual chassis when it is the master
+        if not self.virtual_chassis and self.present_in_database:
+            existing_virtual_chassis = Device.objects.get(id=self.id).virtual_chassis
+            if existing_virtual_chassis and existing_virtual_chassis.master == self:
+                raise ValidationError(
+                    {
+                        "virtual_chassis": "The master device for the virtual chassis ({}) may not be removed".format(
+                            existing_virtual_chassis
+                        )
+                    }
+                )
+
     def save(self, *args, **kwargs):
 
         is_new = not self.present_in_database
