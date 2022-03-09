@@ -62,13 +62,13 @@ class PluginHomeTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
 
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.browser.find_by_css("div[class='homepage_column']")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
+            columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
-                columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
+                columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
     def test_homepage_render_counters(self):
         """
@@ -78,15 +78,15 @@ class PluginHomeTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
 
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.browser.find_by_css("div[class='homepage_column']")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
+            columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, item_details in panel_details.items():
-                item_html = columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
+                item_html = columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
                 counter = item_details["model"].objects.count()
-                counter_html = int(item_html.find_element_by_xpath("./../../span").get_property("innerHTML"))
+                counter_html = int(item_html.find_by_xpath("./../../span")["innerHTML"])
                 self.assertEqual(counter, counter_html)
 
     @override_settings(HIDE_RESTRICTED_UI=False)
@@ -94,16 +94,14 @@ class PluginHomeTestCase(SeleniumTestCase):
         """
         Render homepage with no permissions.
         """
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.browser.find_by_css("div[class='homepage_column']")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
+            columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
-                item_html = columns_html[0].find_element_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                self.assertTrue(
-                    "mdi mdi-lock" in item_html.find_element_by_xpath("./../span").get_property("innerHTML")
-                )
+                item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
+                self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])
 
     def test_examplemodel_custom_panel(self):
         """
@@ -112,13 +110,13 @@ class PluginHomeTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
 
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
-        columns_html[0].find_element_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
+        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html.first.find_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
 
         for item_name in self.custom_panel_examplemodel["items"]:
-            columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
+            columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_limit_permissions(self):
@@ -130,20 +128,18 @@ class PluginHomeTestCase(SeleniumTestCase):
         self.add_permissions("example_plugin.view_examplemodel")
         user_permissions = self.user.get_all_permissions()
 
-        self.load_page(self.live_server_url)
+        self.browser.visit(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.browser.find_by_css("div[class='homepage_column']")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
+            columns_html.first.find_by_xpath(f".//*[contains(text(), '{panel_name}')]")
             for item_name, item_details in panel_details.items():
                 if item_details["permission"] in user_permissions:
-                    item_html = columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
+                    item_html = columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
                     if item_details.get("model"):
                         counter = item_details["model"].objects.count()
-                        counter_html = int(item_html.find_element_by_xpath("./../../span").get_property("innerHTML"))
+                        counter_html = int(item_html.find_by_xpath("./../../span")["innerHTML"])
                         self.assertEqual(counter, counter_html)
                 else:
-                    item_html = columns_html[0].find_element_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                    self.assertTrue(
-                        "mdi mdi-lock" in item_html.find_element_by_xpath("./../span").get_property("innerHTML")
-                    )
+                    item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
+                    self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])

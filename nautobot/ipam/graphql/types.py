@@ -73,7 +73,11 @@ class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Prefix model."""
 
     prefix = graphene.String()
+    family = graphene.Int()
 
     class Meta:
         model = models.Prefix
         filterset_class = filters.PrefixFilterSet
+
+    def resolve_family(self, args):
+        return self.family

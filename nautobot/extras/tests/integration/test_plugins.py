@@ -11,7 +11,7 @@ from django.urls import reverse
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from example_plugin.models import ExampleModel
 
@@ -20,7 +20,7 @@ from example_plugin.models import ExampleModel
     "example_plugin" not in settings.PLUGINS,
     "example_plugin not in settings.PLUGINS",
 )
-class PluginWebhookTest(SplinterTestCase):
+class PluginWebhookTest(SeleniumTestCase):
     """
     This test case proves that plugins can use the webhook functions when making changes on a model.
 
