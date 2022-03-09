@@ -422,7 +422,7 @@ def copy_safe_request(request):
     )
 
 
-def get_object_for_model(model, module_name, object_suffix):
+def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
 
@@ -466,7 +466,7 @@ def get_filterset_for_model(model):
     Returns:
         Either the `FilterSet` class or `None`
     """
-    return get_object_for_model(model, module_name="filters", object_suffix="FilterSet")
+    return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
 
 
 def get_form_for_model(model, form_prefix=""):
@@ -486,7 +486,7 @@ def get_form_for_model(model, form_prefix=""):
         Either the `Form` class or `None`
     """
     object_suffix = f"{form_prefix}Form"
-    return get_object_for_model(model, module_name="forms", object_suffix=object_suffix)
+    return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
 
 
 def get_table_for_model(model):
@@ -500,7 +500,7 @@ def get_table_for_model(model):
     Returns:
         Either the `Table` class or `None`
     """
-    return get_object_for_model(model, module_name="tables", object_suffix="Table")
+    return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
 
 
 # Setup UtilizationData named tuple for use by multiple methods

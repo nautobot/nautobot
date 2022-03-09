@@ -193,7 +193,7 @@ class ContentTypeFilterMixin:
 
 class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
     """
-    Allows characater-based ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+    Allows character-based ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
 
     Does not support limiting of choices. Can be used without arguments on a `FilterSet`:
 
@@ -203,13 +203,13 @@ class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
 
 class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilter):
     """
-    Allows characater-based ContentType filtering by <app_label>.<model> (e.g.
+    Allows character-based ContentType filtering by <app_label>.<model> (e.g.
     "dcim.site") but an explicit set of choices must be provided.
 
     Example use on a `FilterSet`:
 
         content_type = ContentTypeChoiceFilter(
-            choices=FeatureQuery("dynmic_groups").get_choices,
+            choices=FeatureQuery("dynamic_groups").get_choices,
         )
     """
 

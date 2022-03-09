@@ -289,7 +289,11 @@ class DynamicGroupTable(BaseTable):
         )
 
     def render_members(self, value, record):
-        return format_html(f'<a href="{record.get_group_members_url()}">{value}</a>')
+        """Provide a filtered URL to the group members (if any)."""
+        # Only linkify if there are members.
+        if not value:
+            return value
+        return format_html('<a href="{}">{}</a>', record.get_group_members_url(), value)
 
 
 class ExportTemplateTable(BaseTable):

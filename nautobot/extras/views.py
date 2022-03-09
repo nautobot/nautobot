@@ -74,6 +74,9 @@ from .models import (
 from .registry import registry
 
 
+logger = logging.getLogger(__name__)
+
+
 #
 # Computed Fields
 #
@@ -364,7 +367,6 @@ class CustomFieldEditView(generic.ObjectEditView):
         return ctx
 
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.CustomFieldEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
@@ -541,7 +543,6 @@ class DynamicGroupEditView(generic.ObjectEditView):
         return ctx
 
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.SecretsGroupEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
@@ -1571,7 +1572,6 @@ class SecretsGroupEditView(generic.ObjectEditView):
         return ctx
 
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.SecretsGroupEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)

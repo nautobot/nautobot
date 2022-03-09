@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import logging
 import urllib
 
@@ -60,7 +59,6 @@ class BaseDynamicGroupMap:
     @classmethod
     def fields(cls):
         """Return all FilterForm fields in a dictionary."""
-        _fields = OrderedDict()
 
         # Get model form and fields
         modelform = cls.form_class()
@@ -84,63 +82,43 @@ class BaseDynamicGroupMap:
                 logger.debug("Skipping excluded filter field: %s", missing_field)
                 continue
 
-            # Try to fuzz fields that should be in the filter form. Sorted from
-            # most to least common, so the loop break happens sooner than later.
-            # FIXME(jathan): YES THIS IS GHETTO, but I'm just trying to get
-            # something working that is backwards-compatible.
-            # FIXME(jathan); There is a bug with `asset_tag` -> `tag`. Will need
-            # to retrhink this fuzzing approach and/or replace it with a static
-            # mapping or something. "Dynamic" groups indeed.
-            #
-            # >>> Missing: asset_tag, Guess: tag found in filter fields
-            # >>> Missing: tags, Guess: tag found in filter fields
-            guesses = [
-                missing_field,  # foo
-                missing_field + "_id",  # foo_id
-                missing_field.rstrip("s"),  # tags -> tag
-                "has_" + missing_field[:-1],  # primary_ip4 -> has_primary_ip
-                missing_field.split("_")[-1],  # device_role -> role
-            ]
-            for guess in guesses:
-                if guess in filter_fields:
-                    logger.debug("Missing: %s, Guess: %s found in filter fields", missing_field, guess)
-                    break
+            modelform_field = modelform_fields[missing_field]
+            try:
+                filterset_field = filterset_fields[missing_field]
+            except KeyError:
+                logger.debug("Skipping %s: doesn't have a filterset field", missing_field)
+                continue
 
-            # If none of the missing ones are found in some other form, add the
-            # missing field.
-            else:
-                modelform_field = modelform_fields[missing_field]
-                try:
-                    filterset_field = filterset_fields[missing_field]
-                except KeyError:
-                    logger.debug("Skipping %s: doesn't have a filterset field", missing_field)
-                    continue
+            # Get ready to replace the form field w/ correct widget.
+            new_modelform_field = filterset_field.field
+            new_modelform_field.widget = modelform_field.widget
 
-                # Get ready to replace the form field w/ correct widget.
-                new_modelform_field = filterset_field.field
-                new_modelform_field.widget = modelform_field.widget
+            # Replace the modelform_field with the correct type for the UI. At this time this is
+            # only being done for CharField since in the filterset form this ends up being a
+            # `MultipleChoiceField` (derived from `MultiValueCharFilter`) which is not correct
+            # for char fields.
+            if isinstance(modelform_field, forms.CharField):
+                modelform_field = new_modelform_field
 
-                # Replace the modelform_field with the correct type for the UI.
-                if isinstance(modelform_field, forms.CharField):
-                    modelform_field = new_modelform_field
+            # Carry over the `to_field_name` to the modelform_field.
+            to_field_name = filterset_field.extra.get("to_field_name")
+            if to_field_name is not None:
+                modelform_field.to_field_name = to_field_name
 
-                # Carry over the `to_field_name` to the modelform_field.
-                to_field_name = filterset_field.extra.get("to_field_name")
-                if to_field_name is not None:
-                    modelform_field.to_field_name = to_field_name
+            logger.debug("Added %s (%s) to filter fields", missing_field, modelform_field.__class__.__name__)
+            filter_fields[missing_field] = modelform_field
 
-                logger.debug("Added %s (%s) to filter fields", missing_field, modelform_field.__class__.__name__)
-                filter_fields[missing_field] = modelform_field
-
+        # Reduce down to a final dict of desired fields.
+        return_fields = {}
         for field_name, filter_field in filter_fields.items():
             # Skip excluded fields
             if field_name.startswith(cls.exclude_filter_fields):
                 logger.debug("Skipping excluded filter field: %s", field_name)
                 continue
 
-            _fields[field_name] = filter_field
+            return_fields[field_name] = filter_field
 
-        return _fields
+        return return_fields
 
     @classmethod
     def get_queryset(cls, filter_params, flat=False):

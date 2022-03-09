@@ -9,41 +9,14 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.groups import dynamicgroup_map_factory
+from nautobot.extras.querysets import DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 logger = logging.getLogger(__name__)
-
-
-class DynamicGroupQuerySet(RestrictedQuerySet):
-    """Queryset for `DynamicGroup` objects."""
-
-    def get_for_object(self, obj):
-        """
-        Return all `DynamicGroup` assigned to the given object.
-        """
-        if not isinstance(obj, models.Model):
-            raise TypeError(f"{obj} is not an instance of Django Model class")
-
-        # Get dynamic groups for this content_type using the discrete content_type fields to
-        # optimize the query.
-        # TODO(jathan): 1 query
-        eligible_groups = self.filter(
-            content_type__app_label=obj._meta.app_label, content_type__model=obj._meta.model_name
-        ).select_related("content_type")
-
-        # Filter down to matching groups
-        my_groups = []
-        # TODO(jathan: 3 queries per DynamicGroup instance
-        for dynamic_group in eligible_groups:
-            if obj.pk in dynamic_group.get_queryset(flat=True):
-                my_groups.append(dynamic_group.pk)
-
-        # TODO(jathan): 1 query
-        return self.filter(pk__in=my_groups)
 
 
 @extras_features(
@@ -59,13 +32,13 @@ class DynamicGroup(OrganizationalModel):
     """Dynamic Group Model."""
 
     name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
-    slug = models.SlugField(max_length=100, unique=True, help_text="Unique slug")
+    slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
         verbose_name="Object Type",
-        help_text="The type of object for this group.",
+        help_text="The type of object for this Dynamic Group.",
     )
     # TODO(jathan): Set editable=False that this field doesn't show up in forms.
     # It's a complex field only modified by the DynamicGroupForm internals at
@@ -178,30 +151,28 @@ class DynamicGroup(OrganizationalModel):
         :param form_data:
             Dict of filter parameters, generally from a filter form's `cleaned_data`
         """
+        # Get the authoritative source of filter fields we want to keep.
         filter_fields = self.get_filter_fields()
 
-        # Populate the filterset from the incoming form's cleaned_data.
+        # Populate the filterset from the incoming `form_data`. The filterset's internal form is
+        # used for validation, will be used by us to extract cleaned data for final processing.
         filterset_class = self.map.filterset_class
         filterset_class.form_prefix = "filter"
         filterset = filterset_class(form_data)
 
-        # Use the auto-generated filterset form perform creation of the
-        # filter dictionary that will be saved on the instance.
+        # Use the auto-generated filterset form perform creation of the filter dictionary.
         filterset_form = filterset.form
-        filterset_form_fields = list(filterset_form.fields)
 
-        # Keep only the fields we desire for the filter.
-        for extra_field_name in filterset_form_fields:
-            if extra_field_name not in filter_fields:
-                logger.debug("Deleting %s from extra_form", extra_field_name)
-                del filterset_form.fields[extra_field_name]
+        # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
+        # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
+        # filterset form, but will also catch errors in case a user-created dict is provided instead.
+        if not filterset_form.is_valid():
+            raise ValidationError(filterset_form.errors)
 
-        # Validate the filter.
-        filterset_form.is_valid()
+        # Perform some type coercions so that they are URL-friendly and reversible, excluding any
+        # empty/null value fields.
         new_filter = {}
-
-        # Perform some type coercions so that they are URL-friendly and reversible.
-        for field_name in list(filterset_form.fields):
+        for field_name in filter_fields:
             field = filterset_form.fields[field_name]
             field_value = filterset_form.cleaned_data[field_name]
 
@@ -209,12 +180,10 @@ class DynamicGroup(OrganizationalModel):
                 field_to_query = field.to_field_name or "pk"
                 logger.debug("%s - %s", field_value, field_to_query)
                 new_value = [getattr(item, field_to_query) for item in field_value]
-                # new_filter[field_name] = value
 
             elif isinstance(field, forms.ModelChoiceField):
                 field_to_query = field.to_field_name or "pk"
                 new_value = getattr(field_value, field_to_query, None)
-                # new_filter[field_name] = value
 
             else:
                 new_value = field_value
@@ -229,13 +198,12 @@ class DynamicGroup(OrganizationalModel):
 
         self.filter = new_filter
 
-    # FIXME(jathan): Yes, this is "something", but there is discrepancy between
-    # explicitly declared fields on `DeviceFilterForm` (for example) vs. the
-    # `DeviceFilterSet` filters. For example `Device.name` becomes a
-    # `MultiValueCharFilter` that emits a `MultiValueCharField` which expects a
-    # list of strings as input. The inverse is not true. It's easier to munge
-    # this dictionary when we go to send it to the form, than it is to
-    # dynamically coerce the form field types coming and going... For now.
+    # FIXME(jathan): Yes, this is "something", but there is discrepancy between explicitly declared
+    # fields on `DeviceFilterForm` (for example) vs. the `DeviceFilterSet` filters. For example
+    # `Device.name` becomes a `MultiValueCharFilter` that emits a `MultiValueCharField` which
+    # expects a list of strings as input. The inverse is not true. It's easier to munge this
+    # dictionary when we go to send it to the form, than it is to dynamically coerce the form field
+    # types coming and going... For now.
     def get_initial(self):
         """
         Return an form-friendly version of `self.filter` for initial form data.
@@ -271,7 +239,7 @@ class DynamicGroup(OrganizationalModel):
         """
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
 
-        This form is used popoulate and validate the filter dictionary.
+        This form is used to popoulate and validate the filter dictionary.
         """
         filterform_class = self.map and self.map.filterform_class
         filter_fields = self.get_filter_fields()
@@ -296,10 +264,8 @@ class DynamicGroup(OrganizationalModel):
         if not isinstance(self.filter, dict):
             raise ValidationError({"filter": "Filter must be a dict"})
 
-        # Validate against the generated filter form. It's pretty lenient so
-        # this would have to be very ugly.
-        filterset_class = self.map.filterset_class
-        filterset = filterset_class(self.filter)
+        # Validate against the filterset's internal form validation.
+        filterset = self.map.filterset_class(self.filter)
         if not filterset.is_valid():
             raise ValidationError(filterset.errors)
 
