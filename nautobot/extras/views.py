@@ -33,7 +33,7 @@ from nautobot.utilities.utils import (
     shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.views import ContentTypePermissionRequiredMixin, ObjectPermissionRequiredMixin
+from nautobot.utilities.views import ObjectPermissionRequiredMixin
 from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
@@ -776,7 +776,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return "extras.run_job"
 
-    def get(self, request, class_path=None, slug=None):
+    def _get_job_model_or_404(self, class_path=None, slug=None):
+        """Helper function for get() and post()."""
         if class_path:
             try:
                 job_model = self.queryset.get_for_class_path(class_path)
@@ -785,11 +786,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
         else:
             job_model = get_object_or_404(self.queryset, slug=slug)
 
-        if job_model.job_class is None:
-            messages.error(
-                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
-            )
-            raise Http404
+        return job_model
+
+    def get(self, request, class_path=None, slug=None):
+        job_model = self._get_job_model_or_404(class_path, slug)
 
         job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
         schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
@@ -805,31 +805,21 @@ class JobView(ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request, class_path=None, slug=None):
-        if class_path:
-            try:
-                job_model = self.queryset.get_for_class_path(class_path)
-            except JobModel.DoesNotExist:
-                raise Http404
-        else:
-            job_model = get_object_or_404(self.queryset, slug=slug)
+        job_model = self._get_job_model_or_404(class_path, slug)
 
-        if job_model.job_class is None:
-            messages.error(
-                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
-            )
-            raise Http404
-
-        job_form = job_model.job_class().as_form(request.POST, request.FILES)
+        job_form = (
+            job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
+        )
         schedule_form = forms.JobScheduleForm(request.POST)
 
         # Allow execution only if a worker process is running and the job is runnable.
         if not get_worker_count(request):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
-        elif not job_model.installed:
+        elif not job_model.installed or job_model.job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
-        elif job_form.is_valid() and schedule_form.is_valid():
+        elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
@@ -862,8 +852,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     name=schedule_name,
                     task="nautobot.extras.jobs.scheduled_job_handler",
                     job_class=job_model.class_path,
+                    job_model=job_model,
                     start_time=schedule_datetime,
-                    description=f"Nautobot job {schedule_name} scheduled by {request.user} on {schedule_datetime}",
+                    description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
                     kwargs=job_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
@@ -922,7 +913,7 @@ class JobDeleteView(generic.ObjectDeleteView):
     queryset = JobModel.objects.all()
 
 
-class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
+class JobApprovalRequestView(generic.ObjectView):
     """
     This view handles requests to view and approve a Job execution request.
     It renders the Job's form in much the same way as `JobView` except all
@@ -930,10 +921,36 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
     job's execution, rather than initial job form input.
     """
 
-    def get_required_permission(self):
-        return "extras.view_job"
+    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    template_name = "extras/job_approval_request.html"
+    additional_permissions = ("extras.view_job",)
 
-    def post(self, request, scheduled_job):
+    def get_extra_context(self, request, instance):
+        """
+        Render the job form with data from the scheduled_job instance, but mark all fields as disabled.
+        We don't care to actually get any data back from the form as we will not ever change it.
+        Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
+        """
+        job_model = instance.job_model
+        if job_model is not None:
+            job_class = job_model.job_class
+        else:
+            # 2.0 TODO: remove this fallback?
+            job_class = get_job(instance.job_class)
+
+        if job_class is not None:
+            # Render the form with all fields disabled
+            initial = instance.kwargs.get("data", {})
+            initial["_commit"] = instance.kwargs.get("commit", True)
+            job_form = job_class().as_form(initial=initial, approval_view=True)
+        else:
+            job_form = None
+
+        return {
+            "job_form": job_form,
+        }
+
+    def post(self, request, pk):
         """
         Act upon one of the 3 submit button actions from the user.
 
@@ -941,27 +958,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         deny will delete the scheduled_job instance
         approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
         """
-        if not request.user.has_perm("extras.run_job"):
-            return HttpResponseForbidden()
-
-        scheduled_job = get_object_or_404(ScheduledJob, pk=scheduled_job)
-        job_model = scheduled_job.job_model
-        if job_model is not None:
-            job_class = job_model.job_class
-        else:
-            # 2.0 TODO: remove this fallback?
-            job_class = get_job(scheduled_job.job_class)
-
-        if job_class is None:
-            messages.error(
-                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
-            )
-            raise Http404
-
-        # Render the form with all fields disabled
-        initial = scheduled_job.kwargs.get("data", {})
-        initial["_commit"] = scheduled_job.kwargs.get("commit", True)
-        job_form = job_class().as_form(initial=initial, approval_view=True)
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
 
         post_data = request.POST
 
@@ -970,37 +967,66 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         force_approve = "_force_approve" in post_data
         dry_run = "_dry_run" in post_data
 
+        job_model = scheduled_job.job_model
+
         if dry_run:
-            # TODO: enforce object-level run_job permissions
-            # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
-            job_result = JobResult.enqueue_job(
-                run_job,
-                job_class.class_path,
-                job_content_type,
-                request.user,
-                data=job_class.serialize_data(initial),
-                request=copy_safe_request(request),
-                commit=False,  # force a dry-run
-            )
-
-            return redirect("extras:job_jobresult", pk=job_result.pk)
-        elif deny:
-            # Delete the scheduled_job instance
-            scheduled_job.delete()
-            if request.user == scheduled_job.user:
-                messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
+            # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
+            if job_model is None:
+                messages.error(request, "There is no job associated with this request? Cannot run it!")
+            elif not job_model.runnable:
+                messages.error(request, "This job cannot be run at this time")
+            elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
+                messages.error(request, "You do not have permission to run this job")
             else:
-                messages.error(request, f"Approval of {scheduled_job.name} was denied")
+                # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
+                job_content_type = ContentType.objects.get(app_label="extras", model="job")
+                initial = scheduled_job.kwargs.get("data", {})
+                initial["_commit"] = False
+                job_result = JobResult.enqueue_job(
+                    run_job,
+                    job_model.job_class.class_path,
+                    job_content_type,
+                    request.user,
+                    data=job_model.job_class.serialize_data(initial),
+                    request=copy_safe_request(request),
+                    commit=False,  # force a dry-run
+                )
 
-            return redirect("extras:scheduledjob_approval_queue_list")
+                return redirect("extras:job_jobresult", pk=job_result.pk)
+        elif deny:
+            if not (
+                self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
+                and job_model is not None
+                and (
+                    JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
+                    # A user can deny (revoke) their own approval requests, even without general job-approval permission
+                    or request.user == scheduled_job.user
+                )
+            ):
+                messages.error(request, "You do not have permission to deny this request.")
+            else:
+                # Delete the scheduled_job instance
+                scheduled_job.delete()
+                if request.user == scheduled_job.user:
+                    messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
+                else:
+                    messages.error(request, f"Approval of {scheduled_job.name} was denied")
+
+                return redirect("extras:scheduledjob_approval_queue_list")
 
         elif approve or force_approve:
-            # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
-            if request.user == scheduled_job.user:
+            if job_model is None:
+                messages.error(request, "There is no job associated with this request? Cannot run it!")
+            elif not (
+                self.queryset.check_perms(request.user, instance=scheduled_job, action="change")
+                and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
+            ):
+                messages.error(request, "You do not have permission to approve this request.")
+            elif request.user == scheduled_job.user:
                 # The requestor *cannot* approve their own job
                 messages.error(request, "You cannot approve your own job request!")
             else:
+                # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
                 if scheduled_job.one_off and scheduled_job.start_time < timezone.now() and not force_approve:
                     return render(request, "extras/job_approval_confirmation.html", {"scheduled_job": scheduled_job})
                 scheduled_job.approved_by_user = request.user
@@ -1009,49 +1035,14 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
 
                 messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")
 
-            return redirect("extras:scheduledjob_approval_queue_list")
+                return redirect("extras:scheduledjob_approval_queue_list")
 
         return render(
             request,
-            "extras/job_approval_request.html",
+            self.get_template_name(),
             {
-                "job_model": job_model,
-                "job_form": job_form,
-                "scheduled_job": scheduled_job,
-            },
-        )
-
-    def get(self, request, scheduled_job):
-        """
-        Render the job form with data from the scheduled_job instance, but mark all fields as disabled.
-        We don't care to actually get any data back from the form as we will not ever change it.
-        Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
-        """
-        scheduled_job = get_object_or_404(ScheduledJob, pk=scheduled_job)
-        job_model = scheduled_job.job_model
-        if job_model is not None:
-            job_class = job_model.job_class
-        else:
-            # 2.0 TODO: remove this fallback?
-            job_class = get_job(scheduled_job.job_class)
-        if job_class is None:
-            messages.error(
-                request, "Unable to find the Job class corresponding to this database record - check if it's installed!"
-            )
-            raise Http404
-
-        # Render the form will all fields disabled
-        initial = scheduled_job.kwargs.get("data", {})
-        initial["_commit"] = scheduled_job.kwargs.get("commit", True)
-        job_form = job_class().as_form(initial=initial, approval_view=True)
-
-        return render(
-            request,
-            "extras/job_approval_request.html",
-            {
-                "job_model": job_model,
-                "job_form": job_form,
-                "scheduled_job": scheduled_job,
+                "object": scheduled_job,
+                **self.get_extra_context(request, scheduled_job),
             },
         )
 

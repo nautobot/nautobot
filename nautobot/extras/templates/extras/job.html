@@ -93,7 +93,7 @@
                         </div>
                         <div class="pull-right">
                             <button type="submit" name="_run" id="id__run" class="btn btn-primary"
-                                {% if not perms.extras.run_job or not job_model.installed or not job_model.enabled or job_model.job_class is None %}
+                                {% if not perms.extras.run_job or not job_model.runnable %}
                                     disabled="disabled"
                                 {% endif %}
                             >

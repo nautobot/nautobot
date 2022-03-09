@@ -44,7 +44,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
-from nautobot.utilities.testing.utils import post_data
+from nautobot.utilities.testing.utils import disable_warnings, post_data
 
 
 # Use the proper swappable User model
@@ -849,42 +849,54 @@ class ScheduledJobTestCase(
 
 
 class ApprovalQueueTestCase(
+    # It would be nice to use ViewTestCases.GetObjectViewTestCase as well,
+    # but we can't directly use it as it uses instance.get_absolute_url() rather than self._get_url("view", instance)
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = ScheduledJob
+    # Many interactions with a ScheduledJob also require permissions to view the associated Job
+    user_permissions = ("extras.view_job",)
 
     def _get_url(self, action, instance=None):
-        if action != "list":
-            raise ValueError("This override is only valid for list test cases")
-        return reverse("extras:scheduledjob_approval_queue_list")
+        if action == "list":
+            return reverse("extras:scheduledjob_approval_queue_list")
+        if action == "view" and instance is not None:
+            return reverse("extras:scheduledjob_approval_request_view", kwargs={"pk": instance.pk})
+        raise ValueError("This override is only valid for list and view test cases")
 
-    @classmethod
-    def setUpTestData(cls):
-        user = User.objects.create(username="user1", is_active=True)
+    def setUp(self):
+        super().setUp()
+        self.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        self.job_model_2 = Job.objects.get_for_class_path("local/test_fail/TestFail")
+        self.job_model_3 = Job.objects.get_for_class_path("local/test_read_only_pass/TestReadOnlyPass")
+
         ScheduledJob.objects.create(
             name="test1",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
+            job_model=self.job_model,
+            job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
+            user=self.user,
             approval_required=True,
             start_time=datetime.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
+            job_model=self.job_model_2,
+            job_class=self.job_model_2.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
+            user=self.user,
             approval_required=True,
             start_time=datetime.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
+            job_model=self.job_model_3,
+            job_class=self.job_model_3.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
+            user=self.user,
             approval_required=True,
             start_time=datetime.now(),
         )
@@ -895,7 +907,8 @@ class ApprovalQueueTestCase(
         ScheduledJob.objects.create(
             name="test4",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
+            job_model=self.job_model,
+            job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=False,
@@ -905,6 +918,331 @@ class ApprovalQueueTestCase(
         response = self.client.get(self._get_url("list"))
         self.assertHttpStatus(response, 200)
         self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
+
+    #
+    # Reimplementations of ViewTestCases.GetObjectViewTestCase test functions.
+    # Needed because those use instance.get_absolute_url() instead of self._get_url("view", instance)...
+    #
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_object_anonymous(self):
+        self.client.logout()
+        response = self.client.get(self._get_url("view", self._get_queryset().first()))
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_without_permission(self):
+        instance = self._get_queryset().first()
+
+        with disable_warnings("django.request"):
+            self.assertHttpStatus(self.client.get(self._get_url("view", instance)), 403)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+
+        # Add model-level permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        response = self.client.get(self._get_url("view", instance))
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        # The object's display name or string representation should appear in the response
+        self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
+
+        # skip GetObjectViewTestCase checks for Relationships and Custom Fields since this isn't actually a detail view
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            # To get a different rendering flow than the "test_get_object_with_permission" test above,
+            # enable additional permissions for this object so that interaction buttons are rendered.
+            actions=["view", "add", "change", "delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET to permitted object
+        self.assertHttpStatus(self.client.get(self._get_url("view", instance1)), 200)
+
+        # Try GET to non-permitted object
+        self.assertHttpStatus(self.client.get(self._get_url("view", instance2)), 404)
+
+    #
+    # Additional test cases specific to the job approval view
+    #
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_post_anonymous(self):
+        """Anonymous users may not take any action with regard to job approval requests."""
+        self.client.logout()
+        response = self.client.post(self._get_url("view", self._get_queryset().first()))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("You do not have permission to run jobs", response_body)
+        # No job was submitted
+        self.assertEqual(0, len(JobResult.objects.all()))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_post_dry_run_not_runnable(self):
+        """A non-enabled job cannot be dry-run."""
+        self.add_permissions("extras.view_scheduledjob")
+        instance = self._get_queryset().first()
+        data = {"_dry_run": True}
+
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("This job cannot be run at this time", response_body)
+        # No job was submitted
+        self.assertEqual(0, len(JobResult.objects.all()))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_post_dry_run_needs_job_run_permission(self):
+        """A user without run_job permission cannot dry-run a job."""
+        self.add_permissions("extras.view_scheduledjob")
+        instance = self._get_queryset().first()
+        instance.job_model.enabled = True
+        instance.job_model.save()
+        data = {"_dry_run": True}
+
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("You do not have permission to run this job", response_body)
+        # No job was submitted
+        self.assertEqual(0, len(JobResult.objects.all()))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_post_dry_run_needs_specific_job_run_permission(self):
+        """A user without run_job permission FOR THAT SPECIFIC JOB cannot dry-run a job."""
+        self.add_permissions("extras.view_scheduledjob")
+        instance1, instance2 = self._get_queryset().all()[:2]
+        data = {"_dry_run": True}
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance1.job_model.pk}, actions=["run"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        instance1.job_model.enabled = True
+        instance1.job_model.save()
+        instance2.job_model.enabled = True
+        instance2.job_model.save()
+
+        response = self.client.post(self._get_url("view", instance2), data)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("You do not have permission to run this job", response_body)
+        # No job was submitted
+        self.assertEqual(0, len(JobResult.objects.all()))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_post_dry_run_success(self, _):
+        """Successfully request a dry run based on object-based run_job permissions."""
+        self.add_permissions("extras.view_scheduledjob")
+        instance = self._get_queryset().first()
+        instance.job_model.enabled = True
+        instance.job_model.save()
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        data = {"_dry_run": True}
+
+        response = self.client.post(self._get_url("view", instance), data)
+        # Job was submitted
+        self.assertEqual(
+            1, len(JobResult.objects.all()), msg=extract_page_body(response.content.decode(response.charset))
+        )
+        job_result = JobResult.objects.first()
+        self.assertEqual(job_result.job_model, instance.job_model)
+        self.assertEqual(job_result.user, self.user)
+        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": job_result.pk}))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_post_deny_same_user_permitted(self):
+        """A user can revoke their own request even without specific approver permissions to do so."""
+        self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.delete_scheduledjob")
+        instance = self._get_queryset().first()
+        data = {"_deny": True}
+
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
+        # Request was deleted
+        self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_post_deny_different_user_lacking_permissions(self):
+        """A user needs both delete_scheduledjob and approve_job permissions to deny a job request."""
+        user1 = User.objects.create_user(username="testuser1")
+        user2 = User.objects.create_user(username="testuser2")
+
+        # Give both users view_scheduledjob permission
+        obj_perm = ObjectPermission(name="View", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(user1, user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
+
+        # Give user1 delete_scheduledjob permission but not approve_job permission
+        obj_perm = ObjectPermission(name="Delete", actions=["delete"])
+        obj_perm.save()
+        obj_perm.users.add(user1)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
+
+        # Give user2 approve_job permission but not delete_scheduledjob permission
+        obj_perm = ObjectPermission(name="Approve", actions=["approve"])
+        obj_perm.save()
+        obj_perm.users.add(user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        instance = self._get_queryset().first()
+        data = {"_deny": True}
+
+        for user in (user1, user2):
+            self.client.force_login(user)
+            response = self.client.post(self._get_url("view", instance), data)
+            self.assertHttpStatus(response, 200, msg=str(user))
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("You do not have permission", response_body, msg=str(user))
+            # Request was not deleted
+            self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_post_deny_different_user_permitted(self):
+        """A user with appropriate permissions can deny a job request."""
+        user = User.objects.create_user(username="testuser1")
+        instance = self._get_queryset().first()
+
+        # Give user view_scheduledjob and delete_scheduledjob permissions
+        obj_perm = ObjectPermission(name="View", actions=["view", "delete"], constraints={"pk": instance.pk})
+        obj_perm.save()
+        obj_perm.users.add(user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
+
+        # Give user approve_job permission
+        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
+        obj_perm.save()
+        obj_perm.users.add(user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        data = {"_deny": True}
+
+        self.client.force_login(user)
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
+        # Request was deleted
+        self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
+
+        # Check object-based permissions are enforced for a different instance
+        instance = self._get_queryset().first()
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertHttpStatus(response, 200, msg=str(user))
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("You do not have permission", response_body, msg=str(user))
+        # Request was not deleted
+        self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_post_approve_cannot_self_approve(self):
+        self.add_permissions("extras.change_scheduledjob")
+        self.add_permissions("extras.approve_job")
+        instance = self._get_queryset().first()
+        data = {"_approve": True}
+
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("You cannot approve your own job request", response_body)
+        # Job was not approved
+        instance.refresh_from_db()
+        self.assertIsNone(instance.approved_by_user)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_post_approve_different_user_lacking_permissions(self):
+        """A user needs both change_scheduledjob and approve_job permissions to approve a job request."""
+        user1 = User.objects.create_user(username="testuser1")
+        user2 = User.objects.create_user(username="testuser2")
+
+        # Give both users view_scheduledjob permission
+        obj_perm = ObjectPermission(name="View", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(user1, user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
+
+        # Give user1 change_scheduledjob permission but not approve_job permission
+        obj_perm = ObjectPermission(name="Change", actions=["change"])
+        obj_perm.save()
+        obj_perm.users.add(user1)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
+
+        # Give user2 approve_job permission but not change_scheduledjob permission
+        obj_perm = ObjectPermission(name="Approve", actions=["approve"])
+        obj_perm.save()
+        obj_perm.users.add(user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        instance = self._get_queryset().first()
+        data = {"_approve": True}
+
+        for user in (user1, user2):
+            self.client.force_login(user)
+            response = self.client.post(self._get_url("view", instance), data)
+            self.assertHttpStatus(response, 200, msg=str(user))
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("You do not have permission", response_body, msg=str(user))
+            # Job was not approved
+            instance.refresh_from_db()
+            self.assertIsNone(instance.approved_by_user)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_post_approve_different_user_permitted(self):
+        """A user with appropriate permissions can approve a job request."""
+        user = User.objects.create_user(username="testuser1")
+        instance = self._get_queryset().first()
+
+        # Give user view_scheduledjob and change_scheduledjob permissions
+        obj_perm = ObjectPermission(name="View", actions=["view", "change"], constraints={"pk": instance.pk})
+        obj_perm.save()
+        obj_perm.users.add(user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
+
+        # Give user approve_job permission
+        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
+        obj_perm.save()
+        obj_perm.users.add(user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        data = {"_approve": True}
+
+        self.client.force_login(user)
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
+        # Job was scheduled
+        instance.refresh_from_db()
+        self.assertEqual(instance.approved_by_user, user)
+
+        # Check object-based permissions are enforced for a different instance
+        instance = self._get_queryset().last()
+        response = self.client.post(self._get_url("view", instance), data)
+        self.assertHttpStatus(response, 200, msg=str(user))
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("You do not have permission", response_body, msg=str(user))
+        # Job was not scheduled
+        instance.refresh_from_db()
+        self.assertIsNone(instance.approved_by_user)
 
 
 class JobResultTestCase(
@@ -1134,9 +1472,9 @@ class JobTestCase(
             reverse("extras:job_run", kwargs={"slug": self.test_not_installed.slug}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
-            self.assertEqual(response.status_code, 404, msg=run_url)
+            self.assertEqual(response.status_code, 200, msg=run_url)
             response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Unable to find the Job class", response_body)
+            self.assertIn("Job is not presently installed", response_body)
 
             self.assertEqual(0, len(JobResult.objects.all()))
 

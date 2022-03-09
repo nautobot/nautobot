@@ -286,6 +286,10 @@ class Job(PrimaryModel):
     def description_first_line(self):
         return self.description.splitlines()[0]
 
+    @property
+    def runnable(self):
+        return self.enabled and self.installed and self.job_class is not None
+
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
         if self.job_class is not None:

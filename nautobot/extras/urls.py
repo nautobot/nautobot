@@ -345,7 +345,7 @@ urlpatterns = [
         name="scheduledjob_approval_queue_list",
     ),
     path(
-        "jobs/scheduled-jobs/approval-queue/<uuid:scheduled_job>/",
+        "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",
         views.JobApprovalRequestView.as_view(),
         name="scheduledjob_approval_request_view",
     ),
