@@ -466,16 +466,6 @@ class DynamicGroupTestCase(
             "content_type": content_type.pk,
         }
 
-    # FIXME(jathan): This currently fails because there's create and then update
-    # within DynamicGroupForm. (2 changes vs. 1)
-    def test_create_object_with_permission(self):
-        pass
-
-    # FIXME(jathan): This currently fails because there's edit and then update
-    # within DynamicGroupForm. (2 changes vs. 1)
-    def test_edit_object_with_permission(self):
-        pass
-
 
 class ExportTemplateTestCase(
     ViewTestCases.CreateObjectViewTestCase,

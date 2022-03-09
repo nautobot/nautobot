@@ -2,6 +2,7 @@ import logging
 import urllib
 
 from django import forms
+from django.db import models
 from django.urls import reverse
 from django.utils.functional import classproperty
 
@@ -13,6 +14,12 @@ logger = logging.getLogger(__name__)
 
 def dynamicgroup_map_factory(model):
     """Generate a `FooDynamicGroupMap` class for a given `model`."""
+
+    try:
+        if not issubclass(model, models.Model):
+            return None
+    except TypeError:
+        return None
 
     filterset_class = get_filterset_for_model(model)
     filterform_class = get_form_for_model(model, form_prefix="Filter")
@@ -46,7 +53,15 @@ class BaseDynamicGroupMap:
     filterform = None
 
     # This is used as a `startswith` check on field names, so these can be
-    # explicit fields or just substrings. Type: tuple
+    # explicit fields or just substrings.
+    #
+    # Currently this means skipping "search", custom fields, and custom relationships.
+    #
+    # FIXME(jathan): As one example, `DeviceFilterSet.q` filter searches in `comments`. The issue
+    # really being that this field renders as a textarea and it's not cute in the UI. Might be able
+    # to dynamically change the widget if we decide we do want to support this field.
+    #
+    # Type: tuple
     exclude_filter_fields = ("q", "cr", "cf", "comments")  # Must be a tuple
 
     @classproperty
@@ -95,8 +110,8 @@ class BaseDynamicGroupMap:
 
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a
-            # `MultipleChoiceField` (derived from `MultiValueCharFilter`) which is not correct
-            # for char fields.
+            # `MultVarCharField` (dynamically generated from from `MultiValueCharFilter`) which is
+            # not correct for char fields.
             if isinstance(modelform_field, forms.CharField):
                 modelform_field = new_modelform_field
 
