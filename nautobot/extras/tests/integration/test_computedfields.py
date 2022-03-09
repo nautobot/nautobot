@@ -3,12 +3,12 @@ from django.urls import reverse
 
 from nautobot.dcim.models import Device
 from nautobot.extras.models import ComputedField
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 
 
-class ComputedFieldsTestCase(SplinterTestCase):
+class ComputedFieldsTestCase(SeleniumTestCase):
     """
     Integration test to check nautobot.extras.models.ComputedField.advanced_ui functionality
     """

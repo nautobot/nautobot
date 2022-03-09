@@ -4,10 +4,10 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.dcim.models import PowerPanel, Site
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
-class CircuitRelationshipsTestCase(SplinterTestCase):
+class CircuitRelationshipsTestCase(SeleniumTestCase):
     """
     Integration test to check relationships show on a circuit termination in the UI
     """

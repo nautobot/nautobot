@@ -1,19 +1,11 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
 
-{% block nav_tabs %}
-        <li role="presentation"{% if active_tab == 'configcontextschema' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Config Context Schema</a>
-        </li>
-        <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
-            <a href="{% url 'extras:configcontextschema_object_validation' slug=object.slug %}">Validation</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:configcontextschema_changelog' slug=object.slug %}">Change Log</a>
-            </li>
-        {% endif %}
-{% endblock nav_tabs %}
+{% block extra_nav_tabs %}
+    <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
+        <a href="{% url 'extras:configcontextschema_object_validation' slug=object.slug %}">Validation</a>
+    </li>
+{% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
             <div class="panel panel-default">

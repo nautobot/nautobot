@@ -4,10 +4,10 @@ from django.test import override_settings
 
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
-class PrefixHierarchyTest(SplinterTestCase):
+class PrefixHierarchyTest(SeleniumTestCase):
     """
     This test case proves that the setting `DISABLE_PREFIX_LIST_HIERARCHY` causes the prefix list view to
     render a flat list when set to True, instead of calculating parent/child relationships, and that by
