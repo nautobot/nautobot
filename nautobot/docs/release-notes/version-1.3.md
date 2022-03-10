@@ -27,7 +27,7 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
 
 !!! note
-    As a convenience measure, when initially upgrading to Nautobot 1.3.x, any existing Jobs that have been run previously (i.e., have at least one associated JobResult record) will instead default to `enabled = True` so that they may continue to be run without requiring changes.
+    As a convenience measure, when initially upgrading to Nautobot 1.3.x, any existing Jobs that have been run or scheduled previously (i.e., have at least one associated JobResult and/or ScheduledJob record) will instead default to `enabled = True` so that they may continue to be run without requiring changes.
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 

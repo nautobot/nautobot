@@ -10,7 +10,7 @@ from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
@@ -337,11 +337,11 @@ def _run_job(request, job_model, legacy_response=False):
     if not job_model.enabled:
         raise PermissionDenied("This job is not enabled to be run.")
     if not job_model.installed:
-        raise Http404
+        raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
 
     job_class = job_model.job_class
     if job_class is None:
-        raise Http404
+        raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
     input_serializer = serializers.JobInputSerializer(data=request.data)

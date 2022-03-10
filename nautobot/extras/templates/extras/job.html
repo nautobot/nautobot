@@ -42,8 +42,7 @@
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i> This job is not presently installed and cannot be run.
                         </div>
-                    {% endif %}
-                    {% if not job_model.enabled %}
+                    {% elif not job_model.enabled %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i> This job is not enabled to be run.
                         </div>

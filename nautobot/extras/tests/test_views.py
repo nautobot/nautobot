@@ -1274,6 +1274,7 @@ class JobResultTestCase(
 
 
 class JobTestCase(
+    # note no CreateObjectViewTestCase - we do not support user creation of Job records
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,

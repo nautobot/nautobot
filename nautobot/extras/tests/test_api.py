@@ -940,7 +940,7 @@ class JobAPIRunTestMixin:
         url = self.get_run_url("local/uninstalled_module/NoSuchJob")
         with disable_warnings("django.request"):
             response = self.client.post(url, {}, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+        self.assertHttpStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1152,7 +1152,7 @@ class JobAPIRunTestMixin:
 
 class JobModelTestCase(
     JobAPIRunTestMixin,
-    # note no CreateObjectViewTestCase
+    # note no CreateObjectViewTestCase - we do not support user creation of Job records
     APIViewTestCases.GetObjectViewTestCase,
     APIViewTestCases.ListObjectsViewTestCase,
     APIViewTestCases.UpdateObjectViewTestCase,
