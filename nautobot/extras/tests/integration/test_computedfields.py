@@ -11,6 +11,7 @@ from . import create_test_device
 class ComputedFieldsTestCase(SeleniumTestCase):
     """
     Integration test to check nautobot.extras.models.ComputedField.advanced_ui functionality
+    and computed fields appearing in an object list
     """
 
     def setUp(self):
@@ -18,6 +19,13 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
+        self.device = create_test_device()
+        self.computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Device),
+            slug="device_computed_field",
+            label="Device Computed Field",
+            template="{{ obj.name }} is awesome!",
+        )
 
     def tearDown(self):
         self.logout()
@@ -31,31 +39,42 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         It secondly sets the computed field to be shown only in the "Advanced" tab in the UI
         and checks it appears ONLY there!.
         """
-        device = create_test_device()
-        computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Device),
-            slug="device_computed_field",
-            label="Device Computed Field",
-            template="{{ obj.name }} is awesome!",
-        )
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": self.device.pk})}')
         # Check the computed field appears in the primary information tab
         self.assertTrue(self.browser.is_text_present("Device Computed Field"))
-        self.assertTrue(self.browser.is_text_present(f"{device.name} is awesome!"))
+        self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
         # # Check the computed field does NOT appear in the advanced tab
         self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.assertFalse(self.browser.is_text_present("Device Computed Field"))
-        self.assertFalse(self.browser.is_text_present(f"{device.name} is awesome!"))
+        self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))
         # Set the custom_field to only show in the advanced tab
-        computed_field.advanced_ui = True
-        computed_field.save()
+        self.computed_field.advanced_ui = True
+        self.computed_field.save()
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": self.device.pk})}')
         # Check the computed field does NOT appear in the primary information tab
         self.assertFalse(self.browser.is_text_present("Device Computed Field"))
-        self.assertFalse(self.browser.is_text_present(f"{device.name} is awesome!"))
+        self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))
         # Check the computed field appears in the advanced tab
         self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.assertTrue(self.browser.is_text_present("Device Computed Field"))
-        self.assertTrue(self.browser.is_text_present(f"{device.name} is awesome!"))
+        self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
+
+    def test_computed_field_appears_in_object_list(self):
+        """
+        This test sets the computed field to be visible on the object list
+        and then checks to see if it actually appears there.
+        """
+        self.browser.visit(f"{self.live_server_url}/dcim/devices/")
+        self.browser.find_by_xpath(".//button[@title='Configure table']").click()
+        select_option = self.browser.find_by_xpath(
+            ".//select[@id='id_columns']/option[contains(text(), 'Device Computed Field')]"
+        )
+        self.assertEqual(len(select_option), 1)
+        select_option.click()
+        self.browser.find_by_xpath(".//input[@value='Save']").click()
+        self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
+        self.browser.find_by_xpath(".//button[@title='Configure table']").click()
+        self.browser.find_by_xpath(".//input[@value='Reset']").click()
+        self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))
