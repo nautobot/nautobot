@@ -6,8 +6,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ## Release Overview
 
-We've upgraded the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. 
-
+We've upgraded the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 ### Added
 
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
