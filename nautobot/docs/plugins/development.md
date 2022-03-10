@@ -92,7 +92,7 @@ authors = ["Bob Jones"]
 license = "Apache 2.0"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 
 [tool.poetry.dev-dependencies]
 

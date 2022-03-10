@@ -15,10 +15,10 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
 ]
 packages = [
     {include = "nautobot"}
@@ -31,12 +31,9 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 # Background task processing
-celery = [
-    {version = "~5.2.2", python = "^3.7"},
-    {version = "~5.1.2", python = "<3.7"},
-]
+celery = "~5.2.3"
 # Fundamental web framework for Nautobot
 # NOTE: some of our dependencies do not have releases compatible with Django 3.2's DEFAULT_AUTO_FIELD setting
 Django = "~3.2"
@@ -90,9 +87,7 @@ djangorestframework = "~3.13.1"
 # Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
-# NOTE: GitPython 3.1.23 and later drop support for Python 3.6
-# NOTE: GitPython 3.1.19 through 3.1.23 are yanked from PyPI
-GitPython = "3.1.18"
+GitPython = "~3.1.27"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -104,8 +99,7 @@ importlib-metadata = {version = "~4.4", python = "<3.10"}
 # NOTE: Jinja2 3.x is available
 Jinja2 = "~2.11.3"
 # Optional data validation of config contexts
-# NOTE: jsonschema 4.x drops support for Python 3.6
-jsonschema = "~3.2.0"
+jsonschema = "~4.4.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.6"
 # Escape text to use HTML and XML. NOTE: later versions are not compatible with Jinja2 2.x
@@ -119,10 +113,7 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.0.0"
 # Image processing library
-Pillow = [
-    {version = "~9.0.0", python = "^3.7"},
-    {version = "~8.3.2", python = "<3.7"},
-]
+Pillow = "~9.0.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.3"
@@ -154,12 +145,9 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-# NOTE: black 22.1.0 stable is out, but it requires click 8.0, and celery 5.1.2 requires click 7.x.
-# NOTE: adding different Blacks as conditional on Python version fails: https://github.com/python-poetry/poetry/issues/4947
-black = {version = "~21.12b0", python = ">3.6.2"}
+black = "~22.1.0"
 # Test code coverage measurement
-# NOTE: coverage 6.3 drops support for python 3.6
-coverage = "~6.2"
+coverage = "~6.3.2"
 # Tool for debugging Django
 django-debug-toolbar = "~3.2.4"
 # Nautobot example plugin used for testing
@@ -176,8 +164,7 @@ mkdocs = "~1.2.3"
 # Integration Tests
 requests = "~2.27.1"
 # Selenium web drivers for live integration testing
-# NOTE: selenium 4.x drops support for python 3.6
-selenium = "~3.141.0"
+selenium = "~4.1.2"
 # Abstraction layer for working with Selenium
 splinter = "~0.17.0"
 
@@ -190,7 +177,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version = ['py36']
+target-version = ['py37', 'py38', 'py39', 'py310']
 include = '\.pyi?$'
 exclude = '''
 (
