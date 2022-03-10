@@ -81,7 +81,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#1314](https://github.com/nautobot/nautobot/pull/1314) - Updated various development-only Python package dependencies to their latest compatible versions.
 - [#1321](https://github.com/nautobot/nautobot/pull/1321) - Updates to various browser package dependencies. This includes updating from Material Design Icons 5.x to 6.x, which has a potential impact on plugins: a [small number of icons have been removed or renamed](https://dev.materialdesignicons.com/upgrade#5.9.55-to-6.1.95) as a result of this change.
 - [#1367](https://github.com/nautobot/nautobot/pull/1367) - Extracted Job-related models to submodule `nautobot.extras.models.jobs`; refined Job testing best practices.
-- [#1391](https://github.com/nautobot/nautobot/pull/1391) - Updated Jinja2 dependency to 3.0.X.
+- [#1391](https://github.com/nautobot/nautobot/issues/1391) - Updated Jinja2 dependency to 3.0.X.
 - [#1435](https://github.com/nautobot/nautobot/issues/1435) - Update to Selenium 4.X
 
 ### Fixed
