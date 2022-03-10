@@ -87,6 +87,9 @@ class BaseDynamicGroupMap:
         filterset = cls.filterset_class()
         filterset_fields = filterset.filters
 
+        # Get dynamic group filter field mappings (if any)
+        dynamic_group_filter_fields = getattr(cls.model, "dynamic_group_filter_fields", {})
+
         # Model form fields that aren't on the filter form
         missing_fields = set(modelform_fields).difference(filter_fields)
 
@@ -96,6 +99,17 @@ class BaseDynamicGroupMap:
             if missing_field.startswith(cls.exclude_filter_fields):
                 logger.debug("Skipping excluded filter field: %s", missing_field)
                 continue
+
+            # In some cases, fields exist in the filterset AND by another name (e.g. `cluster` ->
+            # `cluster_id` yet are ommited from the filter form. We only want to
+            # add them if-and-only-if they aren't already in `filter_fields`.
+            if missing_field in dynamic_group_filter_fields:
+                mapped_field = dynamic_group_filter_fields[missing_field]
+                if mapped_field in filter_fields:
+                    logger.debug(
+                        "Skipping missing form field %s; mapped to %s filter field", missing_field, mapped_field
+                    )
+                    continue
 
             modelform_field = modelform_fields[missing_field]
             try:
@@ -107,6 +121,11 @@ class BaseDynamicGroupMap:
             # Get ready to replace the form field w/ correct widget.
             new_modelform_field = filterset_field.field
             new_modelform_field.widget = modelform_field.widget
+
+            # If `required=True` was set on the model field, pop "required" from the widget
+            # attributes. Filter fields should never be required!
+            if modelform_field.required:
+                new_modelform_field.widget.attrs.pop("required")
 
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a

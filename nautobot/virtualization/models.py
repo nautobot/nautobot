@@ -291,6 +291,12 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         "memory",
         "disk",
     ]
+    # 2.0 TODO: Make this go away when we assert filterset/filterform parity.
+    # FilterSet fields that are custom on FilterForm that we don't want in
+    # DynamicGroup UI edit form.
+    dynamic_group_filter_fields = {
+        "cluster": "cluster_id",
+    }
 
     class Meta:
         ordering = ("name",)  # Name may be non-unique
