@@ -75,3 +75,4 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
         self.browser.find_by_xpath(".//button[@title='Configure table']").click()
         self.browser.find_by_xpath(".//input[@value='Reset']").click()
+        self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))
