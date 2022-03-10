@@ -35,8 +35,6 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.3"
 # Fundamental web framework for Nautobot
-# NOTE: some of our dependencies do not have releases compatible with Django 3.2's DEFAULT_AUTO_FIELD setting
-# but these dependencies now have workarounds in our current code base
 Django = "~3.2"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
