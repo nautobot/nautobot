@@ -6,7 +6,6 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ## Release Overview
 
-We've upgraded the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 ### Added
 
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
@@ -32,6 +31,8 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
 
 ### Changed
+
+We've upgraded the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 
 #### Docker images now default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
 
