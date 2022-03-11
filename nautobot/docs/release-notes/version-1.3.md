@@ -73,6 +73,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#1255](https://github.com/nautobot/nautobot/pull/1255) - Added Python 3.10 support.
 - [#1350](https://github.com/nautobot/nautobot/issues/1350) - Added missing methods on Circuit Termination detail view.
 - [#1411](https://github.com/nautobot/nautobot/pull/1411) - Added concrete Job database model; added database signals to populate Job records in the database; added detail, edit, and delete views for Job records.
+- [#1457](https://github.com/nautobot/nautobot/pull/1457) - Added new Jobs REST API, added control logic to use JobModel rather than JobClass where appropriate; improved permissions enforcement for Jobs
 
 ### Changed
 
