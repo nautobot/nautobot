@@ -14,6 +14,8 @@ __all__ = [
     "NestedGitRepositorySerializer",
     "NestedGraphQLQuerySerializer",
     "NestedImageAttachmentSerializer",
+    "NestedJobSerializer",
+    "NestedJobLogEntrySerializer",
     "NestedJobResultSerializer",
     "NestedRelationshipSerializer",
     "NestedRelationshipAssociationSerializer",
@@ -91,6 +93,14 @@ class NestedImageAttachmentSerializer(WritableNestedSerializer):
     class Meta:
         model = models.ImageAttachment
         fields = ["id", "url", "name", "image"]
+
+
+class NestedJobSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+
+    class Meta:
+        model = models.Job
+        fields = ["id", "url", "source", "module_name", "job_class_name", "grouping", "name"]
 
 
 class NestedJobLogEntrySerializer(serializers.ModelSerializer):

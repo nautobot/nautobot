@@ -228,9 +228,17 @@ class APIViewTestCases:
 
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            data = response.json()
+
+            self.assertIn("actions", data)
 
             # Grab any field that has choices defined (fields with enums)
-            field_choices = {k: v["choices"] for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+            if "POST" in data["actions"]:
+                field_choices = {k: v["choices"] for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
+                field_choices = {k: v["choices"] for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            else:
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
             # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
             # Broken down to provide better failure messages
@@ -254,9 +262,17 @@ class APIViewTestCases:
 
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            data = response.json()
+
+            self.assertIn("actions", data)
 
             # Grab any field name that has choices defined (fields with enums)
-            field_choices = {k for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+            if "POST" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
+                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            else:
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
             self.assertEqual(set(self.choices_fields), field_choices)
 
@@ -275,7 +291,12 @@ class APIViewTestCases:
             self.user.save()
 
             response = self.client.options(self._get_list_url(), **self.header)
-            actions = response.json()["actions"]["POST"]
+            data = response.json()
+
+            self.assertIn("actions", data)
+            self.assertIn("POST", data["actions"])
+
+            actions = data["actions"]["POST"]
             choices = actions["status"]["choices"]
 
             # Import Status here to avoid circular import issues w/ test utilities.

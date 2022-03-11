@@ -10,14 +10,21 @@ from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
 
+from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
-from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
+from nautobot.core.api.views import (
+    BulkDestroyModelMixin,
+    BulkUpdateModelMixin,
+    ModelViewSetMixin,
+    ModelViewSet,
+    ReadOnlyModelViewSet,
+)
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
@@ -31,6 +38,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -46,7 +54,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.jobs import get_job, get_jobs, run_job
+from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
@@ -286,52 +294,195 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
+def _create_schedule(serializer, data, commit, job, approval_required, request):
+    """
+    This is an internal function to create a scheduled job from API data.
+    It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
+    jobs.
+    """
+    job_kwargs = {
+        "data": data,
+        "request": copy_safe_request(request),
+        "user": request.user.pk,
+        "commit": commit,
+        "name": job.class_path,
+    }
+    type_ = serializer["interval"]
+    if type_ == JobExecutionType.TYPE_IMMEDIATELY:
+        time = datetime.now()
+        name = serializer.get("name") or f"{job.name} - {time}"
+    else:
+        time = serializer["start_time"]
+        name = serializer["name"]
+    scheduled_job = ScheduledJob(
+        name=name,
+        task="nautobot.extras.jobs.scheduled_job_handler",
+        job_class=job.class_path,
+        start_time=time,
+        description=f"Nautobot job {name} scheduled by {request.user} on {time}",
+        kwargs=job_kwargs,
+        interval=type_,
+        one_off=(type_ == JobExecutionType.TYPE_FUTURE),
+        user=request.user,
+        approval_required=approval_required,
+    )
+    scheduled_job.save()
+    return scheduled_job
+
+
+def _run_job(request, job_model, legacy_response=False):
+    """An internal function providing logic shared between JobModelViewSet.run() and JobViewSet.run()."""
+    if not request.user.has_perm("extras.run_job"):
+        raise PermissionDenied("This user does not have permission to run jobs.")
+    if not job_model.enabled:
+        raise PermissionDenied("This job is not enabled to be run.")
+    if not job_model.installed:
+        raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
+
+    job_class = job_model.job_class
+    if job_class is None:
+        raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
+    job = job_class()
+
+    input_serializer = serializers.JobInputSerializer(data=request.data)
+    input_serializer.is_valid(raise_exception=True)
+
+    data = input_serializer.data["data"] or {}
+    commit = input_serializer.data["commit"]
+    if commit is None:
+        commit = job_model.commit_default
+
+    try:
+        job.validate_data(data)
+    except FormsValidationError as e:
+        # message_dict can only be accessed if ValidationError got a dict
+        # in the constructor (saved as error_dict). Otherwise we get a list
+        # of errors under messages
+        return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
+
+    if not get_worker_count():
+        raise CeleryWorkerNotRunningException()
+
+    job_content_type = ContentType.objects.get(app_label="extras", model="job")
+
+    schedule_data = input_serializer.data.get("schedule")
+    # BUG TODO: it looks like by omitting "schedule" you can immediately run an approval_required job here...
+    if schedule_data:
+        schedule = _create_schedule(schedule_data, data, commit, job, job_model.approval_required, request)
+        job_result = None
+    else:
+        schedule = None
+        job_result = JobResult.enqueue_job(
+            run_job,
+            job.class_path,
+            job_content_type,
+            request.user,
+            data=data,
+            request=copy_safe_request(request),
+            commit=commit,
+        )
+        job.result = job_result
+
+    if legacy_response:
+        # Old-style JobViewSet response - serialize the Job class in the response for some reason?
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
+        return Response(serializer.data)
+    else:
+        # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
+        data = {"schedule": None, "job_result": None}
+        if schedule:
+            data["schedule"] = nested_serializers.NestedScheduledJobSerializer(
+                schedule, context={"request": request}
+            ).data
+        if job_result:
+            data["job_result"] = nested_serializers.NestedJobResultSerializer(
+                job_result, context={"request": request}
+            ).data
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
+class JobModelViewSet(
+    # DRF mixins:
+    # note no CreateModelMixin
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    # Nautobot mixins:
+    BulkUpdateModelMixin,
+    BulkDestroyModelMixin,
+    ModelViewSetMixin,
+    # Base class
+    viewsets.GenericViewSet,
+):
+    queryset = Job.objects.all()
+    serializer_class = serializers.JobSerializer
+    filterset_class = filters.JobFilterSet
+
+    @swagger_auto_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
+    @action(detail=True)
+    def variables(self, request, pk):
+        job_model = self.get_object()
+        job_class = job_model.job_class
+        if job_class is None:
+            raise Http404
+        variables_dict = job_class._get_vars()
+        data = []
+        for name, instance in variables_dict.items():
+            entry = {"name": name, "type": instance.__class__.__name__}
+            for key in [
+                "label",
+                "help_text",
+                "required",
+                "min_length",
+                "max_length",
+                "min_value",
+                "max_value",
+                "choices",
+            ]:
+                if key in instance.field_attrs:
+                    entry[key] = instance.field_attrs[key]
+            if "initial" in instance.field_attrs:
+                entry["default"] = instance.field_attrs["initial"]
+            if "queryset" in instance.field_attrs:
+                content_type = ContentType.objects.get_for_model(instance.field_attrs["queryset"].model)
+                entry["model"] = f"{content_type.app_label}.{content_type.model}"
+            data.append(entry)
+        return Response(data)
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special "run_job" permission as queryset filter on the /run/ endpoint, otherwise as ModelViewSetMixin.
+        """
+        if request.user.is_authenticated and self.action == "run":
+            self.queryset = self.queryset.restrict(request.user, "run")
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class JobRunTokenPermissions(TokenPermissions):
+        """As nautobot.core.api.authentication.TokenPermissions, but enforcing run_job instead of add_job."""
+
+        perms_map = {
+            "POST": ["%(app_label)s.run_%(model_name)s"],
+        }
+
+    @swagger_auto_schema(
+        method="post",
+        request_body=serializers.JobInputSerializer,
+        responses={"201": serializers.JobRunResponseSerializer},
+    )
+    @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
+    def run(self, request, pk):
+        job_model = self.get_object()
+        return _run_job(request, job_model)
+
+
 class JobViewSet(viewsets.ViewSet):
+    """Deprecated Job-class-based views. Use Job-model-based views instead."""
+
     permission_classes = [IsAuthenticated]
     lookup_field = "class_path"
     lookup_value_regex = "[^/]+/[^/]+/[^/]+"  # e.g. "git.repo_name/module_name/JobName"
-
-    def _get_job_class(self, class_path):
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
-
-        return job_class
-
-    def _create_schedule(self, serializer, data, commit, job, job_class, request):
-        """
-        This is an internal function to create a scheduled job from API data.
-        It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
-        jobs.
-        """
-        job_kwargs = {
-            "data": data,
-            "request": copy_safe_request(request),
-            "user": request.user.pk,
-            "commit": commit,
-            "name": job.class_path,
-        }
-        type_ = serializer["interval"]
-        if type_ == JobExecutionType.TYPE_IMMEDIATELY:
-            time = datetime.now()
-            name = serializer.get("name") or f"{job.name} - {time}"
-        else:
-            time = serializer["start_time"]
-            name = serializer["name"]
-        scheduled_job = ScheduledJob(
-            name=name,
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class=job.class_path,
-            start_time=time,
-            description=f"Nautobot job {name} scheduled by {request.user} on {time}",
-            kwargs=job_kwargs,
-            interval=type_,
-            one_off=(type_ == JobExecutionType.TYPE_FUTURE),
-            user=request.user,
-            approval_required=job_class.approval_required,
-        )
-        scheduled_job.save()
-        return scheduled_job
 
     def list(self, request):
         if not request.user.has_perm("extras.view_job"):
@@ -347,14 +498,14 @@ class JobViewSet(viewsets.ViewSet):
             .order_by("created")
         }
 
-        jobs = get_jobs()
-        jobs_list = []
-        for grouping, modules in jobs.items():
-            for module_name, entry in modules.items():
-                for job_class in entry["jobs"].values():
-                    job = job_class()
-                    job.result = results.get(job.class_path, None)
-                    jobs_list.append(job)
+        job_models = Job.objects.restrict(request.user, "view")
+        jobs_list = [
+            job_model.job_class()  # TODO: why do we need to instantiate the job_class?
+            for job_model in job_models
+            if job_model.installed and job_model.job_class is not None
+        ]
+        for job_instance in jobs_list:
+            job_instance.result = results.get(job_instance.class_path, None)
 
         serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
 
@@ -363,9 +514,14 @@ class JobViewSet(viewsets.ViewSet):
     def retrieve(self, request, class_path):
         if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
-        job_class = self._get_job_class(class_path)
+        try:
+            job_model = Job.objects.restrict(request.user, "view").get_for_class_path(class_path)
+        except Job.DoesNotExist:
+            raise Http404
+        if not job_model.installed or job_model.job_class is None:
+            raise Http404
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        job = job_class()
+        job = job_model.job_class()  # TODO: why do we need to instantiate the job_class?
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
             name=job.class_path,
@@ -381,49 +537,11 @@ class JobViewSet(viewsets.ViewSet):
     def run(self, request, class_path):
         if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("This user does not have permission to run jobs.")
-
-        job_class = self._get_job_class(class_path)
-        job = job_class()
-
-        input_serializer = serializers.JobInputSerializer(data=request.data)
-        input_serializer.is_valid(raise_exception=True)
-
-        data = input_serializer.data["data"] or {}
-        commit = input_serializer.data["commit"]
-        if commit is None:
-            commit = getattr(job_class.Meta, "commit_default", True)
-
         try:
-            job.validate_data(data)
-        except FormsValidationError as e:
-            # message_dict can only be accessed if ValidationError got a dict
-            # in the constructor (saved as error_dict). Otherwise we get a list
-            # of errors under messages
-            return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
-
-        if not get_worker_count():
-            raise CeleryWorkerNotRunningException()
-
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-
-        schedule = input_serializer.data.get("schedule")
-        if schedule:
-            schedule = self._create_schedule(schedule, data, commit, job, job_class, request)
-        else:
-            job_result = JobResult.enqueue_job(
-                run_job,
-                job.class_path,
-                job_content_type,
-                request.user,
-                data=data,
-                request=copy_safe_request(request),
-                commit=commit,
-            )
-            job.result = job_result
-
-        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
-
-        return Response(serializer.data)
+            job_model = Job.objects.restrict(request.user, "run").get_for_class_path(class_path)
+        except Job.DoesNotExist:
+            raise Http404
+        return _run_job(request, job_model, legacy_response=True)
 
 
 #
@@ -540,6 +658,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             raise PermissionDenied()
 
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        # TODO enforce object-level permissions on run_job here as well?
         job_class = get_job(scheduled_job.job_class)
         if job_class is None:
             raise Http404

@@ -9,7 +9,7 @@ from celery import schedules
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -32,7 +32,7 @@ from nautobot.extras.constants import (
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.plugins.utils import import_object
-from nautobot.extras.querysets import ScheduledJobExtendedQuerySet
+from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, jobs_in_directory
 
 from .customfields import CustomFieldModel
@@ -55,6 +55,7 @@ JOB_LOGS = "job_logs"
     "graphql",
     "job_results",
     "relationships",
+    "webhooks",
 )
 class Job(PrimaryModel):
     """
@@ -63,14 +64,22 @@ class Job(PrimaryModel):
 
     # Information used to locate the Job source code
     source = models.CharField(
-        max_length=110,
+        max_length=16,
+        choices=JobSourceChoices,
         editable=False,
         db_index=True,
         help_text="Source of the Python code for this job - local, Git repository, or plugins",
     )
-    # source does not use choices=JobSourceChoices directly as for Git repositories, it must include the
-    # Git repository slug as part of the source value, in order to remain backwards-compatible.
-    # This is also why it maxes at 110 characters rather than 100 - "git.<100-character-repo-slug>"
+    git_repository = models.ForeignKey(
+        to="extras.GitRepository",
+        blank=True,
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+        db_index=True,
+        related_name="jobs",
+        help_text="Git repository that provides this job",
+    )
     module_name = models.CharField(
         max_length=100,
         editable=False,
@@ -86,7 +95,7 @@ class Job(PrimaryModel):
 
     slug = AutoSlugField(
         max_length=320,
-        populate_from=["source", "module_name", "job_class_name"],
+        populate_from=["class_path"],
         slugify_function=slugify_dots_to_dashes,
     )
 
@@ -174,11 +183,13 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
 
+    objects = JobQuerySet.as_manager()
+
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
         unique_together = [
-            ("source", "module_name", "job_class_name"),
+            ("source", "git_repository", "module_name", "job_class_name"),
             ("grouping", "name"),
         ]
 
@@ -189,6 +200,22 @@ class Job(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    def validate_unique(self, exclude=None):
+        """
+        Check for duplicate (source, module_name, job_class_name) in the case where git_repository is None.
+
+        This is needed because NULL != NULL and so the unique_together constraint will not flag this case.
+        """
+        if self.git_repository is None:
+            if Job.objects.exclude(pk=self.pk).filter(
+                source=self.source, module_name=self.module_name, job_class_name=self.job_class_name
+            ):
+                raise ValidationError(
+                    {"job_class_name": "A Job already exists with this source, module_name, and job_class_name"}
+                )
+
+        super().validate_unique(exclude=exclude)
 
     @property
     def job_class(self):
@@ -204,24 +231,23 @@ class Job(PrimaryModel):
                         break
                 else:
                     logger.warning("Module %s job class %s not found!", self.module_name, self.job_class_name)
-            elif self.source.startswith(JobSourceChoices.SOURCE_GIT):
-                path = settings.GIT_ROOT
-                repo_slug = self.source.split(".", 1)[1]
-                from .datasources import GitRepository
+            elif self.source == JobSourceChoices.SOURCE_GIT:
                 from nautobot.extras.datasources.git import ensure_git_repository
 
+                if self.git_repository is None:
+                    logger.warning("Job %s %s has no associated Git repository", self.module_name, self.job_class_name)
+                    return None
                 try:
-                    repository_record = GitRepository.objects.get(slug=repo_slug)
                     # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
                     # they are not required to share a common filesystem; therefore, we may need to refresh our local
                     # clone of the Git repository to ensure that it is in sync with the latest repository clone
                     # from any instance.
                     ensure_git_repository(
-                        repository_record,
-                        head=repository_record.current_head,
+                        self.git_repository,
+                        head=self.git_repository.current_head,
                         logger=logger,
                     )
-                    path = os.path.join(repository_record.filesystem_path, "jobs")
+                    path = os.path.join(self.git_repository.filesystem_path, "jobs")
                     for job_info in jobs_in_directory(path, module_name=self.module_name):
                         if job_info.job_class_name == self.job_class_name:
                             self._job_class = job_info.job_class
@@ -231,12 +257,12 @@ class Job(PrimaryModel):
                             "Module %s job class %s not found in repository %s",
                             self.module_name,
                             self.job_class_name,
-                            repository_record,
+                            self.git_repository,
                         )
-                except GitRepository.DoesNotExist:
+                except ObjectDoesNotExist:
                     return None
                 except Exception as exc:
-                    logger.error(f"Error during local clone/refresh of Git repository {repository_record}: {exc}")
+                    logger.error(f"Error during local clone/refresh of Git repository {self.git_repository}: {exc}")
                     return None
             elif self.source == JobSourceChoices.SOURCE_PLUGIN:
                 # pkgutil.resolve_name is only available in Python 3.9 and later
@@ -246,6 +272,8 @@ class Job(PrimaryModel):
 
     @property
     def class_path(self):
+        if self.git_repository is not None:
+            return f"{self.source}.{self.git_repository.slug}/{self.module_name}/{self.job_class_name}"
         return f"{self.source}/{self.module_name}/{self.job_class_name}"
 
     @property
@@ -259,16 +287,8 @@ class Job(PrimaryModel):
         return self.description.splitlines()[0]
 
     @property
-    def git_repository(self):
-        """The GitRepository providing this Job, if applicable."""
-        if self.source.startswith(JobSourceChoices.SOURCE_GIT):
-            from .datasources import GitRepository
-
-            try:
-                return GitRepository.objects.get(slug=self.source.split(".")[1])
-            except GitRepository.DoesNotExist:
-                return None
-        return None
+    def runnable(self):
+        return self.enabled and self.installed and self.job_class is not None
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -276,6 +296,19 @@ class Job(PrimaryModel):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(self.job_class, field_name))
+
+        if self.git_repository is not None and self.source != JobSourceChoices.SOURCE_GIT:
+            raise ValidationError('A Git repository may only be specified when the source is "git"')
+
+        # Protect against invalid input when auto-creating Job records
+        if len(self.module_name) > 100:
+            raise ValidationError("Module name may not exceed 100 characters in length")
+        if len(self.job_class_name) > 100:
+            raise ValidationError("Job class name may not exceed 100 characters in length")
+        if len(self.grouping) > 255:
+            raise ValidationError("Grouping may not exceed 255 characters in length")
+        if len(self.name) > 100:
+            raise ValidationError("Name may not exceed 100 characters in length")
 
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})
@@ -451,12 +484,13 @@ class JobResult(BaseModel, CustomFieldModel):
             self.completed = timezone.now()
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, celery_kwargs=None, *args, schedule=None, **kwargs):
+    def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
         func: The callable object to be enqueued for execution
-        name: Name for the JobResult instance
+        name: Name for the JobResult instance - corresponds to the desired Job class's "class_path" attribute,
+            if obj_type is extras.Job; for other funcs and obj_types it may differ.
         obj_type: ContentType to link to the JobResult instance obj_type
         user: User object to link to the JobResult instance
         celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
@@ -464,8 +498,6 @@ class JobResult(BaseModel, CustomFieldModel):
         schedule: Optional ScheduledJob instance to link to the JobResult
         kwargs: additional kwargs passed to the callable
         """
-        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
-
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
         kwargs["job_result_pk"] = job_result.pk
@@ -474,12 +506,28 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is None:
             celery_kwargs = {}
 
-        job = get_job(name)
-        if job is not None:
-            if hasattr(job.Meta, "soft_time_limit"):
-                celery_kwargs["soft_time_limit"] = job.Meta.soft_time_limit
-            if hasattr(job.Meta, "time_limit"):
-                celery_kwargs["time_limit"] = job.Meta.time_limit
+        if obj_type.app_label == "extras" and obj_type.model.lower() == "job":
+            try:
+                job_model = Job.objects.get_for_class_path(name)
+                if job_model.soft_time_limit > 0:
+                    celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+                if job_model.time_limit > 0:
+                    celery_kwargs["time_limit"] = job_model.time_limit
+                job_result.job_model = job_model
+                job_result.save()
+            except Job.DoesNotExist:
+                # 2.0 TODO: remove this fallback logic, database records should always exist
+                from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+
+                job_class = get_job(name)
+                if job_class is not None:
+                    logger.error("No Job instance found in the database corresponding to %s", name)
+                    if hasattr(job_class.Meta, "soft_time_limit"):
+                        celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
+                    if hasattr(job_class.Meta, "time_limit"):
+                        celery_kwargs["time_limit"] = job_class.Meta.time_limit
+                else:
+                    logger.error("Neither a Job database record nor a Job source class were found for %s", name)
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 

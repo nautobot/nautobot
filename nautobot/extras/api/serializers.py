@@ -81,6 +81,7 @@ from .nested_serializers import (  # noqa: F401
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
+    NestedJobSerializer,
     NestedJobResultSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
@@ -574,14 +575,13 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
-    # TODO: enable this once we have an updated Job REST API
-    # url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
 
     class Meta:
         model = Job
         fields = [
             "id",
-            # "url", TODO: enable this
+            "url",
             "source",
             "module_name",
             "job_class_name",
@@ -615,6 +615,31 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
         opt_in_fields = ["computed_fields"]
 
 
+class JobVariableSerializer(serializers.Serializer):
+    """Serializer used for responses from the JobModelViewSet.variables() detail endpoint."""
+
+    name = serializers.CharField(read_only=True)
+    type = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True, required=False)
+    help_text = serializers.CharField(read_only=True, required=False)
+    default = serializers.JSONField(read_only=True, required=False)
+    required = serializers.BooleanField(read_only=True, required=False)
+
+    min_length = serializers.IntegerField(read_only=True, required=False)
+    max_length = serializers.IntegerField(read_only=True, required=False)
+    min_value = serializers.IntegerField(read_only=True, required=False)
+    max_value = serializers.IntegerField(read_only=True, required=False)
+    choices = serializers.JSONField(read_only=True, required=False)
+    model = serializers.CharField(read_only=True, required=False)
+
+
+class JobRunResponseSerializer(serializers.Serializer):
+    """Serializer representing responses from the JobModelViewSet.run() POST endpoint."""
+
+    schedule = NestedScheduledJobSerializer(read_only=True, required=False)
+    job_result = NestedJobResultSerializer(read_only=True, required=False)
+
+
 #
 # Job Results
 #
@@ -624,6 +649,7 @@ class JobResultSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+    job_model = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
     schedule = NestedScheduledJobSerializer(read_only=True)
 
@@ -635,6 +661,7 @@ class JobResultSerializer(serializers.ModelSerializer):
             "created",
             "completed",
             "name",
+            "job_model",
             "obj_type",
             "status",
             "user",
@@ -652,6 +679,7 @@ class JobResultSerializer(serializers.ModelSerializer):
 class ScheduledJobSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
     user = NestedUserSerializer(read_only=True)
+    job_model = NestedJobSerializer(read_only=True)
     approved_by_user = NestedUserSerializer(read_only=True)
 
     class Meta:
@@ -661,6 +689,7 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
             "url",
             "name",
             "user",
+            "job_model",
             "task",
             "interval",
             "queue",
@@ -677,7 +706,8 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
 
 
 #
-# Jobs (fka Custom Scripts, Reports)
+# Job classes (fka Custom Scripts, Reports)
+# 2.0 TODO: remove these if no longer needed
 #
 
 

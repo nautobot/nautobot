@@ -19,6 +19,15 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - The Jobs listing UI view can now be filtered and searched like most other Nautobot table/list views.
 - Job attributes (name, description, approval requirements, etc.) can now be managed via the Nautobot UI by an administrator or user with appropriate permissions to customize or override the attributes defined in the Job source code.
 - Jobs can now be identified by a `slug` as well as by their `class_path`.
+- A new set of REST API endpoints have been added at `api/extras/job-models`. The existing `api/extras/jobs` REST API continues to work but should be considered as deprecated.
+
+!!! warning
+    The new Jobs REST API endpoint URL is likely to change before the final release of Nautobot 1.3.
+
+- As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
+
+!!! note
+    As a convenience measure, when initially upgrading to Nautobot 1.3.x, any existing Jobs that have been run or scheduled previously (i.e., have at least one associated JobResult and/or ScheduledJob record) will instead default to `enabled = True` so that they may continue to be run without requiring changes.
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
