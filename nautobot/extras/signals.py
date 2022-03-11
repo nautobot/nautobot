@@ -206,9 +206,10 @@ def refresh_job_models(sender, *, apps, **kwargs):
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
     Job = apps.get_model("extras", "Job")
+    GitRepository = apps.get_model("extras", "GitRepository")
 
     # To make reverse migrations safe
-    if not hasattr(Job, "job_class_name"):
+    if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
@@ -218,17 +219,26 @@ def refresh_job_models(sender, *, apps, **kwargs):
     job_classes = get_jobs()
     job_models = []
     for source, modules in job_classes.items():
+        git_repository = None
+        if source.startswith("git."):
+            try:
+                git_repository = GitRepository.objects.get(slug=source[4:])
+            except GitRepository.DoesNotExist:
+                logger.warning('GitRepository "%s" not found?', source[4:])
+            source = "git"
+
         for module_name, module_details in modules.items():
             for job_class_name, job_class in module_details["jobs"].items():
                 # TODO: catch DB error in case where multiple Jobs have the same grouping + name
-                job_model, _ = refresh_job_model_from_job_class(Job, source, job_class)
+                job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
                 job_models.append(job_model)
 
     for job_model in Job.objects.all():
         if job_model.installed and job_model not in job_models:
             logger.info(
-                "Job %s/%s/%s is no longer installed",
+                "Job %s%s/%s/%s is no longer installed",
                 job_model.source,
+                f"/{job_model.git_repository.slug}" if job_model.git_repository is not None else "",
                 job_model.module_name,
                 job_model.job_class_name,
             )

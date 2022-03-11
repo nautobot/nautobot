@@ -157,6 +157,28 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         return self.filter(pk__in=my_groups)
 
 
+class JobQuerySet(RestrictedQuerySet):
+    """
+    Extend the standard queryset with a get_for_class_path method.
+    """
+
+    def get_for_class_path(self, class_path):
+        try:
+            source, module_name, job_class_name = class_path.split("/")
+            repository_slug = None
+            if source.startswith("git."):
+                repository_slug = source[4:]
+                source = "git"
+        except ValueError:  # not a class_path perhaps?
+            raise self.model.DoesNotExist()
+        return self.get(
+            source=source,
+            module_name=module_name,
+            job_class_name=job_class_name,
+            git_repository__slug=repository_slug,
+        )
+
+
 class ScheduledJobExtendedQuerySet(RestrictedQuerySet, ExtendedQuerySet):
     """
     Base queryset used for the ScheduledJob class

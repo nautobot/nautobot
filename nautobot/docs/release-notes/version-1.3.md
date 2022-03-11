@@ -19,6 +19,15 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - The Jobs listing UI view can now be filtered and searched like most other Nautobot table/list views.
 - Job attributes (name, description, approval requirements, etc.) can now be managed via the Nautobot UI by an administrator or user with appropriate permissions to customize or override the attributes defined in the Job source code.
 - Jobs can now be identified by a `slug` as well as by their `class_path`.
+- A new set of REST API endpoints have been added at `api/extras/job-models`. The existing `api/extras/jobs` REST API continues to work but should be considered as deprecated.
+
+!!! warning
+    The new Jobs REST API endpoint URL is likely to change before the final release of Nautobot 1.3.
+
+- As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
+
+!!! note
+    As a convenience measure, when initially upgrading to Nautobot 1.3.x, any existing Jobs that have been run or scheduled previously (i.e., have at least one associated JobResult and/or ScheduledJob record) will instead default to `enabled = True` so that they may continue to be run without requiring changes.
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
@@ -31,6 +40,10 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
 
 ### Changed
+
+#### Update Jinja2 to 3.0.3 ([#1474](https://github.com/nautobot/nautobot/pull/1474))
+
+We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 
 #### Docker images now default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
 
@@ -53,12 +66,14 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#863](https://github.com/nautobot/nautobot/issues/863) - Added the ability to hide a job in the UI by setting `hidden = True` in the Job's inner `Meta` class
 - [#881](https://github.com/nautobot/nautobot/issues/881) - Improved the UX of the main Jobs by adding accordion style interface that can collapse/expand jobs provided by each module
 - [#885](https://github.com/nautobot/nautobot/issues/885) - Added the ability to define a `soft_time_limit` and `time_limit` in seconds as attributes of a Job's `Meta`.
+- [#894](https://github.com/nautobot/nautobot/issues/894) - Added the ability to view computed fields in an object list.
 - [#898](https://github.com/nautobot/nautobot/issues/898) - Added support for moving a CustomField, Relationship or ComputedField from the main tab of an object's detail page in the UI to the "Advanced" tab.
 - [#1001](https://github.com/nautobot/nautobot/issues/1001) - Added Job database model and associated functionality.
 - [#1109](https://github.com/nautobot/nautobot/issues/1109) - Added pagination support for GraphQL list queries.
 - [#1255](https://github.com/nautobot/nautobot/pull/1255) - Added Python 3.10 support.
 - [#1350](https://github.com/nautobot/nautobot/issues/1350) - Added missing methods on Circuit Termination detail view.
 - [#1411](https://github.com/nautobot/nautobot/pull/1411) - Added concrete Job database model; added database signals to populate Job records in the database; added detail, edit, and delete views for Job records.
+- [#1457](https://github.com/nautobot/nautobot/pull/1457) - Added new Jobs REST API, added control logic to use JobModel rather than JobClass where appropriate; improved permissions enforcement for Jobs
 
 ### Changed
 
@@ -70,11 +85,14 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#916](https://github.com/nautobot/nautobot/issues/916) - A Job.Meta.description can now contain markdown-formatted multi-line text.
 - [#1107](https://github.com/nautobot/nautobot/issues/1107) - Circuit Provider account numbers can now be up to 100 characters in length.
 - [#1252](https://github.com/nautobot/nautobot/pull/1252) - As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
-- [#1277](https://github.com/nautobot/nautobot/issues/1277) - Upgraded Django dependency to 3.2.X LTS.
+- [#1268](https://github.com/nautobot/nautobot/issues/1268) - Drop Support for Python 3.6.
+- [#1277](https://github.com/nautobot/nautobot/issues/1277) - Updated Django dependency to 3.2.X LTS.
 - [#1307](https://github.com/nautobot/nautobot/pull/1307) - Updated various Python package dependencies to their latest compatible versions.
 - [#1314](https://github.com/nautobot/nautobot/pull/1314) - Updated various development-only Python package dependencies to their latest compatible versions.
 - [#1321](https://github.com/nautobot/nautobot/pull/1321) - Updates to various browser package dependencies. This includes updating from Material Design Icons 5.x to 6.x, which has a potential impact on plugins: a [small number of icons have been removed or renamed](https://dev.materialdesignicons.com/upgrade#5.9.55-to-6.1.95) as a result of this change.
 - [#1367](https://github.com/nautobot/nautobot/pull/1367) - Extracted Job-related models to submodule `nautobot.extras.models.jobs`; refined Job testing best practices.
+- [#1391](https://github.com/nautobot/nautobot/issues/1391) - Updated Jinja2 dependency to 3.0.X.
+- [#1435](https://github.com/nautobot/nautobot/issues/1435) - Update to Selenium 4.X
 
 ### Fixed
 

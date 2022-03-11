@@ -32,7 +32,7 @@ from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import FileProxy, GitRepository, ScheduledJob
+from .models import FileProxy, GitRepository, Job as JobModel, ScheduledJob
 from .registry import registry
 from .utils import jobs_in_directory
 
@@ -297,13 +297,23 @@ class BaseJob:
 
         form = FormClass(data, files, initial=initial)
 
-        if self.read_only:
+        try:
+            job_model = JobModel.objects.get_for_class_path(self.class_path)
+            read_only = job_model.read_only if job_model.read_only_override else self.read_only
+            commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
+        except JobModel.DoesNotExist:
+            # 2.0 TODO: remove this fallback, Job records should always exist.
+            logger.error("No Job instance found in the database corresponding to %s", self.class_path)
+            read_only = self.read_only
+            commit_default = self.commit_default
+
+        if read_only:
             # Hide the commit field for read only jobs
             form.fields["_commit"].widget = forms.HiddenInput()
             form.fields["_commit"].initial = False
         else:
             # Set initial "commit" checkbox state based on the Meta parameter
-            form.fields["_commit"].initial = self.commit_default
+            form.fields["_commit"].initial = commit_default
 
         if self.field_order:
             form.order_fields(self.field_order)
@@ -984,10 +994,28 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         logger.error(e)
         return False
 
-    job_class = get_job(job_result.name)
-    if not job_class:
+    job_model = job_result.job_model
+    initialization_failure = None
+    if not job_model:
+        # 2.0 TODO: remove this fallback logic
+        try:
+            job_model = JobModel.objects.get_for_class_path(job_result.name)
+        except JobModel.DoesNotExist:
+            initialization_failure = f'Unable to locate Job database record for "{job_result.name}" to run it!'
+
+    if not initialization_failure:
+        if not job_model.enabled:
+            initialization_failure = f"Job {job_model} is not enabled to be run!"
+        else:
+            job_class = job_model.job_class
+
+            if not job_model.installed or not job_class:
+                initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
+
+    if initialization_failure:
         job_result.log(
-            f'Unable to locate job "{job_result.name}" to run it!',
+            message=initialization_failure,
+            obj=job_model,
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="initialization",
             logger=logger,
@@ -1011,8 +1039,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    soft_time_limit = job.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-    time_limit = job.time_limit or settings.CELERY_TASK_TIME_LIMIT
+    soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+    time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
     if time_limit <= soft_time_limit:
         job_result.log(
             f"The hard time limit of {time_limit} seconds is less than "
@@ -1050,7 +1078,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job.delete_files(*file_ids)  # Cleanup FileProxy objects
         return False
 
-    if job.read_only:
+    if job_model.read_only:
         # Force commit to false for read only jobs.
         commit = False
 
@@ -1102,13 +1130,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                     raise AbortTransaction()
 
         except AbortTransaction:
-            if not job.read_only:
+            if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted automatically.")
 
         except Exception as exc:
             stacktrace = traceback.format_exc()
             job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
-            if not job.read_only:
+            if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted due to error.")
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 

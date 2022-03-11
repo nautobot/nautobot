@@ -98,7 +98,7 @@ def render_markdown(value):
 
     # Sanitize Markdown links
     schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = fr"\[(.+)\]\((?!({schemes})).*:(.+)\)"
+    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
     value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
 
     # Render Markdown

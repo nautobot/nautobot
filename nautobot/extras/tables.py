@@ -95,19 +95,19 @@ WEBHOOK_CONTENT_TYPES = """
 
 SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_dry_run')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
         title="Dry Run"
         class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-play"></i>
 </button>
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_approve')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
         title="Approve"
         class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-check"></i>
 </button>
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_deny')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
         title="Deny"
         class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-close"></i>
@@ -523,7 +523,7 @@ class JobLogEntryTable(BaseTable):
         }
 
 
-def job_creator_link(value, record):
+def related_object_link(value, record):
     """
     Get a link to the related object, if any, associated with the given JobResult record.
     """
@@ -537,8 +537,9 @@ def job_creator_link(value, record):
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
+    related_object = tables.Column(verbose_name="Related Object", linkify=related_object_link, accessor="related_name")
     name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
@@ -577,6 +578,7 @@ class JobResultTable(BaseTable):
             "pk",
             "created",
             "name",
+            "job_model",
             "obj_type",
             "related_object",
             "duration",
@@ -585,7 +587,7 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
         )
-        default_columns = ("pk", "created", "related_object", "user", "status", "summary")
+        default_columns = ("pk", "created", "job_model", "related_object", "user", "status", "summary")
 
 
 #
@@ -596,7 +598,7 @@ class JobResultTable(BaseTable):
 class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    job_class = tables.Column(verbose_name="Job")
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="First Run")
     last_run_at = tables.Column(verbose_name="Most Recent Run")
@@ -604,12 +606,12 @@ class ScheduledJobTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
+        fields = ("pk", "name", "job_model", "interval", "start_time", "last_run_at")
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
     name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
-    job_class = tables.Column(verbose_name="Job")
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
     user = tables.Column(verbose_name="Requestor")
@@ -617,7 +619,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("name", "job_class", "interval", "user", "start_time", "actions")
+        fields = ("name", "job_model", "interval", "user", "start_time", "actions")
 
 
 class ObjectChangeTable(BaseTable):

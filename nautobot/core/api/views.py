@@ -175,16 +175,29 @@ class ModelViewSetMixin:
 
         return super().initialize_request(request, *args, **kwargs)
 
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Restrict the view's queryset to allow only the permitted objects for the given request.
+
+        Subclasses (such as nautobot.extras.api.views.JobModelViewSet) may wish to override this.
+
+        Called by initial(), below.
+        """
+        # Restrict the view's QuerySet to allow only the permitted objects for the given user, if applicable
+        if request.user.is_authenticated:
+            action = HTTP_ACTIONS[request.method]
+            if action:
+                self.queryset = self.queryset.restrict(request.user, action)
+
     def initial(self, request, *args, **kwargs):
+        """
+        Runs anything that needs to occur prior to calling the method handler.
+
+        Override of internal Django Rest Framework API.
+        """
         super().initial(request, *args, **kwargs)
 
-        if not request.user.is_authenticated:
-            return
-
-        # Restrict the view's QuerySet to allow only the permitted objects
-        action = HTTP_ACTIONS[request.method]
-        if action:
-            self.queryset = self.queryset.restrict(request.user, action)
+        self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
         logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
