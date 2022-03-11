@@ -708,12 +708,6 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
     class Meta:
         ordering = ("name",)
-        unique_together = (
-            "payload_url",
-            "type_create",
-            "type_update",
-            "type_delete",
-        )
 
     def __str__(self):
         return self.name

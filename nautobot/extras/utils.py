@@ -219,3 +219,37 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     )
 
     return (job_model, created)
+def validate_webhooks(instance, content_types, payload_url, type_create, type_update, type_delete):
+    """
+    Validate webhooks
+
+    Return:
+        errors (dict): Returns a dict of errors if any
+    """
+    from nautobot.extras.models.models import Webhook
+
+    errors = {}
+
+    for content_type in content_types:
+        webhooks = Webhook.objects.filter(content_types__in=[content_type], payload_url=payload_url)
+        if instance.present_in_database:
+            webhooks = webhooks.exclude(pk=instance.pk)
+
+        webhooks_type_create_filter = webhooks.filter(type_create=type_create)
+        webhooks_type_update_filter = webhooks.filter(type_update=type_update)
+        webhooks_type_delete_filter = webhooks.filter(type_delete=type_delete)
+
+        if any(
+            [
+                webhooks_type_create_filter.count(),
+                webhooks_type_update_filter.count(),
+                webhooks_type_delete_filter.count(),
+            ]
+        ):
+            error_msg = f"{content_type} with payload url, type_create, type_update and type_delete exist"
+            if "content_types" in errors:
+                errors["content_types"] = [error_msg, *errors["content_types"]]
+            else:
+                errors["content_types"] = [error_msg]
+
+    return errors
