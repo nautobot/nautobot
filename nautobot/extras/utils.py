@@ -235,15 +235,15 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
         if instance and instance.present_in_database:
             webhooks = webhooks.exclude(pk=instance.pk)
 
-        webhooks_type_create_filter = webhooks.filter(type_create=type_create)
-        webhooks_type_update_filter = webhooks.filter(type_update=type_update)
-        webhooks_type_delete_filter = webhooks.filter(type_delete=type_delete)
+        webhooks_type_create_action = webhooks.filter(type_create=type_create).count() if type_create else None
+        webhooks_type_update_action = webhooks.filter(type_update=type_update).count() if type_update else None
+        webhooks_type_delete_action = webhooks.filter(type_delete=type_delete).count() if type_delete else None
 
         if any(
             [
-                webhooks_type_create_filter.count(),
-                webhooks_type_update_filter.count(),
-                webhooks_type_delete_filter.count(),
+                webhooks_type_create_action,
+                webhooks_type_update_action,
+                webhooks_type_delete_action,
             ]
         ):
             error_msg = f"{content_type} with payload url, type_create, type_update and type_delete exist"
