@@ -35,7 +35,6 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.3"
 # Fundamental web framework for Nautobot
-# NOTE: some of our dependencies do not have releases compatible with Django 3.2's DEFAULT_AUTO_FIELD setting
 Django = "~3.2"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
@@ -60,8 +59,7 @@ django-filter = "~21.1"
 # Health check endpoint
 django-health-check = "~3.16.5"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
-# NOTE: Newer versions of django-jinja are available but depend on jinja2 3.x
-django-jinja = "<2.8.0"
+django-jinja = "~2.10.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.13.4"
 # Prometheus metrics for Django
@@ -96,14 +94,13 @@ graphene-django-optimizer = "~0.8.0"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~4.4", python = "<3.10"}
 # Template rendering engine
-# NOTE: Jinja2 3.x is available
-Jinja2 = "~2.11.3"
+Jinja2 = "~3.0.3"
 # Optional data validation of config contexts
 jsonschema = "~4.4.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.6"
-# Escape text to use HTML and XML. NOTE: later versions are not compatible with Jinja2 2.x
-MarkupSafe = "2.0.1"
+# Escape text to use HTML and XML
+MarkupSafe = "~2.1.0"
 # MySQL database adapter
 mysqlclient = {version = "~2.1.0", optional = true}
 # NAPALM automation library
