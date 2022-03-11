@@ -232,7 +232,7 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
 
     for content_type in content_types:
         webhooks = Webhook.objects.filter(content_types__in=[content_type], payload_url=payload_url)
-        if instance.present_in_database:
+        if instance and instance.present_in_database:
             webhooks = webhooks.exclude(pk=instance.pk)
 
         webhooks_type_create_filter = webhooks.filter(type_create=type_create)
