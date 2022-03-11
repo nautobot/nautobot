@@ -401,6 +401,19 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 
 
 #
+# Nautobot base filterset to use for most custom filterset classes.
+#
+
+
+class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+    """
+    This class exists to combine common functionality and is used as a base class throughout the
+    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet
+    are needed.
+    """
+
+
+#
 # Custom Links
 #
 
@@ -442,11 +455,7 @@ class CustomLinkFilterSet(BaseFilterSet):
 #
 
 
-class DynamicGroupFilterSet(
-    BaseFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class DynamicGroupFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(method="search", label="Search")
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
 
@@ -493,15 +502,6 @@ class ExportTemplateFilterSet(BaseFilterSet):
             | Q(content_type__model__icontains=value)
             | Q(description__icontains=value)
         )
-
-
-class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
-    """
-    This class exists to combine common functionality and is used as a base class throughout
-    the codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet are needed.
-    """
-
-    pass
 
 
 #

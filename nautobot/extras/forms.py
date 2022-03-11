@@ -604,6 +604,19 @@ class CustomFieldFilterForm(forms.Form):
 
 
 #
+# Nautobot base form for use in most new custom model forms.
+#
+
+
+class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """
+    This class exists to combine common functionality and is used to inherit from throughout the
+    codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are
+    needed.
+    """
+
+
+#
 # Custom Links
 #
 
@@ -643,7 +656,7 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class DynamicGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class DynamicGroupForm(NautobotModelForm):
     """DynamicGroup model form."""
 
     slug = SlugField()
@@ -714,15 +727,6 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
 
 def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
-
-
-class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
-    """
-    This class exists to combine common functionality and is used to inherit from throughout
-    the codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are needed.
-    """
-
-    pass
 
 
 class PasswordInputWithPlaceholder(forms.PasswordInput):

@@ -119,20 +119,20 @@ class BaseDynamicGroupMap:
             # Get the missing model form field so we can use it to add to the filterform_fields.
             modelform_field = modelform_fields[missing_field]
 
-            # Get ready to replace the form field w/ correct widget.
-            new_modelform_field = filterset_field.field
-            new_modelform_field.widget = modelform_field.widget
-
-            # If `required=True` was set on the model field, pop "required" from the widget
-            # attributes. Filter fields should never be required!
-            if modelform_field.required:
-                new_modelform_field.widget.attrs.pop("required")
-
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a
             # `MultVarCharField` (dynamically generated from from `MultiValueCharFilter`) which is
             # not correct for char fields.
             if isinstance(modelform_field, forms.CharField):
+                # Get ready to replace the form field w/ correct widget.
+                new_modelform_field = filterset_field.field
+                new_modelform_field.widget = modelform_field.widget
+
+                # If `required=True` was set on the model field, pop "required" from the widget
+                # attributes. Filter fields should never be required!
+                if modelform_field.required:
+                    new_modelform_field.widget.attrs.pop("required")
+
                 modelform_field = new_modelform_field
 
             # Carry over the `to_field_name` to the modelform_field.

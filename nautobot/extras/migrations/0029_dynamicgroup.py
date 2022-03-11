@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0025_add_advanced_ui_boolean_to_customfield_conputedfield_and_relationship"),
+        ("extras", "0028_job_reduce_source"),
     ]
 
     operations = [
