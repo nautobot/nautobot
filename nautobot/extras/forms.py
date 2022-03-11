@@ -667,11 +667,7 @@ class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
 
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
-    content_type = CSVContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Type",
-    )
+    content_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, label="Content Type")
 
 
 #

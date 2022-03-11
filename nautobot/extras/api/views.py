@@ -220,7 +220,7 @@ class DynamicGroupViewSet(ModelViewSet):
     # @swagger_auto_schema(method="get", request_body=serializers.GitRepositorySerializer)
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
-        instance = get_object_or_404(DynamicGroup, pk=pk)
+        instance = get_object_or_404(self.queryset, pk=pk)
 
         # Retrieve the serializer for the content_type and paginate the results
         member_model_class = instance.content_type.model_class()

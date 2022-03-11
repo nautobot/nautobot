@@ -435,9 +435,9 @@ def get_related_class_for_model(model, module_name, object_suffix):
         Either the matching object class or None
     """
     if not inspect.isclass(model):
-        raise TypeError(f"model class {model} was passes as an instance!")
+        raise TypeError(f"{model!r} is not a Django Model class")
     if not issubclass(model, Model):
-        raise TypeError(f"{model} is not a subclass of Django Model class")
+        raise TypeError(f"{model!r} is not a subclass of a Django Model class")
 
     # e.g. "nautobot.dcim.forms.DeviceFilterForm"
     app_label = model._meta.app_label

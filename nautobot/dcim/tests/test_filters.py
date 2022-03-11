@@ -1773,6 +1773,18 @@ class DeviceTestCase(TestCase):
         params = {"pass_through_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_has_front_ports(self):
+        params = {"has_front_ports": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_front_ports": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_has_rear_ports(self):
+        params = {"has_rear_ports": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_rear_ports": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
     def test_device_bays(self):
         params = {"device_bays": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)

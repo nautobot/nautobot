@@ -511,16 +511,19 @@ class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
             "name": "API DynamicGroup 4",
             "slug": "api-dynamicgroup-4",
             "content_type": "dcim.device",
+            "filter": {"site": ["site-1"]},
         },
         {
             "name": "API DynamicGroup 5",
             "slug": "api-dynamicgroup-5",
             "content_type": "dcim.device",
+            "filter": {"has_interfaces": False},
         },
         {
             "name": "API DynamicGroup 6",
             "slug": "api-dynamicgroup-6",
             "content_type": "dcim.device",
+            "filter": {"site": ["site-2"]},
         },
     ]
 

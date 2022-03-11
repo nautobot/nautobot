@@ -416,6 +416,7 @@ class DynamicGroupSerializer(ValidatedModelSerializer):
             "content_type",
             "filter",
         ]
+        extra_kwargs = {"filter": {"read_only": False}}
 
 
 #

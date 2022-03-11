@@ -142,18 +142,4 @@
                 <a href="{% url 'dcim:device_configcontext' pk=object.pk %}">Config Context</a>
             </li>
         {% endif %}
-        {% if perms.extras.view_dynamicgroup %}
-            {% if object.dynamic_groups %}
-            <li role="presentation"{% if request.GET.tab == 'dynamic-groups' %} class="active"{% endif %}>
-                <a href="{{ object.get_absolute_url }}#dynamic-groups" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
-                    Dynamic Groups
-                </a>
-            </li>
-            {% endif %}
-        {% endif %}
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:device_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
 {% endblock extra_nav_tabs %}

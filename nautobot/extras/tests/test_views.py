@@ -446,6 +446,9 @@ class DynamicGroupTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    # NOTE: This isn't using `ViewTestCases.PrimaryObjectViewTestCase` because bulk-import/edit
+    # views for DynamicGroup do not make sense at this time, primarily because `content_type` is
+    # immutable after create.
 ):
     model = DynamicGroup
 

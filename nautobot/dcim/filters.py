@@ -693,6 +693,14 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         method="_pass_through_ports",
         label="Has pass-through ports",
     )
+    has_front_ports = RelatedMembershipBooleanFilter(
+        field_name="frontports",
+        label="Has front ports",
+    )
+    has_rear_ports = RelatedMembershipBooleanFilter(
+        field_name="rearports",
+        label="Has rear ports",
+    )
     has_device_bays = RelatedMembershipBooleanFilter(
         field_name="devicebays",
         label="Has device bays",
@@ -729,6 +737,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
             return queryset.filter(params)
         return queryset.exclude(params)
 
+    # 2.0 TODO: Remove me and `pass_through_ports` in exchange for `has_(front|rear)_ports`.
     def _pass_through_ports(self, queryset, name, value):
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 

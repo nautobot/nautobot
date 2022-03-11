@@ -2,7 +2,6 @@ import logging
 import urllib
 
 from django import forms
-from django.db import models
 from django.urls import reverse
 from django.utils.functional import classproperty
 
@@ -13,13 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 def dynamicgroup_map_factory(model):
-    """Generate a `FooDynamicGroupMap` class for a given `model`."""
+    """
+    Generate a `FooDynamicGroupMap` class for a given `model`.
 
-    try:
-        if not issubclass(model, models.Model):
-            return None
-    except TypeError:
-        return None
+    Any exceptions from underlying calls will bubble up.
+    """
 
     filterset_class = get_filterset_for_model(model)
     filterform_class = get_form_for_model(model, form_prefix="Filter")
@@ -49,8 +46,8 @@ class BaseDynamicGroupMap:
 
     model = None
     form_class = None
+    filterform_class = None
     filterset_class = None
-    filterform = None
 
     # This is used as a `startswith` check on field names, so these can be
     # explicit fields or just substrings.
@@ -67,7 +64,7 @@ class BaseDynamicGroupMap:
     @classproperty
     def base_url(cls):
         if cls.model is None:
-            return
+            return ""
         route_name = get_route_for_model(cls.model, "list")
         return reverse(route_name)
 
@@ -81,7 +78,7 @@ class BaseDynamicGroupMap:
 
         # Get filter form and fields
         filterform = cls.filterform_class()
-        filter_fields = filterform.fields
+        filterform_fields = filterform.fields
 
         # Get filterset and fields
         filterset = cls.filterset_class()
@@ -91,32 +88,36 @@ class BaseDynamicGroupMap:
         dynamic_group_filter_fields = getattr(cls.model, "dynamic_group_filter_fields", {})
 
         # Model form fields that aren't on the filter form
-        missing_fields = set(modelform_fields).difference(filter_fields)
+        missing_fields = set(modelform_fields).difference(filterform_fields)
 
         # Try a few ways to see if a missing field can be added to the filter fields.
         for missing_field in missing_fields:
             # Skip excluded fields
             if missing_field.startswith(cls.exclude_filter_fields):
-                logger.debug("Skipping excluded filter field: %s", missing_field)
+                logger.debug("Skipping excluded form field: %s", missing_field)
                 continue
 
-            # In some cases, fields exist in the filterset AND by another name (e.g. `cluster` ->
-            # `cluster_id` yet are ommited from the filter form. We only want to
-            # add them if-and-only-if they aren't already in `filter_fields`.
+            # In some cases, fields exist in the model form AND by another name # in the filter form
+            # (e.g. model form: `cluster` -> filterset: `cluster_id`) yet are omitted from the
+            # filter form (e.g. filter form has "cluster_id" but not "cluster"). We only want to add
+            # them if-and-only-if they aren't already in `filterform_fields`.
             if missing_field in dynamic_group_filter_fields:
                 mapped_field = dynamic_group_filter_fields[missing_field]
-                if mapped_field in filter_fields:
+                if mapped_field in filterform_fields:
                     logger.debug(
                         "Skipping missing form field %s; mapped to %s filter field", missing_field, mapped_field
                     )
                     continue
 
-            modelform_field = modelform_fields[missing_field]
+            # If the missing field isn't even in the filterset, move on.
             try:
                 filterset_field = filterset_fields[missing_field]
             except KeyError:
                 logger.debug("Skipping %s: doesn't have a filterset field", missing_field)
                 continue
+
+            # Get the missing model form field so we can use it to add to the filterform_fields.
+            modelform_field = modelform_fields[missing_field]
 
             # Get ready to replace the form field w/ correct widget.
             new_modelform_field = filterset_field.field
@@ -140,11 +141,11 @@ class BaseDynamicGroupMap:
                 modelform_field.to_field_name = to_field_name
 
             logger.debug("Added %s (%s) to filter fields", missing_field, modelform_field.__class__.__name__)
-            filter_fields[missing_field] = modelform_field
+            filterform_fields[missing_field] = modelform_field
 
         # Reduce down to a final dict of desired fields.
         return_fields = {}
-        for field_name, filter_field in filter_fields.items():
+        for field_name, filter_field in filterform_fields.items():
             # Skip excluded fields
             if field_name.startswith(cls.exclude_filter_fields):
                 logger.debug("Skipping excluded filter field: %s", field_name)

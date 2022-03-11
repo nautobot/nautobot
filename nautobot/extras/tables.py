@@ -271,7 +271,7 @@ class CustomLinkTable(BaseTable):
 class DynamicGroupTable(BaseTable):
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(args=[Accessor("slug")])
+    name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members")
     actions = ButtonsColumn(DynamicGroup, pk_field="slug")
 

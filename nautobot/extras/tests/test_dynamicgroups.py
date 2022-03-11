@@ -65,7 +65,7 @@ class DynamicGroupTestBase(TestCase):
                 filter={"site": ["site-1"]},
                 content_type=cls.device_ct,
             ),
-            # No matches (bogues name match)
+            # No matches (bogus name match)
             DynamicGroup.objects.create(
                 name="No Filter",
                 slug="no-filter",
@@ -171,7 +171,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Test it no args.
         queryset = group.get_queryset()
         devices_site1 = group.content_type.model_class().objects.filter(site=device1.site)
-        devices_flat = (sorted(devices_site1.values_list("pk", flat=True)),)
+        devices_flat = sorted(devices_site1.values_list("pk", flat=True))
         self.assertEqual(
             sorted(queryset.values_list("pk", flat=True)),
             devices_flat,
@@ -198,9 +198,13 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         """Test `DynamicGroup.get_group_members_url()."""
         group = self.groups[0]
         base_url = reverse("dcim:device_list")
-        params = group.map.urlencode(group.filter)
+        params = "site=site-1"
         url = f"{base_url}?{params}"
         self.assertEqual(group.get_group_members_url(), url)
+
+        # If the new group has no attributes or map yet, expect an empty string.
+        new_group = DynamicGroup()
+        self.assertEqual(new_group.get_group_members_url(), "")
 
     def test_get_filter_fields(self):
         """Test `DynamicGroup.get_filter_fields()`."""
@@ -217,7 +221,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertIn("name", filter_fields)
 
     def test_generate_filter_form(self):
-        """Test `DynamicGroup.get_filter_fields()`."""
+        """Test `DynamicGroup.generate_filter_form()`."""
         group = self.groups[0]
         filter_fields = group.get_filter_fields()
         form_class = group.generate_filter_form()
@@ -269,7 +273,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         with self.assertRaises(ValidationError):
             group.set_filter(bad_filter)
 
-        # Cleanup
+        # Cleanup because we're using class-based fixtures in `setUpTestData()`
         group.refresh_from_db()
 
 
@@ -284,8 +288,9 @@ class DynamicGroupMapTest(DynamicGroupTestBase):
         self.assertEqual(dynamicgroup_map.filterform_class, DeviceFilterForm)
         self.assertEqual(dynamicgroup_map.form_class, DeviceForm)
 
-        # Bogus input returns None.
-        self.assertIs(dynamicgroup_map_factory(False), None)
+        # Bogus input errors
+        with self.assertRaises(TypeError):
+            dynamicgroup_map_factory(False)
 
     def test_base_url(self):
         """Test `DynamicGroup.map.base_url`."""
@@ -298,10 +303,10 @@ class DynamicGroupMapTest(DynamicGroupTestBase):
         fields = group.map.fields()
 
         # Test that it's a dict with or without certain key fields.
-        self.assertNotIn("q", fields)
-        self.assertIn("name", fields)
         self.assertIsInstance(fields, dict)
         self.assertNotEqual(fields, {})
+        self.assertNotIn("q", fields)
+        self.assertIn("name", fields)
 
     def test_get_queryset(self):
         """Test `DynamicGroup.map.get_queryset()`."""
@@ -311,12 +316,24 @@ class DynamicGroupMapTest(DynamicGroupTestBase):
         # Test that we can get a full queryset
         qs = group.map.get_queryset(group.filter)
         devices = group.content_type.model_class().objects.filter(site=device1.site)
+        # Expect a single-member qs/list of Device names (only `device1`)
+        expected = [device1.name]
+        self.assertIn(device1, devices)
+        self.assertIn(device1, qs)
+        self.assertEqual(list(map(str, devices)), expected)
+        self.assertEqual(list(map(str, qs)), expected)
         self.assertEqual(list(qs), list(devices))
 
         # ... or just a list of UUIDs
         qs_flat = group.map.get_queryset(group.filter, flat=True)
         devices_flat = devices.values_list("pk", flat=True)
-        self.assertEqual(sorted(qs_flat), sorted(devices_flat))
+
+        # Expect a single-member qs/list of Device UUIDs (only `device1`)
+        expected = [device1.pk]
+        self.assertIn(device1.pk, devices_flat)
+        self.assertIn(device1.pk, qs_flat)
+        self.assertEqual(list(devices_flat), expected)
+        self.assertEqual(sorted(qs_flat), expected)
 
     def test_urlencode(self):
         """Test `DynamicGroup.map.urlencode()`."""
@@ -343,7 +360,7 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_content_type(self):
-        params = {"content_type": "dcim.site"}
+        params = {"content_type": ["dcim.device", "virtualization.virtualmachine"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):

@@ -188,7 +188,7 @@ class CSVModelChoiceField(forms.ModelChoiceField):
 
 class CSVContentTypeField(CSVModelChoiceField):
     """
-    Reference a ContentType in the form `{app_label}.{model}`>
+    Reference a ContentType in the form `{app_label}.{model}`.
     """
 
     STATIC_CHOICES = True

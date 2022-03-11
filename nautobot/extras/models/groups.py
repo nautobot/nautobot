@@ -49,8 +49,6 @@ class DynamicGroup(OrganizationalModel):
         encoder=DjangoJSONEncoder,
         editable=False,
         default=dict,
-        blank=True,
-        null=True,
         help_text="A JSON-encoded dictionary of filter parameters for group membership",
     )
 
@@ -105,7 +103,7 @@ class DynamicGroup(OrganizationalModel):
             try:
                 model = self.content_type.model_class()
                 dynamicgroupmap_class = dynamicgroup_map_factory(model)
-            except models.ObjectDoesNotExist:
+            except (models.ObjectDoesNotExist, TypeError):
                 dynamicgroupmap_class = None
 
             self._map = dynamicgroupmap_class
@@ -117,6 +115,9 @@ class DynamicGroup(OrganizationalModel):
 
     def get_group_members_url(self):
         """Get URL to group members."""
+        if self.map is None:
+            return ""
+
         base_url = self.map.base_url
         filter_str = self.map.urlencode(self.filter)
 
@@ -126,23 +127,15 @@ class DynamicGroup(OrganizationalModel):
         return base_url
 
     def get_filter_fields(self):
-        # Do not present the list of filter options until the object has been created and has a map
-        # class.
-        if not self.map:
+        """Return a mapping of `{field_name: filter_field}` for this group's `content_type`."""
+        # Fail cleaninly until the object has been created and has a map class.
+        if self.map is None:
             return {}
 
         if not self.present_in_database:
             return {}
 
-        # Add all fields defined in the DynamicGroupMap to the form and populate the default value
-        fields = {}
-        for field_name, field in self.map.fields().items():
-            if field_name in self.filter:
-                field.initial = self.filter[field_name]
-
-            fields[field_name] = field
-
-        return fields
+        return self.map.fields()
 
     def set_filter(self, form_data):
         """
@@ -178,7 +171,6 @@ class DynamicGroup(OrganizationalModel):
 
             if isinstance(field, forms.ModelMultipleChoiceField):
                 field_to_query = field.to_field_name or "pk"
-                logger.debug("%s - %s", field_value, field_to_query)
                 new_value = [getattr(item, field_to_query) for item in field_value]
 
             elif isinstance(field, forms.ModelChoiceField):
@@ -187,13 +179,13 @@ class DynamicGroup(OrganizationalModel):
 
             else:
                 new_value = field_value
-                logger.debug("%s: %s", field_name, field_value)
 
             # Don't store empty values like `None`, [], etc.
             if new_value in (None, "", [], {}):
-                logger.debug("Not storing empty value (%s) for %s", field_value, field_name)
+                logger.debug("[%s] Not storing empty value (%s) for %s", self.name, field_value, field_name)
                 continue
 
+            logger.debug("[%s] Setting filter field {%s: %s}", self.name, field_name, field_value)
             new_filter[field_name] = new_value
 
         self.filter = new_filter
@@ -220,9 +212,10 @@ class DynamicGroup(OrganizationalModel):
         # Iterate the char fields and coerce their type to a singular value or
         # an empty string in the case of an empty list.
         for char_field in char_fields:
-            field_value = initial_data.get(char_field, "not_found")
-            if field_value == "not_found":
+            if char_field not in initial_data:
                 continue
+
+            field_value = initial_data[char_field]
 
             if isinstance(field_value, list):
                 # Either the first (and should be only) item in this list.

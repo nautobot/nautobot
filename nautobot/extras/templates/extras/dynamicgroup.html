@@ -29,14 +29,9 @@
         <div class="panel-heading">
             <strong>Filter</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
-            {% for param, value in object.filter.items %}
-                <tr>
-                    <td><code>{{ param }}</code></td>
-                    <td><code>{{ value }}</code></td>
-                </tr>
-            {% endfor %}
-        </table>
+        <div class="panel-body">
+            <pre>{{ object.filter | render_json }}</pre>
+        </div>
     </div>
 {% endblock content_left_page %}
 

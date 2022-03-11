@@ -81,6 +81,7 @@
                 Advanced
             </a>
         </li>
+        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
 	{% if perms.extras.view_dynamicgroup and object.dynamic_groups %}
         <li role="presentation"{% if request.GET.tab == 'dynamic-groups' %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#dynamic-groups" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
@@ -88,7 +89,6 @@
             </a>
         </li>
 	{% endif %}
-        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and changelog_url or active_tab == 'changelog' %}
             <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>

@@ -39,11 +39,9 @@ class Migration(migrations.Migration):
                 (
                     "filter",
                     models.JSONField(
-                        blank=True,
                         default=dict,
                         editable=False,
                         encoder=django.core.serializers.json.DjangoJSONEncoder,
-                        null=True,
                     ),
                 ),
                 (

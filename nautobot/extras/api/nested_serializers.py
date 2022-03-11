@@ -70,7 +70,7 @@ class NestedDynamicGroupSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.DynamicGroup
-        fields = ["id", "name", "slug", "content_type", "url"]
+        fields = ["id", "url", "name", "slug", "content_type"]
 
 
 class NestedExportTemplateSerializer(WritableNestedSerializer):
