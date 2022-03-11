@@ -40,7 +40,7 @@ class ClusterTypeView(generic.ObjectView):
             .prefetch_related("group", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, 'cluster'),
-            vm_count=count_related(VirtualMachine, 'cluster')
+            vm_count=count_related(VirtualMachine, 'cluster'),
         )
 
         cluster_table = tables.ClusterTable(clusters)
@@ -99,7 +99,7 @@ class ClusterGroupView(generic.ObjectView):
             .prefetch_related("type", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, 'cluster'),
-            vm_count=count_related(VirtualMachine, 'cluster')
+            vm_count=count_related(VirtualMachine, 'cluster'),
         )
 
         cluster_table = tables.ClusterTable(clusters)
