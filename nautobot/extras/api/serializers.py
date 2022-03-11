@@ -55,7 +55,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.api.fields import StatusSerializerField
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, validate_webhooks
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -1057,3 +1057,20 @@ class WebhookSerializer(ValidatedModelSerializer):
             "ssl_verification",
             "ca_file_path",
         ]
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        errors = validate_webhooks(
+            instance=self.instance,
+            content_types=data.get("content_types"),
+            payload_url=data.get("payload_url"),
+            type_create=data.get("type_create"),
+            type_update=data.get("type_update"),
+            type_delete=data.get("type_delete"),
+        )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data

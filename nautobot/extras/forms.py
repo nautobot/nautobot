@@ -1456,19 +1456,13 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
     def clean(self):
         data = super().clean()
 
-        content_types = self.cleaned_data.get("content_types")
-        type_create = self.cleaned_data.get("type_create")
-        type_update = self.cleaned_data.get("type_update")
-        type_delete = self.cleaned_data.get("type_delete")
-        payload_url = self.cleaned_data.get("payload_url")
-
         errors = validate_webhooks(
             instance=self.instance,
-            content_types=content_types,
-            payload_url=payload_url,
-            type_create=type_create,
-            type_update=type_update,
-            type_delete=type_delete,
+            content_types=self.cleaned_data.get("content_types"),
+            payload_url=self.cleaned_data.get("payload_url"),
+            type_create=self.cleaned_data.get("type_create"),
+            type_update=self.cleaned_data.get("type_update"),
+            type_delete=self.cleaned_data.get("type_delete"),
         )
 
         if errors:
