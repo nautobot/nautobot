@@ -144,29 +144,11 @@ This setting may also be a dictionary style, but that is not covered here. Pleas
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning
     [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
-
-Example:
-
-```python
-# Set CACHEOPS_REDIS to an empty value
-CACHEOPS_REDIS = False
-
-# If you want to use Sentinel, specify this variable
-CACHEOPS_SENTINEL = {
-    "locations": [("localhost", 26379)], # Sentinel locations, required
-    "service_name": "nautobot",          # Sentinel service name, required
-    "socket_timeout": 10,                # Connection timeout in seconds, optional
-    "db": 0                              # Redis database, default: 0
-    # ...                                # Everything else is passed to `Sentinel()`
-}
-```
-
-For more details on how to configure Cacheops to use Redis Sentinel see the official guide on [Cacheops
-setup](https://github.com/Suor/django-cacheops#setup).
 
 ---
 
@@ -205,6 +187,9 @@ CACHES = {
 The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
 
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
+
+!!! note
+    The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in a future release.
 
 Default:
 
@@ -284,56 +269,6 @@ The following environment variables may also be set for some of the above values
     If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
 
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
-
-#### Using Redis Sentinel
-
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must be using dictionary-style settings, and modify the connection settings. This requires the removal of the `HOST`, `PORT`, and `DEFAULT_TIMEOUT` keys from the example above and the addition of three new keys.
-
-* `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
-of the Redis server and port for each sentinel instance to connect to
-* `MASTER_NAME`: Name of the master / service to connect to
-* `SOCKET_TIMEOUT`: Timeout in seconds for a connection to timeout
-* `CONNECTION_KWARGS`: Connection timeout, in seconds
-
-Example:
-
-```python
-RQ_QUEUES = {
-    "default": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    },
-    "check_releases": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    }
-}
-```
-
-!!! note
-    It is permissible to use Sentinel for only one database and not the other.
-
-For more details on configuring RQ with Redis Sentinel, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
 ---
 

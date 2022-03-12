@@ -17,6 +17,8 @@ from nautobot.extras.filters import (
     ExportTemplateFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
+    JobFilterSet,
+    JobLogEntryFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
@@ -27,13 +29,16 @@ from nautobot.extras.filters import (
     TagFilterSet,
     WebhookFilterSet,
 )
-
 from nautobot.extras.models import (
     ConfigContext,
     CustomLink,
     ExportTemplate,
+    GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
+    JobLogEntry,
+    JobResult,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -505,6 +510,98 @@ class ImageAttachmentTestCase(TestCase):
             "content_type_id": ContentType.objects.get(app_label="dcim", model="site").pk,
             "object_id": [Site.objects.first().pk],
         }
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class JobFilterSetTestCase(TestCase):
+    queryset = Job.objects.all()
+    filterset = JobFilterSet
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["File Upload Success", "File Upload Failure"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_grouping(self):
+        params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_installed(self):
+        params = {"installed": True}
+        # 18 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 21)
+
+    def test_enabled(self):
+        params = {"enabled": False}
+        # 18 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 21)
+
+    def test_commit_default(self):
+        params = {"commit_default": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_hidden(self):
+        params = {"hidden": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_read_only(self):
+        params = {"read_only": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_approval_required(self):
+        params = {"approval_required": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_search(self):
+        params = {"q": "file"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class JobLogEntryTestCase(TestCase):
+    queryset = JobLogEntry.objects.all()
+    filterset = JobLogEntryFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.job_result = JobResult.objects.create(
+            name="test",
+            job_id=uuid.uuid4(),
+            obj_type=ContentType.objects.get_for_model(GitRepository),
+        )
+
+        for log_level in ("debug", "info", "success", "warning"):
+            JobLogEntry.objects.create(
+                log_level=log_level,
+                grouping="run",
+                job_result=cls.job_result,
+                message=f"I am a {log_level} log.",
+            )
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_log_level(self):
+        params = {"log_level": "success"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_grouping(self):
+        params = {"grouping": ["run"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_message(self):
+        params = {"message": ["I am a success log."]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        params = {"q": "run"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        params = {"q": "warning log"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"q": "success"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 

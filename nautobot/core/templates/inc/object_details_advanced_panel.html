@@ -44,4 +44,6 @@
             </tbody>
         </table>
     </div>
+    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_fields_advanced computed_fields_advanced_ui=True %}
+    {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_advanced_fields %}
 {% endif %}

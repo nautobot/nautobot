@@ -14,7 +14,11 @@ from django_jinja import library
 
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.utils import foreground_color
+from nautobot.utilities.utils import foreground_color, UtilizationData
+
+HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
+HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+HTML_NONE = '<span class="text-muted">&mdash;</span>'
 
 register = template.Library()
 
@@ -43,8 +47,41 @@ def placeholder(value):
     """
     if value:
         return value
-    placeholder = '<span class="text-muted">&mdash;</span>'
-    return mark_safe(placeholder)
+    return mark_safe(HTML_NONE)
+
+
+@library.filter()
+@register.filter()
+def render_boolean(value):
+    """Render HTML from a computed boolean value.
+
+    Args:
+        value (any): Input value, can be any variable.
+        A truthy value (for example non-empty string / True / non-zero number) is considered True.
+        A falsey value other than None (for example "" or 0 or False) is considered False.
+        A value of None is considered neither True nor False.
+
+    Returns:
+        str: HTML
+        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
+        - or -
+        '<span class="text-muted">&mdash;</span>' if None value
+        - or -
+        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
+
+    Examples:
+        >>> render_boolean(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> render_boolean(True or "arbitrary string" or 1)
+        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
+        >>> render_boolean(False or "" or 0)
+        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+    """
+    if value is None:
+        return mark_safe(HTML_NONE)
+    if bool(value):
+        return mark_safe(HTML_TRUE)
+    return mark_safe(HTML_FALSE)
 
 
 @library.filter()
@@ -61,7 +98,7 @@ def render_markdown(value):
 
     # Sanitize Markdown links
     schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = fr"\[(.+)\]\((?!({schemes})).*:(.+)\)"
+    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
     value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
 
     # Render Markdown
@@ -451,6 +488,11 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
         dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
                 display
     """
+    # See https://github.com/nautobot/nautobot/issues/1169
+    # If `get_utilization()` threw an exception, utilization_data will be an empty string
+    # rather than a UtilizationData instance. Avoid a potentially confusing exception in that case.
+    if not isinstance(utilization_data, UtilizationData):
+        return {}
     return utilization_graph_raw_data(
         numerator=utilization_data.numerator,
         denominator=utilization_data.denominator,

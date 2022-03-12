@@ -7,9 +7,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 
+from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
-from nautobot.utilities.forms.widgets import StaticSelect2Multiple
 
 
 #
@@ -58,7 +58,7 @@ admin.site.unregister(Group)
 
 
 @admin.register(AdminGroup)
-class GroupAdmin(admin.ModelAdmin):
+class GroupAdmin(NautobotModelAdmin):
     fields = ("name",)
     list_display = ("name", "user_count")
     ordering = ("name",)
@@ -97,11 +97,8 @@ class UserAdmin(UserAdmin_):
         ("User Preferences", {"fields": ("config_data",)}),
     )
     filter_horizontal = ("groups",)
+    formfield_overrides = NautobotModelAdmin.formfield_overrides
     readonly_fields = ("config_data",)
-
-    formfield_overrides = {
-        models.ManyToManyField: {"widget": StaticSelect2Multiple},
-    }
 
     def get_inlines(self, request, obj):
         if obj is not None:
@@ -126,7 +123,7 @@ class TokenAdminForm(forms.ModelForm):
 
 
 @admin.register(Token)
-class TokenAdmin(admin.ModelAdmin):
+class TokenAdmin(NautobotModelAdmin):
     form = TokenAdminForm
     list_display = ["key", "user", "created", "expires", "write_enabled", "description"]
 
@@ -196,7 +193,7 @@ class ObjectPermissionForm(forms.ModelForm):
         # returns anything; we just want to make sure the specified constraints are valid.
         if object_types and constraints:
             # Normalize the constraints to a list of dicts
-            if type(constraints) is not list:
+            if not isinstance(constraints, list):
                 constraints = [constraints]
             for ct in object_types:
                 model = ct.model_class()
@@ -236,7 +233,7 @@ class ObjectTypeListFilter(admin.SimpleListFilter):
 
 
 @admin.register(ObjectPermission)
-class ObjectPermissionAdmin(admin.ModelAdmin):
+class ObjectPermissionAdmin(NautobotModelAdmin):
     actions = ("enable", "disable")
     fieldsets = (
         (None, {"fields": ("name", "description", "enabled")}),
@@ -267,10 +264,6 @@ class ObjectPermissionAdmin(admin.ModelAdmin):
     ]
     list_filter = ["enabled", ActionListFilter, ObjectTypeListFilter, "groups", "users"]
     search_fields = ["actions", "constraints", "description", "name"]
-
-    formfield_overrides = {
-        models.ManyToManyField: {"widget": StaticSelect2Multiple},
-    }
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related("object_types", "users", "groups")

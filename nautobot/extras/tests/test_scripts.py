@@ -1,7 +1,5 @@
-import os.path
-
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from netaddr import IPAddress, IPNetwork
 
 from nautobot.dcim.models import DeviceRole
@@ -24,10 +22,6 @@ from nautobot.extras.scripts import (
 CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))
 
 
-THIS_DIRECTORY = os.path.dirname(__file__)
-
-
-@override_settings(JOBS_ROOT=THIS_DIRECTORY)
 class ScriptVariablesTest(TestCase):
     def test_stringvar(self):
         class TestScript(Script):
@@ -182,8 +176,8 @@ class ScriptVariablesTest(TestCase):
 
             var1 = FileVar()
 
-        # Dummy file
-        testfile = SimpleUploadedFile(name="test_file.txt", content=b"This is a dummy file for testing")
+        # Test file
+        testfile = SimpleUploadedFile(name="test_file.txt", content=b"This is an test file for testing")
 
         # Validate valid data
         file_data = {"var1": testfile}

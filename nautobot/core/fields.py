@@ -1,4 +1,11 @@
+from django.utils.text import slugify
+
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
+
+
+def slugify_dots_to_dashes(content):
+    """Example slugify_function. Preprocess the content to convert '.' to '-' instead of removing dots outright."""
+    return slugify(content.replace(".", "-"))
 
 
 class AutoSlugField(_AutoSlugField):

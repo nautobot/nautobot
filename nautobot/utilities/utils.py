@@ -143,6 +143,24 @@ def serialize_object(obj, extra=None, exclude=None):
     return data
 
 
+def serialize_object_v2(obj):
+    """
+    Return a JSON serialized representation of an object using obj's serializer.
+    """
+    from nautobot.core.api.exceptions import SerializerNotFound
+    from nautobot.utilities.api import get_serializer_for_model
+
+    # Try serializing obj(model instance) using its API Serializer
+    try:
+        serializer_class = get_serializer_for_model(obj.__class__)
+        data = serializer_class(obj, context={"request": None}).data
+    except SerializerNotFound:
+        # Fall back to generic JSON representation of obj
+        data = serialize_object(obj)
+
+    return data
+
+
 def dict_to_filter_params(d, prefix=""):
     """
     Translate a dictionary of attributes to a nested set of parameters suitable for QuerySet filtering. For example:
@@ -298,7 +316,7 @@ def flatten_dict(d, prefix="", separator="."):
     ret = {}
     for k, v in d.items():
         key = separator.join([prefix, k]) if prefix else k
-        if type(v) is dict:
+        if isinstance(v, dict):
             ret.update(flatten_dict(v, prefix=key))
         else:
             ret[key] = v

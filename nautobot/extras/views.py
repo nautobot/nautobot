@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -40,10 +40,11 @@ from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
-    get_datasource_contents,
+    enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
+    get_datasource_contents,
 )
-from .jobs import get_job, get_jobs, run_job, Job
+from .jobs import get_job, run_job, Job as JobClass
 from .models import (
     ComputedField,
     ConfigContext,
@@ -54,8 +55,8 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job as JobModel,
     ObjectChange,
-    JobLogEntry,
     JobResult,
     Relationship,
     RelationshipAssociation,
@@ -217,7 +218,6 @@ class ConfigContextSchemaView(generic.ObjectView):
 
         return {
             "format": format,
-            "active_tab": "configcontextschema",
         }
 
 
@@ -338,6 +338,11 @@ class CustomFieldListView(generic.ObjectListView):
 
 class CustomFieldView(generic.ObjectView):
     queryset = CustomField.objects.all()
+
+    def get_changelog_url(self, instance):
+        """Return the changelog URL."""
+        route = "extras:customfield_changelog"
+        return reverse(route, kwargs={"name": getattr(instance, "name")})
 
 
 class CustomFieldEditView(generic.ObjectEditView):
@@ -551,6 +556,7 @@ class GitRepositoryView(generic.ObjectView):
 class GitRepositoryEditView(generic.ObjectEditView):
     queryset = GitRepository.objects.all()
     model_form = forms.GitRepositoryForm
+    template_name = "extras/gitrepository_object_edit.html"
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
@@ -608,20 +614,36 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
+def check_and_call_git_repository_function(request, slug, func):
+    """Helper for checking Git permissions and worker availability, then calling provided function if all is well
+    Args:
+        request: request object.
+        slug (str): GitRepository slug value.
+        func (function): Enqueue git repo function.
+    Returns:
+        HttpResponseForbidden or a redirect
+    """
+    if not request.user.has_perm("extras.change_gitrepository"):
+        return HttpResponseForbidden()
+
+    # Allow execution only if a worker process is running.
+    if not get_worker_count(request):
+        messages.error(request, "Unable to run job: Celery worker process not running.")
+    else:
+        repository = get_object_or_404(GitRepository, slug=slug)
+        func(repository, request)
+
+    return redirect("extras:gitrepository_result", slug=slug)
+
+
 class GitRepositorySyncView(View):
     def post(self, request, slug):
-        if not request.user.has_perm("extras.change_gitrepository"):
-            return HttpResponseForbidden()
+        return check_and_call_git_repository_function(request, slug, enqueue_pull_git_repository_and_refresh_data)
 
-        repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
-        # Allow execution only if a worker process is running.
-        if not get_worker_count(request):
-            messages.error(request, "Unable to run job: Celery worker process not running.")
-        else:
-            enqueue_pull_git_repository_and_refresh_data(repository, request)
-
-        return redirect("extras:gitrepository_result", slug=slug)
+class GitRepositoryDryRunView(View):
+    def post(self, request, slug):
+        return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
 
 
 class GitRepositoryResultView(generic.ObjectView):
@@ -643,12 +665,8 @@ class GitRepositoryResultView(generic.ObjectView):
             .first()
         )
 
-        logs = JobLogEntry.objects.restrict(request.user, "view").filter(job_result=job_result)
-        log_table = tables.JobLogEntryTable(data=logs, user=request.user)
-
         return {
             "result": job_result,
-            "log_table": log_table,
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
@@ -718,53 +736,35 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 
 
-class JobListView(ContentTypePermissionRequiredMixin, View):
+class JobListView(generic.ObjectListView):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
     """
 
-    def get_required_permission(self):
-        return "extras.view_job"
+    queryset = JobModel.objects.all()
+    table = tables.JobTable
+    filterset = filters.JobFilterSet
+    filterset_form = forms.JobFilterForm
+    action_buttons = ()
+    template_name = "extras/job_list.html"
 
-    def get(self, request):
-        jobs_dict = get_jobs()
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        # Get the newest results for each job name
-        results = {
-            r.name: r
-            for r in JobResult.objects.filter(
-                obj_type=job_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
-            )
-            .order_by("completed")
-            .defer("data")
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        # Default to hiding "hidden" and non-installed jobs
+        if "hidden" not in request.GET:
+            queryset = queryset.filter(hidden=False)
+        if "installed" not in request.GET:
+            queryset = queryset.filter(installed=True)
+        queryset = queryset.prefetch_related("results")
+        return queryset
+
+    def extra_context(self):
+        return {
+            "table_inc_template": "extras/inc/job_table.html",
         }
 
-        # get_jobs() gives us a nested dict {grouping: {module: {"name": name, "jobs": [job, job, job]}}}
-        # But for presentation to the user we want to flatten this to {module_name: [job, job, job]}
 
-        modules_dict = {}
-        for grouping, modules in jobs_dict.items():
-            for module, entry in modules.items():
-                module_jobs = modules_dict.get(entry["name"], [])
-                for job_class in entry["jobs"].values():
-                    job = job_class()
-                    job.result = results.get(job.class_path, None)
-                    module_jobs.append(job)
-                if module_jobs:
-                    # TODO: should we sort module_jobs by job name? Currently they're in source code order
-                    modules_dict[entry["name"]] = module_jobs
-
-        return render(
-            request,
-            "extras/job_list.html",
-            {
-                # Order the jobs listing by case-insensitive sorting of the module human-readable name
-                "jobs": sorted(modules_dict.items(), key=lambda kvpair: kvpair[0].lower()),
-            },
-        )
-
-
+# 2.0 TODO: this should really be "JobRunView"
 class JobView(ContentTypePermissionRequiredMixin, View):
     """
     View the parameters of a Job and enqueue it if desired.
@@ -779,8 +779,12 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             raise Http404
         return job_class
 
-    def get(self, request, class_path):
-        job_class = self._get_job(class_path)
+    def get(self, request, class_path=None, slug=None):
+        if class_path:
+            job_class = self._get_job(class_path)
+        else:
+            job_class = JobModel.objects.get(slug=slug).job_class
+            class_path = job_class.class_path
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
@@ -789,7 +793,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
         return render(
             request,
-            "extras/job.html",
+            "extras/job.html",  # 2.0 TODO: extras/job_submission.html
             {
                 "grouping": grouping,
                 "module": module,
@@ -799,11 +803,15 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             },
         )
 
-    def post(self, request, class_path):
+    def post(self, request, class_path=None, slug=None):
         if not request.user.has_perm("extras.run_job"):
             return HttpResponseForbidden()
 
-        job_class = self._get_job(class_path)
+        if class_path:
+            job_class = self._get_job(class_path)
+        else:
+            job_class = JobModel.objects.get(slug=slug).job_class
+            class_path = job_class.class_path
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
         job_form = job.as_form(request.POST, request.FILES)
@@ -889,6 +897,22 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 "schedule_form": schedule_form,
             },
         )
+
+
+# 2.0 TODO: this should really be "JobView"
+class JobDetailView(generic.ObjectView):
+    queryset = JobModel.objects.all()
+    template_name = "extras/job_detail.html"
+
+
+class JobEditView(generic.ObjectEditView):
+    queryset = JobModel.objects.all()
+    model_form = forms.JobEditForm
+    template_name = "extras/job_edit.html"
+
+
+class JobDeleteView(generic.ObjectDeleteView):
+    queryset = JobModel.objects.all()
 
 
 class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
@@ -1102,20 +1126,30 @@ class JobResultView(generic.ObjectView):
         associated_record = None
         job = None
         related_object = instance.related_object
-        if inspect.isclass(related_object) and issubclass(related_object, Job):
+        if inspect.isclass(related_object) and issubclass(related_object, JobClass):
             job = related_object()
         elif related_object:
             associated_record = related_object
-
-        logs = JobLogEntry.objects.restrict(request.user, "view").filter(job_result=instance)
-        log_table = tables.JobLogEntryTable(data=logs, user=request.user)
 
         return {
             "job": job,
             "associated_record": associated_record,
             "result": instance,
-            "log_table": log_table,
         }
+
+
+class JobLogEntryTableView(View):
+    """
+    Display a table of `JobLogEntry` objects for a given `JobResult` instance.
+    """
+
+    queryset = JobResult.objects.all()
+
+    def get(self, request, pk=None):
+        instance = self.queryset.get(pk=pk)
+        log_table = tables.JobLogEntryTable(data=instance.logs.all(), user=request.user)
+        RequestConfig(request).configure(log_table)
+        return HttpResponse(log_table.as_html(request))
 
 
 #
@@ -1175,7 +1209,6 @@ class ObjectChangeView(generic.ObjectView):
 class ObjectChangeLogView(View):
     """
     Present a history of changes made to a particular object.
-
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 

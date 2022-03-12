@@ -79,7 +79,7 @@ class TestCase(_TestCase):
                 field = None
 
             # Handle ManyToManyFields
-            if value and type(field) in (ManyToManyField, TaggableManager):
+            if value and isinstance(field, (ManyToManyField, TaggableManager)):
 
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
@@ -91,22 +91,22 @@ class TestCase(_TestCase):
             if api:
 
                 # Replace ContentType primary keys with <app_label>.<model>
-                if type(getattr(instance, key)) is ContentType:
+                if isinstance(getattr(instance, key), ContentType):
                     ct = ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
 
                 # Convert IPNetwork instances to strings
-                elif type(value) is IPNetwork:
+                elif isinstance(value, IPNetwork):
                     model_dict[key] = str(value)
 
             else:
 
                 # Convert ArrayFields to CSV strings
-                if type(field) is JSONArrayField:
+                if isinstance(field, JSONArrayField):
                     model_dict[key] = ",".join([str(v) for v in value])
 
                 # Convert JSONField dict values to JSON strings
-                if type(field) is JSONField and isinstance(value, dict):
+                if isinstance(field, JSONField) and isinstance(value, dict):
                     model_dict[key] = json.dumps(value)
 
         return model_dict
@@ -367,6 +367,23 @@ class ViewTestCases:
             # Try GET to non-permitted object
             self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_has_advanced_tab(self):
+            instance = self._get_queryset().first()
+
+            # Add model-level permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(instance.get_absolute_url())
+            response_body = extract_page_body(response.content.decode(response.charset))
+            advanced_tab_href = f"{instance.get_absolute_url()}#advanced"
+
+            self.assertIn(advanced_tab_href, response_body)
+            self.assertIn("Advanced", response_body)
+
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
         View the changelog for an instance.
@@ -447,7 +464,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name="Test permission",
-                constraints={"pk": str(uuid.uuid4())},  # Dummy permission to deny all
+                constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
                 actions=["add"],
             )
             obj_perm.save()
@@ -807,7 +824,7 @@ class ViewTestCases:
             obj_perm = ObjectPermission(
                 name="Test permission",
                 actions=["add"],
-                constraints={"pk": uuid.uuid4()},  # Dummy constraint to deny all
+                constraints={"pk": uuid.uuid4()},  # Match a non-existent pk (i.e., deny all)
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
@@ -818,7 +835,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update the ObjectPermission to allow creation
-            obj_perm.constraints = {"pk__isnull": False}  # Dummy constraint to allow all
+            obj_perm.constraints = {"pk__isnull": False}  # Set constraint to allow all
             obj_perm.save()
 
             response = self.client.post(**request)
@@ -890,7 +907,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name="Test permission",
-                constraints={"pk": str(uuid.uuid4())},  # Dummy permission to deny all
+                constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
                 actions=["add"],
             )
             obj_perm.save()
@@ -902,7 +919,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update permission constraints
-            obj_perm.constraints = {"pk__isnull": False}  # Dummy permission to allow all
+            obj_perm.constraints = {"pk__isnull": False}  # Set permission to allow all
             obj_perm.save()
 
             # Import permitted objects
@@ -1049,7 +1066,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name="Test permission",
-                constraints={"pk": str(uuid.uuid4())},  # Dummy permission to deny all
+                constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
                 actions=["delete"],
             )
             obj_perm.save()
@@ -1061,7 +1078,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update permission constraints
-            obj_perm.constraints = {"pk__isnull": False}  # Dummy permission to allow all
+            obj_perm.constraints = {"pk__isnull": False}  # Match a non-existent pk (i.e., allow all)
             obj_perm.save()
 
             # Bulk delete permitted objects

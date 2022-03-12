@@ -9,7 +9,33 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from .models import Circuit, CircuitType, Provider
+from .models import Circuit, CircuitType, Provider, ProviderNetwork
+
+CIRCUIT_TERMINATION_PARENT = """
+<a href="{{ value.provider_network.get_absolute_url }}">
+{% if value.provider_network %}
+    {{ value.provider_network }}
+{% elif value.site %}
+    {{ value.site }}
+{% endif %}
+</a>
+"""
+
+#
+# Provider Network
+#
+
+
+class ProviderNetworkTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    provider = tables.Column(linkify=True)
+    tags = TagColumn(url_name="circuits:providernetwork_list")
+
+    class Meta(BaseTable.Meta):
+        model = ProviderNetwork
+        fields = ("pk", "name", "provider", "description", "tags")
+        default_columns = ("pk", "name", "provider", "description")
 
 
 #
@@ -73,9 +99,20 @@ class CircuitTable(StatusTableMixin, BaseTable):
     cid = tables.LinkColumn(verbose_name="ID")
     provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__slug")])
     tenant = TenantColumn()
-    a_side = tables.Column(verbose_name="A Side")
-    z_side = tables.Column(verbose_name="Z Side")
     tags = TagColumn(url_name="circuits:circuit_list")
+
+    termination_a = tables.TemplateColumn(
+        template_code=CIRCUIT_TERMINATION_PARENT,
+        accessor=Accessor("termination_a"),
+        orderable=False,
+        verbose_name="Side A",
+    )
+    termination_z = tables.TemplateColumn(
+        template_code=CIRCUIT_TERMINATION_PARENT,
+        accessor=Accessor("termination_z"),
+        orderable=False,
+        verbose_name="Side Z",
+    )
 
     class Meta(BaseTable.Meta):
         model = Circuit
@@ -86,8 +123,8 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "type",
             "status",
             "tenant",
-            "a_side",
-            "z_side",
+            "termination_a",
+            "termination_z",
             "install_date",
             "commit_rate",
             "description",
@@ -100,7 +137,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "type",
             "status",
             "tenant",
-            "a_side",
-            "z_side",
+            "termination_a",
+            "termination_z",
             "description",
         )

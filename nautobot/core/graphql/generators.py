@@ -133,35 +133,69 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         """Return a queryset or an object depending on the type of the relationship."""
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
+        # https://github.com/nautobot/nautobot/issues/1228
+        # If querying for **only** the ID of the related object, for example:
+        # { device(id:"...") { ... rel_my_relationship { id } } }
+        # we will get this exception:
+        # TypeError: Cannot call select_related() after .values() or .values_list()
+        # This appears to be a bug in graphene_django_optimizer but I haven't found a known issue on GitHub.
+        # For now we just work around it by catching the exception and retrying without optimization, below...
         if not relationship.symmetric:
             # Get the objects on the other side of this relationship
             query_params[f"{side}_id"] = self.pk
-            queryset_ids = gql_optimizer.query(
-                RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True), info
-            )
+
+            try:
+                queryset_ids = gql_optimizer.query(
+                    RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True),
+                    info,
+                )
+            except TypeError:
+                logger.debug("Caught TypeError in graphene_django_optimizer, falling back to un-optimized query")
+                queryset_ids = RelationshipAssociation.objects.filter(**query_params).values_list(
+                    f"{peer_side}_id", flat=True
+                )
         else:
             # Get objects that are peers for this relationship, regardless of side
-            queryset_ids = list(
-                gql_optimizer.query(
+            try:
+                queryset_ids = list(
+                    gql_optimizer.query(
+                        RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
+                            "destination_id", flat=True
+                        ),
+                        info,
+                    )
+                )
+                queryset_ids += list(
+                    gql_optimizer.query(
+                        RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
+                            "source_id", flat=True
+                        ),
+                        info,
+                    )
+                )
+            except TypeError:
+                logger.debug("Caught TypeError in graphene_django_optimizer, falling back to un-optimized query")
+                queryset_ids = list(
                     RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
                         "destination_id", flat=True
                     ),
-                    info,
                 )
-            )
-            queryset_ids += list(
-                gql_optimizer.query(
+                queryset_ids += list(
                     RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
                         "source_id", flat=True
                     ),
-                    info,
                 )
-            )
 
         if relationship.has_many(peer_side):
             return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids), info)
 
-        return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids).first(), info)
+        # Also apparently a graphene_django_optimizer bug - in the same query case as described above, here we may see:
+        # AttributeError: object has no attribute "only"
+        try:
+            return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids).first(), info)
+        except AttributeError:
+            logger.debug("Caught AttributeError in graphene_django_optimizer, falling back to un-optimized query")
+            return peer_model.objects.filter(id__in=queryset_ids).first()
 
     resolve_relationship.__name__ = resolver_name
     return resolve_relationship
@@ -210,10 +244,15 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
 def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
-    search_params = {}
+    search_params = {
+        "limit": graphene.Int(),
+        "offset": graphene.Int(),
+    }
     if schema_type._meta.filterset_class is not None:
-        search_params = get_filtering_args_from_filterset(
-            schema_type._meta.filterset_class,
+        search_params.update(
+            get_filtering_args_from_filterset(
+                schema_type._meta.filterset_class,
+            )
         )
 
     return search_params
@@ -261,7 +300,7 @@ def generate_list_resolver(schema_type, resolver_name):
     """
     model = schema_type._meta.model
 
-    def list_resolver(self, info, **kwargs):
+    def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
@@ -277,10 +316,18 @@ def generate_list_resolver(schema_type, resolver_name):
 
                 # Raising this exception will send the error message in the response of the GraphQL request
                 raise GraphQLError(errors)
+            qs = resolved_obj.qs.all()
 
-            return gql_optimizer.query(resolved_obj.qs.all(), info)
+        else:
+            qs = model.objects.restrict(info.context.user, "view").all()
 
-        return gql_optimizer.query(model.objects.restrict(info.context.user, "view").all(), info)
+        if offset:
+            qs = qs[offset:]
+
+        if limit:
+            qs = qs[:limit]
+
+        return gql_optimizer.query(qs, info)
 
     list_resolver.__name__ = resolver_name
     return list_resolver

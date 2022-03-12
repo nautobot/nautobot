@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
@@ -49,7 +50,7 @@ from nautobot.extras.jobs import get_job, get_jobs, run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
-from . import serializers
+from . import nested_serializers, serializers
 
 
 class ExtrasRootView(APIRootView):
@@ -355,7 +356,7 @@ class JobViewSet(viewsets.ViewSet):
                     job.result = results.get(job.class_path, None)
                     jobs_list.append(job)
 
-        serializer = serializers.JobSerializer(jobs_list, many=True, context={"request": request})
+        serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
 
         return Response(serializer.data)
 
@@ -371,7 +372,7 @@ class JobViewSet(viewsets.ViewSet):
             status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
         ).first()
 
-        serializer = serializers.JobDetailSerializer(job, context={"request": request})
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
 
         return Response(serializer.data)
 
@@ -420,7 +421,7 @@ class JobViewSet(viewsets.ViewSet):
             )
             job.result = job_result
 
-        serializer = serializers.JobDetailSerializer(job, context={"request": request})
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
 
         return Response(serializer.data)
 
@@ -428,6 +429,16 @@ class JobViewSet(viewsets.ViewSet):
 #
 # Job Results
 #
+
+
+class JobLogEntryViewSet(ReadOnlyModelViewSet):
+    """
+    Retrieve a list of job log entries.
+    """
+
+    queryset = JobLogEntry.objects.prefetch_related("job_result")
+    serializer_class = serializers.JobLogEntrySerializer
+    filterset_class = filters.JobLogEntryFilterSet
 
 
 class JobResultViewSet(ModelViewSet):
@@ -438,6 +449,13 @@ class JobResultViewSet(ModelViewSet):
     queryset = JobResult.objects.prefetch_related("user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
+
+    @action(detail=True)
+    def logs(self, request, pk=None):
+        job_result = self.get_object()
+        logs = job_result.logs.all()
+        serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
+        return Response(serializer.data)
 
 
 #

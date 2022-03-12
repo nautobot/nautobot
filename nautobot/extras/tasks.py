@@ -93,12 +93,12 @@ def provision_field(field_id, content_type_pk_set):
         for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
             model = ct.model_class()
             for obj in model.objects.all():
-                obj._custom_field_data[field.name] = field.default
+                obj._custom_field_data.setdefault(field.name, field.default)
                 obj.save()
 
 
 @nautobot_task
-def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id):
+def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id, snapshots):
     """
     Make a POST request to the defined Webhook
     """
@@ -113,6 +113,7 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
         "username": username,
         "request_id": request_id,
         "data": data,
+        "snapshots": snapshots,
     }
 
     # Build the headers for the HTTP request

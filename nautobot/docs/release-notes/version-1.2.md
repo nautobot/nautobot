@@ -129,7 +129,7 @@ The Admin sub-site within Nautobot (`/admin/` and its child pages) has been reva
 Job log messages are now stored in a separate database table as a separate `JobLogEntry` data model, instead of being stored as JSON on the `JobResult` model/table. This provides faster and more robust rendering of `JobResult`-related views and lays groundwork for future enhancements of the Jobs feature.
 
 !!! note
-    If you use Jobs inside tests, your TestCase class(es) should have `@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)`. This will allow the tests and the `JobLogEntry` objects to use the `default` database.
+    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../additional-features/jobs.md#testing-jobs) for details.
 
 !!! note
     Because `JobLogEntry` records reference their associated `JobResult`, the pattern `job.job_result = JobResult()` (creating only an in-memory `JobResult` object, rather than a database entry) will no longer work. Instead you will need to create a proper JobResult database object `job.job_result = JobResult.objects.create(...)`.
@@ -140,11 +140,154 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.2 (TBD)
+## v1.2.8 (2022-03-07)
+
+### Added
+
+- [#839](https://github.com/nautobot/nautobot/issues/839) - Add CODE_OF_CONDUCT.md to repository.
+- [#1242](https://github.com/nautobot/nautobot/issues/1242) - Add MAJOR.MINOR tags to Docker images upon release.
+- [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add SECURITY.md to repository.
+- [#1388](https://github.com/nautobot/nautobot/pull/1388) - Added beta version of GitHub Issue Form style for feature request.
+- [#1419](https://github.com/nautobot/nautobot/pull/1419) - Add documentation for specifying a CA cert file for LDAP authentication backend.
+- [#1446](https://github.com/nautobot/nautobot/pull/1446) - Apply title labels to Docker images.
+
+### Changed
+
+- [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version.
+- [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update django-redis to `5.2.x` to address `5.1.x` blocking redis `4.x` versions.
+- [#1447](https://github.com/nautobot/nautobot/pull/1447) - Minor `nit` on Github Issue Form styling.
+- [#1452](https://github.com/nautobot/nautobot/pull/1452) - Changed GitHub release workflow to not run on prerelease releases.
+- [#1453](https://github.com/nautobot/nautobot/pull/1453) - Changed feature request to use GitHub Issue Form.
 
 ### Fixed
 
+- [#1301](https://github.com/nautobot/nautobot/issues/1301) - Fixed window history handling for views with tabs in Safari/Firefox.
+- [#1302](https://github.com/nautobot/nautobot/issues/1302) - Fixed missing Advanced tab on Virtual Machine detail view.
+- [#1398](https://github.com/nautobot/nautobot/issues/1398) - Fixed missing safeguard for removing master from Virtual Chassis via API.
+- [#1399](https://github.com/nautobot/nautobot/issues/1399) - Fixed not being able to set master to `null` on Virtual Chassis API.
+- [#1405](https://github.com/nautobot/nautobot/issues/1405) - Fixed incorrect import in 'startplugin' template code.
+- [#1412](https://github.com/nautobot/nautobot/issues/1412) - Fixed not being able to query for prefix family via GraphQL.
+- [#1442](https://github.com/nautobot/nautobot/issues/1442) - Fixed missing Advanced tab on Job Result, Git Repository, and Config Context Schema detail views.
+
+## v1.2.7 (2022-02-22)
+
+### Changed
+
+- [#1403](https://github.com/nautobot/nautobot/issues/1403) - Changes the GitHub Action on Release version template variable name.
+
+## v1.2.6 (2022-02-22)
+
+### Added
+
+- [#1279](https://github.com/nautobot/nautobot/issues/1279) - Circuit terminations now render custom relationships on the circuit detail page.
+- [#1353](https://github.com/nautobot/nautobot/issues/1353) - Added UI for deleting previously uploaded images when editing a DeviceType.
+
+### Changed
+
+- [#1386](https://github.com/nautobot/nautobot/issues/1386) - Updated release schedule in docs for patch releases, now every two weeks.
+
+### Fixed
+
+- [#1249](https://github.com/nautobot/nautobot/issues/1249) - Fixed a timing issue where after creating a custom field with a default value and immediately assigning values to this custom field on individual objects, the custom field values could be automatically reverted to the default value.
+- [#1280](https://github.com/nautobot/nautobot/pull/1280) - Added missing `get_absolute_url` method to the `CircuitTermination` model, fixing a UI error that could occur when relationships involve CircuitTerminations.
+- [#1283](https://github.com/nautobot/nautobot/pull/1283) - Update Sentinel docs to have 3 hosts (minimum per Redis docs), and change `CELERY_BROKER_URL` to a multiline string instead of a Tuple (tuple is invalid, and raises an exception when job completes).
+- [#1312](https://github.com/nautobot/nautobot/issues/1312) - Fixed a bug where a Prefix filter matching zero records would instead show all records in the UI.
+- [#1327](https://github.com/nautobot/nautobot/pull/1327) - Fixes the broken dependencies from the Release action.
+- [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../additional-features/jobs.md#jobs-and-class_path).
+- [#1332](https://github.com/nautobot/nautobot/pull/1332) - Fixed a regression in which the REST API did not default to pagination based on the configured `PAGINATE_COUNT` setting but instead defaulted to full unpaginated results.
+- [#1335](https://github.com/nautobot/nautobot/issues/1335) - Fixed an issue with the Secret create/edit form that caused problems when defining AWS secrets using the `nautobot-secrets-providers` plugin.
+- [#1346](https://github.com/nautobot/nautobot/issues/1346) - Fixed an error in the periodic execution of Celery's built-in `celery.backend_cleanup` task.
+- [#1360](https://github.com/nautobot/nautobot/issues/1360) - Fixed an issue in the development environment that could cause Selenium integration tests to error out.
+- [#1390](https://github.com/nautobot/nautobot/issues/1390) - Pinned transitive dependency `MarkupSafe` to version 2.0.1 as later versions are incompatible with Nautobot's current `Jinja2` dependency.
+
+## v1.2.5 (2022-02-02)
+
+### Changed
+
+- [#1293](https://github.com/nautobot/nautobot/pull/1293) - Reorganized the developer documents somewhat to reduce duplication of information, added diagrams for issue intake process.
+
+### Fixed
+
+- [#371](https://github.com/nautobot/nautobot/issues/371) - Fixed a server error that could occur when importing cables via CSV.
+- [#1161](https://github.com/nautobot/nautobot/issues/1161) - The `description` field for device component templates is now correctly propagated to device components created from these templates.
+- [#1233](https://github.com/nautobot/nautobot/issues/1233) - Prevented a job aborting when an optional ObjectVar is provided with a value of None
+- [#1272](https://github.com/nautobot/nautobot/pull/1272) - Fixed GitHub Actions syntax and Slack payload for `release` CI workflow
+- [#1282](https://github.com/nautobot/nautobot/issues/1282) - Fixed a server error when editing User accounts.
+- [#1308](https://github.com/nautobot/nautobot/pull/1308) - Fixed another server error that could occur when importing cables via CSV.
+
+## v1.2.4 (2022-01-13)
+
+### Added
+
+- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../additional-features/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
+- [#1251](https://github.com/nautobot/nautobot/pull/1251) - Added `workflow_call` to the GitHub Actions CI workflow so that it may be called by other GHA workflows.
+
+### Changed
+
+- [#616](https://github.com/nautobot/nautobot/issues/616) - The REST API now no longer permits setting non-string values for text-type custom fields.
+- [#1243](https://github.com/nautobot/nautobot/pull/1243) - Github CI action no longer runs for pull requests that don't impact Nautobot code, such as documentation, examples, etc.
+
+### Fixed
+
+- [#1053](https://github.com/nautobot/nautobot/issues/1053) - Fixed error when removing an IP address from an interface when it was previously the parent device's primary IP.
+- [#1140](https://github.com/nautobot/nautobot/issues/1140) - Fixed incorrect UI widgets in the updated Admin UI.
+- [#1253](https://github.com/nautobot/nautobot/issues/1253) - Fixed missing code that prevented switching between tabs in the device-type detail view.
+
+### Security
+
+!!! danger
+    It is highly recommended that users of Python 3.6 prioritize upgrading to a newer version of Python. **Nautobot will be removing support for Python 3.6 in a future update.**
+
+!!! important
+    For users remaining on Python 3.6, please know that upgrading to Nautobot v1.2.4 **will not resolve these CVEs for your installation**. The only remedy at this time is to upgrade your systems utilize Python 3.7 or later.
+
+- [#1267](https://github.com/nautobot/nautobot/issues/1267) - Implemented fixes for [CVE-2022-22815](https://github.com/advisories/GHSA-xrcv-f9gm-v42c), [CVE-2022-22816](https://github.com/advisories/GHSA-xrcv-f9gm-v42c), and [CVE-2022-22817](https://github.com/advisories/GHSA-8vj2-vxx3-667w) to require Pillow >=9.0.0 for Python version >=3.7. For Python version <3.7 (e.g. 3.6), it is recommended that you prioritize upgrading your environment to use Python 3.7 or higher. Support for Python 3.6 will be removed in a future update.
+
+## v1.2.3 (2022-01-07)
+
+### Added
+
+- [#1037](https://github.com/nautobot/nautobot/issues/1037) - Added documentation about how to successfully use the `nautobot-server dumpdata` and `nautobot-server loaddata` commands.
+
+### Fixed
+
+- [#313](https://github.com/nautobot/nautobot/issues/313) - REST API documentation now correctly shows that `status` is a required field.
+- [#477](https://github.com/nautobot/nautobot/issues/477) - Model `TextField`s are now correctly mapped to `MultiValueCharFilter` in filter classes.
+- [#734](https://github.com/nautobot/nautobot/issues/734) - Requests to nonexistent `/api/` URLs now correctly return a JSON 404 response rather than an HTML 404 response.
+- [#1127](https://github.com/nautobot/nautobot/issues/1127) - Fixed incorrect rendering of the navbar at certain browser window sizes.
+- [#1203](https://github.com/nautobot/nautobot/issues/1203) - Fixed maximum recursion depth error when filtering GraphQL queries by `device_types`.
+- [#1220](https://github.com/nautobot/nautobot/issues/1220) - Fixed an inconsistency in the breadcrumbs seen in various Admin pages.
+- [#1228](https://github.com/nautobot/nautobot/issues/1228) - Fixed a case where a GraphQL query for objects associated by Relationships could potentially throw an exception.
+- [#1229](https://github.com/nautobot/nautobot/pull/1229) - Fixed a template rendering error in the login page.
+- [#1234](https://github.com/nautobot/nautobot/issues/1234) - Fixed missing changelog support for Custom Fields.
+
+### Security
+
+!!! danger
+    It is highly recommended that users of Python 3.6 prioritize upgrading to a newer version of Python. **Nautobot will be removing support for Python 3.6 in a future update.**
+
+!!! important
+    For users remaining on Python 3.6, please know that upgrading to Nautobot v1.2.3 **will not resolve this CVE for your installation**. The only remedy at this time is to upgrade your systems utilize Python 3.7 or later.
+
+- [#1238](https://github.com/nautobot/nautobot/issues/1238) - Implemented fix for [CVE-2021-23727](https://github.com/advisories/GHSA-q4xr-rc97-m4xx) to require Celery >=5.2.2 for Python version >=3.7. For Python version <3.7 (e.g. 3.6), it is recommended that you prioritize upgrading your environment to use Python 3.7 or higher. Support for Python 3.6 will be removed in a future update.
+
+## v1.2.2 (2021-12-27)
+
+### Added
+
+- [#1152](https://github.com/nautobot/nautobot/pull/1152) - Added REST API and GraphQL for `JobLogEntry` objects.
+
+### Changed
+
+- [#650](https://github.com/nautobot/nautobot/issues/650) - Job Results UI now render job log messages immediately
+
+### Fixed
+
+- [#1181](https://github.com/nautobot/nautobot/pull/1181) - Avoid throwing a 500 error in the case where users have deleted a required Status value. (Preventing the user from doing this will need to be a later fix.)
 - [#1186](https://github.com/nautobot/nautobot/pull/1186) - Corrected an error in the docs regarding developing secrets providers in plugins.
+- [#1188](https://github.com/nautobot/nautobot/pull/1188) - Corrected some errors in the developer documentation about our branch management approach.
+- [#1193](https://github.com/nautobot/nautobot/issues/1193) - Fixed `JobResult` page may fail to list `JobLogEntries` in chronological order
+- [#1195](https://github.com/nautobot/nautobot/issues/1195) - Job log entries now again correctly render inline Markdown formatting.
 
 ## v1.2.1 (2021-12-16)
 

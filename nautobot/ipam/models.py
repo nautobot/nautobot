@@ -10,11 +10,11 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import ObjectChange, Status, StatusModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
+from nautobot.utilities.utils import array_to_string, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import IPAddressRoleChoices, ServiceProtocolChoices
@@ -879,8 +879,13 @@ class IPAddress(PrimaryModel, StatusModel):
                         }
                     )
 
-        # Check for primary IP assignment that doesn't match the assigned device/VM
-        if self.present_in_database:
+        # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
+        # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
+        primary_ip_unset_by_form = getattr(self, "_primary_ip_unset_by_form", False)
+
+        # Check for primary IP assignment that doesn't match the assigned device/VM if and only if
+        # "_primary_ip_unset" has not been set by the caller.
+        if self.present_in_database and not primary_ip_unset_by_form:
             device = Device.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
             if device:
                 if getattr(self.assigned_object, "device", None) != device:
@@ -898,22 +903,12 @@ class IPAddress(PrimaryModel, StatusModel):
         if self.status == IPAddress.STATUS_SLAAC and self.family != 6:
             raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})
 
-    def save(self, *args, **kwargs):
-
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
 
-        super().save(*args, **kwargs)
-
     def to_objectchange(self, action):
         # Annotate the assigned object, if any
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            related_object=self.assigned_object,
-            object_data=serialize_object(self),
-        )
+        return super().to_objectchange(action, related_object=self.assigned_object)
 
     def to_csv(self):
 

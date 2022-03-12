@@ -92,7 +92,7 @@ authors = ["Bob Jones"]
 license = "Apache 2.0"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 
 [tool.poetry.dev-dependencies]
 
@@ -684,13 +684,13 @@ Plugins can optionally expose their models via Django's built-in [administrative
 
 ```python
 # admin.py
-from django.contrib import admin
+from nautobot.core.admin import NautobotModelAdmin
 
 from .models import Animal
 
 
 @admin.register(Animal)
-class AnimalAdmin(admin.ModelAdmin):
+class AnimalAdmin(NautobotModelAdmin):
     list_display = ('name', 'sound')
 ```
 

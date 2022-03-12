@@ -329,7 +329,7 @@ Please see the [official Django documentation on `DEBUG`](https://docs.djangopro
 
 ---
 
-# DISABLE_PREFIX_LIST_HIERARCHY
+## DISABLE_PREFIX_LIST_HIERARCHY
 
 Default: `False`
 
@@ -709,7 +709,7 @@ This setting is used internally in the core settings to provide default location
 
 Default: `50`
 
-The default maximum number of objects to display per page within each list of objects.
+The default maximum number of objects to display per page within each list of objects. Applies to both the UI and the REST API.
 
 !!! tip
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.

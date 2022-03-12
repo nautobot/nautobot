@@ -2,6 +2,7 @@ import logging
 
 from celery import current_app
 from django_celery_beat.schedulers import ModelEntry, DatabaseScheduler
+from kombu.utils.json import loads
 
 from nautobot.extras.models import ScheduledJob, ScheduledJobs
 
@@ -20,8 +21,14 @@ class NautobotScheduleEntry(ModelEntry):
         self.app = app or current_app._get_current_object()
         self.name = "{}_{}".format(model.name, model.pk)
         self.task = model.task
-        self.args = model.args
-        self.kwargs = model.kwargs
+        try:
+            # Nautobot scheduled jobs pass args/kwargs as constructed objects,
+            # but Celery built-in jobs such as celery.backend_cleanup pass them as JSON to be parsed
+            self.args = model.args if isinstance(model.args, (tuple, list)) else loads(model.args or "[]")
+            self.kwargs = model.kwargs if isinstance(model.kwargs, dict) else loads(model.kwargs or "{}")
+        except (TypeError, ValueError) as exc:
+            logger.exception("Removing schedule %s for argument deserialization error: %s", self.name, exc)
+            self._disable(model)
         try:
             self.schedule = model.schedule
         except model.DoesNotExist:

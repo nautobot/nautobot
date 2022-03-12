@@ -273,7 +273,7 @@ INSTALLED_APPS = [
     "social_django",
     "taggit",
     "timezone_field",
-    "nautobot.core.apps.NautobotServerConfig",  # overridden form of "constance" AppConfig
+    "nautobot.core.apps.NautobotConstanceConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
     "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
     "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
@@ -293,7 +293,8 @@ INSTALLED_APPS = [
     "health_check.cache",
     "health_check.storage",
     "django_extensions",
-    "constance.backends.database",
+    "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
+    "django_ajax_tables",
 ]
 
 # Middleware
@@ -461,7 +462,7 @@ CONSTANCE_CONFIG = {
     ],
     "PAGINATE_COUNT": [
         50,
-        "Default number of objects to display per page when listing objects.",
+        "Default number of objects to display per page when listing objects in the UI and/or REST API.",
     ],
     "PER_PAGE_DEFAULTS": [
         [25, 50, 100, 250, 500, 1000],

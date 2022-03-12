@@ -32,11 +32,13 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    ScheduledJob,
+    Job,
+    JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -58,8 +60,11 @@ __all__ = (
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
+    "JobFilterSet",
+    "JobLogEntryFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
+    "NautobotFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
@@ -324,6 +329,13 @@ class CustomFieldFilter(django_filters.Filter):
             # Contains handles lists within the JSON data for multi select fields
             self.lookup_expr = "contains"
 
+    def filter(self, qs, value):
+        if value == "null":
+            return self.get_method(qs)(
+                Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
+            )
+        return super().filter(qs, value)
+
 
 class CustomFieldModelFilterSet(django_filters.FilterSet):
     """
@@ -452,12 +464,21 @@ class ExportTemplateFilterSet(BaseFilterSet):
         )
 
 
+class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+    """
+    This class exists to combine common functionality and is used as a base class throughout
+    the codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet are needed.
+    """
+
+    pass
+
+
 #
 # Datasources (Git)
 #
 
 
-class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class GitRepositoryFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -532,6 +553,53 @@ class ImageAttachmentFilterSet(BaseFilterSet):
 #
 
 
+class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    tag = TagFilter()
+
+    class Meta:
+        model = Job
+        fields = [
+            "id",
+            "source",
+            "module_name",
+            "job_class_name",
+            "slug",
+            "name",
+            "grouping",
+            "installed",
+            "enabled",
+            "approval_required",
+            "commit_default",
+            "hidden",
+            "read_only",
+            "soft_time_limit",
+            "time_limit",
+            "grouping_override",
+            "name_override",
+            "approval_required_override",
+            "description_override",
+            "commit_default_override",
+            "hidden_override",
+            "read_only_override",
+            "soft_time_limit_override",
+            "time_limit_override",
+        ]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(grouping__icontains=value)
+            | Q(description__icontains=value)
+        )
+
+
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
@@ -550,6 +618,24 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(Q(name__icontains=value) | Q(user__username__icontains=value))
+
+
+class JobLogEntryFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+
+    class Meta:
+        model = JobLogEntry
+        exclude = []
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(grouping__icontains=value) | Q(message__icontains=value) | Q(log_level__icontains=value)
+        )
 
 
 class ScheduledJobFilterSet(BaseFilterSet):
@@ -775,7 +861,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         return {name: getattr(value, to_field_name)}
 
 
-class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class StatusFilterSet(NautobotFilterSet):
     """API filter for filtering custom status object fields."""
 
     q = django_filters.CharFilter(
@@ -819,7 +905,7 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 #
 
 
-class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class TagFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

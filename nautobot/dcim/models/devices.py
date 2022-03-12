@@ -149,11 +149,11 @@ class DeviceType(PrimaryModel):
         super().__init__(*args, **kwargs)
 
         # Save a copy of u_height for validation in clean()
-        self._original_u_height = self.u_height
+        self._original_u_height = self.u_height if self.present_in_database else 1
 
         # Save references to the original front/rear images
-        self._original_front_image = self.front_image
-        self._original_rear_image = self.rear_image
+        self._original_front_image = self.front_image if self.present_in_database else None
+        self._original_rear_image = self.rear_image if self.present_in_database else None
 
     def get_absolute_url(self):
         return reverse("dcim:devicetype", args=[self.pk])
@@ -296,9 +296,9 @@ class DeviceType(PrimaryModel):
         ret = super().save(*args, **kwargs)
 
         # Delete any previously uploaded image files that are no longer in use
-        if self.front_image != self._original_front_image:
+        if self._original_front_image and self.front_image != self._original_front_image:
             self._original_front_image.delete(save=False)
-        if self.rear_image != self._original_rear_image:
+        if self._original_rear_image and self.rear_image != self._original_rear_image:
             self._original_rear_image.delete(save=False)
 
         return ret
@@ -475,7 +475,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     )
     name = models.CharField(max_length=64, blank=True, null=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True)
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number")
     asset_tag = models.CharField(
         max_length=50,
         blank=True,
@@ -727,6 +727,18 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             raise ValidationError(
                 {"vc_position": "A device assigned to a virtual chassis must have its position defined."}
             )
+
+        # Validate device isn't being removed from a virtual chassis when it is the master
+        if not self.virtual_chassis and self.present_in_database:
+            existing_virtual_chassis = Device.objects.get(id=self.id).virtual_chassis
+            if existing_virtual_chassis and existing_virtual_chassis.master == self:
+                raise ValidationError(
+                    {
+                        "virtual_chassis": "The master device for the virtual chassis ({}) may not be removed".format(
+                            existing_virtual_chassis
+                        )
+                    }
+                )
 
     def save(self, *args, **kwargs):
 

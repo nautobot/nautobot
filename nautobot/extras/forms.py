@@ -43,6 +43,7 @@ from .choices import (
     RelationshipSideChoices,
     RelationshipTypeChoices,
 )
+from .constants import JOB_OVERRIDABLE_FIELDS
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
@@ -55,6 +56,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobResult,
     ObjectChange,
     Relationship,
@@ -291,6 +293,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
             "template",
             "fallback_value",
             "weight",
+            "advanced_ui",
         )
 
 
@@ -491,6 +494,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "name",
             "description",
             "required",
+            "advanced_ui",
             "filter_logic",
             "default",
             "weight",
@@ -681,6 +685,15 @@ def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
 
 
+class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """
+    This class exists to combine common functionality and is used to inherit from throughout
+    the codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are needed.
+    """
+
+    pass
+
+
 class PasswordInputWithPlaceholder(forms.PasswordInput):
     """PasswordInput that is populated with a placeholder value if any existing value is present."""
 
@@ -742,6 +755,13 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "provided_contents",
             "tags",
         ]
+
+    def clean(self):
+        super().clean()
+
+        # set dryrun after a successful clean
+        if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
+            self.instance.set_dryrun()
 
 
 class GitRepositoryCSVForm(CSVModelForm):
@@ -870,6 +890,70 @@ class JobForm(BootstrapMixin, forms.Form):
         A boolean indicating whether the form requires user input (ignore the _commit field).
         """
         return bool(len(self.fields) > 1)
+
+
+class JobEditForm(NautobotModelForm):
+    slug = SlugField()
+
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = Job
+        fields = [
+            "slug",
+            "enabled",
+            "name_override",
+            "name",
+            "grouping_override",
+            "grouping",
+            "description_override",
+            "description",
+            "commit_default_override",
+            "commit_default",
+            "hidden_override",
+            "hidden",
+            "read_only_override",
+            "read_only",
+            "approval_required_override",
+            "approval_required",
+            "soft_time_limit_override",
+            "soft_time_limit",
+            "time_limit_override",
+            "time_limit",
+            "tags",
+        ]
+
+    def clean(self):
+        """
+        For all overridable fields, if they aren't marked as overridden, revert them to the underlying value if known.
+        """
+        cleaned_data = super().clean() or self.cleaned_data
+        job_class = self.instance.job_class
+        if job_class is not None:
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                if not cleaned_data.get(f"{field_name}_override", False):
+                    cleaned_data[field_name] = getattr(job_class, field_name)
+        return cleaned_data
+
+
+class JobFilterForm(BootstrapMixin, forms.Form):
+    model = Job
+    q = forms.CharField(required=False, label="Search")
+    installed = forms.NullBooleanField(
+        initial=True,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    commit_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    hidden = forms.NullBooleanField(
+        initial=False,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    approval_required = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    tag = TagFilterField(model)
 
 
 class JobScheduleForm(BootstrapMixin, forms.Form):
@@ -1011,6 +1095,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "slug",
             "description",
             "type",
+            "advanced_ui",
             "source_type",
             "source_label",
             "source_hidden",
@@ -1070,7 +1155,7 @@ def provider_choices():
     return sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()])
 
 
-class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class SecretForm(NautobotModelForm):
     """Create/update form for `Secret` objects."""
 
     slug = SlugField()
@@ -1126,7 +1211,7 @@ SecretsGroupAssociationFormSet = inlineformset_factory(
 )
 
 
-class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class SecretsGroupForm(NautobotModelForm):
     """Create/update form for `SecretsGroup` objects."""
 
     slug = SlugField()
@@ -1150,7 +1235,7 @@ class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class StatusForm(NautobotModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
@@ -1250,7 +1335,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 #
 
 
-class TagForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class TagForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:

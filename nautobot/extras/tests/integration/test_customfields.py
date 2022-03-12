@@ -1,7 +1,14 @@
-from nautobot.utilities.testing.integration import SplinterTestCase
+from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+
+from nautobot.dcim.models import Device
+from nautobot.extras.models import CustomField
+from nautobot.utilities.testing.integration import SeleniumTestCase
+
+from . import create_test_device
 
 
-class CustomFieldTestCase(SplinterTestCase):
+class CustomFieldTestCase(SeleniumTestCase):
     """
     Integration tests for the CustomField and CustomFieldChoice models.
     """
@@ -103,16 +110,16 @@ class CustomFieldTestCase(SplinterTestCase):
             table = self.browser.find_by_id("custom-field-choices")
 
             # Assert that there are 5 choice rows before
-            self.assertEquals(len(table.find_by_css(".formset_row-choices")), 5)
+            self.assertEqual(len(table.find_by_css(".formset_row-choices")), 5)
 
             # And 6 after clicking "Add another..."
             self.browser.find_by_css(".add-row").click()
             rows = table.find_by_css(".formset_row-choices")
-            self.assertEquals(len(rows), 6)
+            self.assertEqual(len(rows), 6)
             self.browser.fill("choices-5-value", "choice3")
 
             # Make sure it the new row has default values while we're at it.
-            self.assertEquals(rows.last.find_by_name("choices-5-weight").value, "100")
+            self.assertEqual(rows.last.find_by_name("choices-5-weight").value, "100")
 
         self._create_custom_field(
             field_name="test-select", field_type="select", choices=choices, call_before_create=call_before_create
@@ -136,7 +143,7 @@ class CustomFieldTestCase(SplinterTestCase):
 
         # Null out the first choice, click "Update", expect it to fail.
         self.browser.fill("choices-0-value", "")
-        self.assertEquals(self.browser.find_by_name("choices-0-value").value, "")
+        self.assertEqual(self.browser.find_by_name("choices-0-value").value, "")
         self.browser.find_by_text("Update").click()
         self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
 
@@ -147,7 +154,7 @@ class CustomFieldTestCase(SplinterTestCase):
         # Fix it, save it, assert correctness.
         self.browser.fill("choices-0-value", "new_choice")
         self.browser.find_by_text("Update").click()
-        self.assertEquals(self.browser.url, detail_url)
+        self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
 
@@ -173,6 +180,47 @@ class CustomFieldTestCase(SplinterTestCase):
         # Fill the new row, save it, assert correctness.
         self.browser.fill("choices-5-value", "new_choice")  # Fill the last row
         self.browser.find_by_text("Update").click()
-        self.assertEquals(self.browser.url, detail_url)
+        self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
+
+    def test_custom_field_advanced_ui(self):
+        """
+        This test creates a device and a custom field for that device.
+        It first leaves the custom field advanced_ui default of False to be show on the primary information
+        tab in the UI and checks it is there.
+        It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it appears ONLY there!.
+        """
+        device = create_test_device()
+        custom_field = CustomField(
+            type="text",
+            label="Device Custom Field",
+            name="test_custom_field",
+            required=False,
+        )
+        custom_field.save()
+        device_content_type = ContentType.objects.get_for_model(Device)
+        custom_field.content_types.set([device_content_type])
+        device.cf[custom_field.name] = "This is some testing text"
+        device.validated_save()
+        # Visit the device detail page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        # Check the custom field appears in the primary information tab
+        self.assertTrue(self.browser.is_text_present("Device Custom Field"))
+        self.assertTrue(self.browser.is_text_present("This is some testing text"))
+        # Check the custom field does NOT appear in the advanced tab
+        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.assertFalse(self.browser.is_text_present("Device Custom Field"))
+        self.assertFalse(self.browser.is_text_present("This is some testing text"))
+        # Set the custom_field to only show in the advanced tab
+        custom_field.advanced_ui = True
+        custom_field.save()
+        # Visit the device detail page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        # Check the custom field does NOT appear in the primary information tab
+        self.assertFalse(self.browser.is_text_present("Device Custom Field"))
+        self.assertFalse(self.browser.is_text_present("This is some testing text"))
+        # Check the custom field appears in the advanced tab
+        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.assertTrue(self.browser.is_text_present("Device Custom Field"))
+        self.assertTrue(self.browser.is_text_present("This is some testing text"))
