@@ -1,11 +1,16 @@
+import json
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import TestCase
 
 from nautobot.dcim.forms import DeviceForm
 import nautobot.dcim.models as dcim_models
+from nautobot.dcim.models.device_components import ConsolePort
+from nautobot.dcim.models.sites import Site
 from nautobot.extras.choices import RelationshipTypeChoices
+from nautobot.extras.forms import WebhookForm
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
+from nautobot.extras.models.models import Webhook
 from nautobot.ipam.forms import IPAddressForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
 
@@ -458,3 +463,108 @@ class RelationshipModelFormTestCase(TestCase):
             "Object Device 1 cannot form a relationship to itself!",
             form.errors[f"cr_{self.relationship_3.slug}__peer"][0],
         )
+
+
+class WebhookFormTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        obj_type_1 = ContentType.objects.get_for_model(ConsolePort)
+        obj_type_2 = ContentType.objects.get_for_model(Site)
+        url = "http://test-url.com/test"
+
+
+        webhook = Webhook.objects.create(
+            name="webhook-1", 
+            enabled=True,
+            type_create=True,
+            type_update=True,
+            type_delete=False,
+            payload_url=url,
+            http_method="POST",
+            http_content_type="application/json",
+            )
+        webhook.content_types.add(obj_type_1)
+
+        cls.webhooks_data = [
+            {
+                "name": "webhook-2",
+                "content_types": [obj_type_2.pk],
+                "enabled": True,
+                "type_create": True,
+                "type_update": False,
+                "type_delete": False,
+                "payload_url": url,
+                "http_method": "POST",
+                "http_content_type": "application/json",
+            },
+            {
+                "name": "webhook-3",
+                "content_types": [obj_type_1.pk],
+                "enabled": True,
+                "type_create": False,
+                "type_update": False,
+                "type_delete": True,
+                "payload_url": "http://test-url.com/test",
+                "http_method": "POST",
+                "http_content_type": "application/json",
+            },
+            {
+                "name": "webhook-4",
+                "content_types": [obj_type_1.pk],
+                "enabled": True,
+                "type_create": True,
+                "type_update": True,
+                "type_delete": True,
+                "payload_url": "http://test-url.com/test",
+                "http_method": "POST",
+                "http_content_type": "application/json",
+            },
+        ]
+
+    def test_create_webhooks_with_diff_content_type_same_url_same_action(self):
+        """
+        Create a new webhook with diffrent content_types, same url and same action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | console port, create, update, http://localhost
+            Webhook 2: dcim | site, create, http://localhost
+        """
+        form = WebhookForm(data=self.webhooks_data[0])
+
+        self.assertTrue(form.is_valid())
+        form.save()
+        
+        self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[0]["name"]).count(), 1)
+    
+    def test_create_webhooks_with_same_content_type_same_url_diff_action(self):
+        """
+        Create a new webhook with same content_types, same url and diff action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | console port, create, update, http://localhost
+            Webhook 2: dcim | console port, delete, http://localhost
+        """
+        form = WebhookForm(data=self.webhooks_data[1])
+        
+        self.assertTrue(form.is_valid())
+        form.save()
+        
+        self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[1]["name"]).count(), 1)
+
+    def test_create_webhooks_with_same_content_type_same_url_same_action(self):
+        """
+        Create a new webhook with same content_types, same url and common action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | console port, create, update, http://localhost
+            Webhook 2: dcim | console port, create, update, delete, http://localhost
+        """
+        form = WebhookForm(data=self.webhooks_data[2])
+        
+        self.assertFalse(form.is_valid())
+        error_msg =json.loads(form.errors.as_json())
+
+        self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[2]["name"]).count(), 0)
+        self.assertIn("type_create", error_msg)
+        self.assertEquals(error_msg["type_create"][0]["message"], "dcim | console port with create action and url exists")
+        self.assertEquals(error_msg["type_update"][0]["message"], "dcim | console port with update action and url exists")

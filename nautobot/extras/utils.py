@@ -228,7 +228,10 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
     """
     from nautobot.extras.models.models import Webhook
 
+    WEBHOOKS_ACTIONS = collections.namedtuple("WEBHOOKS_ACTIONS", ["field_name", "field_value"])
+
     errors = {}
+    webhook_action_msg = "{content_type} with {action} action and url exists"
 
     for content_type in content_types:
         webhooks = Webhook.objects.filter(content_types__in=[content_type], payload_url=payload_url)
@@ -239,17 +242,27 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
         webhooks_type_update_action = webhooks.filter(type_update=type_update).count() if type_update else None
         webhooks_type_delete_action = webhooks.filter(type_delete=type_delete).count() if type_delete else None
 
-        if any(
-            [
-                webhooks_type_create_action,
-                webhooks_type_update_action,
-                webhooks_type_delete_action,
-            ]
-        ):
-            error_msg = f"{content_type} with payload url, type_create, type_update and type_delete exist"
-            if "content_types" in errors:
-                errors["content_types"] = [error_msg, *errors["content_types"]]
-            else:
-                errors["content_types"] = [error_msg]
+        for webhook_action in [
+            WEBHOOKS_ACTIONS(field_name="type_create", field_value=webhooks_type_create_action),
+            WEBHOOKS_ACTIONS(field_name="type_update", field_value=webhooks_type_update_action),
+            WEBHOOKS_ACTIONS(field_name="type_delete", field_value=webhooks_type_delete_action),
+        ]:
+            if webhook_action.field_value:
+                _, action_name = webhook_action.field_name.split("_")
+                errors = add_error(
+                    webhook_action.field_name, 
+                    webhook_action_msg.format(content_type=content_type, action=action_name),
+                    errors,
+                    )
 
     return errors
+
+
+def add_error(field_name, message, errors):
+    if field_name in errors:
+        errors[field_name].append(message)
+    else:
+        errors[field_name] = [message]
+        
+    return errors
+    
