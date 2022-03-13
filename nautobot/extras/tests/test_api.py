@@ -46,6 +46,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
@@ -2169,3 +2170,89 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         for webhook in webhooks:
             webhook.save()
             webhook.content_types.set([obj_type])
+
+    def test_create_webhooks_with_diff_content_type_same_url_same_action(self):
+        """
+        Create a new webhook with diffrent content_types, same url and same action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | device type, create, http://localhost
+            Webhook 2: dcim | console port, create, http://localhost
+        """
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        data = (
+            {
+                "content_types": ["dcim.consoleport"],
+                "name": "api-test-7",
+                "type_create": True,
+                "payload_url": "http://api-test-1.com/test1",
+                "http_method": "POST",
+                "http_content_type": "application/json",
+                "ssl_verification": True,
+            },
+        )
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_create_webhooks_with_same_content_type_same_url_diff_action(self):
+        """
+        Create a new webhook with same content_types, same url and diff action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | device type, create, http://localhost
+            Webhook 2: dcim | device type, delete, http://localhost
+        """
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        data = (
+            {
+                "content_types": ["dcim.devicetype"],
+                "name": "api-test-7",
+                "type_update": True,
+                "payload_url": "http://api-test-1.com/test1",
+                "http_method": "POST",
+                "http_content_type": "application/json",
+                "ssl_verification": True,
+            },
+        )
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_create_webhooks_with_same_content_type_same_url_same_action(self):
+        """
+        Create a new webhook with same content_types, same url and common action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | device type, create, http://localhost
+            Webhook 2: dcim | device type, create, update, http://localhost
+        """
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        data = (
+            {
+                "content_types": ["dcim.devicetype"],
+                "name": "api-test-7",
+                "type_create": True,
+                "type_update": True,
+                "payload_url": "http://api-test-1.com/test1",
+                "http_method": "POST",
+                "http_content_type": "application/json",
+                "ssl_verification": True,
+            },
+        )
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEquals(response.data[0]["type_create"][0], "dcim | device type with create action and url exists")
