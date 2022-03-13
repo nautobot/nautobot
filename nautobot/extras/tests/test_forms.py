@@ -472,9 +472,8 @@ class WebhookFormTestCase(TestCase):
         obj_type_2 = ContentType.objects.get_for_model(Site)
         url = "http://test-url.com/test"
 
-
         webhook = Webhook.objects.create(
-            name="webhook-1", 
+            name="webhook-1",
             enabled=True,
             type_create=True,
             type_update=True,
@@ -482,7 +481,7 @@ class WebhookFormTestCase(TestCase):
             payload_url=url,
             http_method="POST",
             http_content_type="application/json",
-            )
+        )
         webhook.content_types.add(obj_type_1)
 
         cls.webhooks_data = [
@@ -533,9 +532,9 @@ class WebhookFormTestCase(TestCase):
 
         self.assertTrue(form.is_valid())
         form.save()
-        
+
         self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[0]["name"]).count(), 1)
-    
+
     def test_create_webhooks_with_same_content_type_same_url_diff_action(self):
         """
         Create a new webhook with same content_types, same url and diff action with a webhook that exists
@@ -545,10 +544,10 @@ class WebhookFormTestCase(TestCase):
             Webhook 2: dcim | console port, delete, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[1])
-        
+
         self.assertTrue(form.is_valid())
         form.save()
-        
+
         self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[1]["name"]).count(), 1)
 
     def test_create_webhooks_with_same_content_type_same_url_same_action(self):
@@ -560,11 +559,15 @@ class WebhookFormTestCase(TestCase):
             Webhook 2: dcim | console port, create, update, delete, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[2])
-        
+
         self.assertFalse(form.is_valid())
-        error_msg =json.loads(form.errors.as_json())
+        error_msg = json.loads(form.errors.as_json())
 
         self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[2]["name"]).count(), 0)
         self.assertIn("type_create", error_msg)
-        self.assertEquals(error_msg["type_create"][0]["message"], "dcim | console port with create action and url exists")
-        self.assertEquals(error_msg["type_update"][0]["message"], "dcim | console port with update action and url exists")
+        self.assertEquals(
+            error_msg["type_create"][0]["message"], "dcim | console port with create action and url exists"
+        )
+        self.assertEquals(
+            error_msg["type_update"][0]["message"], "dcim | console port with update action and url exists"
+        )

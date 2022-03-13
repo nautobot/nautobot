@@ -228,8 +228,6 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
     """
     from nautobot.extras.models.models import Webhook
 
-    WEBHOOKS_ACTIONS = collections.namedtuple("WEBHOOKS_ACTIONS", ["field_name", "field_value"])
-
     errors = {}
     webhook_action_msg = "{content_type} with {action} action and url exists"
 
@@ -238,22 +236,24 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
         if instance and instance.present_in_database:
             webhooks = webhooks.exclude(pk=instance.pk)
 
-        webhooks_type_create_action = webhooks.filter(type_create=type_create).count() if type_create else None
-        webhooks_type_update_action = webhooks.filter(type_update=type_update).count() if type_update else None
-        webhooks_type_delete_action = webhooks.filter(type_delete=type_delete).count() if type_delete else None
+        if webhooks.filter(type_create=type_create).count():
+            errors = add_error(
+                "type_create",
+                webhook_action_msg.format(content_type=content_type, action="create"),
+                errors,
+            )
 
-        for webhook_action in [
-            WEBHOOKS_ACTIONS(field_name="type_create", field_value=webhooks_type_create_action),
-            WEBHOOKS_ACTIONS(field_name="type_update", field_value=webhooks_type_update_action),
-            WEBHOOKS_ACTIONS(field_name="type_delete", field_value=webhooks_type_delete_action),
-        ]:
-            if webhook_action.field_value:
-                _, action_name = webhook_action.field_name.split("_")
-                errors = add_error(
-                    webhook_action.field_name, 
-                    webhook_action_msg.format(content_type=content_type, action=action_name),
-                    errors,
-                    )
+        if webhooks.filter(type_update=type_update).count():
+            errors = add_error(
+                "type_update", webhook_action_msg.format(content_type=content_type, action="update"), errors
+            )
+
+        if webhooks.filter(type_delete=type_delete).count():
+            errors = add_error(
+                "type_delete",
+                webhook_action_msg.format(content_type=content_type, action="delete"),
+                errors,
+            )
 
     return errors
 
@@ -263,6 +263,5 @@ def add_error(field_name, message, errors):
         errors[field_name].append(message)
     else:
         errors[field_name] = [message]
-        
+
     return errors
-    
