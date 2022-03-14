@@ -80,12 +80,6 @@ menu_items = (
                                     "extras.add_dynamicgroup",
                                 ],
                             ),
-                            # NavMenuImportButton(
-                            #     link="extras:status_import",
-                            #     permissions=[
-                            #         "extras.add_dynamicgroup",
-                            #     ],
-                            # ),
                         ),
                     ),
                 ),
