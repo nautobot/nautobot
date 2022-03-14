@@ -24,6 +24,9 @@ router.register("custom-field-choices", views.CustomFieldChoiceViewSet)
 # Custom Links
 router.register("custom-links", views.CustomLinkViewSet)
 
+# Dynamic Groups
+router.register("dynamic-groups", views.DynamicGroupViewSet)
+
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
 

@@ -28,6 +28,7 @@ from .models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -56,6 +57,7 @@ __all__ = (
     "CustomFieldFilter",
     "CustomFieldModelFilterSet",
     "CustomLinkFilterSet",
+    "DynamicGroupFilterSet",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
@@ -399,6 +401,19 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 
 
 #
+# Nautobot base filterset to use for most custom filterset classes.
+#
+
+
+class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+    """
+    This class exists to combine common functionality and is used as a base class throughout the
+    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet
+    are needed.
+    """
+
+
+#
 # Custom Links
 #
 
@@ -436,6 +451,31 @@ class CustomLinkFilterSet(BaseFilterSet):
 
 
 #
+# Dynamic Groups
+#
+
+
+class DynamicGroupFilterSet(NautobotFilterSet):
+    q = django_filters.CharFilter(method="search", label="Search")
+    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
+
+    class Meta:
+        model = DynamicGroup
+        fields = ("id", "name", "slug", "description")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(description__icontains=value)
+            | Q(content_type__app_label__icontains=value)
+            | Q(content_type__model__icontains=value)
+        )
+
+
+#
 # Export Templates
 #
 
@@ -462,15 +502,6 @@ class ExportTemplateFilterSet(BaseFilterSet):
             | Q(content_type__model__icontains=value)
             | Q(description__icontains=value)
         )
-
-
-class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
-    """
-    This class exists to combine common functionality and is used as a base class throughout
-    the codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet are needed.
-    """
-
-    pass
 
 
 #

@@ -33,6 +33,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -57,6 +58,7 @@ from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
+from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import copy_safe_request, count_related
 from . import nested_serializers, serializers
 
@@ -204,6 +206,36 @@ class CustomLinkViewSet(ModelViewSet):
     queryset = CustomLink.objects.all()
     serializer_class = serializers.CustomLinkSerializer
     filterset_class = filters.CustomLinkFilterSet
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupViewSet(ModelViewSet):
+    """
+    Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = DynamicGroup.objects.prefetch_related("content_type")
+    serializer_class = serializers.DynamicGroupSerializer
+    filterset_class = filters.DynamicGroupFilterSet
+
+    # FIXME(jathan): Figure out how to do `request_body` serializer based on the
+    # content_type of the DynamicGroup? Likely a `DynamicGroupMemberSerializer`
+    # that emits the appropriate serializer? This seems messy.
+    # @swagger_auto_schema(method="get", request_body=serializers.GitRepositorySerializer)
+    @action(detail=True, methods=["get"])
+    def members(self, request, pk, *args, **kwargs):
+        instance = get_object_or_404(self.queryset, pk=pk)
+
+        # Retrieve the serializer for the content_type and paginate the results
+        member_model_class = instance.content_type.model_class()
+        member_serializer_class = get_serializer_for_model(member_model_class)
+        members = self.paginate_queryset(instance.members)
+        member_serializer = member_serializer_class(members, many=True, context={"request": request})
+        return self.get_paginated_response(member_serializer.data)
 
 
 #

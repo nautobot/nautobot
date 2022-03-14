@@ -8,6 +8,15 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Dynamic Group Model ([#896](https://github.com/nautobot/nautobot/issues/896))
+
+A new data model for representing [dynamic groups](../models/extras/dynamicgroup.md) of objects has been implemented. Dynamic groups can be used to organize objects together by matching criteria such as their site location or region, for example, and are dynamically updated whenever new matching objects are created, or existing objects are updated.
+
+For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported. 
+
+!!! note
+  For this first 1.3 beta release, this feature is not yet documented. Dynamic Groups be found by navigating to **Organization** > **Dynamic Groups** in the web interface.
+
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
 GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [user guide](../user-guides/graphql.md#filtering-queries) for examples.

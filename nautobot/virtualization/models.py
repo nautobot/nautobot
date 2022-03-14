@@ -206,6 +206,7 @@ class Cluster(PrimaryModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -290,6 +291,15 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         "memory",
         "disk",
     ]
+    # 2.0 TODO: Make this go away when we assert filterset/filterform parity. FilterSet fields that
+    # are custom on FilterForm that we don't want in DynamicGroup UI edit form because they are
+    # already there.
+    #
+    # This mapping is in the form of:
+    #   {missing_form_field_name}: {filterset_field_name_that_duplicates_it}
+    dynamic_group_filter_fields = {
+        "cluster": "cluster_id",
+    }
 
     class Meta:
         ordering = ("name",)  # Name may be non-unique

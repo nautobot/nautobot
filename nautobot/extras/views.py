@@ -29,6 +29,7 @@ from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
+    get_table_for_model,
     prepare_cloned_fields,
     shallow_compare_dict,
 )
@@ -51,6 +52,7 @@ from .models import (
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -70,6 +72,9 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+
+
+logger = logging.getLogger(__name__)
 
 
 #
@@ -361,7 +366,6 @@ class CustomFieldEditView(generic.ObjectEditView):
         return ctx
 
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.CustomFieldEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
@@ -481,6 +485,154 @@ class CustomLinkDeleteView(generic.ObjectDeleteView):
 class CustomLinkBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomLink.objects.all()
     table = tables.CustomLinkTable
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupListView(generic.ObjectListView):
+    queryset = DynamicGroup.objects.all()
+    table = tables.DynamicGroupTable
+    filterset = filters.DynamicGroupFilterSet
+    filterset_form = forms.DynamicGroupFilterForm
+    action_buttons = ("add",)
+
+
+class DynamicGroupView(generic.ObjectView):
+    queryset = DynamicGroup.objects.all()
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        model = instance.content_type.model_class()
+        table_class = get_table_for_model(model)
+
+        if table_class is not None:
+            members = instance.get_queryset()
+            members_table = table_class(members, orderable=False)
+            context["members_table"] = members_table
+
+        return context
+
+
+class DynamicGroupEditView(generic.ObjectEditView):
+    queryset = DynamicGroup.objects.all()
+    model_form = forms.DynamicGroupForm
+    template_name = "extras/dynamicgroup_edit.html"
+
+    def get_extra_context(self, request, instance):
+        ctx = super().get_extra_context(request, instance)
+
+        filterform_class = instance.generate_filter_form()
+
+        if filterform_class is None:
+            # FIXME(jathan): There is currently an edge case here that needs to be addressed:
+            # `AttributeError: 'NoneType' object has no attribute 'is_valid'`
+            # See: https://sentry.io/share/issue/fb41c6afb40248f6931021574bc38a0d/
+            filter_form = None
+        elif request.POST:
+            filter_form = filterform_class(data=request.POST)
+        else:
+            initial = instance.get_initial()
+            filter_form = filterform_class(initial=initial)
+
+        ctx["filter_form"] = filter_form
+
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    # Obtain the instance, but do not yet `save()` it to the database.
+                    obj = form.save(commit=False)
+
+                    # Process the filter form and save the query filters to `obj.filter`.
+                    ctx = self.get_extra_context(request, obj)
+                    filter_form = ctx["filter_form"]
+                    if filter_form.is_valid():
+                        obj.set_filter(filter_form.cleaned_data)
+                    else:
+                        raise RuntimeError(filter_form.errors)
+
+                    # After filters have been set, now we save the object to the database.
+                    obj.save()
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                msg = "{} {}".format(
+                    "Created" if object_created else "Modified",
+                    self.queryset.model._meta.verbose_name,
+                )
+                logger.info(f"{msg} {obj} (PK: {obj.pk})")
+                if hasattr(obj, "get_absolute_url"):
+                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                else:
+                    msg = "{} {}".format(msg, escape(obj))
+                messages.success(request, mark_safe(msg))
+
+                if "_addanother" in request.POST:
+
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(return_url)
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation."
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except RuntimeError:
+                msg = "Errors encountered when saving Dynamic Group associations. See below."
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except ProtectedError as err:
+                # e.g. Trying to delete a something that is in use.
+                protected_obj, err_msg = err.args
+                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
+class DynamicGroupDeleteView(generic.ObjectDeleteView):
+    queryset = DynamicGroup.objects.all()
+
+
+class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = DynamicGroup.objects.all()
+    table = tables.DynamicGroupTable
 
 
 #
@@ -1429,7 +1581,6 @@ class SecretsGroupEditView(generic.ObjectEditView):
         return ctx
 
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.SecretsGroupEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
