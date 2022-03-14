@@ -156,6 +156,15 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1459](https://github.com/nautobot/nautobot/issues/1459) - Fixed incorrect display of related devices and VMs in the Cluster Type and Cluster Group detail views.
 - [#1469](https://github.com/nautobot/nautobot/issues/1469) - Fixed incorrect CSV export for devices
 
+### Security
+
+!!! danger
+    It is highly recommended that users of Python 3.6 prioritize upgrading to a newer version of Python. **Nautobot will be removing support for Python 3.6 in a future update.**
+
+!!! important
+    For users remaining on Python 3.6, please know that upgrading to Nautobot v1.2.9 **will not resolve these CVEs for your installation**. The only remedy at this time is to upgrade your systems to utilize Python 3.7 or later.
+
+- [#1487](https://github.com/nautobot/nautobot/issues/1487) - Implemented fixes for [CVE-2022-22817](https://github.com/advisories/GHSA-8vj2-vxx3-667w), [CVE-2022-24303](https://github.com/advisories/GHSA-9j59-75qj-795w), and [potential infinite loop](https://github.com/advisories/GHSA-4fx9-vc88-q2xc) by requiring Pillow >=9.0.1 for Python version >=3.7. For Python version <3.7 (e.g. 3.6), it is recommended that you prioritize upgrading your environment to use Python 3.7 or higher. Support for Python 3.6 will be removed in a future update.
 
 ## v1.2.8 (2022-03-07)
 
