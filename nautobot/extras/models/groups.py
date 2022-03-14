@@ -1,6 +1,7 @@
 """Dynamic Groups Models."""
 
 import logging
+import urllib
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
@@ -11,10 +12,9 @@ from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
-from nautobot.extras.groups import dynamicgroup_map_factory
 from nautobot.extras.querysets import DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
-
+from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model, get_route_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -56,29 +56,197 @@ class DynamicGroup(OrganizationalModel):
 
     clone_fields = ["content_type", "filter"]
 
+    # This is used as a `startswith` check on field names, so these can be
+    # explicit fields or just substrings.
+    #
+    # Currently this means skipping "search", custom fields, and custom relationships.
+    #
+    # FIXME(jathan): As one example, `DeviceFilterSet.q` filter searches in `comments`. The issue
+    # really being that this field renders as a textarea and it's not cute in the UI. Might be able
+    # to dynamically change the widget if we decide we do want to support this field.
+    #
+    # Type: tuple
+    exclude_filter_fields = ("q", "cr", "cf", "comments")  # Must be a tuple
+
     class Meta:
         ordering = ["content_type", "name"]
 
     def __str__(self):
         return self.name
 
-    def get_queryset(self, **kwargs):
+    @property
+    def model(self):
         """
-        Define custom queryset for group model.
+        Access to the underlying Model class for this group's `content_type`.
 
-        Any `kwargs` are passed along to `DynamicGroupMap.get_queryset()`.
+        This class object is cached on the instance after the first time it is accessed.
         """
 
-        model = self.content_type.model_class()
+        if getattr(self, "_model", None) is None:
+            try:
+                model = self.content_type.model_class()
+            except models.ObjectDoesNotExist:
+                model = None
+
+            if model is not None:
+                self._set_object_classes(model)
+
+            self._model = model
+
+        return self._model
+
+    def _set_object_classes(self, model):
+        """
+        Given the `content_type` for this group, dynamically map object classes to this instance.
+        Protocol for return values:
+
+        - True: Model and object classes mapped.
+        - False: Model not yet mapped (likely because of no `content_type`)
+        """
+
+        # If object classes have already been mapped, return True.
+        if getattr(self, "_object_classes_mapped", False):
+            return True
+
+        # Try to set the object classes for thie model.
+        try:
+            self.filterset_class = get_filterset_for_model(model)
+            self.filterform_class = get_form_for_model(model, form_prefix="Filter")
+            self.form_class = get_form_for_model(model)
+        # Fail closed.
+        except TypeError:
+            self.filterset_class = None
+            self.filterform_class = None
+            self.form_class = None
+            self._object_classes_mapped = False
+        else:
+            self._object_classes_mapped = True
+
+        return self._object_classes_mapped
+
+    def _map_filter_fields(self):
+        """Return all FilterForm fields in a dictionary."""
+
+        # Fail gracefully with an empty dict if nothing is working yet.
+        if not self._set_object_classes(self.model):
+            return {}
+
+        # Get model form and fields
+        modelform = self.form_class()
+        modelform_fields = modelform.fields
+
+        # Get filter form and fields
+        filterform = self.filterform_class()
+        filterform_fields = filterform.fields
+
+        # Get filterset and fields
+        filterset = self.filterset_class()
+        filterset_fields = filterset.filters
+
+        # Get dynamic group filter field mappings (if any)
+        dynamic_group_filter_fields = getattr(self.model, "dynamic_group_filter_fields", {})
+
+        # Model form fields that aren't on the filter form
+        missing_fields = set(modelform_fields).difference(filterform_fields)
+
+        # Try a few ways to see if a missing field can be added to the filter fields.
+        for missing_field in missing_fields:
+            # Skip excluded fields
+            if missing_field.startswith(self.exclude_filter_fields):
+                logger.debug("Skipping excluded form field: %s", missing_field)
+                continue
+
+            # In some cases, fields exist in the model form AND by another name # in the filter form
+            # (e.g. model form: `cluster` -> filterset: `cluster_id`) yet are omitted from the
+            # filter form (e.g. filter form has "cluster_id" but not "cluster"). We only want to add
+            # them if-and-only-if they aren't already in `filterform_fields`.
+            if missing_field in dynamic_group_filter_fields:
+                mapped_field = dynamic_group_filter_fields[missing_field]
+                if mapped_field in filterform_fields:
+                    logger.debug(
+                        "Skipping missing form field %s; mapped to %s filter field", missing_field, mapped_field
+                    )
+                    continue
+
+            # If the missing field isn't even in the filterset, move on.
+            try:
+                filterset_field = filterset_fields[missing_field]
+            except KeyError:
+                logger.debug("Skipping %s: doesn't have a filterset field", missing_field)
+                continue
+
+            # Get the missing model form field so we can use it to add to the filterform_fields.
+            modelform_field = modelform_fields[missing_field]
+
+            # Replace the modelform_field with the correct type for the UI. At this time this is
+            # only being done for CharField since in the filterset form this ends up being a
+            # `MultVarCharField` (dynamically generated from from `MultiValueCharFilter`) which is
+            # not correct for char fields.
+            if isinstance(modelform_field, forms.CharField):
+                # Get ready to replace the form field w/ correct widget.
+                new_modelform_field = filterset_field.field
+                new_modelform_field.widget = modelform_field.widget
+
+                # If `required=True` was set on the model field, pop "required" from the widget
+                # attributes. Filter fields should never be required!
+                if modelform_field.required:
+                    new_modelform_field.widget.attrs.pop("required")
+
+                modelform_field = new_modelform_field
+
+            # Carry over the `to_field_name` to the modelform_field.
+            to_field_name = filterset_field.extra.get("to_field_name")
+            if to_field_name is not None:
+                modelform_field.to_field_name = to_field_name
+
+            logger.debug("Added %s (%s) to filter fields", missing_field, modelform_field.__class__.__name__)
+            filterform_fields[missing_field] = modelform_field
+
+        # Reduce down to a final dict of desired fields.
+        return_fields = {}
+        for field_name, filter_field in filterform_fields.items():
+            # Skip excluded fields
+            if field_name.startswith(self.exclude_filter_fields):
+                logger.debug("Skipping excluded filter field: %s", field_name)
+                continue
+
+            return_fields[field_name] = filter_field
+
+        return return_fields
+
+    def get_filter_fields(self):
+        """Return a mapping of `{field_name: filter_field}` for this group's `content_type`."""
+        # Fail cleaninly until the object has been created.
+        if self.model is None:
+            return {}
+
+        if not self.present_in_database:
+            return {}
+
+        return self._map_filter_fields()
+
+    def get_queryset(self, flat=False):
+        """
+        Return a queryset for the `content_type` model of thhis group.
+
+        The queryset is generated based on the `filterset_class` for the Model.
+        """
+
+        model = self.model
 
         if not self.filter:
             return model.objects.none()
 
-        qs = self.map.get_queryset(self.filter, **kwargs)
+        filterset = self.filterset_class(self.filter, model.objects.all())
+        qs = filterset.qs
 
-        # Make sure that this instance can't be a member of its own group
+        # Make sure that this instance can't be a member of its own group.
         if self.present_in_database and model == self.__class__:
             qs = qs.exclude(pk=self.pk)
+
+        # If `flat` is desired, return a flat list of "pk".
+        if flat:
+            qs = qs.values_list("pk", flat=True)
 
         return qs
 
@@ -91,51 +259,43 @@ class DynamicGroup(OrganizationalModel):
         """Return the number of objects in the group."""
         return self.get_queryset().count()
 
-    @property
-    def map(self):
-        """
-        Accessor to automatically generated `BaseDynamicGroupMap` class.
-
-        This class object is cached on the instance after the first time it is accessed.
-        """
-
-        if getattr(self, "_map", None) is None:
-            try:
-                model = self.content_type.model_class()
-                dynamicgroupmap_class = dynamicgroup_map_factory(model)
-            except (models.ObjectDoesNotExist, TypeError):
-                dynamicgroupmap_class = None
-
-            self._map = dynamicgroupmap_class
-
-        return self._map
-
     def get_absolute_url(self):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
-    def get_group_members_url(self):
-        """Get URL to group members."""
-        if self.map is None:
+    @property
+    def base_url(self):
+        if self.model is None:
             return ""
 
-        base_url = self.map.base_url
-        filter_str = self.map.urlencode(self.filter)
+        model = self.content_type.model_class()
+        route_name = get_route_for_model(model, "list")
+        return reverse(route_name)
+
+    def urlencode(self, filter_params):
+        """
+        Given a `filter_params` dict, return a URL-encoded HTTP query string.
+
+        For example:
+            >>> dg = DynamicGroup.objects.first()
+            >>> filter_params = {"site": ["ams01", "bkk01"], "has_primary_ip": True}
+            >>> dg.urlencode(filter_params)
+            site=ams01&site=bkk01&has_primary_ip=True'
+
+        """
+        return urllib.parse.urlencode(filter_params, doseq=True)
+
+    def get_group_members_url(self):
+        """Get URL to group members."""
+        if self.model is None:
+            return ""
+
+        base_url = self.base_url
+        filter_str = self.urlencode(self.filter)
 
         if filter_str is not None:
             base_url += f"?{filter_str}"
 
         return base_url
-
-    def get_filter_fields(self):
-        """Return a mapping of `{field_name: filter_field}` for this group's `content_type`."""
-        # Fail cleaninly until the object has been created and has a map class.
-        if self.map is None:
-            return {}
-
-        if not self.present_in_database:
-            return {}
-
-        return self.map.fields()
 
     def set_filter(self, form_data):
         """
@@ -149,7 +309,7 @@ class DynamicGroup(OrganizationalModel):
 
         # Populate the filterset from the incoming `form_data`. The filterset's internal form is
         # used for validation, will be used by us to extract cleaned data for final processing.
-        filterset_class = self.map.filterset_class
+        filterset_class = self.filterset_class
         filterset_class.form_prefix = "filter"
         filterset = filterset_class(form_data)
 
@@ -234,13 +394,12 @@ class DynamicGroup(OrganizationalModel):
 
         This form is used to popoulate and validate the filter dictionary.
         """
-        filterform_class = self.map and self.map.filterform_class
         filter_fields = self.get_filter_fields()
 
         # FIXME(jathan): Account for field_order in the newly generated class.
         try:
 
-            class FilterForm(filterform_class):
+            class FilterForm(self.filterform_class):
                 prefix = "filter"
 
                 def __init__(self, *args, **kwargs):
@@ -257,8 +416,11 @@ class DynamicGroup(OrganizationalModel):
         if not isinstance(self.filter, dict):
             raise ValidationError({"filter": "Filter must be a dict"})
 
+        if self.model is None:
+            raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
+
         # Validate against the filterset's internal form validation.
-        filterset = self.map.filterset_class(self.filter)
+        filterset = self.filterset_class(self.filter)
         if not filterset.is_valid():
             raise ValidationError(filterset.errors)
 
