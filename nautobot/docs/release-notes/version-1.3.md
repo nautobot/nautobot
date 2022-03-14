@@ -41,19 +41,21 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 
 ### Changed
 
-#### Update Jinja2 to 3.0.3 ([#1474](https://github.com/nautobot/nautobot/pull/1474))
+#### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
 
 We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 
-#### Docker images now default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
+#### Docker Images Now Default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
 
 As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
 
-### Fixed
-
 ### Removed
 
-## v1.3.0a1 (2022-??-??)
+#### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
+
+As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
+
+## v1.3.0b1 (2022-03-11)
 
 ### Added
 
@@ -62,9 +64,9 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#498](https://github.com/nautobot/nautobot/issues/498) - Added custom-validator support to the RelationshipAssociation model.
 - [#724](https://github.com/nautobot/nautobot/issues/724) - Added Provider Network data model. (Partially based on [NetBox #5986](https://github.com/netbox-community/netbox/issues/5986).)
 - [#795](https://github.com/nautobot/nautobot/issues/795) - Added ability to filter objects missing custom field values by using `null`.
-- [#803](https://github.com/nautobot/nautobot/issues/803) - There is now a *render_boolean* template filter in helpers, which renders computed boolean values as HTML in a consistent manner.
+- [#803](https://github.com/nautobot/nautobot/issues/803) - Added a `render_boolean` template filter, which renders computed boolean values as HTML in a consistent manner.
 - [#863](https://github.com/nautobot/nautobot/issues/863) - Added the ability to hide a job in the UI by setting `hidden = True` in the Job's inner `Meta` class
-- [#881](https://github.com/nautobot/nautobot/issues/881) - Improved the UX of the main Jobs by adding accordion style interface that can collapse/expand jobs provided by each module
+- [#881](https://github.com/nautobot/nautobot/issues/881) - Improved the UX of the main Jobs list by adding accordion style interface that can collapse/expand jobs provided by each module
 - [#885](https://github.com/nautobot/nautobot/issues/885) - Added the ability to define a `soft_time_limit` and `time_limit` in seconds as attributes of a Job's `Meta`.
 - [#894](https://github.com/nautobot/nautobot/issues/894) - Added the ability to view computed fields in an object list.
 - [#898](https://github.com/nautobot/nautobot/issues/898) - Added support for moving a CustomField, Relationship or ComputedField from the main tab of an object's detail page in the UI to the "Advanced" tab.
@@ -77,15 +79,14 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 
 ### Changed
 
-- [#368](https://github.com/nautobot/nautobot/issues/368) - All classes which inherit from all three of (nautobot.utilities.forms.BootstrapMixin, nautobot.extras.forms.CustomFieldModelForm, nautobot.extras.forms.RelationshipModelForm) now inherit from nautobot.extras.forms.NautobotModelForm as their base class. All classes which inherit from all three of (nautobot.utilities.filters.BaseFilterSet, nautobot.extras.filters.CreatedUpdatedFilterSet, nautobot.extras.filters.CustomFieldModelFilterSet) now inherit from nautobot.extras.filters.NautobotFilterSet as their base class. 
+- [#368](https://github.com/nautobot/nautobot/issues/368) - Added `nautobot.extras.forms.NautobotModelForm` and `nautobot.extras.filters.NautobotFilterSet` base classes. All form classes which inherited from all three of (`BootstrapMixin`, `CustomFieldModelForm`, and `RelationshipModelForm`) now inherit from `NautobotModelForm` as their base class. All filterset classes which inherited from all three of (`BaseFilterSet`, `CreatedUpdatedFilterSet`, and `CustomFieldModelFilterSet`) now inherit from `NautobotFilterSet` as their base class.
 - [#443](https://github.com/nautobot/nautobot/issues/443) - The provided "Dummy Plugin" has been renamed to "Example Plugin".
-- [#591](https://github.com/nautobot/nautobot/issues/591) - All uses of type() are now refactored to use isinstance() where applicable.
+- [#591](https://github.com/nautobot/nautobot/issues/591) - All uses of `type()` are now refactored to use `isinstance()` where applicable.
 - [#880](https://github.com/nautobot/nautobot/issues/880) - Jobs menu items now form their own top-level menu instead of a sub-section under the Extensibility menu.
 - [#909](https://github.com/nautobot/nautobot/issues/909) - Device, InventoryItem, and Rack serial numbers can now be up to 255 characters in length.
-- [#916](https://github.com/nautobot/nautobot/issues/916) - A Job.Meta.description can now contain markdown-formatted multi-line text.
+- [#916](https://github.com/nautobot/nautobot/issues/916) - A `Job.Meta.description` can now contain markdown-formatted multi-line text.
 - [#1107](https://github.com/nautobot/nautobot/issues/1107) - Circuit Provider account numbers can now be up to 100 characters in length.
 - [#1252](https://github.com/nautobot/nautobot/pull/1252) - As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
-- [#1268](https://github.com/nautobot/nautobot/issues/1268) - Drop Support for Python 3.6.
 - [#1277](https://github.com/nautobot/nautobot/issues/1277) - Updated Django dependency to 3.2.X LTS.
 - [#1307](https://github.com/nautobot/nautobot/pull/1307) - Updated various Python package dependencies to their latest compatible versions.
 - [#1314](https://github.com/nautobot/nautobot/pull/1314) - Updated various development-only Python package dependencies to their latest compatible versions.
@@ -99,3 +100,5 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#1440](https://github.com/nautobot/nautobot/issues/1440) - Handle models missing serializer methods, dependent from adding pre-/post-change data to WebHooks.
 
 ### Removed
+
+- [#1268](https://github.com/nautobot/nautobot/issues/1268) - Drop Support for Python 3.6.
