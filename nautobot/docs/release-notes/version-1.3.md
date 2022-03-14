@@ -99,3 +99,7 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 - [#1440](https://github.com/nautobot/nautobot/issues/1440) - Handle models missing serializer methods, dependent from adding pre-/post-change data to WebHooks.
 
 ### Removed
+
+### Security
+
+- [#1487](https://github.com/nautobot/nautobot/issues/1487) - Implemented fixes for [CVE-2022-22817](https://github.com/advisories/GHSA-8vj2-vxx3-667w) and [CVE-2022-24303](https://github.com/advisories/GHSA-9j59-75qj-795w) by requiring Pillow >=9.0.1.
