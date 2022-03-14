@@ -465,8 +465,8 @@ class RelationshipModelFormTestCase(TestCase):
 class WebhookFormTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        obj_type_1 = ContentType.objects.get_for_model(dcim_models.ConsolePort)
-        obj_type_2 = ContentType.objects.get_for_model(dcim_models.Site)
+        console_port_content_type = ContentType.objects.get_for_model(dcim_models.ConsolePort)
+        site_content_type = ContentType.objects.get_for_model(dcim_models.Site)
         url = "http://example.com/test"
 
         webhook = Webhook.objects.create(
@@ -479,12 +479,12 @@ class WebhookFormTestCase(TestCase):
             http_method="POST",
             http_content_type="application/json",
         )
-        webhook.content_types.add(obj_type_1)
+        webhook.content_types.add(console_port_content_type)
 
         cls.webhooks_data = [
             {
                 "name": "webhook-2",
-                "content_types": [obj_type_2.pk],
+                "content_types": [site_content_type.pk],
                 "enabled": True,
                 "type_create": True,
                 "type_update": False,
@@ -495,7 +495,7 @@ class WebhookFormTestCase(TestCase):
             },
             {
                 "name": "webhook-3",
-                "content_types": [obj_type_1.pk],
+                "content_types": [console_port_content_type.pk],
                 "enabled": True,
                 "type_create": False,
                 "type_update": False,
@@ -506,7 +506,7 @@ class WebhookFormTestCase(TestCase):
             },
             {
                 "name": "webhook-4",
-                "content_types": [obj_type_1.pk],
+                "content_types": [console_port_content_type.pk],
                 "enabled": True,
                 "type_create": True,
                 "type_update": True,
