@@ -111,7 +111,7 @@ netaddr = "~0.8.0"
 netutils = "~1.0.0"
 # Image processing library
 Pillow = [
-    {version = "~9.0.0", python = "^3.7"},
+    {version = "~9.0.1", python = "^3.7"},
     {version = "~8.3.2", python = "<3.7"},
 ]
 # PostgreSQL database adapter
