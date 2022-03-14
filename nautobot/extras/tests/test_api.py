@@ -2215,7 +2215,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
                 "http_method": self.webhooks[0].http_method,
                 "http_content_type": self.webhooks[0].http_content_type,
                 "ssl_verification": self.webhooks[0].ssl_verification,
-            }
+            },
         )
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
@@ -2246,4 +2246,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(response.data[0]["type_create"][0], "A webhook already exists for create on dcim | device type to URL http://example.com/test1")
+        self.assertEquals(
+            response.data[0]["type_create"][0],
+            "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
+        )
