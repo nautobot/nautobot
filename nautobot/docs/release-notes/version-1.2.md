@@ -152,6 +152,9 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Fixed
 
+- [#1431](https://github.com/nautobot/nautobot/issues/1431) - Fixed potential failure of `extras.0017_joblog_data_migration` migration when the job logs contain messages mistakenly logged as object references.
+- [#1459](https://github.com/nautobot/nautobot/issues/1459) - Fixed incorrect display of related devices and VMs in the Cluster Type and Cluster Group detail views.
+- [#1469](https://github.com/nautobot/nautobot/issues/1469) - Fixed incorrect CSV export for devices
 
 
 ## v1.2.8 (2022-03-07)
