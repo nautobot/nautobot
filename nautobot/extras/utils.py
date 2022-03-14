@@ -236,19 +236,23 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
         if instance and instance.present_in_database:
             webhooks = webhooks.exclude(pk=instance.pk)
 
-        if webhooks.filter(type_create=type_create).count():
+        webhooks_type_create_action = webhooks.filter(type_create=type_create).count() if type_create else None
+        webhooks_type_update_action = webhooks.filter(type_update=type_update).count() if type_update else None
+        webhooks_type_delete_action = webhooks.filter(type_delete=type_delete).count() if type_delete else None
+
+        if webhooks_type_create_action:
             errors = add_error(
                 "type_create",
                 webhook_action_msg.format(content_type=content_type, action="create"),
                 errors,
             )
 
-        if webhooks.filter(type_update=type_update).count():
+        if webhooks_type_update_action:
             errors = add_error(
                 "type_update", webhook_action_msg.format(content_type=content_type, action="update"), errors
             )
 
-        if webhooks.filter(type_delete=type_delete).count():
+        if webhooks_type_delete_action:
             errors = add_error(
                 "type_delete",
                 webhook_action_msg.format(content_type=content_type, action="delete"),
