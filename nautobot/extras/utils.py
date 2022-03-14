@@ -229,7 +229,7 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
     from nautobot.extras.models.models import Webhook
 
     errors = {}
-    webhook_action_msg = "{content_type} with {action} action and url exists"
+    webhook_error_msg = "{content_type} with {action} action and url exists"
 
     for content_type in content_types:
         webhooks = Webhook.objects.filter(content_types__in=[content_type], payload_url=payload_url)
@@ -243,19 +243,19 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
         if webhooks_type_create_action:
             errors = add_error(
                 "type_create",
-                webhook_action_msg.format(content_type=content_type, action="create"),
+                webhook_error_msg.format(content_type=content_type, action="create"),
                 errors,
             )
 
         if webhooks_type_update_action:
             errors = add_error(
-                "type_update", webhook_action_msg.format(content_type=content_type, action="update"), errors
+                "type_update", webhook_error_msg.format(content_type=content_type, action="update"), errors
             )
 
         if webhooks_type_delete_action:
             errors = add_error(
                 "type_delete",
-                webhook_action_msg.format(content_type=content_type, action="delete"),
+                webhook_error_msg.format(content_type=content_type, action="delete"),
                 errors,
             )
 
