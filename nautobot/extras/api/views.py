@@ -54,7 +54,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.jobs import get_job, run_job
+from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
@@ -590,6 +590,33 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
 
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /approve/, /deny/, and /dry-run/ endpoints.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        if request.user.is_authenticated and self.action == "approve":
+            # extras.approve_job permission will be applied by the view function itself
+            self.queryset = self.queryset.restrict(request.user, "change")
+        elif request.user.is_authenticated and self.action == "deny":
+            # extras.approve_job permission will be applied by the view function itself
+            self.queryset = self.queryset.restrict(request.user, "delete")
+        elif request.user.is_authenticated and self.action == "dry-run":
+            # extras.run_job permission will be applied by the view function itself
+            self.queryset = self.queryset.restrict(request.user, "view")
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class ScheduledJobChangePermissions(TokenPermissions):
+        """
+        As nautobot.core.api.authentication.TokenPermissions, but enforcing change_scheduledjob not add_scheduledjob.
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.change_%(model_name)s"],
+        }
+
     @swagger_auto_schema(
         method="post",
         responses={"200": serializers.ScheduledJobSerializer},
@@ -603,12 +630,12 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             )
         ],
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobChangePermissions])
     def approve(self, request, pk):
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied()
+        scheduled_job = get_object_or_404(self.queryset, pk=pk)
 
-        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
+            raise PermissionDenied("You do not have permission to approve this request.")
 
         # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
         if request.user == scheduled_job.user:
@@ -632,47 +659,65 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
         return Response(serializer.data)
 
+    class ScheduledJobDeletePermissions(TokenPermissions):
+        """
+        As nautobot.core.api.authentication.TokenPermissions, but enforcing delete_scheduledjob not add_scheduledjob.
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.delete_%(model_name)s"],
+        }
+
     @swagger_auto_schema(
         method="post",
         request_body=no_body,
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobDeletePermissions])
     def deny(self, request, pk):
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied()
-
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+
+        if not (
+            Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve")
+            # A user can deny (revoke) their own approval requests, even without general job-approval permission
+            or request.user == scheduled_job.user
+        ):
+            raise PermissionDenied("You do not have permission to deny this request.")
 
         scheduled_job.delete()
 
         return Response(None)
+
+    class ScheduledJobViewPermissions(TokenPermissions):
+        """
+        As nautobot.core.api.authentication.TokenPermissions, but enforcing view_scheduledjob not add_scheduledjob.
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.view_%(model_name)s"],
+        }
 
     @swagger_auto_schema(
         method="post",
         responses={"200": serializers.JobResultSerializer},
         request_body=no_body,
     )
-    @action(detail=True, url_path="dry-run", methods=["post"])
+    @action(detail=True, url_path="dry-run", methods=["post"], permission_classes=[ScheduledJobViewPermissions])
     def dry_run(self, request, pk):
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied()
-
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
-        # TODO enforce object-level permissions on run_job here as well?
-        job_class = get_job(scheduled_job.job_class)
-        if job_class is None:
-            raise Http404
-        job = job_class()
-        grouping, module, class_name = job_class.class_path.split("/", 2)
+        job_model = scheduled_job.job_model
+        if job_model is None or not job_model.runnable:
+            raise MethodNotAllowed("This job cannot be dry-run at this time.")
+        if not Job.objects.check_perms(request.user, instance=job_model, action="run"):
+            raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job with commit=False
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = JobResult.enqueue_job(
             run_job,
-            job.class_path,
+            job_model.class_path,
             job_content_type,
-            scheduled_job.user,
-            data=scheduled_job.kwargs["data"],
+            request.user,
+            data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run
         )
