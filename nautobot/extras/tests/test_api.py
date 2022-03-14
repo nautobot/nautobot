@@ -2110,7 +2110,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.consoleport"],
             "name": "api-test-4",
             "type_create": True,
-            "payload_url": "http://api-test-4.com/test4",
+            "payload_url": "http://example.com/test4",
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
@@ -2119,7 +2119,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.consoleport"],
             "name": "api-test-5",
             "type_update": True,
-            "payload_url": "http://api-test-5.com/test5",
+            "payload_url": "http://example.com/test5",
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
@@ -2128,7 +2128,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.consoleport"],
             "name": "api-test-6",
             "type_delete": True,
-            "payload_url": "http://api-test-6.com/test6",
+            "payload_url": "http://example.com/test6",
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
@@ -2138,11 +2138,11 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = (
+        cls.webhooks = (
             Webhook(
                 name="api-test-1",
                 type_create=True,
-                payload_url="http://api-test-1.com/test1",
+                payload_url="http://example.com/test1",
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
@@ -2150,7 +2150,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             Webhook(
                 name="api-test-2",
                 type_update=True,
-                payload_url="http://api-test-2.com/test2",
+                payload_url="http://example.com/test2",
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
@@ -2158,7 +2158,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             Webhook(
                 name="api-test-3",
                 type_delete=True,
-                payload_url="http://api-test-3.com/test3",
+                payload_url="http://example.com/test3",
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
@@ -2167,7 +2167,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         obj_type = ContentType.objects.get_for_model(DeviceType)
 
-        for webhook in webhooks:
+        for webhook in cls.webhooks:
             webhook.save()
             webhook.content_types.set([obj_type])
 
@@ -2179,20 +2179,17 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             Webhook 1: dcim | device type, create, http://localhost
             Webhook 2: dcim | console port, create, http://localhost
         """
-        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        self.add_permissions("extras.add_webhook")
 
         data = (
             {
                 "content_types": ["dcim.consoleport"],
                 "name": "api-test-7",
-                "type_create": True,
-                "payload_url": "http://api-test-1.com/test1",
-                "http_method": "POST",
-                "http_content_type": "application/json",
-                "ssl_verification": True,
+                "type_create": self.webhooks[0].type_create,
+                "payload_url": self.webhooks[0].payload_url,
+                "http_method": self.webhooks[0].http_method,
+                "http_content_type": self.webhooks[0].http_content_type,
+                "ssl_verification": self.webhooks[0].ssl_verification,
             },
         )
 
@@ -2207,27 +2204,24 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             Webhook 1: dcim | device type, create, http://localhost
             Webhook 2: dcim | device type, delete, http://localhost
         """
-        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        self.add_permissions("extras.add_webhook")
 
         data = (
             {
                 "content_types": ["dcim.devicetype"],
                 "name": "api-test-7",
                 "type_update": True,
-                "payload_url": "http://api-test-1.com/test1",
-                "http_method": "POST",
-                "http_content_type": "application/json",
-                "ssl_verification": True,
-            },
+                "payload_url": self.webhooks[0].payload_url,
+                "http_method": self.webhooks[0].http_method,
+                "http_content_type": self.webhooks[0].http_content_type,
+                "ssl_verification": self.webhooks[0].ssl_verification,
+            }
         )
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-    def test_create_webhooks_with_same_content_type_same_url_same_action(self):
+    def test_create_webhooks_with_same_content_type_same_url_common_action(self):
         """
         Create a new webhook with same content_types, same url and common action with a webhook that exists
 
@@ -2235,24 +2229,21 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             Webhook 1: dcim | device type, create, http://localhost
             Webhook 2: dcim | device type, create, update, http://localhost
         """
-        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        self.add_permissions("extras.add_webhook")
 
         data = (
             {
                 "content_types": ["dcim.devicetype"],
                 "name": "api-test-7",
-                "type_create": True,
+                "type_create": self.webhooks[0].type_create,
                 "type_update": True,
-                "payload_url": "http://api-test-1.com/test1",
-                "http_method": "POST",
-                "http_content_type": "application/json",
-                "ssl_verification": True,
+                "payload_url": self.webhooks[0].payload_url,
+                "http_method": self.webhooks[0].http_method,
+                "http_content_type": self.webhooks[0].http_content_type,
+                "ssl_verification": self.webhooks[0].ssl_verification,
             },
         )
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(response.data[0]["type_create"][0], "dcim | device type with create action and url exists")
+        self.assertEquals(response.data[0]["type_create"][0], "A webhook already exists for create on dcim | device type to URL http://example.com/test1")

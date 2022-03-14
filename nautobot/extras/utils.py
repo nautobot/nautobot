@@ -229,43 +229,30 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
     from nautobot.extras.models.models import Webhook
 
     errors = {}
-    webhook_error_msg = "{content_type} with {action} action and url exists"
+    webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
 
     for content_type in content_types:
         webhooks = Webhook.objects.filter(content_types__in=[content_type], payload_url=payload_url)
         if instance and instance.present_in_database:
             webhooks = webhooks.exclude(pk=instance.pk)
 
-        webhooks_type_create_action = webhooks.filter(type_create=type_create).count() if type_create else None
-        webhooks_type_update_action = webhooks.filter(type_update=type_update).count() if type_update else None
-        webhooks_type_delete_action = webhooks.filter(type_delete=type_delete).count() if type_delete else None
+        existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
+        existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
+        existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
 
-        if webhooks_type_create_action:
-            errors = add_error(
-                "type_create",
-                webhook_error_msg.format(content_type=content_type, action="create"),
-                errors,
+        if existing_type_create:
+            errors.setdefault("type_create", []).append(
+                webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
             )
 
-        if webhooks_type_update_action:
-            errors = add_error(
-                "type_update", webhook_error_msg.format(content_type=content_type, action="update"), errors
+        if existing_type_update:
+            errors.setdefault("type_update", []).append(
+                webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
             )
 
-        if webhooks_type_delete_action:
-            errors = add_error(
-                "type_delete",
-                webhook_error_msg.format(content_type=content_type, action="delete"),
-                errors,
+        if existing_type_delete:
+            errors.setdefault("type_delete", []).append(
+                webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
             )
-
-    return errors
-
-
-def add_error(field_name, message, errors):
-    if field_name in errors:
-        errors[field_name].append(message)
-    else:
-        errors[field_name] = [message]
 
     return errors
