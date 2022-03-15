@@ -71,7 +71,7 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .utils import FeatureQuery, validate_webhooks
+from .utils import FeatureQuery
 
 
 #
@@ -1456,7 +1456,7 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
     def clean(self):
         data = super().clean()
 
-        errors = validate_webhooks(
+        conflicts = Webhook.check_for_conflicts(
             instance=self.instance,
             content_types=self.cleaned_data.get("content_types"),
             payload_url=self.cleaned_data.get("payload_url"),
@@ -1465,8 +1465,8 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
             type_delete=self.cleaned_data.get("type_delete"),
         )
 
-        if errors:
-            raise ValidationError(errors)
+        if conflicts:
+            raise ValidationError(conflicts)
 
         return data
 

@@ -55,7 +55,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.api.fields import StatusSerializerField
-from nautobot.extras.utils import FeatureQuery, validate_webhooks
+from nautobot.extras.utils import FeatureQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -1061,7 +1061,7 @@ class WebhookSerializer(ValidatedModelSerializer):
     def validate(self, data):
         validated_data = super().validate(data)
 
-        errors = validate_webhooks(
+        conflicts = Webhook.check_for_conflicts(
             instance=self.instance,
             content_types=data.get("content_types"),
             payload_url=data.get("payload_url"),
@@ -1070,7 +1070,7 @@ class WebhookSerializer(ValidatedModelSerializer):
             type_delete=data.get("type_delete"),
         )
 
-        if errors:
-            raise serializers.ValidationError(errors)
+        if conflicts:
+            raise serializers.ValidationError(conflicts)
 
         return validated_data
