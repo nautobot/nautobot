@@ -1,3 +1,5 @@
+import time
+
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
@@ -243,9 +245,9 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
-        self.browser.find_by_id("id_cf_test_valid_json_field").type("test")
-        active_web_element = self.browser.driver.switch_to_active_element()
-        # Type valid JSON data into the form
+        self.browser.find_by_id("id_cf_test_valid_json_field").first.type("test")
+        active_web_element = self.browser.driver.switch_to.active_element
+        # Type invalid JSON data into the form
         active_web_element.send_keys('{"test_json_key": "Test JSON Value"}')
         self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
         self.assertTrue(self.browser.is_text_present("Test Device"))
@@ -269,8 +271,8 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
-        self.browser.find_by_id("id_cf_test_invalid_json_field").type("test")
-        active_web_element = self.browser.driver.switch_to_active_element()
+        self.browser.find_by_id("id_cf_test_invalid_json_field").first.type("test")
+        active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
         active_web_element.send_keys('{test_json_key: "Test Invalid JSON Value"}')
         self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
