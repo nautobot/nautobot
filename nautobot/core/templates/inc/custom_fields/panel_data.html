@@ -23,7 +23,7 @@
                                     Show/Hide
                                 </button>
                             </p>
-                            <pre class="collapse" id="cf_{{ field.name | slugify }}"><code>{{ value|render_json }}</code><q>qq</q></pre>
+                            <pre class="collapse" id="cf_{{ field.name | slugify }}"><code>{{ value|render_json }}</code></pre>
                         {% elif value or value == 0 %}
                             {{ value }}
                         {% elif field.required %}
