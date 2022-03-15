@@ -230,9 +230,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(new_group.get_group_members_url(), "")
 
     def test_map_filter_fields(self):
-        """Test `DynamicGroup._map_filter_fields()`."""
+        """Test `DynamicGroup._map_filter_fields`."""
         group = self.groups[0]
-        fields = group._map_filter_fields()
+        fields = group._map_filter_fields
 
         # Test that it's a dict with or without certain key fields.
         self.assertIsInstance(fields, dict)
