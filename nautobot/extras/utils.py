@@ -219,6 +219,8 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     )
 
     return (job_model, created)
+
+
 def validate_webhooks(instance, content_types, payload_url, type_create, type_update, type_delete):
     """
     Validate webhooks
