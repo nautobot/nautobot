@@ -228,7 +228,7 @@ def validate_webhooks(instance, content_types, payload_url, type_create, type_up
     Return:
         errors (dict): Returns a dict of errors if any
     """
-    from nautobot.extras.models.models import Webhook
+    from nautobot.extras.models import Webhook
 
     errors = {}
     webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
