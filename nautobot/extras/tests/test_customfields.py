@@ -62,7 +62,22 @@ class CustomFieldTest(TestCase):
             },
             {
                 "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": {"test": "json type"},
+                "field_value": {"dict_key": "key value"},
+                "empty_value": "",
+            },
+            {
+                "field_type": CustomFieldTypeChoices.TYPE_JSON,
+                "field_value": ["a", "list"],
+                "empty_value": "",
+            },
+            {
+                "field_type": CustomFieldTypeChoices.TYPE_JSON,
+                "field_value": "A string",
+                "empty_value": "",
+            },
+            {
+                "field_type": CustomFieldTypeChoices.TYPE_JSON,
+                "field_value": None,
                 "empty_value": "",
             },
         )

@@ -15,7 +15,7 @@
                             <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
                         {% elif field.type == 'multi-select' and value %}
                             {{ value|join:", " }}
-                        {% elif field.type == 'json' and value %}
+                        {% elif field.type == 'json' and value is not None %}
                             <p>
                                 <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
                                         data-target="#cf_{{ field.name | slugify }}" aria-expanded="false"
