@@ -2,14 +2,34 @@ import graphene
 import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
-from nautobot.dcim.graphql.mixins import PathEndpointMixin
-from nautobot.dcim.models import Cable, CablePath, ConsoleServerPort, Device, Interface, Rack, Site
+from nautobot.dcim.graphql.mixins import CablePeerEndpointMixin, PathEndpointMixin
+from nautobot.dcim.models import (
+    Cable,
+    CablePath,
+    ConsolePort,
+    ConsoleServerPort,
+    Device,
+    FrontPort,
+    Interface,
+    PowerFeed,
+    PowerOutlet,
+    PowerPort,
+    Rack,
+    RearPort,
+    Site,
+)
 from nautobot.dcim.filters import (
     CableFilterSet,
     ConsoleServerPortFilterSet,
+    ConsolePortFilterSet,
     DeviceFilterSet,
+    FrontPortFilterSet,
     InterfaceFilterSet,
+    PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerPortFilterSet,
     RackFilterSet,
+    RearPortFilterSet,
     SiteFilterSet,
 )
 from nautobot.extras.graphql.types import TagType  # noqa: F401
@@ -42,7 +62,7 @@ class RackType(gql_optimizer.OptimizedDjangoObjectType):
         exclude = ["images"]
 
 
-class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
     class Meta:
@@ -61,7 +81,15 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
         return self.ip_addresses.all()
 
 
-class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
+    """Graphql Type Object for ConsolePort model."""
+
+    class Meta:
+        model = ConsolePort
+        filterset_class = ConsolePortFilterSet
+
+
+class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
     """Graphql Type Object for ConsoleServerPort model."""
 
     class Meta:
@@ -100,22 +128,76 @@ class CablePathType(gql_optimizer.OptimizedDjangoObjectType):
         model = CablePath
 
 
+class FrontPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin):
+    """Graphql Type Object for ConsoleServerPort model."""
+
+    class Meta:
+        model = FrontPort
+        filterset_class = FrontPortFilterSet
+
+
+class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
+    """Graphql Type Object for ConsoleServerPort model."""
+
+    class Meta:
+        model = PowerFeed
+        filterset_class = PowerFeedFilterSet
+
+
+class PowerOutletType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+    """Graphql Type Object for ConsoleServerPort model."""
+
+    class Meta:
+        model = PowerOutlet
+        filterset_class = PowerOutletFilterSet
+
+
+class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
+    """Graphql Type Object for ConsoleServerPort model."""
+
+    class Meta:
+        model = PowerPort
+        filterset_class = PowerPortFilterSet
+
+
+class RearPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin):
+    """Graphql Type Object for ConsoleServerPort model."""
+
+    class Meta:
+        model = RearPort
+        filterset_class = RearPortFilterSet
+
+
 class CableTerminationTypes(graphene.Union):
-    """GraphQL type for models that can terminate a Circuit."""
+    """GraphQL type for models that can be terminated on a cable."""
 
     class Meta:
         types = (
-            InterfaceType,
+            ConsolePortType,
             ConsoleServerPortType,
             CircuitTerminationType,
+            FrontPortType,
+            InterfaceType,
+            PowerFeedType,
+            PowerOutletType,
+            PowerPortType,
+            RearPortType,
         )
 
     @classmethod
     def resolve_type(cls, instance, info):
-        if type(instance).__name__ == "Interface":
-            return InterfaceType
-        elif type(instance).__name__ == "CircuitTermination":
-            return CircuitTerminationType
-        elif type(instance).__name__ == "ConsoleServerPort":
-            return ConsoleServerPortType
+        type_mapping = {
+            "ConsolePort": ConsolePortType,
+            "ConsoleServerPort": ConsoleServerPortType,
+            "CircuitTermination": CircuitTerminationType,
+            "FrontPort": FrontPortType,
+            "Interface": InterfaceType,
+            "PowerFeed": PowerFeedType,
+            "PowerOutlet": PowerOutletType,
+            "PowerPort": PowerPortType,
+            "RearPort": RearPortType,
+        }
+        if type(instance).__name__ in type_mapping:
+            return type_mapping[type(instance).__name__]
+
         return None
