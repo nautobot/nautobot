@@ -169,7 +169,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Test that we can get a full queryset
         qs = group.get_queryset()
-        devices = group.content_type.model_class().objects.filter(site=device1.site)
+        devices = group.model.objects.filter(site=device1.site)
 
         # Expect a single-member qs/list of Device names (only `device1`)
         expected = [device1.name]
@@ -178,17 +178,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(list(map(str, devices)), expected)
         self.assertEqual(list(map(str, qs)), expected)
         self.assertEqual(list(qs), list(devices))
-
-        # ... or just a flat list of UUIDs (with `flat=True` passed)
-        qs_flat = group.get_queryset(flat=True)
-        devices_flat = devices.values_list("pk", flat=True)
-
-        # Expect a single-member qs/list of Device UUIDs (only `device1`)
-        expected = [device1.pk]
-        self.assertIn(device1.pk, devices_flat)
-        self.assertIn(device1.pk, qs_flat)
-        self.assertEqual(list(devices_flat), expected)
-        self.assertEqual(sorted(qs_flat), expected)
 
     def test_model(self):
         """Test `DynamicGroup.model`."""
@@ -227,13 +216,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Setting the content_type will now allow `.base_url` to be accessed.
         new_group.content_type = self.device_ct
         self.assertEqual(new_group.base_url, reverse("dcim:device_list"))
-
-    def test_urlencode(self):
-        """Test `DynamicGroup.urlencode()`."""
-        group = self.groups[0]
-        params = group.urlencode(group.filter)
-        expected = "site=site-1"
-        self.assertEqual(params, expected)
 
     def test_get_group_members_url(self):
         """Test `DynamicGroup.get_group_members_url()."""

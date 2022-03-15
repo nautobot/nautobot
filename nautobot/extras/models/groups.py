@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
+from django.utils.functional import cached_property
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
@@ -108,7 +109,7 @@ class DynamicGroup(OrganizationalModel):
         if getattr(self, "_object_classes_mapped", False):
             return True
 
-        # Try to set the object classes for thie model.
+        # Try to set the object classes for this model.
         try:
             self.filterset_class = get_filterset_for_model(model)
             self.filterform_class = get_form_for_model(model, form_prefix="Filter")
@@ -124,6 +125,7 @@ class DynamicGroup(OrganizationalModel):
 
         return self._object_classes_mapped
 
+    @cached_property
     def _map_filter_fields(self):
         """Return all FilterForm fields in a dictionary."""
 
@@ -156,7 +158,7 @@ class DynamicGroup(OrganizationalModel):
                 logger.debug("Skipping excluded form field: %s", missing_field)
                 continue
 
-            # In some cases, fields exist in the model form AND by another name # in the filter form
+            # In some cases, fields exist in the model form AND by another name in the filter form
             # (e.g. model form: `cluster` -> filterset: `cluster_id`) yet are omitted from the
             # filter form (e.g. filter form has "cluster_id" but not "cluster"). We only want to add
             # them if-and-only-if they aren't already in `filterform_fields`.
@@ -216,18 +218,18 @@ class DynamicGroup(OrganizationalModel):
 
     def get_filter_fields(self):
         """Return a mapping of `{field_name: filter_field}` for this group's `content_type`."""
-        # Fail cleaninly until the object has been created.
+        # Fail cleanly until the object has been created.
         if self.model is None:
             return {}
 
         if not self.present_in_database:
             return {}
 
-        return self._map_filter_fields()
+        return self._map_filter_fields
 
-    def get_queryset(self, flat=False):
+    def get_queryset(self):
         """
-        Return a queryset for the `content_type` model of thhis group.
+        Return a queryset for the `content_type` model of this group.
 
         The queryset is generated based on the `filterset_class` for the Model.
         """
@@ -244,19 +246,16 @@ class DynamicGroup(OrganizationalModel):
         if self.present_in_database and model == self.__class__:
             qs = qs.exclude(pk=self.pk)
 
-        # If `flat` is desired, return a flat list of "pk".
-        if flat:
-            qs = qs.values_list("pk", flat=True)
-
         return qs
 
     @property
     def members(self):
+        """Return the member objects for this group."""
         return self.get_queryset()
 
     @property
     def count(self):
-        """Return the number of objects in the group."""
+        """Return the number of member objects in this group."""
         return self.get_queryset().count()
 
     def get_absolute_url(self):
@@ -264,25 +263,12 @@ class DynamicGroup(OrganizationalModel):
 
     @property
     def base_url(self):
+        """Return the list route name for this group's `content_type'."""
         if self.model is None:
             return ""
 
-        model = self.content_type.model_class()
-        route_name = get_route_for_model(model, "list")
+        route_name = get_route_for_model(self.model, "list")
         return reverse(route_name)
-
-    def urlencode(self, filter_params):
-        """
-        Given a `filter_params` dict, return a URL-encoded HTTP query string.
-
-        For example:
-            >>> dg = DynamicGroup.objects.first()
-            >>> filter_params = {"site": ["ams01", "bkk01"], "has_primary_ip": True}
-            >>> dg.urlencode(filter_params)
-            site=ams01&site=bkk01&has_primary_ip=True'
-
-        """
-        return urllib.parse.urlencode(filter_params, doseq=True)
 
     def get_group_members_url(self):
         """Get URL to group members."""
@@ -290,7 +276,7 @@ class DynamicGroup(OrganizationalModel):
             return ""
 
         base_url = self.base_url
-        filter_str = self.urlencode(self.filter)
+        filter_str = urllib.parse.urlencode(self.filter, doseq=True)
 
         if filter_str is not None:
             base_url += f"?{filter_str}"
@@ -393,6 +379,9 @@ class DynamicGroup(OrganizationalModel):
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
 
         This form is used to popoulate and validate the filter dictionary.
+
+        If a form cannot be created for some reason (such as on a new instance when rendering the UI
+        "add" view), this will return `None`.
         """
         filter_fields = self.get_filter_fields()
 
@@ -416,6 +405,7 @@ class DynamicGroup(OrganizationalModel):
         if not isinstance(self.filter, dict):
             raise ValidationError({"filter": "Filter must be a dict"})
 
+        # Accessing `self.model` will determine if the `content_type` is not correctly set, blocking validation.
         if self.model is None:
             raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
 
