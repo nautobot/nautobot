@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -5,7 +6,7 @@ from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, PrimaryModelRelatedContentType
 from nautobot.core.models import BaseModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.fields import ColorField
@@ -22,6 +23,15 @@ from nautobot.utilities.fields import ColorField
     "relationships",
 )
 class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+    content_types = models.ManyToManyField(
+        to=ContentType,
+        related_name="tags",
+        # verbose_name="Content type(s)",
+        limit_choices_to=PrimaryModelRelatedContentType(),
+        help_text="The content type(s) to which this tag applies.",
+        null=True,
+        blank=True
+    )
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,

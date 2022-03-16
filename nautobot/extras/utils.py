@@ -80,6 +80,52 @@ class FeatureQuery:
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
 
 
+@deconstructible
+class PrimaryModelRelatedContentType:
+    """
+    Helper class to get ContentType models that are subclasses of PrimaryModel
+    """
+
+    def get_content_types(self):
+        """
+        Get a list of Content types which models are subclasses of PrimaryModel
+        """
+        from nautobot.core.models.generics import PrimaryModel
+
+        content_types = [
+            content_type
+            for content_type in ContentType.objects.all()
+            if content_type.model_class() and issubclass(content_type.model_class(), PrimaryModel)
+        ]
+
+        content_type_dict = {}
+
+        for content_type in content_types:
+            content_type_dict.setdefault(content_type.app_label, []).append(content_type.model)
+
+        return content_type_dict.items()
+
+    def __call__(self):
+        return self.get_query()
+
+    @property
+    def as_queryset(self):
+        return ContentType.objects.filter(self.get_query())
+
+    def get_query(self):
+        """
+        Given an extras feature, return a Q object for content type lookup
+        """
+        query = Q()
+        for app_label, models in self.get_content_types():
+            query |= Q(app_label=app_label, model__in=models)
+
+        return query
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
+
+
 def extras_features(*features):
     """
     Decorator used to register extras provided features to a model

@@ -32,6 +32,14 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Content Type(s)</td>
+                        <td>
+                            {% for ct in content_types %}
+                                {{ ct }}<br>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Description</td>
                         <td>
                             {{ object.description|placeholder }}

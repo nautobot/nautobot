@@ -71,7 +71,7 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .utils import FeatureQuery
+from .utils import FeatureQuery, PrimaryModelRelatedContentType
 
 
 #
@@ -1386,10 +1386,13 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
 class TagForm(NautobotModelForm):
     slug = SlugField()
+    content_types = MultipleContentTypeField(
+        label="Content Type(s)", queryset=PrimaryModelRelatedContentType().as_queryset, required=False,
+    )
 
     class Meta:
         model = Tag
-        fields = ["name", "slug", "color", "description"]
+        fields = ["name", "slug", "color", "description", "content_types"]
 
 
 class TagCSVForm(CustomFieldModelCSVForm):
@@ -1415,6 +1418,12 @@ class AddRemoveTagsForm(forms.Form):
 class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Tag
     q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+        queryset=PrimaryModelRelatedContentType().as_queryset,
+    )
 
 
 class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
