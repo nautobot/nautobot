@@ -197,6 +197,12 @@ class ModelViewSetMixin:
         """
         super().initial(request, *args, **kwargs)
 
+        # Django Rest Framework stores the raw API version string e.g. "1.2" as request.version.
+        # For convenience we split it out into integer major/minor versions as well.
+        major, minor = request.version.split(".")
+        request.major_version = int(major)
+        request.minor_version = int(minor)
+
         self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):

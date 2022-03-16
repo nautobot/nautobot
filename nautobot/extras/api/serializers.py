@@ -602,7 +602,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
         model = Job
@@ -749,7 +749,7 @@ class JobClassSerializer(serializers.Serializer):
     description = serializers.CharField(max_length=255, required=False, read_only=True)
     test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
     vars = serializers.SerializerMethodField(read_only=True)
-    result = NestedJobResultSerializer()
+    result = NestedJobResultSerializer(required=False)
 
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
