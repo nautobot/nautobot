@@ -1387,7 +1387,9 @@ class StatusModelCSVFormMixin(CSVModelForm):
 class TagForm(NautobotModelForm):
     slug = SlugField()
     content_types = MultipleContentTypeField(
-        label="Content Type(s)", queryset=PrimaryModelRelatedContentType().as_queryset, required=False,
+        label="Content Type(s)",
+        queryset=PrimaryModelRelatedContentType().as_queryset,
+        required=False,
     )
 
     class Meta:

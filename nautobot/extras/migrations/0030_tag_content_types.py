@@ -7,14 +7,20 @@ import nautobot.extras.utils
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('contenttypes', '0002_remove_content_type_name'),
-        ('extras', '0029_dynamicgroup'),
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("extras", "0029_dynamicgroup"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tag',
-            name='content_types',
-            field=models.ManyToManyField(blank=True, limit_choices_to=nautobot.extras.utils.PrimaryModelRelatedContentType(), null=True, related_name='tags', to='contenttypes.ContentType'),
+            model_name="tag",
+            name="content_types",
+            field=models.ManyToManyField(
+                blank=True,
+                limit_choices_to=nautobot.extras.utils.PrimaryModelRelatedContentType(),
+                null=True,
+                related_name="tags",
+                to="contenttypes.ContentType",
+            ),
         ),
     ]

@@ -30,7 +30,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
         limit_choices_to=PrimaryModelRelatedContentType(),
         help_text="The content type(s) to which this tag applies.",
         null=True,
-        blank=True
+        blank=True,
     )
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
