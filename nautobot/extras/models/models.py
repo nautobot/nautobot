@@ -752,6 +752,12 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
     @classmethod
     def check_for_conflicts(cls, instance, content_types, payload_url, type_create, type_update, type_delete):
+        """
+        Helper method for enforcing uniqueness.
+
+        Don't allow two webhooks with the same content_type, same payload_url, and any action(s) in common.
+        Called by WebhookForm.clean() and WebhookSerializer.validate()
+        """
 
         conflicts = {}
         webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
