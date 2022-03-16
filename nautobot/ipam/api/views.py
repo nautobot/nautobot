@@ -1,6 +1,6 @@
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -122,8 +122,8 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
             return serializers.PrefixLengthSerializer
         return super().get_serializer_class()
 
-    @swagger_auto_schema(method="get", responses={200: serializers.AvailablePrefixSerializer(many=True)})
-    @swagger_auto_schema(method="post", responses={201: serializers.PrefixSerializer(many=False)})
+    @extend_schema(methods=["get"], responses={200: serializers.AvailablePrefixSerializer(many=True)})
+    @extend_schema(methods=["post"], responses={201: serializers.PrefixSerializer(many=False)})
     @action(detail=True, url_path="available-prefixes", methods=["get", "post"])
     def available_prefixes(self, request, pk=None):
         """
@@ -196,17 +196,17 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 
             return Response(serializer.data)
 
-    @swagger_auto_schema(method="get", responses={200: serializers.AvailableIPSerializer(many=True)})
-    @swagger_auto_schema(
-        method="post",
+    @extend_schema(methods=["get"], responses={200: serializers.AvailableIPSerializer(many=True)})
+    @extend_schema(
+        methods=["post"],
         responses={201: serializers.AvailableIPSerializer(many=True)},
-        request_body=serializers.AvailableIPSerializer(many=True),
+        request=serializers.AvailableIPSerializer(many=True),
     )
     @action(
         detail=True,
         url_path="available-ips",
         methods=["get", "post"],
-        queryset=IPAddress.objects.all(),
+        # queryset=IPAddress.objects.all(),
     )
     def available_ips(self, request, pk=None):
         """

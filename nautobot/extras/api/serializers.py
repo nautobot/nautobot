@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from drf_yasg.utils import swagger_serializer_method
+from drf_spectacular.utils import extend_schema_field
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.extras.models.secrets import SecretsGroupAssociation
 from rest_framework import serializers
@@ -258,7 +258,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -298,7 +298,7 @@ class ConfigContextSchemaSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -320,7 +320,7 @@ class ContentTypeSerializer(serializers.ModelSerializer):
         model = ContentType
         fields = ["id", "url", "app_label", "model", "display"]
 
-    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
         return obj.app_labeled_name
 
@@ -454,7 +454,7 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
             "file_extension",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -580,7 +580,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
         return data
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_parent(self, obj):
 
         # Static mapping of models to their nested serializers
@@ -823,7 +823,7 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
             "object_data",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_changed_object(self, obj):
         """
         Serialize a nested representation of the changed object.

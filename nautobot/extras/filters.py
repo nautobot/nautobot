@@ -360,7 +360,7 @@ class CustomFieldFilterSet(BaseFilterSet):
         label="Search",
     )
     content_types = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_fields").get_choices,
+        choices=FeatureQuery("custom_fields").get_choices(),
     )
 
     class Meta:
@@ -457,7 +457,7 @@ class CustomLinkFilterSet(BaseFilterSet):
 
 class DynamicGroupFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(method="search", label="Search")
-    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
+    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices(), conjoined=False)
 
     class Meta:
         model = DynamicGroup
@@ -781,9 +781,9 @@ class ObjectChangeFilterSet(BaseFilterSet):
 
 class RelationshipFilterSet(BaseFilterSet):
 
-    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices(), conjoined=False)
     destination_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("relationships").get_choices, conjoined=False
+        choices=FeatureQuery("relationships").get_choices(), conjoined=False
     )
 
     class Meta:
@@ -799,9 +799,9 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Relationship (slug)",
     )
-    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices(), conjoined=False)
     destination_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("relationships").get_choices, conjoined=False
+        choices=FeatureQuery("relationships").get_choices(), conjoined=False
     )
 
     class Meta:
@@ -923,7 +923,7 @@ class StatusFilterSet(NautobotFilterSet):
         label="Search",
     )
     content_types = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("statuses").get_choices,
+        choices=FeatureQuery("statuses").get_choices(),
     )
 
     class Meta:
@@ -986,7 +986,7 @@ class WebhookFilterSet(BaseFilterSet):
         label="Search",
     )
     content_types = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("webhooks").get_choices,
+        choices=FeatureQuery("webhooks").get_choices(),
     )
 
     class Meta:

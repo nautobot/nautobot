@@ -162,6 +162,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
     "DEFAULT_VERSION": "1.2",
@@ -175,6 +176,20 @@ REST_FRAMEWORK = {
         "bulk_destroy": "bulk_delete",
     },
     "VIEW_NAME_FUNCTION": "nautobot.utilities.api.get_view_name",
+}
+
+
+#
+# drf_spectacular (OpenAPI/Swagger)
+#
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Nautobot API",
+    "DESCRIPTION": "Source of truth and network automation platform",
+    # use sidecar - locally packaged UI files, not CDN
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
 }
 
 
@@ -295,7 +310,8 @@ INSTALLED_APPS = [
     "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
-    "drf_yasg",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "graphene_django",
     "health_check",
     "health_check.cache",

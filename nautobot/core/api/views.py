@@ -18,8 +18,7 @@ from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
-from drf_yasg.openapi import Schema, TYPE_OBJECT, TYPE_ARRAY
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema
 from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
@@ -172,7 +171,6 @@ class ModelViewSetMixin:
                 logger.debug(f"Nested serializer for {self.queryset.model} not found!")
 
         # Fall back to the hard-coded serializer class
-        logger.debug(f"Using serializer {self.serializer_class}")
         return self.serializer_class
 
     def get_queryset(self):
@@ -461,15 +459,15 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     def get_backend(self, request):
         return self.backend
 
-    @swagger_auto_schema(
-        request_body=serializers.GraphQLAPISerializer,
-        operation_description="Query the database using a GraphQL query",
+    @extend_schema(
+        request=serializers.GraphQLAPISerializer,
+        description="Query the database using a GraphQL query",
         responses={
-            200: Schema(type=TYPE_OBJECT, properties={"data": Schema(type=TYPE_OBJECT)}),
-            400: Schema(
-                type=TYPE_OBJECT,
-                properties={"errors": Schema(type=TYPE_ARRAY, items={"type": TYPE_OBJECT})},
-            ),
+            200: {"type": "object", "properties": {"data": {"type": "object"}}},
+            400: {
+                "type": "object",
+                "properties": {"errors": {"type": "array", "items": {"type": "object"}}},
+            },
         },
     )
     def post(self, request, *args, **kwargs):

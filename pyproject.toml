@@ -83,7 +83,6 @@ django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.13.1"
 # Swagger schema generation for the REST API
-drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
 GitPython = "~3.1.27"
 # GraphQL support
@@ -126,6 +125,7 @@ social-auth-core = {version = "~4.2.0", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+drf-spectacular = {version = "~0.21.2", extras = ["sidecar"]}
 
 
 [tool.poetry.extras]

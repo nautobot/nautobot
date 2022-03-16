@@ -1,11 +1,13 @@
 from collections import OrderedDict
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 
 
+@extend_schema_field({"value": "any", "label": "string"})
 class ChoiceField(serializers.Field):
     """
     Represent a ChoiceField as {'value': <DB value>, 'label': <string>}. Accepts a single value on write.
