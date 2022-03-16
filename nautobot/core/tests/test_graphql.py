@@ -17,7 +17,7 @@ from graphql import get_default_backend
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from nautobot.circuits.models import Provider
+from nautobot.circuits.models import Provider, CircuitTermination
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_schema_type,
@@ -1269,6 +1269,41 @@ query {
             # TODO: it would be nice to have connections to console server ports and circuit terminations to test!
             self.assertIsNone(interface_entry["connected_console_server_port"])
             self.assertIsNone(interface_entry["connected_circuit_termination"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_cable_peer(self):
+        """Test querying interfaces for their cable peers"""
+
+        query = """\
+query {
+    interfaces {
+        id
+        cable_peer_circuit_termination { id }
+        cable_peer_interface { id }
+        cable_peer_front_port { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for interface_entry in result.data["interfaces"]:
+            intf_obj = Interface.objects.get(id=interface_entry["id"])
+            cable_peer = intf_obj.get_cable_peer()
+
+            # Extract Expected Properties from Interface object
+            cable_peer_circuit_termination = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, CircuitTermination) else None
+            )
+            cable_peer_interface = {"id": str(cable_peer.id)} if isinstance(cable_peer, Interface) else None
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(interface_entry["cable_peer_circuit_termination"], cable_peer_circuit_termination)
+            self.assertEqual(interface_entry["cable_peer_interface"], cable_peer_interface)
+            self.assertEqual(interface_entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(interface_entry["cable_peer_rear_port"], cable_peer_rear_port)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_mode(self):

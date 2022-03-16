@@ -2,7 +2,7 @@ import graphene
 import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
-from nautobot.dcim.graphql.mixins import CablePeerEndpointMixin, PathEndpointMixin
+from nautobot.dcim.graphql.mixins import PathEndpointMixin
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -62,41 +62,6 @@ class RackType(gql_optimizer.OptimizedDjangoObjectType):
         exclude = ["images"]
 
 
-class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
-    """Graphql Type Object for Interface model."""
-
-    class Meta:
-        model = Interface
-        filterset_class = InterfaceFilterSet
-        exclude = ["_name"]
-
-    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
-
-    # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
-    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
-    @gql_optimizer.resolver_hints(
-        model_field="ip_addresses",
-    )
-    def resolve_ip_addresses(self, args):
-        return self.ip_addresses.all()
-
-
-class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
-    """Graphql Type Object for ConsolePort model."""
-
-    class Meta:
-        model = ConsolePort
-        filterset_class = ConsolePortFilterSet
-
-
-class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
-    """Graphql Type Object for ConsoleServerPort model."""
-
-    class Meta:
-        model = ConsoleServerPort
-        filterset_class = ConsoleServerPortFilterSet
-
-
 class CableType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Cable model."""
 
@@ -128,44 +93,317 @@ class CablePathType(gql_optimizer.OptimizedDjangoObjectType):
         model = CablePath
 
 
-class FrontPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin):
+class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+    """Graphql Type Object for Interface model."""
+
+    class Meta:
+        model = Interface
+        filterset_class = InterfaceFilterSet
+        exclude = ["_name"]
+
+    cable_peer_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
+    cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
+    cable_peer_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
+    cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
+    connected_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
+    connected_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
+    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
+
+    def resolve_cable_peer_circuit_termination(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "CircuitTermination":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_front_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "FrontPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_interface(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "Interface":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_rear_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "RearPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_circuit_termination(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "CircuitTermination":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_interface(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "Interface":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
+    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
+    @gql_optimizer.resolver_hints(
+        model_field="ip_addresses",
+    )
+    def resolve_ip_addresses(self, args):
+        return self.ip_addresses.all()
+
+
+class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+    """Graphql Type Object for ConsolePort model."""
+
+    class Meta:
+        model = ConsolePort
+        filterset_class = ConsolePortFilterSet
+
+    cable_peer_console_server_port = graphene.Field("nautobot.dcim.graphql.types.ConsoleServerPortType")
+    cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
+    cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
+    connected_console_server_port = graphene.Field("nautobot.dcim.graphql.types.ConsoleServerPortType")
+
+    def resolve_cable_peer_console_server_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "ConsoleServerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_front_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "FrontPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_rear_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "RearPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_console_server_port(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "ConsoleServerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+
+class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
     """Graphql Type Object for ConsoleServerPort model."""
+
+    class Meta:
+        model = ConsoleServerPort
+        filterset_class = ConsoleServerPortFilterSet
+
+    cable_peer_console_port = graphene.Field("nautobot.dcim.graphql.types.ConsolePortType")
+    cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
+    cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
+    connected_console_port = graphene.Field("nautobot.dcim.graphql.types.ConsolePortType")
+
+    def resolve_cable_peer_console_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "ConsolePort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_front_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "FrontPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_rear_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "RearPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_console_port(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "ConsolePort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+
+class FrontPortType(gql_optimizer.OptimizedDjangoObjectType):
+    """Graphql Type Object for FrontPort model."""
 
     class Meta:
         model = FrontPort
         filterset_class = FrontPortFilterSet
 
+    cable_peer_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
+    cable_peer_console_port = graphene.Field("nautobot.dcim.graphql.types.ConsolePortType")
+    cable_peer_console_server_port = graphene.Field("nautobot.dcim.graphql.types.ConsoleServerPortType")
+    cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
+    cable_peer_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
+    cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
 
-class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
-    """Graphql Type Object for ConsoleServerPort model."""
+    def resolve_cable_peer_circuit_termination(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "CircuitTermination":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_console_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "ConsolePort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_console_server_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "ConsoleServerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_front_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "FrontPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_interface(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "Interface":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_rear_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "RearPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+
+class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+    """Graphql Type Object for PowerFeed model."""
 
     class Meta:
         model = PowerFeed
         filterset_class = PowerFeedFilterSet
 
+    cable_peer_power_port = graphene.Field("nautobot.dcim.graphql.types.PowerPortType")
+    connected_power_port = graphene.Field("nautobot.dcim.graphql.types.PowerPortType")
+
+    def resolve_cable_peer_power_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "PowerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_power_port(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "PowerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
 
 class PowerOutletType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
-    """Graphql Type Object for ConsoleServerPort model."""
+    """Graphql Type Object for PowerOutlet model."""
 
     class Meta:
         model = PowerOutlet
         filterset_class = PowerOutletFilterSet
 
+    cable_peer_power_port = graphene.Field("nautobot.dcim.graphql.types.PowerPortType")
+    connected_power_port = graphene.Field("nautobot.dcim.graphql.types.PowerPortType")
 
-class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin, PathEndpointMixin):
-    """Graphql Type Object for ConsoleServerPort model."""
+    def resolve_cable_peer_power_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "PowerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_power_port(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "PowerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+
+class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+    """Graphql Type Object for PowerPort model."""
 
     class Meta:
         model = PowerPort
         filterset_class = PowerPortFilterSet
 
+    cable_peer_power_feed = graphene.Field("nautobot.dcim.graphql.types.PowerFeedType")
+    cable_peer_power_outlet = graphene.Field("nautobot.dcim.graphql.types.PowerOutletType")
+    connected_power_feed = graphene.Field("nautobot.dcim.graphql.types.PowerFeedType")
+    connected_power_outlet = graphene.Field("nautobot.dcim.graphql.types.PowerOutletType")
 
-class RearPortType(gql_optimizer.OptimizedDjangoObjectType, CablePeerEndpointMixin):
-    """Graphql Type Object for ConsoleServerPort model."""
+    def resolve_cable_peer_power_feed(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "PowerFeed":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_power_outlet(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "PowerOutlet":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_power_feed(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "PowerFeed":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_connected_power_outlet(self, args):
+        peer = self.connected_endpoint
+        if peer and type(peer).__name__ == "PowerOutlet":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+
+class RearPortType(gql_optimizer.OptimizedDjangoObjectType):
+    """Graphql Type Object for RearPort model."""
 
     class Meta:
         model = RearPort
         filterset_class = RearPortFilterSet
+
+    cable_peer_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
+    cable_peer_console_port = graphene.Field("nautobot.dcim.graphql.types.ConsolePortType")
+    cable_peer_console_server_port = graphene.Field("nautobot.dcim.graphql.types.ConsoleServerPortType")
+    cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
+    cable_peer_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
+
+    def resolve_cable_peer_circuit_termination(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "CircuitTermination":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_console_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "ConsolePort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_console_server_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "ConsoleServerPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_front_port(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "FrontPort":  # type built-in used to avoid class loading
+            return peer
+        return None
+
+    def resolve_cable_peer_interface(self, args):
+        peer = self.get_cable_peer()
+        if type(peer).__name__ == "Interface":  # type built-in used to avoid class loading
+            return peer
+        return None
 
 
 class CableTerminationTypes(graphene.Union):
@@ -186,18 +424,31 @@ class CableTerminationTypes(graphene.Union):
 
     @classmethod
     def resolve_type(cls, instance, info):
-        type_mapping = {
-            "ConsolePort": ConsolePortType,
-            "ConsoleServerPort": ConsoleServerPortType,
-            "CircuitTermination": CircuitTerminationType,
-            "FrontPort": FrontPortType,
-            "Interface": InterfaceType,
-            "PowerFeed": PowerFeedType,
-            "PowerOutlet": PowerOutletType,
-            "PowerPort": PowerPortType,
-            "RearPort": RearPortType,
-        }
-        if type(instance).__name__ in type_mapping:
-            return type_mapping[type(instance).__name__]
+        if type(instance).__name__ == "ConsolePort":
+            return ConsolePortType
+
+        if type(instance).__name__ == "ConsoleServerPort":
+            return ConsoleServerPortType
+
+        if type(instance).__name__ == "CircuitTermination":
+            return CircuitTerminationType
+
+        if type(instance).__name__ == "FrontPort":
+            return FrontPortType
+
+        if type(instance).__name__ == "Interface":
+            return InterfaceType
+
+        if type(instance).__name__ == "PowerFeed":
+            return PowerFeedType
+
+        if type(instance).__name__ == "PowerOutlet":
+            return PowerOutletType
+
+        if type(instance).__name__ == "PowerPort":
+            return PowerPortType
+
+        if type(instance).__name__ == "RearPort":
+            return RearPortType
 
         return None
