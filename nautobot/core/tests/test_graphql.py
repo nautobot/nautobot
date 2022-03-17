@@ -32,11 +32,13 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
-from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices
+from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import (
     Cable,
+    ConsolePort,
+    ConsoleServerPort,
     Device,
     DeviceRole,
     DeviceType,
@@ -675,6 +677,16 @@ class GraphQLQueryTest(TestCase):
             RearPort.objects.create(device=cls.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
         )
 
+        cls.device_1_console_ports = (
+            ConsolePort.objects.create(device=cls.device1, name="Console Port 1", type=ConsolePortTypeChoices.TYPE_RJ45),
+            ConsolePort.objects.create(device=cls.device1, name="Console Port 2", type=ConsolePortTypeChoices.TYPE_RJ45),
+        )
+
+        cls.device_1_console_server_ports = (
+            ConsoleServerPort.objects.create(device=cls.device1, name="Console Port 1", type=ConsolePortTypeChoices.TYPE_RJ45),
+            ConsoleServerPort.objects.create(device=cls.device1, name="Console Port 2", type=ConsolePortTypeChoices.TYPE_RJ45),
+        )
+
         cls.device1_frontports = [
             FrontPort.objects.create(
                 device=cls.device1,
@@ -856,6 +868,70 @@ class GraphQLQueryTest(TestCase):
             return document.execute(context_value=self.request)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_circuit_terminations_cable_peer(self):
+        """Test querying circuit terminations for their cable peers"""
+
+        query = """\
+query {
+    circuit_terminations {
+        id
+        cable_peer_circuit_termination { id }
+        cable_peer_front_port { id }
+        cable_peer_interface { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for circuit_term_entry in result.data["circuit_terminations"]:
+            circuit_term_obj = CircuitTermination.objects.get(id=circuit_term_entry["id"])
+            cable_peer = circuit_term_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_circuit_termination = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, CircuitTermination) else None
+            )
+            cable_peer_interface = {"id": str(cable_peer.id)} if isinstance(cable_peer, Interface) else None
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(circuit_term_entry["cable_peer_circuit_termination"], cable_peer_circuit_termination)
+            self.assertEqual(circuit_term_entry["cable_peer_interface"], cable_peer_interface)
+            self.assertEqual(circuit_term_entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(circuit_term_entry["cable_peer_rear_port"], cable_peer_rear_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_circuit_termination_connected_endpoint(self):
+        """Test querying circuit terminations for their connnected endpoints."""
+
+        query = """\
+query {
+    circuit_terminations {
+        id
+        connected_circuit_termination { id }
+        connected_interface { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for circuit_term_entry in result.data["circuit_terminations"]:
+            circuit_term_obj = CircuitTermination.objects.get(id=circuit_term_entry["id"])
+            connected_endpoint = circuit_term_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_circuit_termination = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, CircuitTermination) else None
+            )
+            connected_interface = {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, Interface) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(circuit_term_entry["connected_circuit_termination"], connected_circuit_termination)
+            self.assertEqual(circuit_term_entry["connected_interface"], connected_interface)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context_and_custom_field_data(self):
 
         query = """
@@ -895,6 +971,62 @@ class GraphQLQueryTest(TestCase):
         self.assertIsInstance(custom_field_data[0], dict)
         self.assertEqual(custom_field_data[0], {})
         self.assertEqual(result.data["device"]["_custom_field_data"], {})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_console_port_cable_peer(self):
+        """Test querying console port terminations for their cable peers"""
+
+        query = """\
+query {
+    console_ports {
+        id
+        cable_peer_console_server_port { id }
+        cable_peer_front_port { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for console_port_entry in result.data["console_ports"]:
+            console_port_obj = ConsolePort.objects.get(id=console_port_entry["id"])
+            cable_peer = console_port_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_console_server_port = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, ConsoleServerPort) else None
+            )
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(console_port_entry["cable_peer_console_server_port"], cable_peer_console_server_port)
+            self.assertEqual(console_port_entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(console_port_entry["cable_peer_rear_port"], cable_peer_rear_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_console_port_connected_endpoint(self):
+        """Test querying console ports for their connnected endpoints."""
+
+        query = """\
+query {
+    console_ports {
+        id
+        connected_console_server_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for console_port_entry in result.data["console_ports"]:
+            console_port_obj = ConsolePort.objects.get(id=console_port_entry["id"])
+            connected_endpoint = console_port_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_console_server_port = {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, ConsoleServerPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(console_port_entry["connected_console_server_port"], connected_console_server_port)
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1266,8 +1398,7 @@ query {
                     interface_entry["connected_endpoint"]["device"]["name"],
                     interface_entry["connected_interface"]["device"]["name"],
                 )
-            # TODO: it would be nice to have connections to console server ports and circuit terminations to test!
-            self.assertIsNone(interface_entry["connected_console_server_port"])
+            # TODO: it would be nice to have connections to circuit terminations to test!
             self.assertIsNone(interface_entry["connected_circuit_termination"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
