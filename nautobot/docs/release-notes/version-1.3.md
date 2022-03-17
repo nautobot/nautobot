@@ -40,6 +40,10 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
+#### JSON Type for Custom Fields
+
+Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
+
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
 A [data model](../models/circuits/providernetwork.md) has been added to support representing the termination of a circuit to an external provider's network.
@@ -47,10 +51,6 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 #### Python 3.10 Support ([#1255](https://github.com/nautobot/nautobot/pull/1255))
 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
-
-#### JSON Type for Custom Fields
-
-Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
 
 ### Changed
 

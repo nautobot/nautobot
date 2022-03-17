@@ -17,6 +17,7 @@ Nautobot supports these custom field types:
 * Boolean: True or false
 * Date: A date in ISO 8601 format (YYYY-MM-DD)
 * URL: This will be presented as a link in the web UI
+* JSON: Arbitrary JSON data
 * Selection: A selection of one of several pre-defined custom choices
 * Multiple selection: A selection field which supports the assignment of multiple values
 
@@ -39,6 +40,7 @@ Nautobot supports limited custom validation for custom field values. Following a
 
 * Text: Regular expression (optional)
 * Integer: Minimum and/or maximum value (optional)
+* JSON: If not empty, this field must contain valid JSON data
 * Selection: Must exactly match one of the prescribed choices
   * Selection Fields: Regular expression (optional)
 
