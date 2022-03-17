@@ -50,8 +50,7 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 
 #### JSON Type for Custom Fields
 
-A custom field can now have a type of "json" which will render with a button to toggle this data view in an object's
-detail page in the UI. Simple string searching of these fields is available from the object list view's filter form.
+Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
 
 ### Changed
 
