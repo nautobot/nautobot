@@ -4,15 +4,17 @@ from django.urls import reverse
 from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
 from nautobot.extras.models import CustomFieldModel, ObjectChange
+from nautobot.extras.models.mixins import DynamicGroupMixin
 from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 @extras_features(
     "custom_links",
+    "dynamic_groups",
     "graphql",
     "webhooks",
 )
-class ExampleModel(BaseModel):
+class ExampleModel(BaseModel, DynamicGroupMixin):
     name = models.CharField(max_length=20, help_text="The name of this Example.")
     number = models.IntegerField(default=100, help_text="The number of this Example.")
 
@@ -46,8 +48,9 @@ class ExampleModel(BaseModel):
 
 @extras_features(
     "custom_fields",
+    "dynamic_groups",
 )
-class AnotherExampleModel(BaseModel, CustomFieldModel):
+class AnotherExampleModel(BaseModel, CustomFieldModel, DynamicGroupMixin):
     name = models.CharField(max_length=20)
     number = models.IntegerField(default=100)
 

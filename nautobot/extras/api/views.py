@@ -222,12 +222,12 @@ class DynamicGroupViewSet(ModelViewSet):
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
-    # FIXME(jathan): Figure out how to do `request_body` serializer based on the
-    # content_type of the DynamicGroup? Likely a `DynamicGroupMemberSerializer`
-    # that emits the appropriate serializer? This seems messy.
-    # @swagger_auto_schema(method="get", request_body=serializers.GitRepositorySerializer)
+    # FIXME(jathan): Figure out how to do dynamic `responses` serializer based on the `content_type`
+    # of the DynamicGroup? May not be possible or even desirable to have a "dynamic schema".
+    # @swagger_auto_schema(method="get", responses={200: member_response})
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
+        """List member objects of the same type as the `content_type` for this dynamic group."""
         instance = get_object_or_404(self.queryset, pk=pk)
 
         # Retrieve the serializer for the content_type and paginate the results
