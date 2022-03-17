@@ -48,6 +48,11 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
 
+#### JSON Type for Custom Fields
+
+A custom field can now have a type of "json" which will render with a button to toggle this data view in an object's
+detail page in the UI. Simple string searching of these fields is available from the object list view's filter form.
+
 ### Changed
 
 #### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
