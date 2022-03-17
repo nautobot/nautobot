@@ -10,6 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
+from django.forms.widgets import TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
@@ -372,13 +373,14 @@ class CustomField(BaseModel, ChangeLoggedModel):
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
-    def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False):
+    def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
         """
         Return a form field suitable for setting a CustomField's value for an object.
 
         set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
         enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
         for_csv_import: Return a form field suitable for bulk import of objects in CSV format.
+        simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False
@@ -426,7 +428,11 @@ class CustomField(BaseModel, ChangeLoggedModel):
 
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
-            field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=initial)
+
+            if simple_json_filter:
+                field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
+            else:
+                field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=initial)
 
         # Select or Multi-select
         else:
