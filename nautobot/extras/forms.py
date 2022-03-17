@@ -36,7 +36,6 @@ from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
     CustomFieldFilterLogicChoices,
-    CustomFieldTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
