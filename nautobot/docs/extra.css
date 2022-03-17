@@ -20,6 +20,6 @@ td {
 
 /* Fixes disappearing UI on the left column on RTD */
 .rst-versions .rst-current-version {
-    padding-top: 0;
-    padding-bottom: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
 }
