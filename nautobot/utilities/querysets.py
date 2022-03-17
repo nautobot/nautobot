@@ -1,4 +1,5 @@
-from django.db.models import Q, QuerySet, IntegrityError, transaction
+from django.db import IntegrityError, transaction
+from django.db.models import Q, QuerySet
 from django.db.models.utils import resolve_callables
 
 from nautobot.utilities.permissions import permission_is_exempt
