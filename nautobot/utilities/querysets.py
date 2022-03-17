@@ -1,4 +1,5 @@
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, IntegrityError, transaction
+from django.db.models.utils import resolve_callables
 
 from nautobot.utilities.permissions import permission_is_exempt
 
@@ -41,3 +42,46 @@ class RestrictedQuerySet(QuerySet):
             qs = self.filter(attrs)
 
         return qs
+
+    def validated_create(self, **kwargs):
+        """Overload of create() to call validated_save()."""
+        obj = self.model(**kwargs)
+        self._for_write = True
+        obj.validated_save(force_insert=True, using=self.db)
+        return obj
+
+    def validated_get_or_create(self, defaults=None, **kwargs):
+        """Overload of get_or_create() to call validated_create()."""
+        # The get() needs to be targeted at the write database in order
+        # to avoid potential transaction consistency problems.
+        self._for_write = True
+        try:
+            return self.get(**kwargs), False
+        except self.model.DoesNotExist:
+            params = self._extract_model_params(defaults, **kwargs)
+            # Try to create an object using passed params.
+            try:
+                with transaction.atomic(using=self.db):
+                    params = dict(resolve_callables(params))
+                    return self.validated_create(**params), True
+            except IntegrityError:
+                try:
+                    return self.get(**kwargs), False
+                except self.model.DoesNotExist:
+                    pass
+                raise
+
+    def validated_update_or_create(self, defaults=None, **kwargs):
+        """Overload of update_or_create() to call validated_create()."""
+        defaults = defaults or {}
+        self._for_write = True
+        with transaction.atomic(using=self.db):
+            # Lock the row so that a concurrent update is blocked until
+            # update_or_create() has performed its save.
+            obj, created = self.select_for_update().validated_get_or_create(defaults, **kwargs)
+            if created:
+                return obj, created
+            for k, v in resolve_callables(defaults):
+                setattr(obj, k, v)
+            obj.save(using=self.db)
+        return obj, False
