@@ -596,15 +596,9 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
         Otherwise, same as ModelViewSetMixin.
         """
-        if request.user.is_authenticated and self.action == "approve":
-            # extras.approve_job permission will be applied by the view function itself
-            self.queryset = self.queryset.restrict(request.user, "change")
-        elif request.user.is_authenticated and self.action == "deny":
-            # extras.approve_job permission will be applied by the view function itself
-            self.queryset = self.queryset.restrict(request.user, "delete")
-        elif request.user.is_authenticated and self.action == "dry-run":
-            # extras.run_job permission will be applied by the view function itself
-            self.queryset = self.queryset.restrict(request.user, "view")
+        action_to_method = {"approve": "change", "deny": "delete", "dry-run": "view"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
         else:
             super().restrict_queryset(request, *args, **kwargs)
 
