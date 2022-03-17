@@ -78,6 +78,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#881](https://github.com/nautobot/nautobot/issues/881) - Improved the UX of the main Jobs list by adding accordion style interface that can collapse/expand jobs provided by each module
 - [#885](https://github.com/nautobot/nautobot/issues/885) - Added the ability to define a `soft_time_limit` and `time_limit` in seconds as attributes of a Job's `Meta`.
 - [#894](https://github.com/nautobot/nautobot/issues/894) - Added the ability to view computed fields in an object list.
+- [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
 - [#898](https://github.com/nautobot/nautobot/issues/898) - Added support for moving a CustomField, Relationship or ComputedField from the main tab of an object's detail page in the UI to the "Advanced" tab.
 - [#1001](https://github.com/nautobot/nautobot/issues/1001) - Added Job database model and associated functionality.
 - [#1109](https://github.com/nautobot/nautobot/issues/1109) - Added pagination support for GraphQL list queries.
