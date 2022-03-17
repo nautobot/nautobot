@@ -594,13 +594,17 @@ class CustomFieldFilterForm(forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
         for cf in custom_fields:
             field_name = "cf_{}".format(cf.name)
-            self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
+            if cf.type == "json":
+                self.fields[field_name] = cf.to_form_field(
+                    set_initial=True, enforce_required=False, simple_json_filter=True
+                )
+            else:
+                self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
 
 
 #
