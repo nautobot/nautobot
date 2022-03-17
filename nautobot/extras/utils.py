@@ -6,6 +6,7 @@ import logging
 import pkgutil
 import sys
 
+from django.apps import apps
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -81,29 +82,22 @@ class FeatureQuery:
 
 
 @deconstructible
-class PrimaryModelRelatedContentType:
+class ModelSubclassesQuery:
     """
-    Helper class to get ContentType models that are subclasses of PrimaryModel
+    Helper class to get ContentType models that are subclasses of self.klass
     """
 
-    def get_content_types(self):
+    # TODO: Make ModelSubclassesQuery reusable by adding a klass arg to ___init__.
+    # Instead of geting the subclasses of only PrimaryModel, the subclasses
+    # of any class provided can be generated e.g ModelSubclassesQuery(RelationshipModel)
+
+    def list_subclasses(self):
         """
-        Get a list of Content types which models are subclasses of PrimaryModel
+        Return a list of classes that inherits from PrimaryModel
         """
         from nautobot.core.models.generics import PrimaryModel
 
-        content_types = [
-            content_type
-            for content_type in ContentType.objects.all()
-            if content_type.model_class() and issubclass(content_type.model_class(), PrimaryModel)
-        ]
-
-        content_type_dict = {}
-
-        for content_type in content_types:
-            content_type_dict.setdefault(content_type.app_label, []).append(content_type.model)
-
-        return content_type_dict.items()
+        return [_class for _class in apps.get_models() if issubclass(_class, PrimaryModel)]
 
     def __call__(self):
         return self.get_query()
@@ -117,8 +111,8 @@ class PrimaryModelRelatedContentType:
         Given an extras feature, return a Q object for content type lookup
         """
         query = Q()
-        for app_label, models in self.get_content_types():
-            query |= Q(app_label=app_label, model__in=models)
+        for model in self.list_subclasses():
+            query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
 
         return query
 

@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.utils import FeatureQuery, PrimaryModelRelatedContentType
+from nautobot.extras.utils import FeatureQuery, ModelSubclassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -965,7 +965,7 @@ class TagFilterSet(NautobotFilterSet):
         label="Search",
     )
     content_types = ContentTypeMultipleChoiceFilter(
-        choices=PrimaryModelRelatedContentType().get_choices,
+        choices=ModelSubclassesQuery().get_choices,
     )
 
     class Meta:
