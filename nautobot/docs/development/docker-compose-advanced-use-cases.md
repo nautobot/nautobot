@@ -96,7 +96,7 @@ After these two files are created, you can use the `invoke` tasks to manage the 
 
 By default the Docker development environment is configured to use a PostgreSQL container as the database backend. For development or testing purposes, you might optionally choose to use MySQL instead. In order to do so, you need to make the following changes to your environment:
 
-- Set up `invoke.yml` as described above and use it to overide the postgres docker-compose file:
+- Set up `invoke.yml` as described above and use it to override the postgres docker-compose file:
 
 ```yaml
 ---
