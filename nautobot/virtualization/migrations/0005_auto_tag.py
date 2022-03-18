@@ -7,24 +7,26 @@ import nautobot.extras.models.tags
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0031_auto_tag_taggeditem'),
-        ('virtualization', '0004_auto_slug'),
+        ("extras", "0031_auto_tag_taggeditem"),
+        ("virtualization", "0004_auto_slug"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cluster',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="cluster",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='virtualmachine',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="virtualmachine",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='vminterface',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(related_name='vminterface', through='extras.TaggedItem', to='extras.Tag'),
+            model_name="vminterface",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(
+                related_name="vminterface", through="extras.TaggedItem", to="extras.Tag"
+            ),
         ),
     ]

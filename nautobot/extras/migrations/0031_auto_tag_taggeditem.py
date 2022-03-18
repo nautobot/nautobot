@@ -7,23 +7,23 @@ import nautobot.extras.models.tags
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0030_tag_content_types'),
+        ("extras", "0030_tag_content_types"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='gitrepository',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="gitrepository",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='job',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="job",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='secret',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="secret",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
     ]

@@ -7,29 +7,29 @@ import nautobot.extras.models.tags
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0031_auto_tag_taggeditem'),
-        ('circuits', '0007_circuitterminations_primary_model'),
+        ("extras", "0031_auto_tag_taggeditem"),
+        ("circuits", "0007_circuitterminations_primary_model"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='circuit',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="circuit",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='circuittermination',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="circuittermination",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='provider',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="provider",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='providernetwork',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="providernetwork",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
     ]

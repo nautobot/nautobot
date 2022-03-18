@@ -7,44 +7,44 @@ import nautobot.extras.models.tags
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0031_auto_tag_taggeditem'),
-        ('ipam', '0005_auto_slug'),
+        ("extras", "0031_auto_tag_taggeditem"),
+        ("ipam", "0005_auto_slug"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='aggregate',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="aggregate",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='ipaddress',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="ipaddress",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='prefix',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="prefix",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='routetarget',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="routetarget",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='service',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="service",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='vlan',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="vlan",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='vrf',
-            name='tags',
-            field=nautobot.extras.models.tags.TaggableManagerField(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="vrf",
+            name="tags",
+            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
         ),
     ]
