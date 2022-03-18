@@ -140,6 +140,12 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.10 (2022-MM-DD)
+
+### Changed
+
+- [#1514](https://github.com/nautobot/nautobot/pull/1514) - Simplified switching between PostgreSQL and MySQL database backends in the developer environment.
+
 ## v1.2.9 (2022-03-14)
 
 ### Fixed
