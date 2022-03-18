@@ -1457,6 +1457,23 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
             "ca_file_path",
         )
 
+    def clean(self):
+        data = super().clean()
+
+        conflicts = Webhook.check_for_conflicts(
+            instance=self.instance,
+            content_types=self.cleaned_data.get("content_types"),
+            payload_url=self.cleaned_data.get("payload_url"),
+            type_create=self.cleaned_data.get("type_create"),
+            type_update=self.cleaned_data.get("type_update"),
+            type_delete=self.cleaned_data.get("type_delete"),
+        )
+
+        if conflicts:
+            raise ValidationError(conflicts)
+
+        return data
+
 
 class WebhookFilterForm(BootstrapMixin, forms.Form):
     model = Webhook

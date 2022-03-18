@@ -1057,3 +1057,20 @@ class WebhookSerializer(ValidatedModelSerializer):
             "ssl_verification",
             "ca_file_path",
         ]
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        conflicts = Webhook.check_for_conflicts(
+            instance=self.instance,
+            content_types=data.get("content_types"),
+            payload_url=data.get("payload_url"),
+            type_create=data.get("type_create"),
+            type_update=data.get("type_update"),
+            type_delete=data.get("type_delete"),
+        )
+
+        if conflicts:
+            raise serializers.ValidationError(conflicts)
+
+        return validated_data
