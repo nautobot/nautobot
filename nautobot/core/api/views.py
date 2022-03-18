@@ -46,19 +46,23 @@ HTTP_ACTIONS = {
 }
 
 
+#
+# Mixins
+#
+
+
 class NautobotAPIVersionMixin:
     """Add Nautobot-specific handling to the base APIView class."""
 
     def finalize_response(self, request, response, *args, **kwargs):
         """Returns the final response object."""
         response = super().finalize_response(request, response, *args, **kwargs)
-        # Add the API version to the response
-        response["API-Version"] = request.version
+        try:
+            # Add the API version to the response, if available
+            response["API-Version"] = request.version
+        except AttributeError:
+            pass
         return response
-
-#
-# Mixins
-#
 
 
 class BulkUpdateModelMixin:
@@ -229,11 +233,11 @@ class ModelViewSetMixin:
 
 
 class ModelViewSet(
+    NautobotAPIVersionMixin,
     BulkUpdateModelMixin,
     BulkDestroyModelMixin,
-    NautobotAPIVersionMixin,
     ModelViewSetMixin,
-    ModelViewSet_
+    ModelViewSet_,
 ):
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.

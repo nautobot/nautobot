@@ -1258,6 +1258,7 @@ class JobTestVersion13(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
+
     model = Job
     brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "source", "url"]
     choices_fields = None
