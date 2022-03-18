@@ -142,6 +142,10 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ## v1.2.10 (2022-MM-DD)
 
+### Added
+
+- [#1492](https://github.com/nautobot/nautobot/pull/1492) - Added note in the Jobs documentation about the use of `AbortTransaction` to end the job and force rollback.
+
 ### Changed
 
 - [#1514](https://github.com/nautobot/nautobot/pull/1514) - Simplified switching between PostgreSQL and MySQL database backends in the developer environment.
