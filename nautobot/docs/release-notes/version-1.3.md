@@ -49,6 +49,10 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
 
+#### Job Approval Now Controlled By `extras.approve_job` Permission ([#1490](https://github.com/nautobot/nautobot/pull/1490))
+
+Similar to the existing `extras.run_job` permission, a new `extras.approve_job` permission is now enforced by the UI and the REST API when approving scheduled jobs. Only users with this permission can approve or deny approval requests; additionally such users also now require the `extras.view_scheduledjob`, `extras.change_scheduledjob`, and `extras.delete_scheduledjob` permissions as well.
+
 ### Fixed
 
 ### Removed
