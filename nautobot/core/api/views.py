@@ -46,6 +46,16 @@ HTTP_ACTIONS = {
 }
 
 
+class NautobotAPIVersionMixin:
+    """Add Nautobot-specific handling to the base APIView class."""
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Returns the final response object."""
+        response = super().finalize_response(request, response, *args, **kwargs)
+        # Add the API version to the response
+        response["API-Version"] = request.version
+        return response
+
 #
 # Mixins
 #
@@ -218,7 +228,13 @@ class ModelViewSetMixin:
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
 
-class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixin, ModelViewSet_):
+class ModelViewSet(
+    BulkUpdateModelMixin,
+    BulkDestroyModelMixin,
+    NautobotAPIVersionMixin,
+    ModelViewSetMixin,
+    ModelViewSet_
+):
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
     """
@@ -271,7 +287,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixi
         return super().perform_destroy(instance)
 
 
-class ReadOnlyModelViewSet(ModelViewSetMixin, ReadOnlyModelViewSet_):
+class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyModelViewSet_):
     """
     Extend DRF's ReadOnlyModelViewSet to support queryset restriction.
     """
@@ -282,7 +298,7 @@ class ReadOnlyModelViewSet(ModelViewSetMixin, ReadOnlyModelViewSet_):
 #
 
 
-class APIRootView(APIView):
+class APIRootView(NautobotAPIVersionMixin, APIView):
     """
     This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
     """
@@ -342,7 +358,7 @@ class APIRootView(APIView):
         )
 
 
-class StatusView(APIView):
+class StatusView(NautobotAPIVersionMixin, APIView):
     """
     A lightweight read-only endpoint for conveying the current operational status.
     """
@@ -391,7 +407,7 @@ class StatusView(APIView):
 #
 
 
-class GraphQLDRFAPIView(APIView):
+class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     """
     API View for GraphQL to integrate properly with DRF authentication mecanism.
     The code is a stripped down version of graphene-django default View
