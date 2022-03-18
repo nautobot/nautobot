@@ -207,15 +207,15 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filterform_class, DeviceFilterForm)
         self.assertEqual(group.form_class, DeviceForm)
 
-    def test_base_url(self):
-        """Test `DynamicGroup.base_url`."""
-        # New instances should not have a map unless `content_type` is set.
+    def test_members_base_url(self):
+        """Test `DynamicGroup.members_base_url`."""
+        # New instances should not have `members_base_url` unless `content_type` is set.
         new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
-        self.assertEqual(new_group.base_url, "")
+        self.assertEqual(new_group.members_base_url, "")
 
-        # Setting the content_type will now allow `.base_url` to be accessed.
+        # Setting the content_type will now allow `.members_base_url` to be accessed.
         new_group.content_type = self.device_ct
-        self.assertEqual(new_group.base_url, reverse("dcim:device_list"))
+        self.assertEqual(new_group.members_base_url, reverse("dcim:device_list"))
 
     def test_get_group_members_url(self):
         """Test `DynamicGroup.get_group_members_url()."""

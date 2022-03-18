@@ -116,6 +116,7 @@ class DynamicGroup(OrganizationalModel):
             self.form_class = get_form_for_model(model)
         # Fail closed.
         except TypeError:
+            logger.debug("Failed to map object classes for model %s", model)
             self.filterset_class = None
             self.filterform_class = None
             self.form_class = None
@@ -262,7 +263,7 @@ class DynamicGroup(OrganizationalModel):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
     @property
-    def base_url(self):
+    def members_base_url(self):
         """Return the list route name for this group's `content_type'."""
         if self.model is None:
             return ""
@@ -275,13 +276,13 @@ class DynamicGroup(OrganizationalModel):
         if self.model is None:
             return ""
 
-        base_url = self.base_url
+        url = self.members_base_url
         filter_str = urllib.parse.urlencode(self.filter, doseq=True)
 
         if filter_str is not None:
-            base_url += f"?{filter_str}"
+            url += f"?{filter_str}"
 
-        return base_url
+        return url
 
     def set_filter(self, form_data):
         """
