@@ -670,11 +670,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     def deny(self, request, pk):
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
 
-        if not (
-            Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve")
-            # A user can deny (revoke) their own approval requests, even without general job-approval permission
-            or request.user == scheduled_job.user
-        ):
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
             raise PermissionDenied("You do not have permission to deny this request.")
 
         scheduled_job.delete()
