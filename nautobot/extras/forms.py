@@ -323,7 +323,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
     tenant_groups = DynamicModelMultipleChoiceField(queryset=TenantGroup.objects.all(), required=False)
     tenants = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
     data = JSONField(label="")
 
     class Meta:
@@ -775,8 +775,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         choices=get_git_datasource_content_choices,
     )
 
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = GitRepository
         fields = [
@@ -929,8 +927,6 @@ class JobForm(BootstrapMixin, forms.Form):
 
 class JobEditForm(NautobotModelForm):
     slug = SlugField()
-
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Job
@@ -1212,8 +1208,6 @@ class SecretForm(NautobotModelForm):
     provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
-
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Secret

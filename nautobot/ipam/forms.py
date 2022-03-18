@@ -12,7 +12,6 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
@@ -73,7 +72,6 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VRF
@@ -143,8 +141,6 @@ class VRFFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
 
 
 class RouteTargetForm(NautobotModelForm, TenancyForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = RouteTarget
         fields = [
@@ -244,7 +240,6 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
 class AggregateForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Aggregate
@@ -375,7 +370,6 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
         },
     )
     role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Prefix
@@ -635,7 +629,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         },
     )
     primary_for_parent = forms.BooleanField(required=False, label="Make this the primary IP for the device/VM")
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = IPAddress
@@ -758,7 +751,6 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, Custo
         required=False,
         label="VRF",
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = IPAddress
@@ -1041,7 +1033,6 @@ class VLANForm(NautobotModelForm, TenancyForm):
         query_params={"site_id": "$site"},
     )
     role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VLAN
@@ -1181,7 +1172,6 @@ class ServiceForm(NautobotModelForm):
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Service
