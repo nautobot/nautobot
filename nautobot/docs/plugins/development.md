@@ -78,7 +78,7 @@ Version [0.1.0]:
 Description []:  An example Nautobot plugin
 Author [, n to skip]:  Bob Jones
 License []:  Apache 2.0
-Compatible Python versions [^3.8]:  ^3.6
+Compatible Python versions [^3.8]:  ^3.7
 
 Would you like to define your main dependencies interactively? (yes/no) [yes] no
 Would you like to define your development dependencies interactively? (yes/no) [yes] no

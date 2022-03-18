@@ -7,6 +7,7 @@ EXTRAS_FEATURES = [
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_template_owners",
     "export_templates",
     "graphql",

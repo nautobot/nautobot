@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -77,6 +78,7 @@ from .nested_serializers import (  # noqa: F401
     NestedConfigContextSerializer,
     NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
+    NestedDynamicGroupSerializer,
     NestedExportTemplateSerializer,
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
@@ -391,6 +393,31 @@ class CustomLinkSerializer(ValidatedModelSerializer):
             "button_class",
             "new_window",
         )
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        model = DynamicGroup
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "description",
+            "content_type",
+            "filter",
+        ]
+        extra_kwargs = {"filter": {"read_only": False}}
 
 
 #

@@ -1,11 +1,11 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory
 from django.urls.base import reverse
-from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
@@ -18,6 +18,7 @@ from nautobot.utilities.forms import (
     BulkEditForm,
     BulkEditNullBooleanSelect,
     ColorSelect,
+    CSVContentTypeField,
     CSVModelChoiceField,
     CSVModelForm,
     CSVMultipleChoiceField,
@@ -51,6 +52,7 @@ from .models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -299,7 +301,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
 class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
     model = ComputedField
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
+    content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content Type",
@@ -592,13 +594,30 @@ class CustomFieldFilterForm(forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
         for cf in custom_fields:
             field_name = "cf_{}".format(cf.name)
-            self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
+            if cf.type == "json":
+                self.fields[field_name] = cf.to_form_field(
+                    set_initial=True, enforce_required=False, simple_json_filter=True
+                )
+            else:
+                self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
+
+
+#
+# Nautobot base form for use in most new custom model forms.
+#
+
+
+class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """
+    This class exists to combine common functionality and is used to inherit from throughout the
+    codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are
+    needed.
+    """
 
 
 #
@@ -629,11 +648,43 @@ class CustomLinkForm(BootstrapMixin, forms.ModelForm):
 class CustomLinkFilterForm(BootstrapMixin, forms.Form):
     model = CustomLink
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
+    content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content Type",
     )
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupForm(NautobotModelForm):
+    """DynamicGroup model form."""
+
+    slug = SlugField()
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+        label="Content Type",
+    )
+
+    class Meta:
+        model = DynamicGroup
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "content_type",
+        ]
+
+
+class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
+    """DynamicGroup filter form."""
+
+    model = DynamicGroup
+    q = forms.CharField(required=False, label="Search")
+    content_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, label="Content Type")
 
 
 #
@@ -664,7 +715,7 @@ class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
 class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
     model = ExportTemplate
     q = forms.CharField(required=False, label="Search")
-    content_type = forms.ModelChoiceField(
+    content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
             "app_label", "model"
         ),
@@ -680,15 +731,6 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
 
 def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
-
-
-class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
-    """
-    This class exists to combine common functionality and is used to inherit from throughout
-    the codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are needed.
-    """
-
-    pass
 
 
 class PasswordInputWithPlaceholder(forms.PasswordInput):

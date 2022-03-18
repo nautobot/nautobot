@@ -438,6 +438,7 @@ class Platform(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -782,6 +783,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.rack.name if self.rack else None,
             self.position,
             self.get_face_display(),
+            self.secrets_group.name if self.secrets_group else None,
             self.comments,
         )
 

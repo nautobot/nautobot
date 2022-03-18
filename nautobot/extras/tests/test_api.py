@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -502,6 +503,102 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
             weight=100,
             new_window=False,
         )
+
+
+class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
+    model = DynamicGroup
+    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "API DynamicGroup 4",
+            "slug": "api-dynamicgroup-4",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-1"]},
+        },
+        {
+            "name": "API DynamicGroup 5",
+            "slug": "api-dynamicgroup-5",
+            "content_type": "dcim.device",
+            "filter": {"has_interfaces": False},
+        },
+        {
+            "name": "API DynamicGroup 6",
+            "slug": "api-dynamicgroup-6",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-2"]},
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create the objects required for devices.
+        sites = [
+            Site.objects.create(name="Site 1", slug="site-1"),
+            Site.objects.create(name="Site 2", slug="site-2"),
+            Site.objects.create(name="Site 3", slug="site-3"),
+        ]
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="device Type 1",
+            slug="device-type-1",
+        )
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        status_active = Status.objects.get(slug="active")
+        status_planned = Status.objects.get(slug="planned")
+        Device.objects.create(
+            name="device-site-1",
+            status=status_active,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[0],
+        )
+        Device.objects.create(
+            name="device-site-2",
+            status=status_active,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[1],
+        )
+        Device.objects.create(
+            name="device-site-3",
+            status=status_planned,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[2],
+        )
+
+        # Then the DynamicGroups.
+        content_type = ContentType.objects.get_for_model(Device)
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 1",
+            slug="api-dynamicgroup-1",
+            content_type=content_type,
+            filter={"status": ["active"]},
+        )
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 2",
+            slug="api-dynamicgroup-2",
+            content_type=content_type,
+            filter={"status": ["planned"]},
+        )
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 3",
+            slug="api-dynamicgroup-3",
+            content_type=content_type,
+            filter={"site": ["site-3"]},
+        )
+
+    def test_get_members(self):
+        """Test that the `/members/` API endpoint returns what is expected."""
+        self.add_permissions("extras.view_dynamicgroup")
+        instance = DynamicGroup.objects.first()
+        member_count = instance.members.count()
+        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(member_count, len(response.json()["results"]))
 
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):

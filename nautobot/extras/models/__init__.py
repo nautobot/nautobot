@@ -2,6 +2,7 @@ from .change_logging import ChangeLoggedModel, ObjectChange
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
+from .groups import DynamicGroup
 from .jobs import (
     Job,
     JobLogEntry,
@@ -22,7 +23,7 @@ from .models import (
     ImageAttachment,
     Webhook,
 )
-from .relationships import Relationship, RelationshipModel, RelationshipAssociation
+from .relationships import Relationship, RelationshipAssociation, RelationshipModel
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from .tags import Tag, TaggedItem
 
@@ -36,6 +37,7 @@ __all__ = (
     "CustomFieldChoice",
     "CustomFieldModel",
     "CustomLink",
+    "DynamicGroup",
     "ExportTemplate",
     "FileAttachment",
     "FileProxy",

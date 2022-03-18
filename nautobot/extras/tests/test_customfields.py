@@ -60,6 +60,26 @@ class CustomFieldTest(TestCase):
                 "field_value": "http://example.com/",
                 "empty_value": "",
             },
+            {
+                "field_type": CustomFieldTypeChoices.TYPE_JSON,
+                "field_value": {"dict_key": "key value"},
+                "empty_value": "",
+            },
+            {
+                "field_type": CustomFieldTypeChoices.TYPE_JSON,
+                "field_value": ["a", "list"],
+                "empty_value": "",
+            },
+            {
+                "field_type": CustomFieldTypeChoices.TYPE_JSON,
+                "field_value": "A string",
+                "empty_value": "",
+            },
+            {
+                "field_type": CustomFieldTypeChoices.TYPE_JSON,
+                "field_value": None,
+                "empty_value": "",
+            },
         )
 
         obj_type = ContentType.objects.get_for_model(Site)
