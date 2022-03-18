@@ -3,6 +3,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
+from taggit.managers import TaggableManager
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
@@ -10,6 +11,7 @@ from nautobot.extras.utils import extras_features, ModelSubclassesQuery
 from nautobot.core.models import BaseModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.fields import ColorField
+from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
 
 
 #
@@ -53,6 +55,21 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
     def to_csv(self):
         return (self.name, self.slug, self.color, self.description)
+
+
+class TaggableManagerField(TaggableManager):
+    """
+    Helper class for overriding TaggableManager formfield method
+    """
+
+    def formfield(self, form_class=DynamicModelMultipleChoiceField, **kwargs):
+        defaults = {
+            "queryset": Tag.objects.all(),
+            "required": False,
+            "query_params": {"content_types": self.model._meta.label_lower},
+        }
+        kwargs.update(defaults)
+        return super().formfield(form_class, **kwargs)
 
 
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):

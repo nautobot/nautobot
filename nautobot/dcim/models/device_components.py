@@ -6,7 +6,6 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-from taggit.managers import TaggableManager
 
 
 from nautobot.dcim.choices import (
@@ -32,6 +31,7 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
+    TaggableManagerField,
     TaggedItem,
 )
 from nautobot.extras.utils import extras_features
@@ -68,7 +68,7 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
     description = models.CharField(max_length=200, blank=True)
-    tags = TaggableManager(through=TaggedItem)
+    tags = TaggableManagerField(through=TaggedItem)
 
     class Meta:
         abstract = True

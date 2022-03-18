@@ -2,7 +2,6 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
-from taggit.managers import TaggableManager
 
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
@@ -10,6 +9,7 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     StatusModel,
+    TaggableManagerField,
     TaggedItem,
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -420,7 +420,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         object_id_field="assigned_object_id",
         related_query_name="vminterface",
     )
-    tags = TaggableManager(through=TaggedItem, related_name="vminterface")
+    tags = TaggableManagerField(through=TaggedItem, related_name="vminterface")
 
     csv_headers = [
         "virtual_machine",
