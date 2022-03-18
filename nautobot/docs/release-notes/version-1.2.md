@@ -149,6 +149,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Changed
 
 - [#1514](https://github.com/nautobot/nautobot/pull/1514) - Simplified switching between PostgreSQL and MySQL database backends in the developer environment.
+- [#1518](https://github.com/nautobot/nautobot/pull/1518) - Updated GitHub Pull Request template to include detail section, todo list.
 
 ## v1.2.9 (2022-03-14)
 
