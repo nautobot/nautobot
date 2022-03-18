@@ -13,6 +13,7 @@ from django.utils.text import slugify
 from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
+from nautobot.dcim.models import Site
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
 from nautobot.extras.models import ChangeLoggedModel, ObjectChange, Tag
 from nautobot.users.models import ObjectPermission
@@ -194,7 +195,12 @@ class TestCase(_TestCase):
         """
         Create and return a Tag instance for each name given.
         """
-        return [Tag.objects.create(name=name, slug=slugify(name)) for name in names]
+        tags = [Tag.objects.create(name=name, slug=slugify(name)) for name in names]
+
+        for _tag in tags:
+            _tag.content_types.add(ContentType.objects.get_for_model(Site))
+
+        return tags
 
 
 class ModelTestCase(TestCase):

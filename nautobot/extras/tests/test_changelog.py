@@ -160,9 +160,13 @@ class ChangeLogAPITest(APITestCase):
         CustomFieldChoice.objects.create(field=cf_select, value="Foo")
 
         # Create some tags
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
 
         self.statuses = Status.objects.get_for_model(Site)
 

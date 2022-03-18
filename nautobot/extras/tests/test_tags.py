@@ -11,6 +11,13 @@ class TaggedItemTest(APITestCase):
     Test the application of Tags to and item (a Site, for example) upon creation (POST) and modification (PATCH).
     """
 
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        # for tag in tags:
+        #     tag.content_types.add(ContentType.objects.get_for_model(Site))
+
     def test_create_tagged_item(self):
         tags = self.create_tags("Foo", "Bar", "Baz")
         data = {
@@ -34,8 +41,8 @@ class TaggedItemTest(APITestCase):
             slug="test-site",
             status=Status.objects.get(slug="active"),
         )
+        self.create_tags("New Tag", "Foo", "Bar", "Baz")
         site.tags.add("Foo", "Bar", "Baz")
-        self.create_tags("New Tag")
         data = {
             "tags": [
                 {"name": "Foo"},
