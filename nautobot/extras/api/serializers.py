@@ -101,8 +101,19 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
+class TagSerializerField(NestedTagSerializer):
+    """NestedSerializer field for `Tag` object fields."""
+
+    def get_queryset(self):
+        """Only emit status options for this model/field combination."""
+        queryset = super().get_queryset()
+        # Get objects model e.g Site, Device... etc.
+        model = self.parent.parent.Meta.model
+        return queryset.get_for_model(model)
+
+
 class TaggedObjectSerializer(serializers.Serializer):
-    tags = NestedTagSerializer(many=True, required=False)
+    tags = TagSerializerField(many=True, required=False)
 
     def create(self, validated_data):
         tags = validated_data.pop("tags", None)

@@ -12,11 +12,23 @@ from nautobot.core.models import BaseModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.fields import ColorField
 from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
+from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 #
 # Tags
 #
+
+
+class TagQuerySet(RestrictedQuerySet):
+    """Queryset for `Tags` objects."""
+
+    def get_for_model(self, model):
+        """
+        Return all `Tags` assigned to the given model.
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(content_types=content_type)
 
 
 @extras_features(
@@ -39,6 +51,8 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     )
 
     csv_headers = ["name", "slug", "color", "description"]
+
+    objects = TagQuerySet.as_manager()
 
     class Meta:
         ordering = ["name"]
