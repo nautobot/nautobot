@@ -179,6 +179,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(list(map(str, qs)), expected)
         self.assertEqual(list(qs), list(devices))
 
+        # A new group that doesn't have a content_type and therefore
+        # `self.model`, should raise a RuntimeError
+        new_group = DynamicGroup()
+        with self.assertRaises(RuntimeError):
+            new_group.get_queryset()
+
     def test_model(self):
         """Test `DynamicGroup.model`."""
         # New instances should not have a model unless `content_type` is set.

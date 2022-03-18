@@ -237,6 +237,9 @@ class DynamicGroup(OrganizationalModel):
 
         model = self.model
 
+        if model is None:
+            raise RuntimeError(f"Could not determine queryset for model '{model}'")
+
         if not self.filter:
             return model.objects.none()
 
