@@ -258,8 +258,9 @@ class JobTest(TransactionTestCase):
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
         self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
-        self.assertEqual(info_log.log_object, "Role: role")
-        self.assertEqual(job_result.data["output"], "\nNice Roles, bro.")
+        self.assertEqual(info_log.log_object, None)
+        self.assertEqual(info_log.message, "Role: role")
+        self.assertEqual(job_result.data["output"], "\nNice Roles!")
 
     def test_optional_object_var(self):
         """

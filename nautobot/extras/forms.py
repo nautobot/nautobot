@@ -594,13 +594,17 @@ class CustomFieldFilterForm(forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
         for cf in custom_fields:
             field_name = "cf_{}".format(cf.name)
-            self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
+            if cf.type == "json":
+                self.fields[field_name] = cf.to_form_field(
+                    set_initial=True, enforce_required=False, simple_json_filter=True
+                )
+            else:
+                self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
 
 
 #
@@ -1457,6 +1461,23 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
             "ssl_verification",
             "ca_file_path",
         )
+
+    def clean(self):
+        data = super().clean()
+
+        conflicts = Webhook.check_for_conflicts(
+            instance=self.instance,
+            content_types=self.cleaned_data.get("content_types"),
+            payload_url=self.cleaned_data.get("payload_url"),
+            type_create=self.cleaned_data.get("type_create"),
+            type_update=self.cleaned_data.get("type_update"),
+            type_delete=self.cleaned_data.get("type_delete"),
+        )
+
+        if conflicts:
+            raise ValidationError(conflicts)
+
+        return data
 
 
 class WebhookFilterForm(BootstrapMixin, forms.Form):

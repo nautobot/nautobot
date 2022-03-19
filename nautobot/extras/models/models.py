@@ -708,12 +708,6 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
     class Meta:
         ordering = ("name",)
-        unique_together = (
-            "payload_url",
-            "type_create",
-            "type_update",
-            "type_delete",
-        )
 
     def __str__(self):
         return self.name
@@ -755,3 +749,41 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
     def get_absolute_url(self):
         return reverse("extras:webhook", kwargs={"pk": self.pk})
+
+    @classmethod
+    def check_for_conflicts(cls, instance, content_types, payload_url, type_create, type_update, type_delete):
+        """
+        Helper method for enforcing uniqueness.
+
+        Don't allow two webhooks with the same content_type, same payload_url, and any action(s) in common.
+        Called by WebhookForm.clean() and WebhookSerializer.validate()
+        """
+
+        conflicts = {}
+        webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
+
+        for content_type in content_types:
+            webhooks = cls.objects.filter(content_types__in=[content_type], payload_url=payload_url)
+            if instance and instance.present_in_database:
+                webhooks = webhooks.exclude(pk=instance.pk)
+
+            existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
+            existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
+            existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
+
+            if existing_type_create:
+                conflicts.setdefault("type_create", []).append(
+                    webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
+                )
+
+            if existing_type_update:
+                conflicts.setdefault("type_update", []).append(
+                    webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
+                )
+
+            if existing_type_delete:
+                conflicts.setdefault("type_delete", []).append(
+                    webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
+                )
+
+        return conflicts

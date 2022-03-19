@@ -40,6 +40,10 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
+#### JSON Type for Custom Fields
+
+Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
+
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
 A [data model](../models/circuits/providernetwork.md) has been added to support representing the termination of a circuit to an external provider's network.
@@ -63,6 +67,16 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
+
+## v1.3.0b2 (2022-MM-DD)
+
+### Added
+
+- [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
+
+### Changed
+
+- [#1225](https://github.com/nautobot/nautobot/issues/1225) - Relaxed uniqueness constraint on Webhook creation, allowing multiple webhooks to send to the same target address so long as their content-type(s) and action(s) do not overlap.
 
 ## v1.3.0b1 (2022-03-11)
 
