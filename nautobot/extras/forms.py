@@ -1386,7 +1386,7 @@ class TagForm(NautobotModelForm):
     slug = SlugField()
     content_types = MultipleContentTypeField(
         label="Content Type(s)",
-        queryset=ModelSubclassesQuery().as_queryset,
+        queryset=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset,
         required=False,
     )
 
@@ -1422,7 +1422,7 @@ class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
         choices_as_strings=True,
         required=False,
         label="Content Type(s)",
-        queryset=ModelSubclassesQuery().as_queryset,
+        queryset=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset,
     )
 
 

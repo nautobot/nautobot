@@ -15,6 +15,7 @@ from taggit.managers import _TaggableManager
 
 from nautobot.core.fields import slugify_dots_to_dashes
 from nautobot.extras.constants import EXTRAS_FEATURES, JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
 
 
@@ -87,17 +88,14 @@ class ModelSubclassesQuery:
     Helper class to get ContentType models that are subclasses of self.klass
     """
 
-    # TODO: Make ModelSubclassesQuery reusable by adding a klass arg to ___init__.
-    # Instead of geting the subclasses of only PrimaryModel, the subclasses
-    # of any class provided can be generated e.g ModelSubclassesQuery(RelationshipModel)
+    def __init__(self, klass):
+        self.klass = import_object(klass)
 
     def list_subclasses(self):
         """
-        Return a list of classes that inherits from PrimaryModel
+        Return a list of classes that inherits from self.klass
         """
-        from nautobot.core.models.generics import PrimaryModel
-
-        return [_class for _class in apps.get_models() if issubclass(_class, PrimaryModel)]
+        return [_class for _class in apps.get_models() if issubclass(_class, self.klass)]
 
     def __call__(self):
         return self.get_query()

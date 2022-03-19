@@ -55,7 +55,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.api.fields import StatusSerializerField
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, ModelSubclassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -1020,6 +1020,13 @@ class StatusModelSerializerMixin(serializers.Serializer):
 class TagSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(
+            ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").get_query()
+        ),
+        many=True,
+        required=False,
+    )
 
     class Meta:
         model = Tag
@@ -1031,6 +1038,7 @@ class TagSerializer(CustomFieldModelSerializer):
             "color",
             "description",
             "tagged_items",
+            "content_types",
             "custom_fields",
             "created",
             "last_updated",

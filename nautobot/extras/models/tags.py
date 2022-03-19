@@ -40,7 +40,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="tags",
-        limit_choices_to=ModelSubclassesQuery(),
+        limit_choices_to=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel"),
         help_text="The content type(s) to which this tag applies.",
         blank=True,
     )
