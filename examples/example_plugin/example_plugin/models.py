@@ -1,18 +1,17 @@
 from django.db import models
 from django.urls import reverse
 
-from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.utils import extras_features
-from nautobot.extras.models import CustomFieldModel, ObjectChange
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 @extras_features(
     "custom_links",
+    "dynamic_groups",
     "graphql",
     "webhooks",
 )
-class ExampleModel(BaseModel):
+class ExampleModel(OrganizationalModel):
     name = models.CharField(max_length=20, help_text="The name of this Example.")
     number = models.IntegerField(default=100, help_text="The number of this Example.")
 
@@ -27,16 +26,6 @@ class ExampleModel(BaseModel):
     def get_absolute_url(self):
         return reverse("plugins:example_plugin:examplemodel", kwargs={"pk": self.pk})
 
-    def to_objectchange(self, action):
-
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-        )
-
     def to_csv(self):
         return (
             self.name,
@@ -46,8 +35,9 @@ class ExampleModel(BaseModel):
 
 @extras_features(
     "custom_fields",
+    "dynamic_groups",
 )
-class AnotherExampleModel(BaseModel, CustomFieldModel):
+class AnotherExampleModel(OrganizationalModel):
     name = models.CharField(max_length=20)
     number = models.IntegerField(default=100)
 

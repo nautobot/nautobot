@@ -74,6 +74,7 @@ nav:
         - Context Data: 'additional-features/config-contexts.md'
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'
+        - Dynamic Groups: 'additional-features/dynamic-groups.md'
         - Export Templates: 'models/extras/exporttemplate.md'
         - Git Repositories: 'models/extras/gitrepository.md'
         - Health Check: 'additional-features/healthcheck.md'

@@ -511,6 +511,14 @@ class DynamicGroupView(generic.ObjectView):
         if table_class is not None:
             members = instance.get_queryset()
             members_table = table_class(members, orderable=False)
+
+            # Paginate the members table.
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(members_table)
+
             context["members_table"] = members_table
 
         return context
