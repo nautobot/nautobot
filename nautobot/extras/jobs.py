@@ -460,26 +460,42 @@ class BaseJob:
     def log_success(self, obj=None, message=None):
         """
         Record a successful test against an object. Logging a message is optional.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_SUCCESS)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
 
     def log_info(self, obj=None, message=None):
         """
         Log an informational message.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_INFO)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
 
     def log_warning(self, obj=None, message=None):
         """
         Log a warning.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_WARNING)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
 
     def log_failure(self, obj=None, message=None):
         """
         Log a failure. Calling this method will automatically mark the overall job as failed.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
         self.failed = True
 
     # Convenience functions

@@ -17,3 +17,11 @@ nautobot:
     - "ghcr.io/nautobot/nautobot"
     - "networktocode/nautobot-dev"
     - "ghcr.io/nautobot/nautobot-dev"
+
+# The following is an example of using a MySQL as the database backend
+# ---
+# nautobot:
+#   compose_files:
+#     - "docker-compose.yml"
+#     - "docker-compose.mysql.yml"
+#     - "docker-compose.dev.yml"

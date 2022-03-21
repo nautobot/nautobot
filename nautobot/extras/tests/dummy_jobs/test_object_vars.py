@@ -26,4 +26,4 @@ class TestObjectVars(Job):
 
         self.log_success(message="Job didn't crash!")
 
-        return "Nice Roles, bro."
+        return "Nice Roles!"
