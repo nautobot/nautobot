@@ -18,7 +18,7 @@ This will result in a file named `nautobot_dump.json`.
 
 ## Create the MySQL database
 
-Create the MySQL database for Nautobot, ensuring that it has the correct character set (`utf8mb4`) and collation (`utf8mb4_bin`) settings for case-sensitivity (MySQL will otherwise be case-insensitive by default, which may cause problems when importing your data from the case-sensitive PostgreSQL database dump). Refer to the instructions for [CentOS/RHEL](./centos.md) or [Ubuntu](./ubuntu.md) as necessary if you are unsure how to set up MySQL and create the Nautobot database.
+Create the MySQL database for Nautobot, ensuring that it has the correct character set (`utf8mb4`) and collation (`utf8mb4_general_ci`) settings for case-sensitivity (MySQL will otherwise be case-insensitive by default, which may cause problems when importing your data from the case-sensitive PostgreSQL database dump). Refer to the instructions for [CentOS/RHEL](./centos.md) or [Ubuntu](./ubuntu.md) as necessary if you are unsure how to set up MySQL and create the Nautobot database.
 
 ## Apply database migrations to the MySQL database
 
