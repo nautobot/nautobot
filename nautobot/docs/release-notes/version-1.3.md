@@ -81,6 +81,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#1225](https://github.com/nautobot/nautobot/issues/1225) - Relaxed uniqueness constraint on Webhook creation, allowing multiple webhooks to send to the same target address so long as their content-type(s) and action(s) do not overlap.
+- [#1478](https://github.com/nautobot/nautobot/issues/1478) - ScheduledJob REST API endpoints now enforce `extras.approve_job` permissions as appropriate.
 
 ## v1.3.0b1 (2022-03-11)
 
