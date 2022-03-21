@@ -17,3 +17,9 @@ th {
 td {
     padding: 6px;
 }
+
+/* Fixes disappearing UI on the left column on RTD */
+.rst-versions .rst-current-version {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}

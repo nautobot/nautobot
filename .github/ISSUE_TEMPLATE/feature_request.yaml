@@ -1,5 +1,5 @@
 ---
-name: ✨ Feature Request Beta
+name: ✨ Feature Request
 description: Propose a new Nautobot feature or enhancement
 labels: ["type: feature"]
 body:
