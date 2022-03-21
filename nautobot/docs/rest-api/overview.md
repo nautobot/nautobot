@@ -130,38 +130,38 @@ Breaking (non-backward-compatible) REST API changes also may be introduced in ma
 - Changed field types (for example, changing a single value to a list of values)
 - Redesigned API (for example, listing and accessing Job instances by UUID primary-key instead of by class-path string)
 
-Per Nautobot's feature-deprecation policy, the previous REST API version will continue to be supported for some time before eventually being removed.
+Per Nautobot's [feature-deprecation policy](../development/index.md#deprecation-policy), the previous REST API version will continue to be supported for some time before eventually being removed.
 
 !!! important
     When breaking changes are introduced in a minor release, for compatibility as described above, the default REST API behavior within the remainder of the current major release cycle will continue to be the previous (unchanged) API version. API clients must "opt in" to the new version of the API by explicitly requesting the new API version.
 
 !!! tip
-    This is another reason to always specify the exact major.minor Nautobot REST API version when developing a REST API client integration, as it guarantees that the client will be receiving the latest API feature set available in that release rather than possibly defaulting to an older REST API version that is still default but is now deprecated.
+    This is another reason to always specify the exact `major.minor` Nautobot REST API version when developing a REST API client integration, as it guarantees that the client will be receiving the latest API feature set available in that release rather than possibly defaulting to an older REST API version that is still default but is now deprecated.
 
 ### Example of API Version Behavior
 
 As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-compatible_ REST API for the `/api/extras/jobs/` endpoint, and also introduced a new, _backwards-compatible_ set of additional fields on the `/api/dcim/sites/` endpoint. Depending on what API version a REST client interacting with Nautobot 1.3 specified (or didn't specify), it would see the following responses from the server:
 
-| API endpoint       | Requested API version | Response                                     |
-| ------------------ | --------------------- | -------------------------------------------- |
-| `/api/extras/jobs` | (unspecified)         | Deprecated 1.2-compatible REST API           |
-| `/api/extras/jobs` | `version=1.2`         | Deprecated 1.2-compatible REST API           |
-| `/api/extras/jobs` | `version=1.3`         | New/updated 1.3-compatible REST API          |
+| API endpoint        | Requested API version | Response                                     |
+| ------------------- | --------------------- | -------------------------------------------- |
+| `/api/extras/jobs/` | (unspecified)         | Deprecated 1.2-compatible REST API           |
+| `/api/extras/jobs/` | `version=1.2`         | Deprecated 1.2-compatible REST API           |
+| `/api/extras/jobs/` | `version=1.3`         | New/updated 1.3-compatible REST API          |
 
 !!! important
     Note again that if not specifying an API version, the client _would not_ receive the latest API version when breaking changes are present. Even though the server had Nautobot version 1.3, the default Jobs REST API behavior would be that of Nautobot 1.2. Only by actually specifying `version=1.3` was the client able to access the new Jobs REST API.
 
-| API endpoint       | Requested API version | Response                                     |
-| ------------------ | --------------------- | -------------------------------------------- |
-| `/api/dcim/sites`  | (unspecified)         | 1.3-updated, 1.2-compatible REST API         |
-| `/api/dcim/sites`  | `version=1.2`         | 1.3-updated, 1.2-compatible REST API         |
-| `/api/dcim/sites`  | `version=1.3`         | 1.3-updated, 1.2-compatible REST API         |
+| API endpoint        | Requested API version | Response                                     |
+| ------------------- | --------------------- | -------------------------------------------- |
+| `/api/dcim/sites/`  | (unspecified)         | 1.3-updated, 1.2-compatible REST API         |
+| `/api/dcim/sites/`  | `version=1.2`         | 1.3-updated, 1.2-compatible REST API         |
+| `/api/dcim/sites/`  | `version=1.3`         | 1.3-updated, 1.2-compatible REST API         |
 
-| API endpoint       | Requested API version | Response                                     |
-| ------------------ | --------------------- | -------------------------------------------- |
-| `/api/dcim/racks`  | (unspecified)         | 1.2-compatible REST API (unchanged)          |
-| `/api/dcim/racks`  | `version=1.2`         | 1.2-compatible REST API (unchanged)          |
-| `/api/dcim/racks`  | `version=1.3`         | 1.3-compatible REST API (unchanged from 1.2) |
+| API endpoint        | Requested API version | Response                                     |
+| ------------------- | --------------------- | -------------------------------------------- |
+| `/api/dcim/racks/`  | (unspecified)         | 1.2-compatible REST API (unchanged)          |
+| `/api/dcim/racks/`  | `version=1.2`         | 1.2-compatible REST API (unchanged)          |
+| `/api/dcim/racks/`  | `version=1.3`         | 1.3-compatible REST API (unchanged from 1.2) |
 
 ## Serialization
 
