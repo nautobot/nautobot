@@ -156,7 +156,7 @@ For more details on how to configure Cacheops to use Redis Sentinel see the docu
 
 #### `celery` Sentinel Configuration
 
-Celery Sentinel configuration is controlled by 4 variables `BROKER_URL`, `BROKER_TRANSPORT_OPTIONS`, `RESULT_BACKEND`, and `RESULT_BACKEND_TRANSPORT_OPTIONS`.  These parameters can
+Celery Sentinel configuration is controlled by four variables `BROKER_URL`, `BROKER_TRANSPORT_OPTIONS`, `RESULT_BACKEND`, and `RESULT_BACKEND_TRANSPORT_OPTIONS`.  These parameters can
 be specified in the django settings in `nautobot_config.py` by prefixing these variable names with `CELERY_`.  By default Nautobot configures the celery broker and results backend with the
 same configuration.
 
@@ -180,3 +180,5 @@ CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 ```
 
 For more details on how to configure Celery to use Redis Sentinel see the documentation for [Celery](https://docs.celeryproject.org/en/stable/getting-started/backends-and-brokers/redis.html#configuration).
+
+Please also see the [documentation on required Nautobot settings for Celery](../../configuration/required-settings#task-queuing-with-celery) for additional information.
