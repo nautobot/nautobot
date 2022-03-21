@@ -1148,11 +1148,7 @@ class JobApprovalRequestView(generic.ObjectView):
             if not (
                 self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
                 and job_model is not None
-                and (
-                    JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
-                    # A user can deny (revoke) their own approval requests, even without general job-approval permission
-                    or request.user == scheduled_job.user
-                )
+                and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
             ):
                 messages.error(request, "You do not have permission to deny this request.")
             else:

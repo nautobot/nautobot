@@ -1540,10 +1540,12 @@ class ScheduledJobTest(
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
         ScheduledJob.objects.create(
             name="test1",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job_model.class_path,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -1551,8 +1553,9 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job_model.class_path,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -1560,8 +1563,9 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job_model.class_path,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -1578,38 +1582,56 @@ class ScheduledJobTest(
 class JobApprovalTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
-        user = User.objects.create(username="user1", is_active=True)
+        cls.additional_user = User.objects.create(username="user1", is_active=True)
+        cls.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        cls.job_model.enabled = True
+        cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=cls.job_model.class_path,
+            job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
+            user=cls.additional_user,
             approval_required=True,
             start_time=now(),
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_anonymous(self):
-        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": 1})
-        response = self.client.post(url, **self.header)
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_without_permission(self):
-        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": 1})
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
         with disable_warnings("django.request"):
             response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_without_approve_job_permission(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_without_change_scheduledjob_permission(self):
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_same_user(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=self.job_model.class_path,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -1621,24 +1643,22 @@ class JobApprovalTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_in_past(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
-        user = User.objects.get(username="user1")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=self.job_model.class_path,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
-            user=user,
+            user=self.additional_user,
             approval_required=True,
             start_time=now(),
         )
@@ -1648,16 +1668,15 @@ class JobApprovalTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_in_past_force(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
-        user = User.objects.get(username="user1")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=self.job_model.class_path,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
-            user=user,
+            user=self.additional_user,
             approval_required=True,
             start_time=now(),
         )
@@ -1667,32 +1686,51 @@ class JobApprovalTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_job_without_permission(self):
-        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": 1})
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
         with disable_warnings("django.request"):
             response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_job_without_approve_job_permission(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.delete_scheduledjob")
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_job_without_delete_scheduledjob_permission(self):
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_job(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.delete_scheduledjob")
         url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsNone(ScheduledJob.objects.filter(pk=self.scheduled_job.pk).first())
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_dry_run_job_without_permission(self):
-        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": 1})
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
         with disable_warnings("django.request"):
             response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_dry_run_job_without_run_job_permission(self):
+        self.add_permissions("extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_dry_run_job(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
-        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        self.add_permissions("extras.run_job", "extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 

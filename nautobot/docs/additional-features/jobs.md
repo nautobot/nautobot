@@ -437,6 +437,8 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
     ![Adding the run action to a permission](../media/admin_ui_run_permission.png)
 
+    Similarly, to [approve a job request by another user](./job-scheduling-and-approvals.md), a user must be assigned the `extras.approve_job` permission via the same process. Job approvers also need the `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions as job approvals are implemented via the `ScheduledJob` data model.
+
 ### Jobs and `class_path`
 
 It is a key concept to understand the 3 `class_path` elements:

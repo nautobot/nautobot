@@ -1105,19 +1105,6 @@ class ApprovalQueueTestCase(
         self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_deny_same_user_permitted(self):
-        """A user can revoke their own request even without specific approver permissions to do so."""
-        self.add_permissions("extras.view_scheduledjob")
-        self.add_permissions("extras.delete_scheduledjob")
-        instance = self._get_queryset().first()
-        data = {"_deny": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
-        # Request was deleted
-        self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_post_deny_different_user_lacking_permissions(self):
         """A user needs both delete_scheduledjob and approve_job permissions to deny a job request."""
         user1 = User.objects.create_user(username="testuser1")
