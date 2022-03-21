@@ -76,12 +76,14 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
 
 ### Changed
 
 - [#1225](https://github.com/nautobot/nautobot/issues/1225) - Relaxed uniqueness constraint on Webhook creation, allowing multiple webhooks to send to the same target address so long as their content-type(s) and action(s) do not overlap.
 - [#1478](https://github.com/nautobot/nautobot/issues/1478) - ScheduledJob REST API endpoints now enforce `extras.approve_job` permissions as appropriate.
+- [#1502](https://github.com/nautobot/nautobot/issues/1502) Finalized Dynamic Groups implementation for 1.3 release (including documentation and integration tests)
 
 ## v1.3.0b1 (2022-03-11)
 
