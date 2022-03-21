@@ -77,10 +77,10 @@ class TaggableManagerField(TaggableManager):
     """
 
     def formfield(self, form_class=DynamicModelMultipleChoiceField, **kwargs):
-        kwargs["queryset"] = Tag.objects.all()
-        kwargs["required"] = False
-        kwargs["query_params"] = {"content_types": self.model._meta.label_lower}
-        
+        kwargs.setdefault("queryset", Tag.objects.all())
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("query_params", {"content_types": self.model._meta.label_lower})
+
         return super().formfield(form_class, **kwargs)
 
 
