@@ -1857,14 +1857,13 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "color": "00ff00",
         }
 
-        cls.site_content_type = ContentType.objects.get_for_model(Site)
-
     def test_create_tags_with_content_types(self):
         self.add_permissions("extras.add_tag")
+        site_content_type = ContentType.objects.get_for_model(Site)
 
         form_data = {
             **self.form_data,
-            "content_types": [self.site_content_type.id],
+            "content_types": [site_content_type.id],
         }
 
         request = {
@@ -1875,7 +1874,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         tag = Tag.objects.filter(slug=self.form_data["slug"])
         self.assertTrue(tag.exists())
-        self.assertEqual(tag[0].content_types.first(), self.site_content_type)
+        self.assertEqual(tag[0].content_types.first(), site_content_type)
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
