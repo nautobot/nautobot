@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.dcim.models import Site
-from nautobot.extras.models import Status
+from nautobot.extras.models import Status, Tag
 from nautobot.utilities.testing import APITestCase
 
 
@@ -78,3 +78,19 @@ class TaggedItemTest(APITestCase):
         self.assertEqual(len(response.data["tags"]), 0)
         site = Site.objects.get(pk=response.data["id"])
         self.assertEqual(len(site.tags.all()), 0)
+
+    def test_create_invalid_tagged_item(self):
+        """Test creating a Site with a tag that does not include Site's Content type as its content_type"""
+        tag = Tag.objects.create(name="Tag One", slug="tag-one")
+        data = {
+            "name": "Test Site",
+            "slug": "test-site",
+            "status": "active",
+            "tags": [tag.id],
+        }
+        url = reverse("dcim-api:site-list")
+        self.add_permissions("dcim.add_site")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Related object not found", str(response.data["tags"]))
