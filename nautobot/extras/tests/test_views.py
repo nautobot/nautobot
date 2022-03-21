@@ -42,7 +42,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
@@ -1856,6 +1856,45 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.bulk_edit_data = {
             "color": "00ff00",
         }
+
+        cls.site_content_type = ContentType.objects.get_for_model(Site)
+
+    def test_create_tags_with_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        form_data = {
+            **self.form_data,
+            "content_types": [self.site_content_type.id],
+        }
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        self.assertTrue(tag.exists())
+        self.assertEqual(tag[0].content_types.first(), self.site_content_type)
+
+    def test_create_tags_with_invalid_content_types(self):
+        self.add_permissions("extras.add_tag")
+        vlangroup_content_type = ContentType.objects.get_for_model(VLANGroup)
+
+        form_data = {
+            **self.form_data,
+            "content_types": [vlangroup_content_type.id],
+        }
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+
+        response = self.client.post(**request)
+        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        self.assertFalse(tag.exists())
+        self.assertIn("content_types: Select a valid choice", str(response.content))
 
 
 class WebhookTestCase(
