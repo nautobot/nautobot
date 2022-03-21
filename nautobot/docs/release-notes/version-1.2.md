@@ -154,6 +154,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Fixed
 
+- [#1511](https://github.com/nautobot/nautobot/issues/1511) - Fixed left column of Read The Docs being cut off.
 - [#1522](https://github.com/nautobot/nautobot/pull/1522) - Fixed link name attribute name in developer docs.
 
 ## v1.2.9 (2022-03-14)
