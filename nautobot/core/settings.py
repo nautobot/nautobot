@@ -196,7 +196,7 @@ SWAGGER_SETTINGS = {
     "DEFAULT_FILTER_INSPECTORS": [
         "drf_yasg.inspectors.CoreAPICompatInspector",
     ],
-    "DEFAULT_INFO": "nautobot.core.urls.openapi_info",
+    "DEFAULT_INFO": "nautobot.core.api.urls.openapi_info",
     "DEFAULT_MODEL_DEPTH": 1,
     "DEFAULT_PAGINATOR_INSPECTORS": [
         "nautobot.utilities.custom_inspectors.NullablePaginatorInspector",

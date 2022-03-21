@@ -61,7 +61,9 @@ For example, consider this filter:
 
 This would result in a Dynamic Group of a single Device with name "ams01-edge-01" if-and-only-if that device also has interfaces. While this likely wouldn't be all that useful of a filter for a Dynamic Group in practice, it illustrates that some fields take only one value instead of an array of values. It also underscores how important it is to think deliberately about defining your filter criteria.
 
+!!! note
+  Please refer to either the source code definition of the `{model_name}FilterSet` (e.g. for `Device` it would be `nautobot.dcim.filters.DeviceFilterSet`) or the API documentation for the list endpoint (e.g. `/api/dcim/devices/`) for a given model object, to view the available filter fields and their expectations.
+
 ### Filter Field Internals 
 
 The filter fields are backed and validated by underlying filtersets (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field. Any invalid field names that are not eligible for filtering objects will be discarded upon validation. Any invalid field values will result in a validation error.
-

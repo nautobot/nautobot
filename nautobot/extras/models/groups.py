@@ -114,7 +114,8 @@ class DynamicGroup(OrganizationalModel):
             self.filterset_class = get_filterset_for_model(model)
             self.filterform_class = get_form_for_model(model, form_prefix="Filter")
             self.form_class = get_form_for_model(model)
-        # Fail closed.
+        # We expect this to happen on new instances or in any case where `model` was not properly
+        # available to the caller, so always fail closed.
         except TypeError:
             logger.debug("Failed to map object classes for model %s", model)
             self.filterset_class = None
