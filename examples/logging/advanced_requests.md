@@ -4,7 +4,11 @@ By default django logs [4xx and 5xx requests](https://docs.djangoproject.com/en/
 but is missing details such as the request user name.  This can be helpful in debugging. This example 
 shows how the request user can be added to the logs for 4xx and 5xx responses.
 
-Using the django-request-logging module can lead to password leaks if not configured correctly. If using in production, make sure that you capture all passwords and mask them in logs. The bellow example uses the `mask_password` function to manipulate the message before logged.
+Using the django-request-logging module can lead to password leaks if not configured correctly. If using in production, make sure that you capture all passwords and mask them in logs. The example below uses defines a function, `mask_password`, to manipulate the message before logged. This is just one way to mask a password. Be mindful that other places are captured as well. Here is the "before/after" example of the function `mask_password`:
+
+> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=mysecretpassword
+
+> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=***
 
 
 ```python
