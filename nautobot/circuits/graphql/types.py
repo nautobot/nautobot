@@ -1,12 +1,13 @@
 from graphene import Field
 import graphene_django_optimizer as gql_optimizer
 
+from nautobot.core.graphql.utils import construct_resolver
 from nautobot.circuits.models import CircuitTermination
 from nautobot.circuits.filters import CircuitTerminationFilterSet
-from nautobot.dcim.graphql.mixins import PathEndpointMixin
+from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
 
 
-class CircuitTerminationType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
+class CircuitTerminationType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for CircuitTermination model."""
 
     class Meta:
@@ -20,38 +21,9 @@ class CircuitTerminationType(gql_optimizer.OptimizedDjangoObjectType, PathEndpoi
     connected_circuit_termination = Field("nautobot.circuits.graphql.types.CircuitTerminationType")
     connected_interface = Field("nautobot.dcim.graphql.types.InterfaceType")
 
-    def resolve_cable_peer_circuit_termination(self, args):
-        peer = self.get_cable_peer()
-        if type(peer).__name__ == "CircuitTermination":  # type built-in used to avoid class loading
-            return peer
-        return None
-
-    def resolve_cable_peer_front_port(self, args):
-        peer = self.get_cable_peer()
-        if type(peer).__name__ == "FrontPort":  # type built-in used to avoid class loading
-            return peer
-        return None
-
-    def resolve_cable_peer_interface(self, args):
-        peer = self.get_cable_peer()
-        if type(peer).__name__ == "Interface":  # type built-in used to avoid class loading
-            return peer
-        return None
-
-    def resolve_cable_peer_rear_port(self, args):
-        peer = self.get_cable_peer()
-        if type(peer).__name__ == "RearPort":  # type built-in used to avoid class loading
-            return peer
-        return None
-
-    def resolve_connected_circuit_termination(self, args):
-        peer = self.connected_endpoint
-        if peer and type(peer).__name__ == "CircuitTermination":  # type built-in used to avoid class loading
-            return peer
-        return None
-
-    def resolve_connected_interface(self, args):
-        peer = self.connected_endpoint
-        if peer and type(peer).__name__ == "Interface":  # type built-in used to avoid class loading
-            return peer
-        return None
+    resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
+    resolve_cable_peer_front_port = construct_resolver("FrontPort", "cable_peer")
+    resolve_cable_peer_interface = construct_resolver("Interface", "cable_peer")
+    resolve_cable_rear_port = construct_resolver("RearPort", "cable_peer")
+    resolve_connected_circuit_termination = construct_resolver("CircuitTermination", "connected_endpoint")
+    resolve_connected_interface = construct_resolver("Interface", "connected_endpoint")

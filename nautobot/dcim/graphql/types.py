@@ -1,8 +1,9 @@
 import graphene
 import graphene_django_optimizer as gql_optimizer
 
+from nautobot.core.graphql.utils import construct_resolver
 from nautobot.circuits.graphql.types import CircuitTerminationType
-from nautobot.dcim.graphql.mixins import CableEndpointMixin, PathEndpointMixin
+from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -33,34 +34,6 @@ from nautobot.dcim.filters import (
     SiteFilterSet,
 )
 from nautobot.extras.graphql.types import TagType  # noqa: F401
-
-
-def _construct_resolver(model_name, resolver_type):
-    """Constructs a resolve_[cable_peer|connected_endpoint]_<endpoint> function for a given model type.
-
-    Args:
-        model_name (str): Name of the model to construct a resolver function for (e.g. CircuitTermination).
-        resolver_type (str): One of ['connected_endpoint', 'cable_peer']
-    """
-    if resolver_type == "cable_peer":
-
-        def resolve(self, args):
-            peer = self.get_cable_peer()
-            if type(peer).__name__ == model_name:
-                return peer
-            return None
-
-        return resolve
-
-    if resolver_type == "connected_endpoint":
-
-        def resolve(self, args):
-            peer = self.connected_endpoint
-            if type(peer).__name__ == model_name:
-                return peer
-            return None
-
-        return resolve
 
 
 class SiteType(gql_optimizer.OptimizedDjangoObjectType):
@@ -121,7 +94,7 @@ class CablePathType(gql_optimizer.OptimizedDjangoObjectType):
         model = CablePath
 
 
-class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin, PathEndpointMixin):
+class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
     class Meta:
@@ -139,12 +112,12 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin,
     ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
     # Resolver Definitions
-    resolve_cable_peer_circuit_termination = _construct_resolver("CircuitTermination", "cable_peer")
-    resolve_cable_peer_front_port = _construct_resolver("FrontPort", "cable_peer")
-    resolve_cable_peer_interface = _construct_resolver("Interface", "cable_peer")
-    resolve_cable_peer_rear_port = _construct_resolver("RearPort", "cable_peer")
-    resolve_connected_circuit_termination = _construct_resolver("CircuitTermination", "connected_endpoint")
-    resolve_connected_interface = _construct_resolver("Interface", "connected_endpoint")
+    resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
+    resolve_cable_peer_front_port = construct_resolver("FrontPort", "cable_peer")
+    resolve_cable_peer_interface = construct_resolver("Interface", "cable_peer")
+    resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
+    resolve_connected_circuit_termination = construct_resolver("CircuitTermination", "connected_endpoint")
+    resolve_connected_interface = construct_resolver("Interface", "connected_endpoint")
 
     # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
     # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
@@ -155,7 +128,7 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin,
         return self.ip_addresses.all()
 
 
-class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin, PathEndpointMixin):
+class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for ConsolePort model."""
 
     class Meta:
@@ -169,13 +142,13 @@ class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixi
     connected_console_server_port = graphene.Field("nautobot.dcim.graphql.types.ConsoleServerPortType")
 
     # Resolver Definitions
-    resolve_cable_peer_console_server_port = _construct_resolver("ConsoleServerPort", "cable_peer")
-    resolve_cable_peer_front_port = _construct_resolver("FrontPort", "cable_peer")
-    resolve_cable_peer_rear_port = _construct_resolver("RearPort", "cable_peer")
-    resolve_connected_console_server_port = _construct_resolver("ConsoleServerPort", "connected_endpoint")
+    resolve_cable_peer_console_server_port = construct_resolver("ConsoleServerPort", "cable_peer")
+    resolve_cable_peer_front_port = construct_resolver("FrontPort", "cable_peer")
+    resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
+    resolve_connected_console_server_port = construct_resolver("ConsoleServerPort", "connected_endpoint")
 
 
-class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin, PathEndpointMixin):
+class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for ConsoleServerPort model."""
 
     class Meta:
@@ -189,13 +162,13 @@ class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpoi
     connected_console_port = graphene.Field("nautobot.dcim.graphql.types.ConsolePortType")
 
     # Resolver Definitions
-    resolve_cable_peer_console_port = _construct_resolver("ConsolePort", "cable_peer")
-    resolve_cable_peer_front_port = _construct_resolver("FrontPort", "cable_peer")
-    resolve_cable_peer_rear_port = _construct_resolver("RearPort", "cable_peer")
-    resolve_connected_console_port = _construct_resolver("ConsolePort", "connected_endpoint")
+    resolve_cable_peer_console_port = construct_resolver("ConsolePort", "cable_peer")
+    resolve_cable_peer_front_port = construct_resolver("FrontPort", "cable_peer")
+    resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
+    resolve_connected_console_port = construct_resolver("ConsolePort", "connected_endpoint")
 
 
-class FrontPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin):
+class FrontPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin):
     """Graphql Type Object for FrontPort model."""
 
     class Meta:
@@ -211,15 +184,15 @@ class FrontPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin)
     cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
 
     # Resolver Definitions
-    resolve_cable_peer_circuit_termination = _construct_resolver("CircuitTermination", "cable_peer")
-    resolve_cable_peer_console_port = _construct_resolver("ConsolePort", "cable_peer")
-    resolve_cable_peer_console_server_port = _construct_resolver("ConsoleServerPort", "cable_peer")
-    resolve_cable_peer_front_port = _construct_resolver("FrontPort", "cable_peer")
-    resolve_cable_peer_interface = _construct_resolver("Interface", "cable_peer")
-    resolve_cable_peer_rear_port = _construct_resolver("RearPort", "cable_peer")
+    resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
+    resolve_cable_peer_console_port = construct_resolver("ConsolePort", "cable_peer")
+    resolve_cable_peer_console_server_port = construct_resolver("ConsoleServerPort", "cable_peer")
+    resolve_cable_peer_front_port = construct_resolver("FrontPort", "cable_peer")
+    resolve_cable_peer_interface = construct_resolver("Interface", "cable_peer")
+    resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
 
 
-class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin, PathEndpointMixin):
+class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for PowerFeed model."""
 
     class Meta:
@@ -231,11 +204,11 @@ class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin,
     connected_power_port = graphene.Field("nautobot.dcim.graphql.types.PowerPortType")
 
     # Resolver Definitions
-    resolve_cable_peer_power_port = _construct_resolver("PowerPort", "cable_peer")
-    resolve_connected_power_port = _construct_resolver("PowerPort", "connected_endpoint")
+    resolve_cable_peer_power_port = construct_resolver("PowerPort", "cable_peer")
+    resolve_connected_power_port = construct_resolver("PowerPort", "connected_endpoint")
 
 
-class PowerOutletType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin, PathEndpointMixin):
+class PowerOutletType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for PowerOutlet model."""
 
     class Meta:
@@ -247,11 +220,11 @@ class PowerOutletType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixi
     connected_power_port = graphene.Field("nautobot.dcim.graphql.types.PowerPortType")
 
     # Resolver Definitions
-    resolve_cable_peer_power_port = _construct_resolver("PowerPort", "cable_peer")
-    resolve_connected_power_port = _construct_resolver("PowerPort", "connected_endpoint")
+    resolve_cable_peer_power_port = construct_resolver("PowerPort", "cable_peer")
+    resolve_connected_power_port = construct_resolver("PowerPort", "connected_endpoint")
 
 
-class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin, PathEndpointMixin):
+class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for PowerPort model."""
 
     class Meta:
@@ -265,13 +238,13 @@ class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin,
     connected_power_outlet = graphene.Field("nautobot.dcim.graphql.types.PowerOutletType")
 
     # Resolver Definitions
-    resolve_cable_peer_power_feed = _construct_resolver("PowerFeed", "cable_peer")
-    resolve_cable_peer_power_outlet = _construct_resolver("PowerOutlet", "cable_peer")
-    resolve_connected_power_feed = _construct_resolver("PowerFeed", "connected_endpoint")
-    resolve_connected_power_outlet = _construct_resolver("PowerOutlet", "connected_endpoint")
+    resolve_cable_peer_power_feed = construct_resolver("PowerFeed", "cable_peer")
+    resolve_cable_peer_power_outlet = construct_resolver("PowerOutlet", "cable_peer")
+    resolve_connected_power_feed = construct_resolver("PowerFeed", "connected_endpoint")
+    resolve_connected_power_outlet = construct_resolver("PowerOutlet", "connected_endpoint")
 
 
-class RearPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin):
+class RearPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin):
     """Graphql Type Object for RearPort model."""
 
     class Meta:
@@ -287,15 +260,15 @@ class RearPortType(gql_optimizer.OptimizedDjangoObjectType, CableEndpointMixin):
     cable_peer_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
 
     # Resolver Definitions
-    resolve_cable_peer_circuit_termination = _construct_resolver("CircuitTermination", "cable_peer")
-    resolve_cable_peer_console_port = _construct_resolver("ConsolePort", "cable_peer")
-    resolve_cable_peer_console_server_port = _construct_resolver("ConsoleServerPort", "cable_peer")
-    resolve_cable_peer_front_port = _construct_resolver("FrontPort", "cable_peer")
-    resolve_cable_peer_interface = _construct_resolver("Interface", "cable_peer")
-    resolve_cable_peer_rear_port = _construct_resolver("RearPort", "cable_peer")
+    resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
+    resolve_cable_peer_console_port = construct_resolver("ConsolePort", "cable_peer")
+    resolve_cable_peer_console_server_port = construct_resolver("ConsoleServerPort", "cable_peer")
+    resolve_cable_peer_front_port = construct_resolver("FrontPort", "cable_peer")
+    resolve_cable_peer_interface = construct_resolver("Interface", "cable_peer")
+    resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
 
 
-class PathEndpointTerminationTypes(graphene.Union):
+class PathEndpointTypes(graphene.Union):
     """GraphQL type for models that can be terminated on a PathEndpoint."""
 
     class Meta:
