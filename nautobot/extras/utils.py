@@ -102,7 +102,7 @@ class ModelSubclassesQuery:
 
     @property
     def as_queryset(self):
-        return ContentType.objects.filter(self.get_query())
+        return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
 
     def get_query(self):
         """
