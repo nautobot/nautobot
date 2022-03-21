@@ -281,11 +281,11 @@ In the event you do need to make customizations to how Celery interacts with the
 
 #### CELERY_BROKER_URL
 
-This setting tells Celery and its workers how and where to communicate with the message broker. The default value for this points to ``redis://localhost:6379/0`. Please see the [optional settings documentation for `CELERY_BROKER_URL`](../optional-settings#celery_broker_url) for more information on customizing this setting.
+This setting tells Celery and its workers how and where to communicate with the message broker. The default value for this points to `redis://localhost:6379/0`. Please see the [optional settings documentation for `CELERY_BROKER_URL`](../optional-settings#celery_broker_url) for more information on customizing this setting.
 
 #### CELERY_RESULT_BACKEND
 
-This setting tells Celery and its workers how and where to store message results. This defaults to the same value as `CELERY_BROKER_URL`. In some more advanced setups it may be required for these to be separate locations, however in our configuration guides these are always the same. Please see the [optional settings documentation for `CELERY_RESULT_BACKEND`](../optional-settings#celery_result_backend)) for more information on customizing this setting.
+This setting tells Celery and its workers how and where to store message results. This defaults to the same value as `CELERY_BROKER_URL`. In some more advanced setups it may be required for these to be separate locations, however in our configuration guides these are always the same. Please see the [optional settings documentation for `CELERY_RESULT_BACKEND`](../optional-settings#celery_result_backend) for more information on customizing this setting.
 
 #### Configuring Celery for High Availability
 
