@@ -145,6 +145,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Added
 
 - [#1492](https://github.com/nautobot/nautobot/pull/1492) - Added note in the Jobs documentation about the use of `AbortTransaction` to end the job and force rollback.
+- [#1517](https://github.com/nautobot/nautobot/pull/1517) - Added password filtering example to advanced logging section in docs.
 
 ### Changed
 
