@@ -487,10 +487,22 @@ class JobViewSet(
         return Response(serializer.data)
 
     @swagger_auto_schema(
-        responses={"200": serializers.JobClassDetailSerializer()}, operation_id="extras_jobs_read_deprecated"
+        deprecated=True,
+        operation_id="extras_jobs_read_deprecated",
+        responses={"200": serializers.JobClassDetailSerializer()},
     )
-    @action(methods=["get"], detail=False, url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)", url_name="detail")
+    @action(
+        detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
+        methods=["get"],
+        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)",  # /api/extras/jobs/<class_path>/
+        url_name="detail",
+    )
     def retrieve_deprecated(self, request, class_path):
+        """
+        Get details of a Job as identified by its class-path.
+
+        This API endpoint is deprecated; it is recommended to use the extras_jobs_read endpoint instead.
+        """
         if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
         try:
@@ -514,6 +526,7 @@ class JobViewSet(
     @swagger_auto_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True)
     def variables(self, request, pk):
+        """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
         job_class = job_model.job_class
         if job_class is None:
@@ -559,28 +572,36 @@ class JobViewSet(
         }
 
     @swagger_auto_schema(
-        method="post",
+        methods=["post"],
         request_body=serializers.JobInputSerializer,
         responses={"201": serializers.JobRunResponseSerializer},
     )
     @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
     def run(self, request, *args, pk, **kwargs):
-        # Newer model-based view
+        """Run the specified Job."""
         job_model = self.get_object()
         return _run_job(request, job_model)
 
     @swagger_auto_schema(
-        responses={"200": serializers.JobClassDetailSerializer()}, operation_id="extras_jobs_run_deprecated"
+        deprecated=True,
+        methods=["post"],
+        request_body=serializers.JobInputSerializer,
+        responses={"200": serializers.JobClassDetailSerializer()},
+        operation_id="extras_jobs_run_deprecated",
     )
     @action(
         detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
         methods=["post"],
         permission_classes=[JobRunTokenPermissions],
-        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)/run",
+        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)/run",  # /api/extras/jobs/<class_path>/run/
         url_name="run",
     )
     def run_deprecated(self, request, class_path):
-        # Legacy JobClass-based view
+        """
+        Run a Job as identified by its class-path.
+
+        This API endpoint is deprecated; it is recommended to use the extras_jobs_run endpoint instead.
+        """
         if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("This user does not have permission to run jobs.")
         try:
