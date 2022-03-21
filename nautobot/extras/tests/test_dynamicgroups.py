@@ -189,11 +189,11 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         """Test `DynamicGroup.model`."""
         # New instances should not have a model unless `content_type` is set.
         new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
-        self.assertIs(new_group.model, None)
+        self.assertIsNone(new_group.model)
 
         # Setting the content_type will now allow `.model` to be accessed.
         new_group.content_type = self.device_ct
-        self.assertIsNot(new_group.model, None)
+        self.assertIsNotNone(new_group.model)
 
     def test_set_object_classes(self):
         """Test `DynamicGroup._set_object_classes()`."""
