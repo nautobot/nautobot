@@ -1,9 +1,9 @@
 from django import template
 from django.contrib.contenttypes.models import ContentType
-from django.utils.html import format_html, escape
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.models import CustomLink, ComputedField
+from nautobot.extras.models import ComputedField
 
 
 register = template.Library()

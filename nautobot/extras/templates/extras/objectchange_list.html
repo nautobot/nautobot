@@ -1,9 +1,15 @@
 {% extends 'generic/object_list.html' %}
+{% load helpers %}
 
 {% block title %}Change Log{% endblock %}
 
 {% block sidebar %}
     <div class="text-muted">
-        Change log retention: {% if settings.CHANGELOG_RETENTION %}{{ settings.CHANGELOG_RETENTION }} days{% else %}Indefinite{% endif %}
+        Change log retention:
+        {% if "CHANGELOG_RETENTION"|settings_or_config %}
+            {{ "CHANGELOG_RETENTION"|settings_or_config }} days
+        {% else %}
+            Indefinite
+        {% endif %}
     </div>
 {% endblock %}

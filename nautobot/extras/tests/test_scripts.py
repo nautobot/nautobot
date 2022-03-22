@@ -5,7 +5,21 @@ from django.test import TestCase, override_settings
 from netaddr import IPAddress, IPNetwork
 
 from nautobot.dcim.models import DeviceRole
-from nautobot.extras.scripts import *
+from nautobot.extras.scripts import (
+    BooleanVar,
+    ChoiceVar,
+    FileVar,
+    IntegerVar,
+    IPAddressVar,
+    IPAddressWithMaskVar,
+    IPNetworkVar,
+    MultiChoiceVar,
+    MultiObjectVar,
+    ObjectVar,
+    Script,
+    StringVar,
+    TextVar,
+)
 
 CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))
 

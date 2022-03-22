@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from nautobot.tenancy.filters import *
+from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
 
 

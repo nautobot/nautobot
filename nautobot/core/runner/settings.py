@@ -75,8 +75,9 @@ def add_settings(mod, allow_extras=True, settings=django_settings):
     """
     Adds all settings that are part of ``mod`` to the global settings object.
 
-    Special cases ``EXTRA_APPS`` to append the specified applications to the
-    list of ``INSTALLED_APPS``.
+    Special cases ``EXTRA_{settings name}`` to append the specified applications to the
+    list of ``{settings name}``.  For example, ``EXTRA_INSTALLED_APPS`` will be appended to the list
+    of ``INSTALLED_APPS``.
     """
     extras = {}
 

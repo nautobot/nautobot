@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load helpers %}
+{% load static %}
+
+{% block content %}
+    <div class="pull-right noprint">
+        {% if request.user.is_authenticated and table_config_form %}
+            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table">
+                <i class="mdi mdi-cog"></i> Configure</button>
+            </button>
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}Installed Plugins{% endblock %}</h1>
+
+    <div class="row">
+        <div class="col-md-12">
+            {% if filter_form %}
+                <div class="col-md-3 pull-right right-side-panel noprint">
+                    {% include 'inc/search_panel.html' %}
+                    {% block sidebar %}{% endblock %}
+                </div>
+            {% endif %}
+            {% include table_template|default:'responsive_table.html' %}
+            {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
+            <div class="clearfix"></div>
+        </div>
+    </div>
+    {% table_config_form table table_name="ObjectTable" %}
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'js/tableconfig.js' %}"></script>
+{% endblock %}

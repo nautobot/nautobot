@@ -9,6 +9,13 @@ from nautobot.utilities.forms import (
 from dummy_plugin.models import DummyModel
 
 
+class DummyPluginConfigForm(BootstrapMixin, forms.Form):
+    """Example of what a plugin-specific configuration form might look like."""
+
+    magic_word = forms.CharField()
+    maximum_velocity = forms.IntegerField(help_text="Meters per second")
+
+
 class DummyModelForm(BootstrapMixin, forms.ModelForm):
     """Generic create/update form for `DummyModel` objects."""
 

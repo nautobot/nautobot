@@ -1,0 +1,28 @@
+{% extends 'generic/object_list.html' %}
+
+{% block title %}Jobs Approval Queue{% endblock title %}
+
+{% block javascript %}
+{{ block.super }}
+{# this function serves as a helper for attaching data for post on the job approval endpoint. valid values for action are _dry_run, _accept, and _deny. the url gets injected by the caller. #}
+<script>
+    function handleDetailPostAction(url, action) {
+        var form = $("<form />", {
+            action: url,
+            method: "post",
+            style: "display: none;"
+        });
+        $('<input />', {
+            type: 'hidden',
+            name: action,
+            value: action
+        }).appendTo(form);
+        $('<input />', {
+            type: 'hidden',
+            name: "csrfmiddlewaretoken",
+            value: nautobot_csrf_token
+        }).appendTo(form);
+        form.appendTo('body').submit();
+    }
+</script>
+{% endblock javascript %}

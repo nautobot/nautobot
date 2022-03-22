@@ -1,60 +1,7 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
-{% load static %}
-{% load tz %}
 
-
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:graphqlquery_list' %}">GraphQL Queries</a></li>
-                {% if object.name %}
-                    <li><a href="{% url 'extras:graphqlquery' slug=object.slug %}" value="{{ object }}">{{ object.name }}</a></li>
-                {% endif %}
-            </ol>
-        </div>
-    </div>
-
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        <a class="btn btn-primary" href="{% url 'graphql' %}?id={{ object.id }}#query={{ object.query|urlencode }}&variables={{ object.variables|render_json|urlencode }}">Open in GraphiQL</a>
-        {% if perms.extras.add_graphqlquery %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.extras.change_graphqlquery %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.extras.delete_graphqlquery %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-
-    <h1>{% block title %}{{ object.name }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">GraphQL Query</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:graphqlquery_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-
-{% endblock %}
-
-{% block content %}
-<div class="row">
-	<div class="col-md-5">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Query</strong>
@@ -78,9 +25,9 @@
                 </tr>
             </table>
         </div>
-    </div>
+{% endblock content_left_page %}
 
-    <div class="col-md-7">
+{% block content_right_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Response</strong>
@@ -98,12 +45,10 @@
 
             </pre>
         </div>
-    </div>
+{% endblock content_right_page %}
 
-</div>
-
+{% block javascript %}
 <script>
-
     function test_query() {
         var output = $("#query_output");
         var variables = $("#query_variables").val();
@@ -136,4 +81,4 @@
         this.style.height = this.scrollHeight + 'px';
     }
 </script>
-{% endblock %}
+{% endblock javascript %}

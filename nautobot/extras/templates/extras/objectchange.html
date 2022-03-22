@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
 
 {% block title %}{{ object }}{% endblock %}
@@ -21,7 +21,7 @@
         <div class="col-sm-4 col-md-3">
             <form action="{% url 'extras:objectchange_list' %}" method="get">
                 <div class="input-group">
-                    <input type="text" name="q" class="form-control" />
+                    <input type="text" name="q" class="form-control" placeholder="Search change logs" />
                     <span class="input-group-btn">
                         <button type="submit" class="btn btn-primary">
                             <span class="mdi mdi-magnify" aria-hidden="true"></span>

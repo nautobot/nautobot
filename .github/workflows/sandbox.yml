@@ -1,0 +1,29 @@
+---
+name: "Update Nautobot Sandbox"
+on:
+  push:
+    branches:
+      - "develop"
+      - "next"
+      - "main"
+
+jobs:
+  webhook:
+    runs-on: "ubuntu-20.04"
+    steps:
+      - run: "echo ::set-output name=branch_name::$(echo ${{ github.ref }} | sed 's@refs/heads/@@')"
+        id: "git"
+      - name: "Call Webhook"
+        run: |
+          curl --location --request POST --user "${{ secrets.SANDBOX_GITHUB_USERNAME }}:${{ secrets.SANDBOX_GITHUB_TOKEN }}"\
+            --header 'Content-Type: application/json' \
+            --header 'Accept: application/vnd.github.everest-preview+json' \
+            --data '{
+              "ref": "${{ secrets.SANDBOX_BRANCH }}",
+              "inputs": {
+                "hash": "${{ github.sha }}",
+                "environment": "${{ steps.git.outputs.branch_name }}"
+              }
+            }' \
+            'https://api.github.com/repos/networktocode-llc/sandbox-nautobot/actions/workflows/webhook.yml/dispatches'
+

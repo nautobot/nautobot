@@ -39,6 +39,43 @@ Definition of data types that can be provided by data source models (such as [Gi
 
 Plugins may extend this dictionary with additional data sources and/or data types by calling `extras.registry.register_datasource_contents()` as desired.
 
+### `homepage_layout`
+
+A dictionary holding information about the layout of Nautobot's homepage. Each app may register homepage panels and items using objects from the generic app class. Each object has a weight attribute allowing the developer to define the position of the object.
+
+``` python
+{
+    "panels": {
+        "Panel 1" {
+            "weight": 100,
+            "items": {
+                "Item 1": {
+                    "description": "This is item 1",
+                    "link": "example.link_1"
+                    "model": Example,
+                    "permissions": "example.view_link_1",
+                    "weight": 100,
+                },
+                "Item 2": {
+                    "description": "This is item 2",
+                    "link": "example.link_2"
+                    "model": Example,
+                    "permissions": "example.view_link_2",
+                    "weight": 200,
+                }
+            }
+        }
+        "Panel 2": {
+            "weight": 200,
+            "custom_template": "panel_example.html",
+            "custom_data": {
+                "example": example_callback_function,
+            },
+        }
+    }
+}
+```
+
 ### `model_features`
 
 A dictionary of particular features (e.g. custom fields) mapped to the Nautobot models which support them, arranged by app. For example:
@@ -141,7 +178,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 
 ```python
 [
-    <DjangoObjectType>, <DjangoObjectType>
+    <DjangoObjectType>, <DjangoObjectType>, <OptimizedDjangoObjectType>
 ]
 ```
 

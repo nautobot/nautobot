@@ -1,5 +1,5 @@
 from django.db import NotSupportedError
-from django.db.models.lookups import Lookup, Contains
+from django.db.models.lookups import Lookup
 
 from nautobot.dcim.utils import object_to_path_node
 

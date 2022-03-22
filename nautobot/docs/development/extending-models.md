@@ -72,6 +72,8 @@ Edit the object's view template to display the new field. There may also be a cu
 
 If the model is already part of the GraphQL schema, the new field will be included automatically. Validate that the new field is rendering properly in GraphQL. If the field is not compatible with GraphQL or shouldn't be included in GraphQL it's possible to exclude a specific field in the GraphQL Type Object associated with this specific model. You can refer to the [graphene-django documentation](https://docs.graphene-python.org/projects/django/en/latest/queries/#specifying-which-fields-to-include) for additional information.
 
+Note that if you're using the `convert_django_field` registry to override the default GraphQL representation for any field type, this override must be registered within the relevant app's `ready()` function, rather than at module import time.
+
 ## 11. Create/extend test cases
 
 Create or extend the relevant test cases to verify that the new field and any accompanying validation logic perform as expected. This is especially important for relational fields. Nautobot incorporates various test suites, including:

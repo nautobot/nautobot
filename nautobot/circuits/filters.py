@@ -15,7 +15,6 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from .choices import *
 from .models import Circuit, CircuitTermination, CircuitType, Provider
 
 __all__ = (

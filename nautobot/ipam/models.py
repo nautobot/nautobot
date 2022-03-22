@@ -5,19 +5,26 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import ObjectChange, Status, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
-from .choices import *
-from .constants import *
+from .choices import IPAddressRoleChoices, ServiceProtocolChoices
+from .constants import (
+    IPADDRESS_ASSIGNMENT_MODELS,
+    IPADDRESS_ROLES_NONUNIQUE,
+    SERVICE_PORT_MAX,
+    SERVICE_PORT_MIN,
+    VRF_RD_MAX_LENGTH,
+)
 from .fields import VarbinaryIPField
 from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet
 from .validators import DNSValidator
@@ -172,7 +179,7 @@ class RIR(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
@@ -381,7 +388,7 @@ class Role(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     weight = models.PositiveSmallIntegerField(default=1000)
     description = models.CharField(
         max_length=200,
@@ -872,8 +879,13 @@ class IPAddress(PrimaryModel, StatusModel):
                         }
                     )
 
-        # Check for primary IP assignment that doesn't match the assigned device/VM
-        if self.present_in_database:
+        # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
+        # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
+        primary_ip_unset_by_form = getattr(self, "_primary_ip_unset_by_form", False)
+
+        # Check for primary IP assignment that doesn't match the assigned device/VM if and only if
+        # "_primary_ip_unset" has not been set by the caller.
+        if self.present_in_database and not primary_ip_unset_by_form:
             device = Device.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
             if device:
                 if getattr(self.assigned_object, "device", None) != device:
@@ -891,12 +903,8 @@ class IPAddress(PrimaryModel, StatusModel):
         if self.status == IPAddress.STATUS_SLAAC and self.family != 6:
             raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})
 
-    def save(self, *args, **kwargs):
-
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
-
-        super().save(*args, **kwargs)
 
     def to_objectchange(self, action):
         # Annotate the assigned object, if any
@@ -976,7 +984,8 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    slug = AutoSlugField(populate_from="name", unique=None)
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -995,6 +1004,7 @@ class VLANGroup(OrganizationalModel):
         )  # (site, name) may be non-unique
         unique_together = [
             ["site", "name"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
         verbose_name = "VLAN group"

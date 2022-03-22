@@ -12,7 +12,10 @@ Some text-based content is more conveniently stored in a separate Git repository
 
 ## Repository Configuration
 
-When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `token` and the token `username` that can be used to grant access to the repository.
+When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `token` and any associated `username` that can be used to grant access to the repository.
+
+!!! warning
+    Beginning in Nautobot 1.2, there are two ways to define a `token` and/or `username` for a Git repository -- either by directly configuring them into the repository definition, or by associating the repository with a [secrets group](./secretsgroup.md) record (this latter approach is new in Nautobot 1.2). The direct-configuration approach should be considered as deprecated, as it is less secure and poses a number of maintainability issues. If at all possible, you should use a secrets group instead. The direct-configuration approach may be removed altogether as an option in a future release of Nautobot.
 
 The token implementation can vary from Git provider to Git provider, the following providers have been confirmed to work. In theory, additional providers using the same pattern will work, but there is currently no specific support for all providers.
 
@@ -20,10 +23,17 @@ The token implementation can vary from Git provider to Git provider, the followi
 * GitLab's [`token`](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) requires a `username`, conventions are to use the username "oauth2". In addition, GitLab's [deploy tokens](https://docs.gitlab.com/ee/user/project/deploy_tokens/) are also supported.
 * For Bitbucket, there are two options: [personal access tokens](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html) or [OAuth2](https://developer.atlassian.com/cloud/bitbucket/oauth-2/) depending on the product.
 
+!!! note
+    When defining a [secrets group](./secretsgroup.md) for a Git repository, the group must contain assigned secret(s) with an *access type* of `HTTP(S)` and *secret type(s)* of `Token` (and `Username`, if required by the provider).
+
 Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../../../configuration/optional-settings/#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
 !!! important
     The repository branch must exist and have a commit against it. At this time, Nautobot will not initialize an empty repository.
+
+!!! note
+    If you are using a self-signed Git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
+    in order for the repository to sync.
 
 ## Repository Structure
 
@@ -36,29 +46,27 @@ Jobs defined in Python files located in a `/jobs/` directory at the root of a Gi
 
 ### Configuration Contexts
 
-Config contexts may be provided as JSON or YAML files located in `/config_contexts/`.
+Config contexts may be provided as JSON or YAML files located in `/config_contexts/`. There are three different types of config context scopes; **explicit**, **implicit**, and **local**.
 
-Files in the root of the `/config_contexts/` directory will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context will be taken from the `_metadata` within the file, not the filename).
+* **Explicit**: Defined as JSON or YAML files at the root of the `/config_contexts/` folder. Multiple config contexts can be specified within the each file. The metadata regarding the naming and scoping of the config context is determined by the `_metadata` key for each list element.
+* **Implicit**: They're defined using a specific folder and file structure to apply the config context to a specific scope.
+* **Local**: Defined at the device/virtual machine level and only being applied to the specific device/virtual machine.
 
-Additionally or as an alternative, files can be placed in `/config_contexts/<filter>/<slug>.[json|yaml]`, in which case their path and filename will be taken as an implied scope for the context. For example:
+#### Metadata
 
-```shell
-config_contexts/
-  context_1.json   # JSON data will be imported as-is, with scoping derived from its contents
-  context_2.yaml   # YAML data will be imported as-is, with scoping derived from its contents
-  devices/
-    rtr-01.yaml    # YAML data, local to the Device named "rtr-01"
-  regions/
-    nyc.yaml       # YAML data, with implied scoping to the Region with slug "nyc"
-  sites/
-    nyc-01.json    # JSON data, with implied scoping to the Site with slug "nyc-01"
-  virtual_machines/
-    vm001.json     # JSON data, local to the VirtualMachine named "vm001"
-```
+The metadata used to create the config context has the following options and is specified by the `_metadata` key.
 
-#### Grouped/Scoped Configuration Contexts
+| Key         | Required | Default | Description                                                                       |
+| ----------- | -------- | ------- | --------------------------------------------------------------------------------- |
+| name        | True     | N/A     | The name that will be assigned to the Config Context                              |
+| weight      | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
+| description | False    | N/A     | The description applied to the Config Context                                     |
+| is_active   | False    | True    | Whether or not the Config Context is active                                       |
+| schema      | False    | N/A     | Config Context Schema that it should be validated against                         |
 
-After loading and potentially extending the JSON or YAML data with any implied scoping, the key `_metadata` will be extracted from the loaded data and used to define the config context's metadata; all remaining data will form the config context data dictionary. For example, the below JSON file defines a config context with weight 1000, scoped to the region with slug `nyc`, with two keys `ntp-servers` and `syslog-servers` in its config context data:
+There are several other keys that can be defined that match the scope of what the Config Context will be assigned to.
+
+Here is an example `_metadata` key defined:
 
 ```json
 {
@@ -70,18 +78,39 @@ After loading and potentially extending the JSON or YAML data with any implied s
         "regions": [{"slug": "nyc"}],
         "schema": "Config Context Schema 1"
     },
-    "ntp-servers": [
-        "172.16.10.22",
-        "172.16.10.33"
-    ],
-    "syslog-servers": [
-        "172.16.9.100",
-        "172.16.9.101"
-    ]
+    "acl": {
+        "definitions": {
+            "named ": {
+                "PERMIT_ROUTES": [
+                  "10 permit ip any any"
+                ]
+            }
+        }
+    },
+    "route-maps": {
+        "PERMIT_CONN_ROUTES": {
+            "seq": 10,
+            "statements": [
+                "match ip address PERMIT_ROUTES"
+            ],
+            "type": "permit"
+        }
+    }
 }
 ```
 
-Within the `_metadata`, the `name` key is always required; all other metadata keys are optional and will take on default values if omitted. The optional field `schema` defines the name of a config context schema to validate data.
+!!! important
+    The only config context scope that does not require any metadata defined is the local configuration context
+
+#### Explicit Config Contexts
+
+As stated above, these **explicit** files live at the root of `/config_contexts`. These files will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context will be taken from the `_metadata` key within the file, not the filename). To provide a visual, the `context_1.json` and `context_2.yml` are **explicit** config context scopes.
+
+```shell
+config_contexts/
+  context_1.json   # JSON data will be imported as-is, with scoping explicit from its contents
+  context_2.yaml   # YAML data will be imported as-is, with scoping explicit from its contents
+```
 
 For files in the root of the `/config_contexts/` directory, a single file may define a single config context as above, or alternatively it may contain a list of config context data definitions, as in the following example:
 
@@ -111,9 +140,77 @@ For files in the root of the `/config_contexts/` directory, a single file may de
 ...
 ```
 
+The `_metadata` key will map to the attributes required when creating a config context via the UI or API such as name and the scope of the config context. If we take a look at the first element, the name assigned to the config context will be `"Router hostname pattern"` and be scoped to `roles` with a slug of `router`.
+
+Any key/value pair defined at the same level as `_metadata` will be converted to the config context data. Keeping with the first element, it will have a key set as `hostname_pattern_string` with a value of `rtr-.+`.
+
+#### Implicit Config Contexts
+
+Implicit config context files will have the following folder/file structure `/config_contexts/<filter>/<slug>.[json|yaml]`, in which case their path and filename will be taken as an implicit scope for the context. For example:
+
+```shell
+config_contexts/
+  regions/
+    nyc.yaml       # YAML data, with implicit scoping to the Region with slug "nyc"
+  sites/
+    nyc-01.json    # JSON data, with implicit scoping to the Site with slug "nyc-01"
+```
+
+The implicit config contexts will be defined using dictionaries for both `_metadata` and any context data for the config context.
+
+**JSON**
+
+```json
+{
+    "_metadata": {
+        "name": "Region NYC servers",
+        "weight": 1000,
+        "description": "NTP and Syslog servers for region NYC",
+        "is_active": true,
+        "schema": "Config Context Schema 1"
+    },
+    "ntp-servers": [
+        "172.16.10.22",
+        "172.16.10.33"
+    ],
+    "syslog-servers": [
+        "172.16.9.100",
+        "172.16.9.101"
+    ]
+}
+```
+
+**YAML**
+
+```yaml
+_metadata":
+  name: "Region NYC servers"
+  weight: 1000
+  description: "NTP and Syslog servers for region NYC"
+  is_active: true
+  schema: "Config Context Schema 1"
+
+ntp-servers:
+  - 172.16.10.22
+  - 172.16.10.33
+syslog-servers:
+  - 172.16.9.100
+  - 172.16.9.101
+```
+
+This will create a config context with two keys: `ntp-servers` and `syslog-servers`.
+
 #### Local Configuration Contexts
 
 Files in a `config_contexts/devices/` and/or `config_contexts/virtual_machines/` directory will be used to populate "local" config context data for individual devices or virtual machines. For these files, the device/VM name will always be taken from the filename, and the data in the file will be used precisely as-is (there is no need, or support, for a `_metadata` key in these files).
+
+```shell
+config_contexts/
+  devices/
+    rtr-01.yaml    # YAML data, local to the Device named "rtr-01"
+  virtual_machines/
+    vm001.json     # JSON data, local to the VirtualMachine named "vm001"
+```
 
 !!! note
     While virtual machines are always uniquely identified by their name, it is possible for devices associated with different sites and/or tenants to share an identical name. Currently, Nautobot is unable to automatically apply local config context via Git to devices that have a non-globally-unique name (or no name at all).
@@ -134,7 +231,7 @@ When loading the schema, the key `_metadata` will be extracted from the loaded d
 
 JSON single example:
 
-``` json
+```json
 {
   "_metadata": {
     "name": "Config Context Schema 1",
@@ -154,7 +251,7 @@ JSON single example:
 
 JSON list example:
 
-``` json
+```json
 [
   {
     "_metadata": {
@@ -206,7 +303,7 @@ data_schema:
 
 YAML list example:
 
-``` yaml
+```yaml
 ---
 - _metadata:
     name: "Config Context Schema 1"
@@ -227,7 +324,6 @@ YAML list example:
         type: "string"
         description: "The person's last name"
 ```
-
 
 ### Export Templates
 

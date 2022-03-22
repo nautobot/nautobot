@@ -1,7 +1,6 @@
 from django.apps import apps
 from django.conf import settings
 from django.conf.urls import include
-from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import path
 
 from nautobot.extras.plugins.utils import import_object
@@ -9,7 +8,10 @@ from nautobot.extras.plugins.utils import import_object
 from . import views
 
 # Initialize URL base, API, and admin URL patterns for plugins
-plugin_patterns = []
+plugin_patterns = [
+    path("installed-plugins/", views.InstalledPluginsView.as_view(), name="plugins_list"),
+    path("installed-plugins/<str:plugin>/", views.InstalledPluginDetailView.as_view(), name="plugin_detail"),
+]
 plugin_api_patterns = [
     path("", views.PluginsAPIRootView.as_view(), name="api-root"),
     path(
@@ -18,13 +20,7 @@ plugin_api_patterns = [
         name="plugins-list",
     ),
 ]
-plugin_admin_patterns = [
-    path(
-        "installed-plugins/",
-        staff_member_required(views.InstalledPluginsAdminView.as_view()),
-        name="plugins_list",
-    )
-]
+plugin_admin_patterns = []
 
 # Register base/API URL patterns for each plugin
 for plugin_path in settings.PLUGINS:

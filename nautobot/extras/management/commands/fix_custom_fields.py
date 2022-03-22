@@ -23,7 +23,7 @@ class Command(BaseCommand):
                     obj_changed = False
                     # Provision CustomFields that are not associated with the object
                     for custom_field in custom_fields_for_content_type:
-                        if not obj._custom_field_data[custom_field.name]:
+                        if custom_field.name not in obj._custom_field_data:
                             self.stdout.write(f"Adding missing CustomField {custom_field.name} to {obj}")
                             obj._custom_field_data[custom_field.name] = custom_field.default
                             obj_changed = True

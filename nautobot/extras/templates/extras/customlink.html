@@ -1,59 +1,7 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
-{% load static %}
-{% load tz %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:customlink_list' %}">Custom Links</a></li>
-                {% if object.name %}
-                    <li><a href="{% url 'extras:customlink' pk=object.pk %}">{{ object.name }}</a></li>
-                {% endif %}
-            </ol>
-        </div>
-    </div>
-
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.extras.add_customlink %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.extras.change_customlink %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.extras.delete_customlink %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Custom Link</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:customlink_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-
-{% endblock %}
-
-{% block content %}
-
-<div class="row">
-	<div class="col-md-7">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Webhook</strong>
@@ -106,7 +54,4 @@
             </div>
                 {% if object.text %} <pre>{{ object.text }}</pre> {% else %} {{ None }} {% endif %}
         </div>
-    </div>
-</div>
-
-{% endblock %}
+{% endblock content_left_page %}

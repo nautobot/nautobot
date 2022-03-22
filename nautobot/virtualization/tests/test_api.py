@@ -39,10 +39,14 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
             "name": "Cluster Type 6",
             "slug": "cluster-type-6",
         },
+        {
+            "name": "Cluster Type 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -68,10 +72,14 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
             "name": "Cluster Group 6",
             "slug": "cluster-type-6",
         },
+        {
+            "name": "Cluster Group 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):

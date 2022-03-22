@@ -8,7 +8,9 @@ Within the database, custom fields are stored as JSON data directly alongside ea
 
 ## Creating Custom Fields
 
-Custom fields must be created through the admin UI under Extras > Custom Fields. Nautobot supports these custom field types:
+Custom fields can be created through the UI under Extensibility > Miscellaneous > Custom Fields or through the REST API.
+
+Nautobot supports these custom field types:
 
 * Text: Free-form text (up to 255 characters)
 * Integer: A whole number (positive or negative)
@@ -36,10 +38,13 @@ Nautobot supports limited custom validation for custom field values. Following a
 * Text: Regular expression (optional)
 * Integer: Minimum and/or maximum value (optional)
 * Selection: Must exactly match one of the prescribed choices
+  * Selection Fields: Regular expression (optional)
 
 ### Custom Selection Fields
 
 Choices are stored as independent values and are assigned a numeric weight which affects their ordering in selection lists and dropdowns. Note that choice values are saved exactly as they appear, so it's best to avoid superfluous punctuation or symbols where possible.
+
+A regular expression can optionally be defined on custom selection choices to validate the defined field choices in the user interface and the API.
 
 If a default value is specified for a selection field, it must exactly match one of the provided choices. Note that the default value can only be set on the custom field after its corresponding choice has been added.
 

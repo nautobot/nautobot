@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 from nautobot.dcim.models import Site, Rack
 from nautobot.ipam.models import VLAN
-from nautobot.extras.choices import *
+from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation
 from nautobot.utilities.testing import TestCase
 from nautobot.utilities.forms import (
@@ -19,51 +19,12 @@ class RelationshipBaseTest(TestCase):
         self.rack_ct = ContentType.objects.get_for_model(Rack)
         self.vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        self.m2m_1 = Relationship(
-            name="Vlan to Rack",
-            slug="vlan-rack",
-            source_type=self.rack_ct,
-            source_label="My Vlans",
-            source_filter={"site": "mysite"},
-            destination_type=self.vlan_ct,
-            destination_label="My Racks",
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-        )
-        self.m2m_1.save()
-
-        self.m2m_2 = Relationship(
-            name="Another Vlan to Rack",
-            slug="vlan-rack-2",
-            source_type=self.rack_ct,
-            destination_type=self.vlan_ct,
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-        )
-        self.m2m_2.save()
-
-        self.o2m_1 = Relationship(
-            name="generic site to vlan",
-            slug="site-vlan",
-            source_type=self.site_ct,
-            destination_type=self.vlan_ct,
-            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
-        )
-        self.o2m_1.save()
-
-        self.o2o_1 = Relationship(
-            name="Primary Rack per Site",
-            slug="primary-rack-site",
-            source_type=self.rack_ct,
-            source_hidden=True,
-            destination_type=self.site_ct,
-            destination_label="Primary Rack",
-            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
-        )
-        self.o2o_1.save()
-
         self.sites = [
             Site.objects.create(name="Site A", slug="site-a"),
             Site.objects.create(name="Site B", slug="site-b"),
             Site.objects.create(name="Site C", slug="site-c"),
+            Site.objects.create(name="Site D", slug="site-d"),
+            Site.objects.create(name="Site E", slug="site-e"),
         ]
 
         self.racks = [
@@ -77,6 +38,78 @@ class RelationshipBaseTest(TestCase):
             VLAN.objects.create(name="VLAN B", vid=100, site=self.sites[1]),
             VLAN.objects.create(name="VLAN C", vid=100, site=self.sites[2]),
         ]
+
+        self.m2m_1 = Relationship(
+            name="Vlan to Rack",
+            slug="vlan-rack",
+            source_type=self.rack_ct,
+            source_label="My Vlans",
+            source_filter={"site": ["site-a"]},
+            destination_type=self.vlan_ct,
+            destination_label="My Racks",
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        self.m2m_1.validated_save()
+
+        self.m2m_2 = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=self.rack_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        self.m2m_2.validated_save()
+
+        self.o2m_1 = Relationship(
+            name="generic site to vlan",
+            slug="site-vlan",
+            source_type=self.site_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+        self.o2m_1.validated_save()
+
+        self.o2o_1 = Relationship(
+            name="Primary Rack per Site",
+            slug="primary-rack-site",
+            source_type=self.rack_ct,
+            source_hidden=True,
+            destination_type=self.site_ct,
+            destination_label="Primary Rack",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+        )
+        self.o2o_1.validated_save()
+
+        # Relationships between objects of the same type
+
+        self.o2o_2 = Relationship(
+            name="Alphabetical Sites",
+            slug="alphabetical-sites",
+            source_type=self.site_ct,
+            source_label="Alphabetically Prior",
+            destination_type=self.site_ct,
+            destination_label="Alphabetically Subsequent",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+        )
+        self.o2o_2.validated_save()
+
+        self.o2os_1 = Relationship(
+            name="Redundant Rack",
+            slug="redundant-rack",
+            source_type=self.rack_ct,
+            destination_type=self.rack_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+        self.o2os_1.validated_save()
+
+        self.m2ms_1 = Relationship(
+            name="Related Sites",
+            slug="related-sites",
+            source_type=self.site_ct,
+            destination_type=self.site_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        )
+        self.m2ms_1.validated_save()
 
 
 class RelationshipTest(RelationshipBaseTest):
@@ -142,18 +175,6 @@ class RelationshipTest(RelationshipBaseTest):
         }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
-    def test_clean_same_object(self):
-        m2m = Relationship(
-            name="Another Vlan to Rack",
-            slug="vlan-rack-2",
-            source_type=self.rack_ct,
-            destination_type=self.rack_ct,
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-        )
-
-        with self.assertRaises(ValidationError):
-            m2m.clean()
-
     def test_clean_valid(self):
         m2m = Relationship(
             name="Another Vlan to Rack",
@@ -167,6 +188,52 @@ class RelationshipTest(RelationshipBaseTest):
 
         m2m.clean()
 
+    def test_clean_invalid_asymmetric(self):
+        """For a symmetric relationship, source and destination properties must match if specified."""
+        o2os = Relationship(
+            name="Site to Site",
+            slug="site-to-site",
+            source_type=self.site_ct,
+            source_label="Site A",
+            source_hidden=True,
+            source_filter={"name": ["site-a"]},
+            destination_type=self.rack_ct,
+            destination_label="Site B",
+            destination_hidden=False,
+            destination_filter={"name": ["site-b"]},
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+
+        with self.assertRaises(ValidationError) as handler:
+            o2os.clean()
+        expected_errors = {
+            "destination_type": ["Must match source_type for a symmetric relationship"],
+            "destination_label": ["Must match source_label for a symmetric relationship"],
+            "destination_hidden": ["Must match source_hidden for a symmetric relationship"],
+            "destination_filter": ["Must match source_filter for a symmetric relationship"],
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+    def test_clean_valid_symmetric_implicit(self):
+        """For a symmetric relationship, omitted relevant properties are autofilled on clean."""
+        o2os = Relationship(
+            name="Site to Site",
+            slug="site-to-site",
+            source_type=self.site_ct,
+            destination_type=self.site_ct,
+            source_label="Site",
+            destination_filter={"name": ["site-b"]},
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+
+        o2os.clean()
+        self.assertEqual(o2os.destination_label, "Site")
+        self.assertEqual(o2os.source_filter, {"name": ["site-b"]})
+        self.assertEqual(o2os.source_type, o2os.destination_type)
+        self.assertEqual(o2os.source_label, o2os.destination_label)
+        self.assertEqual(o2os.source_hidden, o2os.destination_hidden)
+        self.assertEqual(o2os.source_filter, o2os.destination_filter)
+
     def test_get_label_input(self):
         with self.assertRaises(ValueError):
             self.m2m_1.get_label("wrongside")
@@ -178,6 +245,9 @@ class RelationshipTest(RelationshipBaseTest):
     def test_get_label_without_label_defined(self):
         self.assertEqual(self.m2m_2.get_label("source"), "VLANs")
         self.assertEqual(self.m2m_2.get_label("destination"), "racks")
+        self.assertEqual(self.m2ms_1.get_label("source"), "sites")
+        self.assertEqual(self.m2ms_1.get_label("destination"), "sites")
+        self.assertEqual(self.m2ms_1.get_label("peer"), "sites")
 
     def test_has_many_input(self):
         with self.assertRaises(ValueError):
@@ -190,6 +260,14 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertTrue(self.m2m_1.has_many("destination"))
         self.assertFalse(self.o2o_1.has_many("source"))
         self.assertFalse(self.o2o_1.has_many("destination"))
+        self.assertFalse(self.o2o_2.has_many("source"))
+        self.assertFalse(self.o2o_2.has_many("destination"))
+        self.assertFalse(self.o2os_1.has_many("source"))
+        self.assertFalse(self.o2os_1.has_many("destination"))
+        self.assertFalse(self.o2os_1.has_many("peer"))
+        self.assertTrue(self.m2ms_1.has_many("source"))
+        self.assertTrue(self.m2ms_1.has_many("destination"))
+        self.assertTrue(self.m2ms_1.has_many("peer"))
 
     def test_to_form_field_m2m(self):
 
@@ -203,7 +281,12 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
-        self.assertEqual(field.query_params, {"site": "mysite"})
+        self.assertEqual(field.query_params, {"site": ["site-a"]})
+
+        field = self.m2ms_1.to_form_field("peer")
+        self.assertFalse(field.required)
+        self.assertIsInstance(field, DynamicModelMultipleChoiceField)
+        self.assertEqual(field.query_params, {})
 
     def test_to_form_field_o2m(self):
 
@@ -216,6 +299,22 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelChoiceField)
         self.assertEqual(field.label, "site")
+
+    def test_to_form_field_o2o(self):
+        field = self.o2o_1.to_form_field("source")
+        self.assertFalse(field.required)
+        self.assertIsInstance(field, DynamicModelChoiceField)
+        self.assertEqual(field.label, "site")
+
+        field = self.o2o_1.to_form_field("destination")
+        self.assertFalse(field.required)
+        self.assertIsInstance(field, DynamicModelChoiceField)
+        self.assertEqual(field.label, "Primary Rack")
+
+        field = self.o2os_1.to_form_field("peer")
+        self.assertFalse(field.required)
+        self.assertIsInstance(field, DynamicModelChoiceField)
+        self.assertEqual(field.label, "rack")
 
 
 class RelationshipAssociationTest(RelationshipBaseTest):
@@ -238,12 +337,13 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         """Validate that one-to-one relationships can't have more than one relationship association per side."""
 
         cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
 
         cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[1], destination=self.sites[1])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
+
+        cra = RelationshipAssociation(relationship=self.o2os_1, source=self.racks[0], destination=self.racks[1])
+        cra.validated_save()
 
         with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[2])
@@ -262,20 +362,33 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
+        with self.assertRaises(ValidationError) as handler:
+            cra = RelationshipAssociation(relationship=self.o2os_1, source=self.racks[0], destination=self.racks[2])
+            cra.clean()
+        expected_errors = {"source": ["Unable to create more than one Redundant Rack association to Rack A (source)"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        # Slightly tricky case - a symmetric one-to-one relationship where the proposed *source* is already in use
+        # as a *destination* in a different RelationshipAssociation
+        with self.assertRaises(ValidationError) as handler:
+            cra = RelationshipAssociation(relationship=self.o2os_1, source=self.racks[1], destination=self.racks[2])
+            cra.clean()
+        expected_errors = {
+            "source": ["Unable to create more than one Redundant Rack association involving Rack B (peer)"]
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
     def test_clean_check_quantity_o2m(self):
         """Validate that one-to-many relationships can't have more than one relationship association per source."""
 
         cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[0])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
 
         cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[1])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
 
         cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[1], destination=self.vlans[2])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
 
         with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[2], destination=self.vlans[0])
@@ -287,27 +400,61 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
+        # Shouldn't be possible to create another copy of the same RelationshipAssociation
+        with self.assertRaises(ValidationError) as handler:
+            cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[0])
+            cra.validated_save()
+        expected_errors = {
+            "__all__": [
+                "Relationship association with this Relationship, Source type, Source id, Destination type "
+                "and Destination id already exists."
+            ],
+            "destination": [
+                "Unable to create more than one generic site to vlan association to VLAN A (100) (destination)",
+            ],
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
     def test_clean_check_quantity_m2m(self):
         """Validate that many-to-many relationship can have many relationship associations."""
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
 
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
 
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[2])
-        cra.clean()
-        cra.save()
+        cra.validated_save()
 
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[2], destination=self.vlans[0])
-        cra.clean()
+        cra.validated_save()
+
+        # Shouldn't be possible to create another copy of the same RelationshipAssociation
+        with self.assertRaises(ValidationError) as handler:
+            cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
+            cra.validated_save()
+        expected_errors = {
+            "__all__": [
+                "Relationship association with this Relationship, Source type, Source id, Destination type "
+                "and Destination id already exists."
+            ],
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        cra = RelationshipAssociation(relationship=self.m2ms_1, source=self.sites[0], destination=self.sites[1])
+        cra.validated_save()
+
+        # Shouldn't be possible to create a mirrored copy of the same symmetric RelationshipAssociation
+        with self.assertRaises(ValidationError) as handler:
+            cra = RelationshipAssociation(relationship=self.m2ms_1, source=self.sites[1], destination=self.sites[0])
+            cra.validated_save()
+        expected_errors = {"__all__": ["A Related Sites association already exists between Site B and Site A"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_get_peer(self):
         """Validate that the get_peer() method works correctly."""
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
-        cra.save()
+        cra.validated_save()
 
         self.assertEqual(cra.get_peer(self.racks[0]), self.vlans[0])
         self.assertEqual(cra.get_peer(self.vlans[0]), self.racks[0])
@@ -315,22 +462,40 @@ class RelationshipAssociationTest(RelationshipBaseTest):
 
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
-        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
-        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1])
-        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[0])
+        associations = [
+            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
+            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
+            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[0]),
+            # Create an association loop just to make sure it works correctly on deletion
+            RelationshipAssociation(relationship=self.o2o_2, source=self.sites[2], destination=self.sites[3]),
+            RelationshipAssociation(relationship=self.o2o_2, source=self.sites[3], destination=self.sites[2]),
+        ]
+        for association in associations:
+            association.validated_save()
+        # Create a self-referential association as well; validated_save() would correctly reject this one as invalid
+        RelationshipAssociation.objects.create(relationship=self.o2o_2, source=self.sites[4], destination=self.sites[4])
 
-        self.assertEqual(3, RelationshipAssociation.objects.count())
+        self.assertEqual(6, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when their 'source' object is deleted
         self.racks[0].delete()
 
         # Both relations involving racks[0] should have been deleted
-        # The relation between racks[1] and vlans[0] should remain
-        self.assertEqual(1, RelationshipAssociation.objects.count())
+        # The relation between racks[1] and vlans[0] should remain, as should the site relations
+        self.assertEqual(4, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when their 'destination' object is deleted
         self.vlans[0].delete()
 
+        # Site relation remains
+        self.assertEqual(3, RelationshipAssociation.objects.count())
+
+        # Test automatic deletion of RelationshipAssociations when there's a loop of source/destination references
+        self.sites[3].delete()
+        self.assertEqual(1, RelationshipAssociation.objects.count())
+
+        # Test automatic deletion of RelationshipAssociations when the same object is both source and destination
+        self.sites[4].delete()
         self.assertEqual(0, RelationshipAssociation.objects.count())
 
     def test_generic_relation(self):

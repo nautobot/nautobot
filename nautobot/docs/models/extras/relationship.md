@@ -1,19 +1,65 @@
 # Relationships
 Sometimes it is desirable to create a new kind of relationship between one (or more) objects in your source of truth to reflect business logic or other relationships that may be useful to you but that haven't been defined. This is where the Relationships feature comes in: like defining custom fields to hold atributes specific to your use cases, relationships define specific links between objects that might be specific to your network or data.
 
+To create a relationship, from the top-level navigation menu select *Extensibility* --> *Relationships*
+
 ## Relationship Types
 
-* Many to Many -  where both sides of the relationship connection can be connected to multiple objects. e.g. VLANs can be connected to multiple devices and devices will have multiple VLANs.
-* One to Many - where one side of the connection can only have one object. e.g. where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many FEX. 
-* One to One - where there can be only one object on either side of the relationship. e.g. a primary VLAN for a site or device. It doesn't make sense to have more than 1 'primary' vlan for a device.
+* **Many-to-many** - where both sides of the relationship connection can be connected to multiple objects. For example, VLANs can be connected to multiple devices and devices will have multiple VLANs.
+* **One-to-many** - where one side of the connection can only have one object. For example, where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many FEX.
+* **One-to-one** - where there can be only one object on either side of the relationship. For example, an IP address serving as a router-id for a device. Each device has at most one router-id, and each IP address can be a router-id for at most one device.
+
+Additionally, there are two *symmetric* relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two *sides* of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the *source* and *destination* of a relationship as the non-symmetric relationship types above do.
+
+* **Symmetric Many-to-many** - as in Many-to-many, but acting more as an *undirected graph* of similar objects. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between *source* and *destination* peers.
+* **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
+
+!!! note
+    A symmetric many-to-many relationship can be, but is not necessarily, a *complete graph* or *full mesh*. For example, in the routing topology example above, if Device *A* and Device *B* are peers, and Device *B* and Device *C* are peers, this does not automatically imply a relationship between Devices *A* and *C* -- they **might or might not** also be peers, depending on how you define and populate the specific associations for this relationship.
 
 ## Relationship Filters
 
-Filters can be defined to restrict the type or selection of objects for either side of the connection. From the FEX example above, you can restrict the FEX side of the connection to only of devices with the FEX role, and restrict the controller side to only devices with Controller roles.
+Filters can be defined to restrict the type or selection of objects for either side of the connection. 
+
+As an example, let's create a relationship between Circuits and Devices. 
+In our situation we only would terminate Circuits on Devices with the Device Role of `edge`.
+
+To prevent the Circuit Relationship from showing up on any other Device, use a JSON filter to 
+limit the Relationship to only Devices with Device Role whose slug is `edge`:
+
+```json
+{
+    "role": [
+        "edge"
+    ]
+}
+```
+
+!!! note
+    There are a few ways to tell what attributes are available to filter on for a given object.
+    In the case of the *Device* object used in the example, the user could:
+    
+    - look at the code `nautobot/dcim/filters.py` -> `DeviceFilterSet` class (available options there include `manufacturer_id`, `manufacturer`, etc)
+    - check the filter options available in the REST API: `https://<server-name>/api/docs`, and in this case checking the `dcim_devices_list` API endpoint for the parameter names
+
+For context, here is an image of the entire Relationship:
+
+![Image of Relationship with json filter](../../img/relationship_w_json_filter.png)
+
+Now, the Circuit Relationship field will show up on a Device with an `edge` role:
+
+![Image of Edge Device Relationships](../../img/edge_dev_circuit_relationship.png)
+
+The Circuit Relationship field will *not* show up on a Device with a role `leaf`:
+
+![Image of Leaf Device Relationships](../../img/leaf_dev_no_circuit_relationship.png)
+
+
 
 ## Relationship Labels
 
-Realtionship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name. From the VLANs example above, you might label the relationship so that on the VLANs side the connection appears as 'Devices' and on the Device side the connection appears as 'VLANs'. 
+Relationship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name. 
+From the Devices/Circuits example above, you might label the relationship so that on the Device side the connection appears as 'Terminated Circuits' and on the Circuit side the connection appears as 'Terminating Devices'. 
 
 ### Options
 

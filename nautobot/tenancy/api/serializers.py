@@ -3,8 +3,10 @@ from rest_framework import serializers
 from nautobot.extras.api.customfields import CustomFieldModelSerializer
 from nautobot.extras.api.serializers import TaggedObjectSerializer
 from nautobot.tenancy.models import Tenant, TenantGroup
-from .nested_serializers import *
 
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import NestedTenantGroupSerializer, NestedTenantSerializer  # noqa: F401
 
 #
 # Tenants

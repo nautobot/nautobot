@@ -10,7 +10,6 @@ from django.db.models import (
     OuterRef,
     Subquery,
     Q,
-    QuerySet,
     UUIDField,
     Value,
 )

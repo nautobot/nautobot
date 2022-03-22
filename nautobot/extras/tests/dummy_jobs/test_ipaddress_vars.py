@@ -1,6 +1,6 @@
 import json
 
-from nautobot.extras.jobs import *
+from nautobot.extras.jobs import Job, IPAddressVar, IPAddressWithMaskVar
 
 
 name = "IP Addresses"
@@ -38,7 +38,7 @@ class TestIPAddresses(Job):
         ipv6_network = data["ipv6_network"]
 
         # Log the data as JSON so we can pull it back out for testing.
-        self.log_info(obj=json.dumps({k: str(v) for k, v in data.items()}))
+        self.log_info(obj=json.dumps({k: str(v) for k, v in data.items()}), message="IP Address Test")
 
         self.log_warning(f"IPv4: {ipv4_address}")
         self.log_warning(f"IPv4: {ipv4_with_mask}")

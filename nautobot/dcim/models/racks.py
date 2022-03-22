@@ -6,17 +6,20 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
+from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
+
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
@@ -52,7 +55,8 @@ class RackGroup(MPTTModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    slug = AutoSlugField(populate_from="name", unique=None)
     site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     parent = TreeForeignKey(
         to="self",
@@ -72,6 +76,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
         ordering = ["site", "name"]
         unique_together = [
             ["site", "name"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
 
@@ -122,7 +127,7 @@ class RackRole(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
@@ -464,8 +469,8 @@ class Rack(PrimaryModel, StatusModel):
         self,
         face=DeviceFaceChoices.FACE_FRONT,
         user=None,
-        unit_width=settings.RACK_ELEVATION_DEFAULT_UNIT_WIDTH,
-        unit_height=settings.RACK_ELEVATION_DEFAULT_UNIT_HEIGHT,
+        unit_width=None,
+        unit_height=None,
         legend_width=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
         include_images=True,
         base_url=None,
@@ -483,6 +488,10 @@ class Rack(PrimaryModel, StatusModel):
         :param include_images: Embed front/rear device images where available
         :param base_url: Base URL for links and images. If none, URLs will be relative.
         """
+        if unit_width is None:
+            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH")
+        if unit_height is None:
+            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
         elevation = RackElevationSVG(self, user=user, include_images=include_images, base_url=base_url)
 
         return elevation.render(face, unit_width, unit_height, legend_width)

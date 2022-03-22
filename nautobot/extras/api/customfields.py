@@ -3,9 +3,7 @@ from rest_framework.serializers import SerializerMethodField
 from rest_framework.fields import CreateOnlyDefault, Field
 
 from nautobot.core.api import ValidatedModelSerializer
-from nautobot.extras.api.nested_serializers import NestedCustomFieldSerializer
-from nautobot.extras.choices import *
-from nautobot.extras.models import CustomField, CustomFieldChoice
+from nautobot.extras.models import CustomField
 
 
 #

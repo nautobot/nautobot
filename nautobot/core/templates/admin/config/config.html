@@ -1,0 +1,84 @@
+{% extends "admin/constance/change_list.html" %}
+{% load admin_list static i18n %}
+{% load helpers %}
+
+{% block breadcrumbs %}
+  <ol class="breadcrumb">
+    <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
+    <li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    <li>{{ opts.verbose_name_plural|capfirst }}</li>
+  </ol>
+{% endblock %}
+
+{% block content %}
+    <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                {% if form.non_field_errors %}
+                    <div class="panel panel-danger">
+                        <div class="panel-heading"><strong>Errors</strong></div>
+                        <div class="panel-body">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                {% endif %}
+                {% if form.errors %}
+                <ul class="errorlist">
+                {% endif %}
+                {% for field in form.hidden_fields %}
+                    {% for error in field.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                    {{ field }}
+                {% endfor %}
+                {% if form.errors %}
+                </ul>
+                {% endif %}
+
+                <div class="row">
+                    {% for fieldset in fieldsets %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading"><strong>{{ fieldset.title }}</strong></div>
+                            <div class="panel-body">
+                                {% for item in fieldset.config_values %}
+                                {% get_attr settings item.name as settings_value %}
+                                <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
+                                    {% if settings_value is not None %}
+                                        <div class="alert alert-warning" role="alert">
+                                            <code>{{ item.name }} = {{ settings_value | quote_string }}</code>
+                                            is defined in <code>{{ settings.SETTINGS_PATH }}</code>,
+                                            therefore it is not currently editable here.
+                                            <br>Remove that declaration from <code>{{ settings.SETTINGS_PATH }}</code>
+                                            if you want to manage it via this interface instead.
+                                        </div>
+                                        {{ item.form_field.as_hidden }}
+                                    {% else %}
+                                        <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
+                                            {{ item.name | split:"_" | join:" " }}
+                                            <span class="help-block">
+                                                (default: <code>{{ item.default }}</code>)
+                                            </span>
+                                        </label>
+                                        <div class="col-md-9">
+                                            {{ item.form_field.errors }}
+                                            {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
+                                                {{ item.form_field }}
+                                            <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3 text-right">
+                <input type="submit" name="_save" class="btn btn-primary" value="{% trans 'Save' %}"/>
+            </div>
+        </div>
+    </form>
+{% endblock content %}

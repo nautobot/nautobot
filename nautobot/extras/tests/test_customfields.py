@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
@@ -8,7 +9,7 @@ from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
 from nautobot.dcim.models import Site, Rack, Device
 from nautobot.dcim.tables import SiteTable
-from nautobot.extras.choices import *
+from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.utilities.tables import CustomFieldColumn
 from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
@@ -17,10 +18,10 @@ from nautobot.virtualization.models import VirtualMachine
 
 class CustomFieldTest(TestCase):
     def setUp(self):
-
-        Site.objects.create(name="Site A", slug="site-a")
-        Site.objects.create(name="Site B", slug="site-b")
-        Site.objects.create(name="Site C", slug="site-c")
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        Site.objects.create(name="Site A", slug="site-a", status=active_status)
+        Site.objects.create(name="Site B", slug="site-b", status=active_status)
+        Site.objects.create(name="Site C", slug="site-c", status=active_status)
 
     def test_simple_fields(self):
         DATA = (
@@ -73,7 +74,7 @@ class CustomFieldTest(TestCase):
             # Assign a value to the first Site
             site = Site.objects.first()
             site.cf[cf.name] = data["field_value"]
-            site.save()
+            site.validated_save()
 
             # Retrieve the stored value
             site.refresh_from_db()
@@ -107,7 +108,7 @@ class CustomFieldTest(TestCase):
         # Assign a value to the first Site
         site = Site.objects.first()
         site.cf[cf.name] = "Option A"
-        site.save()
+        site.validated_save()
 
         # Retrieve the stored value
         site.refresh_from_db()
@@ -141,11 +142,51 @@ class CustomFieldTest(TestCase):
         # Assign a value to the first Site
         site = Site.objects.first()
         site.cf[cf.name] = ["Option A", "Option B"]
-        site.save()
+        site.validated_save()
 
         # Retrieve the stored value
         site.refresh_from_db()
         self.assertEqual(site.cf[cf.name], ["Option A", "Option B"])
+
+        # Delete the stored value
+        site.cf.pop(cf.name)
+        site.save()
+        site.refresh_from_db()
+        self.assertIsNone(site.cf.get(cf.name))
+
+        # Delete the custom field
+        cf.delete()
+
+    def test_text_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            name="my_text_field",
+            required=False,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        # Assign a disallowed value (list) to the first Site
+        site = Site.objects.first()
+        site.cf[cf.name] = ["I", "am", "a", "list"]
+        with self.assertRaises(ValidationError) as context:
+            site.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Site
+        site.cf[cf.name] = 2
+        with self.assertRaises(ValidationError) as context:
+            site.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+
+        # Assign another disallowed value (bool) to the first Site
+        site.cf[cf.name] = True
+        with self.assertRaises(ValidationError) as context:
+            site.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
 
         # Delete the stored value
         site.cf.pop(cf.name)
@@ -165,7 +206,10 @@ class CustomFieldManagerTest(TestCase):
         custom_field.content_types.set([content_type])
 
     def test_get_for_model(self):
-        self.assertEqual(CustomField.objects.get_for_model(Site).count(), 1)
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(CustomField.objects.get_for_model(Site).count(), 2)
+        else:
+            self.assertEqual(CustomField.objects.get_for_model(Site).count(), 1)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
 
 
@@ -237,6 +281,9 @@ class CustomFieldAPITest(APITestCase):
         cls.cf_multi_select.default = ["Foo", "Bar"]
         cls.cf_multi_select.save()
 
+        if "dummy_plugin" in settings.PLUGINS:
+            cls.cf_plugin_field = CustomField.objects.get(name="dummy-plugin-auto-custom-field")
+
         statuses = Status.objects.get_for_model(Site)
 
         # Create some sites
@@ -255,6 +302,8 @@ class CustomFieldAPITest(APITestCase):
             cls.cf_select.name: "Bar",
             cls.cf_multi_select.name: ["Bar", "Baz"],
         }
+        if "dummy_plugin" in settings.PLUGINS:
+            cls.sites[1]._custom_field_data[cls.cf_plugin_field.name] = "Custom value"
         cls.sites[1].save()
 
     def test_get_single_object_without_custom_field_data(self):
@@ -266,18 +315,20 @@ class CustomFieldAPITest(APITestCase):
 
         response = self.client.get(url, **self.header)
         self.assertEqual(response.data["name"], self.sites[0].name)
-        self.assertEqual(
-            response.data["custom_fields"],
-            {
-                "text_field": None,
-                "number_field": None,
-                "boolean_field": None,
-                "date_field": None,
-                "url_field": None,
-                "choice_field": None,
-                "multi_choice_field": None,
-            },
-        )
+        expected_data = {
+            "text_field": None,
+            "number_field": None,
+            "boolean_field": None,
+            "date_field": None,
+            "url_field": None,
+            "choice_field": None,
+            "multi_choice_field": None,
+        }
+        if "dummy_plugin" in settings.PLUGINS:
+            # A model directly instantiated via the ORM does NOT automatically receive custom field default values.
+            # This is arguably a bug.
+            expected_data["dummy-plugin-auto-custom-field"] = None
+        self.assertEqual(response.data["custom_fields"], expected_data)
 
     def test_get_single_object_with_custom_field_data(self):
         """
@@ -296,6 +347,11 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response.data["custom_fields"]["url_field"], site2_cfvs["url_field"])
         self.assertEqual(response.data["custom_fields"]["choice_field"], site2_cfvs["choice_field"])
         self.assertEqual(response.data["custom_fields"]["multi_choice_field"], site2_cfvs["multi_choice_field"])
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(
+                response.data["custom_fields"]["dummy-plugin-auto-custom-field"],
+                site2_cfvs["dummy-plugin-auto-custom-field"],
+            )
 
     def test_create_single_object_with_defaults(self):
         """
@@ -321,6 +377,8 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response_cf["url_field"], self.cf_url.default)
         self.assertEqual(response_cf["choice_field"], self.cf_select.default)
         self.assertEqual(response_cf["multi_choice_field"], self.cf_multi_select.default)
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(response_cf["dummy-plugin-auto-custom-field"], self.cf_plugin_field.default)
 
         # Validate database data
         site = Site.objects.get(pk=response.data["id"])
@@ -331,6 +389,8 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(site.cf["url_field"], self.cf_url.default)
         self.assertEqual(site.cf["choice_field"], self.cf_select.default)
         self.assertEqual(site.cf["multi_choice_field"], self.cf_multi_select.default)
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(site.cf["dummy-plugin-auto-custom-field"], self.cf_plugin_field.default)
 
     def test_create_single_object_with_values(self):
         """
@@ -350,6 +410,8 @@ class CustomFieldAPITest(APITestCase):
                 "multi_choice_field": ["Baz"],
             },
         }
+        if "dummy_plugin" in settings.PLUGINS:
+            data["custom_fields"]["dummy-plugin-auto-custom-field"] = "Custom value"
         url = reverse("dcim-api:site-list")
         self.add_permissions("dcim.add_site")
 
@@ -366,6 +428,8 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response_cf["url_field"], data_cf["url_field"])
         self.assertEqual(response_cf["choice_field"], data_cf["choice_field"])
         self.assertEqual(response_cf["multi_choice_field"], data_cf["multi_choice_field"])
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(response_cf["dummy-plugin-auto-custom-field"], data_cf["dummy-plugin-auto-custom-field"])
 
         # Validate database data
         site = Site.objects.get(pk=response.data["id"])
@@ -376,6 +440,8 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(site.cf["url_field"], data_cf["url_field"])
         self.assertEqual(site.cf["choice_field"], data_cf["choice_field"])
         self.assertEqual(site.cf["multi_choice_field"], data_cf["multi_choice_field"])
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(site.cf["dummy-plugin-auto-custom-field"], data_cf["dummy-plugin-auto-custom-field"])
 
     def test_create_multiple_objects_with_defaults(self):
         """
@@ -417,6 +483,8 @@ class CustomFieldAPITest(APITestCase):
             self.assertEqual(response_cf["url_field"], self.cf_url.default)
             self.assertEqual(response_cf["choice_field"], self.cf_select.default)
             self.assertEqual(response_cf["multi_choice_field"], self.cf_multi_select.default)
+            if "dummy_plugin" in settings.PLUGINS:
+                self.assertEqual(response_cf["dummy-plugin-auto-custom-field"], self.cf_plugin_field.default)
 
             # Validate database data
             site = Site.objects.get(pk=response.data[i]["id"])
@@ -427,6 +495,8 @@ class CustomFieldAPITest(APITestCase):
             self.assertEqual(site.cf["url_field"], self.cf_url.default)
             self.assertEqual(site.cf["choice_field"], self.cf_select.default)
             self.assertEqual(site.cf["multi_choice_field"], self.cf_multi_select.default)
+            if "dummy_plugin" in settings.PLUGINS:
+                self.assertEqual(site.cf["dummy-plugin-auto-custom-field"], self.cf_plugin_field.default)
 
     def test_create_multiple_objects_with_values(self):
         """
@@ -441,6 +511,8 @@ class CustomFieldAPITest(APITestCase):
             "choice_field": "Bar",
             "multi_choice_field": ["Foo", "Bar"],
         }
+        if "dummy_plugin" in settings.PLUGINS:
+            custom_field_data["dummy-plugin-auto-custom-field"] = "Custom value"
         data = (
             {
                 "name": "Site 3",
@@ -479,6 +551,10 @@ class CustomFieldAPITest(APITestCase):
             self.assertEqual(response_cf["url_field"], custom_field_data["url_field"])
             self.assertEqual(response_cf["choice_field"], custom_field_data["choice_field"])
             self.assertEqual(response_cf["multi_choice_field"], custom_field_data["multi_choice_field"])
+            if "dummy_plugin" in settings.PLUGINS:
+                self.assertEqual(
+                    response_cf["dummy-plugin-auto-custom-field"], custom_field_data["dummy-plugin-auto-custom-field"]
+                )
 
             # Validate database data
             site = Site.objects.get(pk=response.data[i]["id"])
@@ -504,6 +580,10 @@ class CustomFieldAPITest(APITestCase):
                 site.cf["multi_choice_field"],
                 custom_field_data["multi_choice_field"],
             )
+            if "dummy_plugin" in settings.PLUGINS:
+                self.assertEqual(
+                    site.cf["dummy-plugin-auto-custom-field"], custom_field_data["dummy-plugin-auto-custom-field"]
+                )
 
     def test_update_single_object_with_values(self):
         """
@@ -533,6 +613,10 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response_cf["url_field"], original_cfvs["url_field"])
         self.assertEqual(response_cf["choice_field"], original_cfvs["choice_field"])
         self.assertEqual(response_cf["multi_choice_field"], original_cfvs["multi_choice_field"])
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(
+                response_cf["dummy-plugin-auto-custom-field"], original_cfvs["dummy-plugin-auto-custom-field"]
+            )
 
         # Validate database data
         site.refresh_from_db()
@@ -546,6 +630,8 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(site.cf["url_field"], original_cfvs["url_field"])
         self.assertEqual(site.cf["choice_field"], original_cfvs["choice_field"])
         self.assertEqual(site.cf["multi_choice_field"], original_cfvs["multi_choice_field"])
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(site.cf["dummy-plugin-auto-custom-field"], original_cfvs["dummy-plugin-auto-custom-field"])
 
     def test_minimum_maximum_values_validation(self):
         url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
@@ -616,6 +702,54 @@ class CustomFieldAPITest(APITestCase):
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_select_regex_validation(self):
+        url = reverse("extras-api:customfieldchoice-list")
+        self.add_permissions("extras.add_customfieldchoice")
+
+        self.cf_select.validation_regex = r"^[A-Z]{3}$"  # Three uppercase letters
+        self.cf_select.save()
+
+        data = {"field": self.cf_select.id, "value": "1234", "weight": 100}
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        data = {"field": self.cf_select.id, "value": "abc", "weight": 100}
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        data = {"field": self.cf_select.id, "value": "ABC", "weight": 100}
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_text_type_with_invalid_values(self):
+        """
+        Try and create a new site with an invalid value for a text type.
+        """
+        data = {
+            "name": "Site 4",
+            "slug": "site-4",
+            "status": "active",
+            "custom_fields": {
+                "text_field": ["I", "am", "a", "disallowed", "type"],
+            },
+        }
+        url = reverse("dcim-api:site-list")
+        self.add_permissions("dcim.add_site")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Value must be a string", str(response.content))
+
+        data["custom_fields"].update({"text_field": 2})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Value must be a string", str(response.content))
+
+        data["custom_fields"].update({"text_field": True})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Value must be a string", str(response.content))
+
 
 class CustomFieldImportTest(TestCase):
     user_permissions = (
@@ -658,7 +792,7 @@ class CustomFieldImportTest(TestCase):
         Import a Site in CSV format, including a value for each CustomField.
         """
         data = (
-            (
+            [
                 "name",
                 "slug",
                 "status",
@@ -669,8 +803,8 @@ class CustomFieldImportTest(TestCase):
                 "cf_url",
                 "cf_select",
                 "cf_multiselect",
-            ),
-            (
+            ],
+            [
                 "Site 1",
                 "site-1",
                 "active",
@@ -681,8 +815,8 @@ class CustomFieldImportTest(TestCase):
                 "http://example.com/1",
                 "Choice A",
                 "Choice A",
-            ),
-            (
+            ],
+            [
                 "Site 2",
                 "site-2",
                 "active",
@@ -693,17 +827,25 @@ class CustomFieldImportTest(TestCase):
                 "http://example.com/2",
                 "Choice B",
                 '"Choice A,Choice B"',
-            ),
-            ("Site 3", "site-3", "active", "", "", "", "", "", "", ""),
+            ],
+            ["Site 3", "site-3", "active", "", "", "", "", "", "", ""],
         )
+        if "dummy_plugin" in settings.PLUGINS:
+            data[0].append("cf_dummy-plugin-auto-custom-field")
+            data[1].append("Custom value")
+            data[2].append("Another custom value")
+            data[3].append("")
         csv_data = "\n".join(",".join(row) for row in data)
 
-        response = self.client.post(reverse("dcim:site_import"), {"csv": csv_data})
+        response = self.client.post(reverse("dcim:site_import"), {"csv_data": csv_data})
         self.assertEqual(response.status_code, 200)
 
         # Validate data for site 1
         site1 = Site.objects.get(name="Site 1")
-        self.assertEqual(len(site1.cf), 7)
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(len(site1.cf), 8)
+        else:
+            self.assertEqual(len(site1.cf), 7)
         self.assertEqual(site1.cf["text"], "ABC")
         self.assertEqual(site1.cf["integer"], 123)
         self.assertEqual(site1.cf["boolean"], True)
@@ -711,10 +853,15 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(site1.cf["url"], "http://example.com/1")
         self.assertEqual(site1.cf["select"], "Choice A")
         self.assertEqual(site1.cf["multiselect"], ["Choice A"])
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(site1.cf["dummy-plugin-auto-custom-field"], "Custom value")
 
         # Validate data for site 2
         site2 = Site.objects.get(name="Site 2")
-        self.assertEqual(len(site2.cf), 7)
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(len(site2.cf), 8)
+        else:
+            self.assertEqual(len(site2.cf), 7)
         self.assertEqual(site2.cf["text"], "DEF")
         self.assertEqual(site2.cf["integer"], 456)
         self.assertEqual(site2.cf["boolean"], False)
@@ -722,6 +869,8 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(site2.cf["url"], "http://example.com/2")
         self.assertEqual(site2.cf["select"], "Choice B")
         self.assertEqual(site2.cf["multiselect"], ["Choice A", "Choice B"])
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(site2.cf["dummy-plugin-auto-custom-field"], "Another custom value")
 
         # No custom field data should be set for site 3
         site3 = Site.objects.get(name="Site 3")
@@ -766,6 +915,7 @@ class CustomFieldModelTest(TestCase):
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
 
     def setUp(self):
+        self.active_status = Status.objects.get_for_model(Site).get(slug="active")
         self.site1 = Site.objects.create(name="NYC")
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
@@ -801,20 +951,28 @@ class CustomFieldModelTest(TestCase):
             fallback_value="This template has errored",
             weight=100,
         )
+        # Field whose template will return None, with fallback_value defaulting to empty string
+        self.bad_attribute_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_attribute_computed_field",
+            label="Bad Attribute Computed Field",
+            template="{{ obj.location }}",
+            weight=200,
+        )
 
     def test_cf_data(self):
         """
         Check that custom field data is present on the instance immediately after being set and after being fetched
         from the database.
         """
-        site = Site(name="Test Site", slug="test-site")
+        site = Site(name="Test Site", slug="test-site", status=self.active_status)
 
         # Check custom field data on new instance
         site.cf["foo"] = "abc"
         self.assertEqual(site.cf["foo"], "abc")
 
         # Check custom field data from database
-        site.save()
+        site.validated_save()
         site = Site.objects.get(name="Test Site")
         self.assertEqual(site.cf["foo"], "abc")
 
@@ -870,6 +1028,7 @@ class CustomFieldModelTest(TestCase):
             "computed_field_one": f"{self.site1.name} is the name of this site.",
             "bad_computed_field": self.bad_computed_field.fallback_value,
             "worse_computed_field": self.worse_computed_field.fallback_value,
+            "bad_attribute_computed_field": "",
         }
         self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)
 
@@ -878,6 +1037,7 @@ class CustomFieldModelTest(TestCase):
             "Computed Field One": f"{self.site1.name} is the name of this site.",
             "Bad Computed Field": self.bad_computed_field.fallback_value,
             "Worse Computed Field": self.worse_computed_field.fallback_value,
+            "Bad Attribute Computed Field": "",
         }
         self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)
 
@@ -1045,14 +1205,17 @@ class CustomFieldChoiceTest(TestCase):
         self.choice = CustomFieldChoice(field=self.cf, value="Foo")
         self.choice.save()
 
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+
         self.site = Site(
             name="Site 1",
             slug="site-1",
             _custom_field_data={
                 "cf1": "Foo",
             },
+            status=active_status,
         )
-        self.site.save()
+        self.site.validated_save()
 
     def test_default_value_must_be_valid_choice_sad_path(self):
         self.cf.default = "invalid value"
@@ -1071,7 +1234,10 @@ class CustomFieldChoiceTest(TestCase):
 
     def test_custom_choice_deleted_with_field(self):
         self.cf.delete()
-        self.assertEqual(CustomField.objects.count(), 0)
+        if "dummy_plugin" in settings.PLUGINS:
+            self.assertEqual(CustomField.objects.count(), 1)  # custom field automatically added by the plugin
+        else:
+            self.assertEqual(CustomField.objects.count(), 0)
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
 
@@ -1229,7 +1395,7 @@ class CustomFieldTableTest(TestCase):
             cf_select.name: "Bar",
             cf_multi_select.name: ["Bar", "Baz"],
         }
-        self.site.save()
+        self.site.validated_save()
 
     def test_custom_field_table_render(self):
         queryset = Site.objects.filter(name=self.site.name)

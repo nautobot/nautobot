@@ -1,4 +1,5 @@
 import types
+from unittest import skip
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -8,6 +9,7 @@ from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
 from graphql import GraphQLError
+import graphene.types
 from graphene_django import DjangoObjectType
 from graphene_django.settings import graphene_settings
 from graphql.error.located_error import GraphQLLocatedError
@@ -30,10 +32,22 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
-from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices
+from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
-from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
+from nautobot.dcim.models import (
+    Cable,
+    Device,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    Interface,
+    Manufacturer,
+    Rack,
+    RearPort,
+    Region,
+    Site,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.utilities.testing.utils import create_test_user
 
@@ -43,6 +57,7 @@ from nautobot.extras.models import (
     ConfigContext,
     GraphQLQuery,
     Relationship,
+    RelationshipAssociation,
     Status,
     Webhook,
 )
@@ -56,7 +71,6 @@ User = get_user_model()
 
 
 class GraphQLTestCase(TestCase):
-    @classmethod
     def setUp(self):
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
@@ -194,13 +208,14 @@ class GraphQLExtendSchemaType(TestCase):
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
-    def test_extend_custom_context(self):
+    def test_extend_config_context(self):
 
         schema = extend_schema_type_config_context(DeviceTypeGraphQL, Device)
         self.assertIn("config_context", schema._meta.fields.keys())
 
     def test_extend_schema_device(self):
 
+        # The below *will* log an error as DeviceTypeGraphQL has already been extended automatically...?
         schema = extend_schema_type(DeviceTypeGraphQL)
         self.assertIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
@@ -228,7 +243,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        self.m2m_1 = Relationship.objects.create(
+        self.m2m_1 = Relationship(
             name="Vlan to Rack",
             slug="vlan-rack",
             source_type=rack_ct,
@@ -237,24 +252,27 @@ class GraphQLExtendSchemaRelationship(TestCase):
             destination_label="My Racks",
             type="many-to-many",
         )
+        self.m2m_1.validated_save()
 
-        self.m2m_2 = Relationship.objects.create(
+        self.m2m_2 = Relationship(
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=rack_ct,
             destination_type=vlan_ct,
             type="many-to-many",
         )
+        self.m2m_2.validated_save()
 
-        self.o2m_1 = Relationship.objects.create(
+        self.o2m_1 = Relationship(
             name="generic site to vlan",
             slug="site-vlan",
             source_type=site_ct,
             destination_type=vlan_ct,
             type="one-to-many",
         )
+        self.o2m_1.validated_save()
 
-        self.o2o_1 = Relationship.objects.create(
+        self.o2o_1 = Relationship(
             name="Primary Rack per Site",
             slug="primary-rack-site",
             source_type=rack_ct,
@@ -263,40 +281,86 @@ class GraphQLExtendSchemaRelationship(TestCase):
             destination_label="Primary Rack",
             type="one-to-one",
         )
+        self.o2o_1.validated_save()
 
-        self.sites = [
-            Site.objects.create(name="Site A", slug="site-a"),
-            Site.objects.create(name="Site B", slug="site-b"),
-            Site.objects.create(name="Site C", slug="site-c"),
-        ]
+        self.o2os_1 = Relationship(
+            name="Redundant Site",
+            slug="redundant-site",
+            source_type=site_ct,
+            destination_type=site_ct,
+            type="symmetric-one-to-one",
+        )
+        self.o2os_1.validated_save()
 
-        self.racks = [
-            Rack.objects.create(name="Rack A", site=self.sites[0]),
-            Rack.objects.create(name="Rack B", site=self.sites[1]),
-            Rack.objects.create(name="Rack C", site=self.sites[2]),
-        ]
+        self.o2m_same_type_1 = Relationship(
+            name="Some sort of site hierarchy?",
+            slug="site-hierarchy",
+            source_type=site_ct,
+            destination_type=site_ct,
+            type="one-to-many",
+        )
+        self.o2m_same_type_1.validated_save()
 
-        self.vlans = [
-            VLAN.objects.create(name="VLAN A", vid=100, site=self.sites[0]),
-            VLAN.objects.create(name="VLAN B", vid=100, site=self.sites[1]),
-            VLAN.objects.create(name="VLAN C", vid=100, site=self.sites[2]),
-        ]
+        self.site_schema = generate_schema_type(app_name="dcim", model=Site)
+        self.vlan_schema = generate_schema_type(app_name="ipam", model=VLAN)
 
-        self.schema = generate_schema_type(app_name="dcim", model=Site)
+    def test_extend_relationship_default_prefix(self):
+        """Verify that relationships are correctly added to the schema."""
+        schema = extend_schema_type_relationships(self.vlan_schema, VLAN)
 
-    @override_settings(GRAPHQL_CUSTOM_RELATIONSHIP_PREFIX="pr")
-    def test_extend_relationship_w_prefix(self):
-
-        schema = extend_schema_type_relationships(self.schema, Site)
-
-        datas = [
-            {"field_slug": "primary-rack-site"},
-            {"field_slug": "site-vlan"},
-        ]
-
-        for data in datas:
-            field_name = f"rel_{str_to_var_name(data['field_slug'])}"
+        # Relationships on VLAN
+        for rel, peer_side in [
+            (self.m2m_1, "source"),
+            (self.m2m_2, "source"),
+            (self.o2m_1, "source"),
+        ]:
+            field_name = f"rel_{str_to_var_name(rel.slug)}"
             self.assertIn(field_name, schema._meta.fields.keys())
+            self.assertIsInstance(schema._meta.fields[field_name], graphene.types.field.Field)
+            if rel.has_many(peer_side):
+                self.assertIsInstance(schema._meta.fields[field_name].type, graphene.types.structures.List)
+            else:
+                self.assertNotIsInstance(schema._meta.fields[field_name].type, graphene.types.structures.List)
+
+        # Relationships not on VLAN
+        for rel in [self.o2o_1, self.o2os_1]:
+            field_name = f"rel_{str_to_var_name(rel.slug)}"
+            self.assertNotIn(field_name, schema._meta.fields.keys())
+
+    @override_settings(GRAPHQL_RELATIONSHIP_PREFIX="pr")
+    def test_extend_relationship_w_prefix(self):
+        """Verify that relationships are correctly added to the schema when using a custom prefix setting."""
+        schema = extend_schema_type_relationships(self.site_schema, Site)
+
+        # Relationships on Site
+        for rel, peer_side in [
+            (self.o2m_1, "destination"),
+            (self.o2o_1, "source"),
+            (self.o2os_1, "peer"),
+        ]:
+            field_name = f"pr_{str_to_var_name(rel.slug)}"
+            self.assertIn(field_name, schema._meta.fields.keys())
+            self.assertIsInstance(schema._meta.fields[field_name], graphene.types.field.Field)
+            if rel.has_many(peer_side):
+                self.assertIsInstance(schema._meta.fields[field_name].type, graphene.types.structures.List)
+            else:
+                self.assertNotIsInstance(schema._meta.fields[field_name].type, graphene.types.structures.List)
+
+        # Special handling of same-type non-symmetric relationships
+        for rel in [self.o2m_same_type_1]:
+            for peer_side in ["source", "destination"]:
+                field_name = f"pr_{str_to_var_name(rel.slug)}_{peer_side}"
+                self.assertIn(field_name, schema._meta.fields.keys())
+                self.assertIsInstance(schema._meta.fields[field_name], graphene.types.field.Field)
+                if rel.has_many(peer_side):
+                    self.assertIsInstance(schema._meta.fields[field_name].type, graphene.types.structures.List)
+                else:
+                    self.assertNotIsInstance(schema._meta.fields[field_name].type, graphene.types.structures.List)
+
+        # Relationships not on Site
+        for rel in [self.m2m_1, self.m2m_2]:
+            field_name = f"pr_{str_to_var_name(rel.slug)}"
+            self.assertNotIn(field_name, schema._meta.fields.keys())
 
 
 class GraphQLSearchParameters(TestCase):
@@ -425,6 +489,14 @@ class GraphQLAPIPermissionTest(TestCase):
         }
         """
 
+        self.get_rack_query = """
+        query ($id: ID!) {
+            rack (id: $id) {
+                name
+            }
+        }
+        """
+
     def test_graphql_api_token_with_perm(self):
         """Validate that users can query based on their permissions."""
         # First user
@@ -516,6 +588,14 @@ class GraphQLAPIPermissionTest(TestCase):
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 2-1", "Rack 2-2"])
 
+    def test_graphql_single_object_query(self):
+        """Validate graphql query for a single object as opposed to a set of objects also works."""
+        payload = {"query": self.get_rack_query, "variables": {"id": Rack.objects.first().pk}}
+        response = self.clients[2].post(self.api_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data["data"]["rack"], dict)
+        self.assertEqual(response.data["data"]["rack"]["name"], Rack.objects.first().name)
+
     def test_graphql_query_multi_level(self):
         """Validate request with multiple levels return the proper information, following the permissions."""
         response = self.clients[0].post(self.api_url, {"query": self.get_sites_racks_query}, format="json")
@@ -542,130 +622,160 @@ class GraphQLAPIPermissionTest(TestCase):
 
 
 class GraphQLQueryTest(TestCase):
-    def setUp(self):
+    """Execute various GraphQL queries and verify their correct responses."""
+
+    @classmethod
+    def setUpTestData(cls):
         """Initialize the Database with some datas."""
-        super().setUp()
-        self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
+        super().setUpTestData()
+        cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
         # Initialize fake request that will be required to execute GraphQL query
-        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
-        self.request.id = uuid.uuid4()
-        self.request.user = self.user
-
-        self.backend = get_default_backend()
-        self.schema = graphene_settings.SCHEMA
+        cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        cls.request.id = uuid.uuid4()
+        cls.request.user = cls.user
 
         # Populate Data
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        self.devicetype = DeviceType.objects.create(
+        cls.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        self.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
-        self.status1 = Status.objects.create(name="status1", slug="status1")
-        self.status2 = Status.objects.create(name="status2", slug="status2")
-        self.region1 = Region.objects.create(name="Region1", slug="region1")
-        self.region2 = Region.objects.create(name="Region2", slug="region2")
-        self.site1 = Site.objects.create(
-            name="Site-1", slug="site-1", asn=65000, status=self.status1, region=self.region1
-        )
-        self.site2 = Site.objects.create(
-            name="Site-2", slug="site-2", asn=65099, status=self.status2, region=self.region2
-        )
-        self.rack1 = Rack.objects.create(name="Rack 1", site=self.site1)
-        self.rack2 = Rack.objects.create(name="Rack 2", site=self.site2)
-        self.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
-        self.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
+        cls.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        cls.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
+        cls.status1 = Status.objects.create(name="status1", slug="status1")
+        cls.status2 = Status.objects.create(name="status2", slug="status2")
+        cls.region1 = Region.objects.create(name="Region1", slug="region1")
+        cls.region2 = Region.objects.create(name="Region2", slug="region2")
+        cls.site1 = Site.objects.create(name="Site-1", slug="site-1", asn=65000, status=cls.status1, region=cls.region1)
+        cls.site2 = Site.objects.create(name="Site-2", slug="site-2", asn=65099, status=cls.status2, region=cls.region2)
+        cls.rack1 = Rack.objects.create(name="Rack 1", site=cls.site1)
+        cls.rack2 = Rack.objects.create(name="Rack 2", site=cls.site2)
+        cls.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
+        cls.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
 
-        self.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, site=self.site1)
-        self.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, site=self.site2)
+        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, site=cls.site1)
+        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, site=cls.site2)
 
-        self.device1 = Device.objects.create(
+        cls.device1 = Device.objects.create(
             name="Device 1",
-            device_type=self.devicetype,
-            device_role=self.devicerole1,
-            site=self.site1,
-            status=self.status1,
-            rack=self.rack1,
-            tenant=self.tenant1,
+            device_type=cls.devicetype,
+            device_role=cls.devicerole1,
+            site=cls.site1,
+            status=cls.status1,
+            rack=cls.rack1,
+            tenant=cls.tenant1,
             face="front",
             comments="First Device",
         )
 
-        self.interface11 = Interface.objects.create(
-            name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device1,
-            mac_address="00:11:11:11:11:11",
-            mode=InterfaceModeChoices.MODE_ACCESS,
-            untagged_vlan=self.vlan1,
-        )
-        self.interface12 = Interface.objects.create(
-            name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device1,
-        )
-        self.ipaddr1 = IPAddress.objects.create(
-            address="10.0.1.1/24", status=self.status1, assigned_object=self.interface11
+        cls.device1_rear_ports = (
+            RearPort.objects.create(device=cls.device1, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
         )
 
-        self.device2 = Device.objects.create(
+        cls.device1_frontports = [
+            FrontPort.objects.create(
+                device=cls.device1,
+                name="Front Port 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=cls.device1_rear_ports[0],
+            ),
+            FrontPort.objects.create(
+                device=cls.device1,
+                name="Front Port 2",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=cls.device1_rear_ports[1],
+            ),
+            FrontPort.objects.create(
+                device=cls.device1,
+                name="Front Port 3",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=cls.device1_rear_ports[2],
+            ),
+            FrontPort.objects.create(
+                device=cls.device1,
+                name="Front Port 4",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=cls.device1_rear_ports[3],
+            ),
+        ]
+
+        cls.interface11 = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=cls.device1,
+            mac_address="00:11:11:11:11:11",
+            mode=InterfaceModeChoices.MODE_ACCESS,
+            untagged_vlan=cls.vlan1,
+        )
+        cls.interface12 = Interface.objects.create(
+            name="Int2",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=cls.device1,
+        )
+        cls.ipaddr1 = IPAddress.objects.create(
+            address="10.0.1.1/24", status=cls.status1, assigned_object=cls.interface11
+        )
+
+        cls.device2 = Device.objects.create(
             name="Device 2",
-            device_type=self.devicetype,
-            device_role=self.devicerole2,
-            site=self.site1,
-            status=self.status2,
-            rack=self.rack2,
-            tenant=self.tenant2,
+            device_type=cls.devicetype,
+            device_role=cls.devicerole2,
+            site=cls.site1,
+            status=cls.status2,
+            rack=cls.rack2,
+            tenant=cls.tenant2,
             face="rear",
         )
 
-        self.interface21 = Interface.objects.create(
+        cls.interface21 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device2,
-            untagged_vlan=self.vlan2,
+            device=cls.device2,
+            untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
         )
-        self.interface22 = Interface.objects.create(
-            name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=self.device2, mac_address="00:12:12:12:12:12"
+        cls.interface22 = Interface.objects.create(
+            name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=cls.device2, mac_address="00:12:12:12:12:12"
         )
-        self.ipaddr2 = IPAddress.objects.create(
-            address="10.0.2.1/30", status=self.status2, assigned_object=self.interface12
+        cls.ipaddr2 = IPAddress.objects.create(
+            address="10.0.2.1/30", status=cls.status2, assigned_object=cls.interface12
         )
 
-        self.device3 = Device.objects.create(
+        cls.device3 = Device.objects.create(
             name="Device 3",
-            device_type=self.devicetype,
-            device_role=self.devicerole1,
-            site=self.site2,
-            status=self.status1,
+            device_type=cls.devicetype,
+            device_role=cls.devicerole1,
+            site=cls.site2,
+            status=cls.status1,
         )
 
-        self.interface31 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device3
+        cls.interface31 = Interface.objects.create(
+            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3
         )
-        self.interface31 = Interface.objects.create(
+        cls.interface31 = Interface.objects.create(
             name="Mgmt1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device3,
+            device=cls.device3,
             mgmt_only=True,
             enabled=False,
         )
 
-        self.cable1 = Cable.objects.create(
-            termination_a=self.interface11,
-            termination_b=self.interface12,
-            status=self.status1,
+        cls.cable1 = Cable.objects.create(
+            termination_a=cls.interface11,
+            termination_b=cls.interface12,
+            status=cls.status1,
         )
-        self.cable2 = Cable.objects.create(
-            termination_a=self.interface31,
-            termination_b=self.interface21,
-            status=self.status2,
+        cls.cable2 = Cable.objects.create(
+            termination_a=cls.interface31,
+            termination_b=cls.interface21,
+            status=cls.status2,
         )
 
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        context1.regions.add(self.region1)
+        context1.regions.add(cls.region1)
 
         Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
         Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
@@ -677,18 +787,65 @@ class GraphQLQueryTest(TestCase):
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         cluster = Cluster.objects.create(name="Cluster 1", type=clustertype)
-        self.virtualmachine = VirtualMachine.objects.create(
+        cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=cluster,
-            status=self.status1,
+            status=cls.status1,
         )
-        self.vminterface = VMInterface.objects.create(
-            virtual_machine=self.virtualmachine,
+        cls.vminterface = VMInterface.objects.create(
+            virtual_machine=cls.virtualmachine,
             name="eth0",
         )
-        self.vmipaddr = IPAddress.objects.create(
-            address="1.1.1.1/32", status=self.status1, assigned_object=self.vminterface
+        cls.vmipaddr = IPAddress.objects.create(
+            address="1.1.1.1/32", status=cls.status1, assigned_object=cls.vminterface
         )
+
+        cls.relationship_o2o_1 = Relationship(
+            name="Device to VirtualMachine",
+            slug="device-to-vm",
+            source_type=ContentType.objects.get_for_model(Device),
+            destination_type=ContentType.objects.get_for_model(VirtualMachine),
+            type="one-to-one",
+        )
+        cls.relationship_o2o_1.validated_save()
+
+        cls.ro2o_assoc_1 = RelationshipAssociation(
+            relationship=cls.relationship_o2o_1,
+            source=cls.device1,
+            destination=cls.virtualmachine,
+        )
+        cls.ro2o_assoc_1.validated_save()
+
+        cls.relationship_m2ms_1 = Relationship(
+            name="Device Group",
+            slug="device-group",
+            source_type=ContentType.objects.get_for_model(Device),
+            destination_type=ContentType.objects.get_for_model(Device),
+            type="symmetric-many-to-many",
+        )
+        cls.relationship_m2ms_1.validated_save()
+
+        cls.rm2ms_assoc_1 = RelationshipAssociation(
+            relationship=cls.relationship_m2ms_1,
+            source=cls.device1,
+            destination=cls.device2,
+        )
+        cls.rm2ms_assoc_1.validated_save()
+        cls.rm2ms_assoc_2 = RelationshipAssociation(
+            relationship=cls.relationship_m2ms_1,
+            source=cls.device2,
+            destination=cls.device3,
+        )
+        cls.rm2ms_assoc_2.validated_save()
+        cls.rm2ms_assoc_3 = RelationshipAssociation(
+            relationship=cls.relationship_m2ms_1,
+            source=cls.device3,
+            destination=cls.device1,
+        )
+        cls.rm2ms_assoc_3.validated_save()
+
+        cls.backend = get_default_backend()
+        cls.schema = graphene_settings.SCHEMA
 
     def execute_query(self, query, variables=None):
 
@@ -699,28 +856,77 @@ class GraphQLQueryTest(TestCase):
             return document.execute(context_value=self.request)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_config_context(self):
+    def test_query_config_context_and_custom_field_data(self):
 
         query = """
         query {
             devices {
                 name
                 config_context
+                _custom_field_data
+            }
+            device (id: "%s") {
+                name
+                config_context
+                _custom_field_data
             }
         }
-        """
+        """ % (
+            self.device1.id,
+        )
 
         expected_data = {"a": 123, "b": 456, "c": 777}
 
         result = self.execute_query(query)
 
         self.assertIsInstance(result.data["devices"], list)
+        self.assertIsInstance(result.data["device"], dict)
+
         device_names = [item["name"] for item in result.data["devices"]]
         self.assertEqual(sorted(device_names), ["Device 1", "Device 2", "Device 3"])
+        self.assertEqual(result.data["device"]["name"], "Device 1")
 
-        config_context = [item["config_context"] for item in result.data["devices"]]
-        self.assertIsInstance(config_context[0], dict)
-        self.assertDictEqual(config_context[0], expected_data)
+        config_contexts = [item["config_context"] for item in result.data["devices"]]
+        self.assertIsInstance(config_contexts[0], dict)
+        self.assertDictEqual(config_contexts[0], expected_data)
+        self.assertEqual(result.data["device"]["config_context"], expected_data)
+
+        custom_field_data = [item["_custom_field_data"] for item in result.data["devices"]]
+        self.assertIsInstance(custom_field_data[0], dict)
+        self.assertEqual(custom_field_data[0], {})
+        self.assertEqual(result.data["device"]["_custom_field_data"], {})
+
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_relationship_associations(self):
+        """Test queries involving relationship associations."""
+
+        # Query testing for https://github.com/nautobot/nautobot/issues/1228
+        query = """
+        query {
+            device (id: "%s") {
+                name
+                rel_device_to_vm {
+                    id
+                }
+                rel_device_group {
+                    id
+                }
+            }
+        }
+        """ % (
+            self.device1.id,
+        )
+        result = self.execute_query(query)
+
+        self.assertIsInstance(result.data, dict, result)
+        self.assertIsInstance(result.data["device"], dict, result)
+        self.assertEqual(result.data["device"]["name"], self.device1.name)
+        self.assertIsInstance(result.data["device"]["rel_device_to_vm"], dict, result)
+        self.assertEqual(result.data["device"]["rel_device_to_vm"]["id"], str(self.virtualmachine.id))
+        self.assertIsInstance(result.data["device"]["rel_device_group"], list, result)
+        self.assertIn(str(self.device2.id), set(item["id"] for item in result.data["device"]["rel_device_group"]))
+        self.assertIn(str(self.device3.id), set(item["id"] for item in result.data["device"]["rel_device_group"]))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_device_role_filter(self):
@@ -876,6 +1082,7 @@ query {
                 virtual_machine { name }
             }
         }
+        family
         interface { name }
         vminterface { name }
     }
@@ -888,6 +1095,7 @@ query {
                 entry["address"], (str(self.ipaddr1.address), str(self.ipaddr2.address), str(self.vmipaddr.address))
             )
             self.assertIn("assigned_object", entry)
+            self.assertIn(entry["family"], (4, 6))
             if entry["address"] == str(self.vmipaddr.address):
                 self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
                 self.assertEqual(entry["vminterface"]["name"], self.vminterface.name)
@@ -929,6 +1137,40 @@ query {
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_frontport_filter_second_level(self):
+        """Test "second-level" filtering of FrontPorts within a Devices query."""
+
+        filters = (
+            (f'name: "{self.device1_frontports[0].name}"', 1),
+            (f'device: "{self.device1.name}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ frontports(" + filter + "){ id }}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_frontport_filter_third_level(self):
+        """Test "third-level" filtering of FrontPorts within Devices within Sites."""
+
+        filters = (
+            (f'name: "{self.device1_frontports[0].name}"', 1),
+            (f'device: "{self.device1.name}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ frontports(" + filter + "){ id }}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter(self):
         """Test custom interface filter fields and boolean, not other concrete fields."""
 
@@ -950,6 +1192,44 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_filter_second_level(self):
+        """Test "second-level" filtering of Interfaces within a Devices query."""
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 2),
+            ('kind: "virtual"', 2),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ("vlan: 100", 1),
+            (f'vlan_id: "{self.vlan1.id}"', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ interfaces(" + filter + "){ id }}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_filter_third_level(self):
+        """Test "third-level" filtering of Interfaces within Devices within Sites."""
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 2),
+            ('kind: "virtual"', 2),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ("vlan: 100", 1),
+            (f'vlan_id: "{self.vlan1.id}"', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ interfaces(" + filter + "){ id }}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
@@ -1047,3 +1327,19 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["webhooks"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_device_types(self):
+        """Test querying of device types, specifically checking for issue #1203."""
+        query = """
+        query {
+            device_types {
+                model
+            }
+        }
+        """
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertIsInstance(result.data, dict, result)
+        self.assertIsInstance(result.data["device_types"], list, result)
+        self.assertEqual(result.data["device_types"][0]["model"], self.devicetype.model, result)

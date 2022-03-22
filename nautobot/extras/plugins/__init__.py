@@ -6,16 +6,28 @@ from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
+from django.urls import URLPattern
 
-from nautobot.core.apps import NautobotConfig, NavMenuButton, NavMenuGroup, NavMenuItem, NavMenuTab, register_menu_items
+from nautobot.core.apps import (
+    NautobotConfig,
+    NavMenuButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+    register_menu_items,
+    register_homepage_panels,
+)
+from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.secrets import register_secrets_provider
 from nautobot.utilities.choices import ButtonColorChoices
 
 
 # Initialize plugin registry stores
-# registry['datasource_content'] is a non-plugin-exclusive registry and is initialized in extras.registry
+# registry["datasource_content"], registry["secrets_providers"] are not plugin-exclusive; initialized in extras.registry
+registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
@@ -63,27 +75,60 @@ class PluginConfig(NautobotConfig):
         "*": {"ops": "all"},
     }
 
+    # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure"
+    home_view_name = None
+    config_view_name = None
+
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
+    banner_function = "banner.banner"
     custom_validators = "custom_validators.custom_validators"
     datasource_contents = "datasources.datasource_contents"
     graphql_types = "graphql.types.graphql_types"
+    homepage_layout = "homepage.layout"
+    jinja_filters = "jinja_filters"
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
+    secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
-    jinja_filters = "jinja_filters"
 
     def ready(self):
+        """Callback after plugin app is loaded."""
+        # We don't call super().ready here because we don't need or use the on-ready behavior of a core Nautobot app
+
+        # Introspect URL patterns and models to make available to the installed-plugins detail UI view.
+        urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")
+        api_urlpatterns = import_object(f"{self.__module__}.api.urls.urlpatterns")
+
+        self.features = {
+            "api_urlpatterns": sorted(
+                (urlp for urlp in (api_urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
+            ),
+            "models": sorted(model._meta.verbose_name for model in self.get_models()),
+            "urlpatterns": sorted(
+                (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
+            ),
+        }
+
+        # Register banner function (if defined)
+        banner_function = import_object(f"{self.__module__}.{self.banner_function}")
+        if banner_function is not None:
+            register_banner_function(banner_function)
+            self.features["banner"] = True
 
         # Register model validators (if defined)
         validators = import_object(f"{self.__module__}.{self.custom_validators}")
         if validators is not None:
             register_custom_validators(validators)
+            self.features["custom_validators"] = sorted(set(validator.model for validator in validators))
 
         # Register datasource contents (if defined)
         datasource_contents = import_object(f"{self.__module__}.{self.datasource_contents}")
         if datasource_contents is not None:
             register_datasource_contents(datasource_contents)
+            self.features["datasource_contents"] = datasource_contents
 
         # Register GraphQL types (if defined)
         graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
@@ -94,22 +139,38 @@ class PluginConfig(NautobotConfig):
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
             register_jobs(jobs)
+            self.features["jobs"] = jobs
 
         # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
         if menu_items is not None:
             register_plugin_menu_items(self.verbose_name, menu_items)
+            self.features["nav_menu"] = menu_items
+
+        homepage_layout = import_object(f"{self.__module__}.{self.homepage_layout}")
+        if homepage_layout is not None:
+            register_homepage_panels(self.path, self.label, homepage_layout)
+            self.features["home_page"] = homepage_layout
 
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+            self.features["template_extensions"] = sorted(set(extension.model for extension in template_extensions))
 
         # Register custom jinja filters
         try:
             import_module(f"{self.__module__}.{self.jinja_filters}")
+            self.features["jinja_filters"] = True
         except ModuleNotFoundError:
             pass
+
+        # Register secrets providers (if any)
+        secrets_providers = import_object(f"{self.__module__}.{self.secrets_providers}")
+        if secrets_providers is not None:
+            for secrets_provider in secrets_providers:
+                register_secrets_provider(secrets_provider)
+            self.features["secrets_providers"] = secrets_providers
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -242,6 +303,23 @@ def register_template_extensions(class_list):
             raise TypeError(f"PluginTemplateExtension class {template_extension} does not define a valid model!")
 
         registry["plugin_template_extensions"][template_extension.model].append(template_extension)
+
+
+class PluginBanner:
+    """Class that may be returned by a registered plugin_banners function."""
+
+    def __init__(self, content, banner_class=BannerClassChoices.CLASS_INFO):
+        self.content = content
+        if banner_class not in BannerClassChoices.values():
+            raise ValueError("Banner class must be a choice within BannerClassChoices.")
+        self.banner_class = banner_class
+
+
+def register_banner_function(function):
+    """
+    Register a function that may return a Banner object.
+    """
+    registry["plugin_banners"].append(function)
 
 
 def register_graphql_types(class_list):

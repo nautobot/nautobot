@@ -1,4 +1,3 @@
-import copy
 from unittest import skipIf
 
 import netaddr
@@ -35,12 +34,12 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(self.field.db_type(connection), expected)
 
     def test_value_to_string(self):
-        """"Test `VarbinaryIPField.value_to_string`."""
+        """Test `VarbinaryIPField.value_to_string`."""
         # value_to_string calls _parse_address so no need for negative tests here.
         self.assertEqual(self.field.value_to_string(self.prefix), self.network)
 
     def test_parse_address_success(self):
-        """"Test `VarbinaryIPField._parse_address` PASS."""
+        """Test `VarbinaryIPField._parse_address` PASS."""
 
         # str => netaddr.IPAddress
         obj = self.field._parse_address(self.prefix.network)
@@ -55,8 +54,15 @@ class TestVarbinaryIPField(TestCase):
         # IPAddress => netaddr.IPAddress
         self.assertEqual(self.field._parse_address(obj), obj)
 
+        # Special cases involving values that could be IPv4 or IPv6 if naively interpreted
+        self.assertEqual(self.field._parse_address(bytes(netaddr.IPAddress("0.0.0.1"))), netaddr.IPAddress("0.0.0.1"))
+        self.assertEqual(self.field._parse_address(bytes(netaddr.IPAddress("::1"))), netaddr.IPAddress("::1"))
+        self.assertEqual(
+            self.field._parse_address(bytes(netaddr.IPAddress("::192.0.2.15"))), netaddr.IPAddress("::192.0.2.15")
+        )
+
     def test_parse_address_failure(self):
-        """"Test `VarbinaryIPField._parse_address` FAIL."""
+        """Test `VarbinaryIPField._parse_address` FAIL."""
 
         bad_inputs = (
             None,
@@ -68,7 +74,7 @@ class TestVarbinaryIPField(TestCase):
             self.assertRaises(ValidationError, self.field._parse_address, bad)
 
     def test_to_python(self):
-        """"Test `VarbinaryIPField.to_python`."""
+        """Test `VarbinaryIPField.to_python`."""
 
         # to_python calls _parse_address so no need for negative tests here.
 
@@ -83,7 +89,7 @@ class TestVarbinaryIPField(TestCase):
         "postgres is not the database driver",
     )
     def test_get_db_prep_value_postgres(self):
-        """"Test `VarbinaryIPField.get_db_prep_value`."""
+        """Test `VarbinaryIPField.get_db_prep_value`."""
 
         # PostgreSQL escapes `bytes` in `::bytea` and you must call
         # `getquoted()` to extract the value.
@@ -96,7 +102,7 @@ class TestVarbinaryIPField(TestCase):
         "mysql is not the database driver",
     )
     def test_get_db_prep_value_mysql(self):
-        """"Test `VarbinaryIPField.get_db_prep_value` for MySQL."""
+        """Test `VarbinaryIPField.get_db_prep_value` for MySQL."""
 
         # MySQL uses raw `bytes`
         prepped = self.field.get_db_prep_value(self.network, connection)

@@ -112,7 +112,7 @@ owners.
 
 Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-mysql> CREATE DATABASE nautobot;
+mysql> CREATE DATABASE nautobot CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 Query OK, 1 row affected (0.00 sec)
 
 mysql> CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';

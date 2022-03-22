@@ -2,6 +2,15 @@
 
 A token is a unique identifier mapped to a Nautobot user account. Each user may have one or more tokens which he or she can use for authentication when making REST API requests. To create a token, navigate to the API tokens page under your user profile.
 
+1. Sign into Nautobot
+2. On the upper right hand corner, select your username, then _Profile_
+3. On the left hand side, under User Profile, select _API Tokens_
+4. Select **+Add a token**
+5. Leave _Key_ blank to automatically create a token, or fill one in for yourself
+6. Check or uncheck "Write enabled", as desired
+7. (Optional) Set an expiration date for this token
+8. (Optional) Add a description
+
 !!! note
     The creation and modification of API tokens can be restricted per user by an administrator. If you don't see an option to create an API token, ask an administrator to grant you access.
 

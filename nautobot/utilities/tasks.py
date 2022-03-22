@@ -6,6 +6,7 @@ from django.conf import settings
 from packaging import version
 
 from nautobot.core.celery import nautobot_task
+from nautobot.utilities.config import get_settings_or_config
 
 # Get an instance of a logger
 logger = logging.getLogger("nautobot.releases")
@@ -13,7 +14,7 @@ logger = logging.getLogger("nautobot.releases")
 
 @nautobot_task
 def get_releases(pre_releases=False):
-    url = settings.RELEASE_CHECK_URL
+    url = get_settings_or_config("RELEASE_CHECK_URL")
     headers = {
         "Accept": "application/vnd.github.v3+json",
     }
@@ -48,6 +49,7 @@ def get_releases(pre_releases=False):
         return []
 
     # Cache the most recent release
-    cache.set("latest_release", max(releases), settings.RELEASE_CHECK_TIMEOUT)
+    cache.set("latest_release", max(releases), get_settings_or_config("RELEASE_CHECK_TIMEOUT"))
 
-    return releases
+    # Since this is a Celery task, we can't return Version objects as they are not JSON serializable.
+    return [(str(version), url) for version, url in releases]

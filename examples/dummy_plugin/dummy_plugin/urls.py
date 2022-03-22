@@ -9,6 +9,8 @@ from dummy_plugin.models import DummyModel
 app_name = "dummy_plugin"
 
 urlpatterns = [
+    path("", views.DummyPluginHomeView.as_view(), name="home"),
+    path("config/", views.DummyPluginConfigView.as_view(), name="config"),
     path("models/", views.DummyModelListView.as_view(), name="dummymodel_list"),
     path("models/add/", views.DummyModelEditView.as_view(), name="dummymodel_add"),
     path(

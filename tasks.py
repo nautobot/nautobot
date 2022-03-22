@@ -15,11 +15,9 @@ limitations under the License.
 from distutils.util import strtobool
 import os
 import re
-from time import sleep
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
-import requests
 
 
 def is_truthy(arg):
@@ -49,19 +47,11 @@ namespace.configure(
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_files": [
                 "docker-compose.yml",
+                "docker-compose.postgres.yml",
                 "docker-compose.dev.yml",
             ],
             # Image names to use when building from "main" branch
             "docker_image_names_main": [
-                # Production containers - not containing development tools
-                "networktocode/nautobot",
-                "ghcr.io/nautobot/nautobot",
-                # Development containers - include development tools like linters
-                "networktocode/nautobot-dev",
-                "ghcr.io/nautobot/nautobot-dev",
-            ],
-            # Image names to use when building from "develop" branch
-            "docker_image_names_develop": [
                 # Production containers - not containing development tools
                 "networktocode/nautobot",
                 "ghcr.io/nautobot/nautobot",
@@ -201,27 +191,23 @@ def get_nautobot_version():
     }
 )
 def docker_push(context, branch, commit="", datestamp=""):
-    """Tags and pushes docker images to the appropriate repos, intended for CI use only."""
+    """Tags and pushes docker images to the appropriate repos, intended for release use only.
+
+    Before running this command, you **must** be on the `main` branch and **must** have run
+    the appropriate set of `invoke buildx` commands. Refer to the developer release-checklist docs for details.
+    """
     nautobot_version = get_nautobot_version()
 
     docker_image_tags_main = [
-        f"latest-py{context.nautobot.python_ver}",
+        f"stable-py{context.nautobot.python_ver}",
         f"{nautobot_version}-py{context.nautobot.python_ver}",
-    ]
-    docker_image_tags_develop = [
-        f"develop-py{context.nautobot.python_ver}",
-        f"develop-py{context.nautobot.python_ver}-{commit}-{datestamp}",
     ]
 
     if context.nautobot.python_ver == "3.6":
-        docker_image_tags_main += ["latest", f"{nautobot_version}"]
-        docker_image_tags_develop += ["develop", f"develop-{commit}-{datestamp}"]
+        docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
         docker_image_tags = docker_image_tags_main
-    elif branch == "develop":
-        docker_image_names = context.nautobot.docker_image_names_develop
-        docker_image_tags = docker_image_tags_develop
     else:
         raise Exit(f"Unknown Branch ({branch}) Specified", 1)
 
@@ -272,11 +258,14 @@ def restart(context, service=None):
     docker_compose(context, "restart", service=service)
 
 
-@task
-def stop(context):
+@task(help={"service": "If specified, only affect this service."})
+def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
-    docker_compose(context, "down")
+    if not service:
+        docker_compose(context, "down")
+    else:
+        docker_compose(context, "stop", service=service)
 
 
 @task
