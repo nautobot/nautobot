@@ -126,6 +126,7 @@ class CableTerminationSerializer(serializers.ModelSerializer):
     cable_peer_type = serializers.SerializerMethodField(read_only=True)
     cable_peer = serializers.SerializerMethodField(read_only=True)
 
+    @extend_schema_field(serializers.CharField)
     def get_cable_peer_type(self, obj):
         if obj._cable_peer is not None:
             return f"{obj._cable_peer._meta.app_label}.{obj._cable_peer._meta.model_name}"
@@ -148,6 +149,7 @@ class ConnectedEndpointSerializer(ValidatedModelSerializer):
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
     connected_endpoint_reachable = serializers.SerializerMethodField(read_only=True)
 
+    @extend_schema_field(serializers.CharField)
     def get_connected_endpoint_type(self, obj):
         if obj._path is not None and obj._path.destination is not None:
             return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"

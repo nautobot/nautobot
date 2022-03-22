@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -80,6 +81,7 @@ class ChoiceField(serializers.Field):
         return self._choices
 
 
+@extend_schema_field(field=OpenApiTypes.STR)
 class ContentTypeField(RelatedField):
     """
     Represent a ContentType as '<app_label>.<model>'

@@ -92,5 +92,6 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         for field in custom_fields:
             instance.custom_fields[field.name] = instance.cf.get(field.name)
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_computed_fields(self, obj):
         return obj.get_computed_fields()
