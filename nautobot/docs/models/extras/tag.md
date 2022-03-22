@@ -16,7 +16,7 @@ The `tag` filter can be specified multiple times to match only objects which hav
 GET /api/dcim/devices/?tag=monitored&tag=deprecated
 ```
 
-Tags can also be created in the ORM of Nautobot. You can create tags and assign the following HEX color values below.
+Tags can also be created in the ORM or REST API of Nautobot. The following HEX color values in the table below correspond to the dropdown selection when building tags using the UI. Any HEX color value can be used with the ORM or REST API, but a non-standard color will cause some inconsistency when editing the tag via the UI.
 
 | Color | HEX value |
 | :------------ | :------------ |
