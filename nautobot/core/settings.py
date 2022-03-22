@@ -162,7 +162,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
     "DEFAULT_VERSION": "1.2",
