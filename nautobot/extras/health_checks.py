@@ -51,7 +51,7 @@ class RedisBackend(BaseHealthCheckBackend):
         # Sentinel is not used, so we check Redis directly
         else:
             if self.redis_url is None:
-                self.add_error(ServiceUnavailable("CACHEOPS_REDIS is not set"), e)
+                self.add_error(ServiceUnavailable("CACHEOPS_REDIS is not set"))
             else:
                 try:
                     # conn is used as a context to release opened resources later
