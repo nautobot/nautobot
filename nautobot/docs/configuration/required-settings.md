@@ -150,22 +150,9 @@ setup](https://github.com/Suor/django-cacheops#setup).
 !!! warning
     [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
----
-
-### Task Queuing with RQ
-
-!!! warning
-	As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
-
-Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
-
-Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
-
-In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined.
-
 #### CACHES
 
-The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ and Celery. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
+The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
 
 !!! important
     Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
@@ -184,6 +171,17 @@ CACHES = {
     }
 }
 ```
+
+### Task Queuing with RQ
+
+!!! warning
+	As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
+
+Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
+
+Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
+
+In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined.
 
 #### RQ_QUEUES
 
