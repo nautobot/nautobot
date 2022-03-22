@@ -2104,30 +2104,24 @@ class TagTest(APIViewTestCases.APIViewTestCase):
     def test_create_tags_with_content_types(self):
         self.add_permissions("extras.add_tag")
 
-        site_content_type = ContentType.objects.get_for_model(Site)
-        site_content_type_data = f"{site_content_type.app_label}.{site_content_type.model}"
-
-        data = {**self.create_data[0], "content_types": [site_content_type_data]}
+        data = {**self.create_data[0], "content_types": [Site._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
         tag = Tag.objects.filter(slug=data["slug"])
         self.assertHttpStatus(response, 201)
         self.assertTrue(tag.exists())
-        self.assertEquals(response.data["content_types"], [site_content_type_data])
+        self.assertEquals(response.data["content_types"], [Site._meta.label_lower])
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
 
-        vlangroup_content_type = ContentType.objects.get_for_model(VLANGroup)
-        vlangroup_content_type_data = f"{vlangroup_content_type.app_label}.{vlangroup_content_type.model}"
-
-        data = {**self.create_data[0], "content_types": [vlangroup_content_type_data]}
+        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
         tag = Tag.objects.filter(slug=data["slug"])
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
-        self.assertIn(f"Invalid content type: {vlangroup_content_type_data}", response.data["content_types"])
+        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
