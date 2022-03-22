@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 
 from nautobot.dcim.models import Site
@@ -15,16 +16,16 @@ class TaggedItemTest(APITestCase):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        # for tag in tags:
-        #     tag.content_types.add(ContentType.objects.get_for_model(Site))
+        cls.tags = cls.create_tags("Foo", "Bar", "Baz", "New Tag")
+        for tag in cls.tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
 
     def test_create_tagged_item(self):
-        tags = self.create_tags("Foo", "Bar", "Baz")
         data = {
             "name": "Test Site",
             "slug": "test-site",
             "status": "active",
-            "tags": [str(t.pk) for t in tags],
+            "tags": [str(t.pk) for t in self.tags],
         }
         url = reverse("dcim-api:site-list")
         self.add_permissions("dcim.add_site")
@@ -33,7 +34,7 @@ class TaggedItemTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertListEqual(sorted([t["id"] for t in response.data["tags"]]), sorted(data["tags"]))
         site = Site.objects.get(pk=response.data["id"])
-        self.assertListEqual(sorted([t.name for t in site.tags.all()]), sorted(["Foo", "Bar", "Baz"]))
+        self.assertListEqual(sorted([t.name for t in site.tags.all()]), sorted(["Foo", "Bar", "Baz", "New Tag"]))
 
     def test_update_tagged_item(self):
         site = Site.objects.create(
@@ -41,7 +42,6 @@ class TaggedItemTest(APITestCase):
             slug="test-site",
             status=Status.objects.get(slug="active"),
         )
-        self.create_tags("New Tag", "Foo", "Bar", "Baz")
         site.tags.add("Foo", "Bar", "Baz")
         data = {
             "tags": [
