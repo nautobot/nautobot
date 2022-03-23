@@ -156,14 +156,14 @@ For more details on how to configure Cacheops to use Redis Sentinel see the docu
 #### `celery` Sentinel Configuration
 
 !!! note
-	Celery is not directly related caching but it does utilize Redis, therefore in more advanced deployments it if Redis Sentinel is required for caching, Celery must also be configured to use Redis Sentinel to high availability.
+	Celery is not directly related caching but it does utilize Redis, therefore in more advanced deployments if Redis Sentinel is required for caching, Celery must also be configured to use Redis Sentinel to high availability.
 
 Celery Sentinel configuration is controlled by four settings within your `nautobot_config.py`:
 
--  `CELERY_BROKER_URL`
--  `CELERY_BROKER_TRANSPORT_OPTIONS`
--  `CELERY_RESULT_BACKEND`
--  `CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`
+-  [`CELERY_BROKER_URL`](../../configuration/optional-settings#celery_broker_url)
+-  [`CELERY_BROKER_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_broker_transport_options)
+-  [`CELERY_RESULT_BACKEND`](../../configuration/optional-settings#celery_result_backend)
+-  [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_result_backend_transport_options)
 
 By default Nautobot configures the celery broker and results backend with the same settings, so this pattern is mirrored here.
 
