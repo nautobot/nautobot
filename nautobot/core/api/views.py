@@ -306,12 +306,11 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
     """
 
     _ignore_model_permissions = True
-    exclude_from_schema = True
-    swagger_schema = None
 
     def get_view_name(self):
         return "API Root"
 
+    @extend_schema(exclude=True)
     def get(self, request, format=None):
 
         return Response(
@@ -367,6 +366,18 @@ class StatusView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses={200: {
+        "type": "object",
+        "properties": {
+            "django-version": {"type": "string"},
+            "installed-apps": {"type": "object"},
+            "nautobot-version": {"type": "string"},
+            "plugins": {"type": "object"},
+            "python-version": {"type": "string"},
+            "rq-workers-running": {"type": "integer"},
+            "celery-workers-running": {"type": "integer"},
+        }
+    }})
     def get(self, request):
         # Gather the version numbers from all installed Django apps
         installed_apps = {}
@@ -376,7 +387,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
             if version:
                 if isinstance(version, tuple):
                     version = ".".join(str(n) for n in version)
-                installed_apps[app_config.name] = version
+            installed_apps[app_config.name] = version
         installed_apps = {k: v for k, v in sorted(installed_apps.items())}
 
         # Gather installed plugins

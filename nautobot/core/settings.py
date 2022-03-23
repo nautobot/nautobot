@@ -186,6 +186,9 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Nautobot API",
     "DESCRIPTION": "Source of truth and network automation platform",
+    "EXTERNAL_DOCS": {"url": "https://nautobot.readthedocs.io/"},
+    "LICENSE": {"name": "Apache v2 License"},
+    "VERSION": VERSION,
     # use sidecar - locally packaged UI files, not CDN
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
