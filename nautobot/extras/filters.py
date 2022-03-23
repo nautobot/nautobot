@@ -966,6 +966,7 @@ class TagFilterSet(NautobotFilterSet):
     )
     content_types = ContentTypeMultipleChoiceFilter(
         choices=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").get_choices,
+        include_null=True,
     )
 
     class Meta:
