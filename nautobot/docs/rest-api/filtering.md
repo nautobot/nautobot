@@ -74,10 +74,10 @@ String-based (char) fields (Name, Address, etc.) support these lookup expression
 - `n` - not equal to (negation)
 - `ic` - case-insensitive contains
 - `nic` - negated case-insensitive contains
-- `isw` - case-insensitive starts with
-- `nisw` - negated case-insensitive starts with
-- `iew` - case-insensitive ends with
-- `niew` - negated case-insensitive ends with
+- `isw` - case-insensitive starts-with
+- `nisw` - negated case-insensitive starts-with
+- `iew` - case-insensitive ends-with
+- `niew` - negated case-insensitive ends-with
 - `ie` - case-insensitive exact match
 - `nie` - negated case-insensitive exact match
 - `re` - case-sensitive regular expression match
