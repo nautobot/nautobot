@@ -82,7 +82,10 @@ django-timezone-field = "~4.1.2"
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.13.1"
-# Swagger schema generation for the REST API
+# OpenAPI 3.0 schema generation for the REST API
+drf-spectacular = {version = "~0.21.2", extras = ["sidecar"]}
+# 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
+drf-yasg = {version = "~1.20.0", extras = ["validation"]}
 # Git integrations for Python
 GitPython = "~3.1.27"
 # GraphQL support
@@ -125,7 +128,6 @@ social-auth-core = {version = "~4.2.0", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
-drf-spectacular = {version = "~0.21.2", extras = ["sidecar"]}
 
 
 [tool.poetry.extras]
