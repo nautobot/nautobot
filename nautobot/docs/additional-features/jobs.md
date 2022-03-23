@@ -439,7 +439,7 @@ As of Nautobot 1.3, each Job class installed in Nautobot is represented by a cor
 When a new Job record is created for a newly discovered Job class, it defaults to `enabled = False`, which prevents the Job from being run by any user. This is intended to provide a level of security and oversight regarding the installation of new Jobs into Nautobot.
 
 !!! important
-    One exception to this default is when upgrading from a Nautobot release before 1.3 to Nautobot 1.3.0 or later. In this case, at the time of the upgrade, any Job class that shows evidence of having been run or scheduled under the older Nautobot version (that is, there is at least one JobResult and/or ScheduledJob record that references this Job class) will result in the creation of a Job database record with `enabled = True`. The reasoning for this feature is that since the Job has already been run or scheduled previously, it has presumably already undergone appropriate review at that time, and so it should remain possible to run it as it was possible before the upgrade.
+    One exception to this default is when upgrading from a Nautobot release before 1.3 to Nautobot 1.3.0 or later. In this case, at the time of the upgrade, any Job class that shows evidence of having been run or scheduled under the older Nautobot version (that is, there is at least one JobResult and/or ScheduledJob record that references this Job class) will result in the creation of a Job database record with `enabled = True`. The reasoning for this feature is the assertion that because the Job has been run or scheduled previously, it has presumably already undergone appropriate review at that time, and so it should remain possible to run it as it was possible before the upgrade.
 
 An administrator or user with `extras.change_job` permission can edit the Job to change it to `enabled = True`, permitting running of the Job, when they have completed any appropriate review of the new Job to ensure that it meets their standards. Similarly, an obsolete or no-longer-used Job can be prevented from inadvertent execution by changing it back to `enabled = False`.
 
@@ -457,7 +457,7 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 - `soft_time_limit`
 - `time_limit`
 
-This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will rever the attribute to the underlying value defined by the Job class source code.
+This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 
 ### Deleting Jobs
 
