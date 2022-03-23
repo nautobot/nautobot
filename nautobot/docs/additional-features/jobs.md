@@ -451,6 +451,9 @@ The `class_path` is often represented as a string in the format of `<grouping_na
 `local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the definitions of these
 elements will be important in running jobs programmatically.
 
+!!! note
+    In Nautobot 1.3 and later, with the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
+
 ### Via the Web UI
 
 Jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Job" button.
@@ -459,10 +462,7 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<class_path>/run`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
-
-!!! note
-    [See above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
 For example, to run a job with no user inputs and without committing any anything to the database:
 
@@ -470,8 +470,8 @@ For example, to run a job with no user inputs and without committing any anythin
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
-http://nautobot/api/extras/jobs/local/example/MyJobWithNoVars/run/
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/jobs/$JOB_ID/run/
 ```
 
 Or to run a job that expects user inputs, and commit changes to the database:
@@ -480,8 +480,8 @@ Or to run a job that expects user inputs, and commit changes to the database:
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
-http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/jobs/$JOB_ID/run/ \
 --data '{"data": {"string_variable": "somevalue", "integer_variable": 123}, "commit": true}'
 ```
 
@@ -546,8 +546,8 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.test import TransactionTestCase
 
-from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import JobResult, JobLogEntry
+from nautobot.extras.jobs import run_job
+from nautobot.extras.models import Job, JobResult, JobLogEntry
 
 
 if "job_logs" in settings.DATABASES:
@@ -561,10 +561,12 @@ class MyJobTestCase(TransactionTestCase):
 
     def test_my_job(self):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
-        job_class = get_job("local/my_job_file/MyJob")
+        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
+        # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
         job_result = JobResult.objects.create(
-            name=job_class.class_path,
+            name=job.class_path,
             obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            job_model=job,
             job_id=uuid.uuid4(),
         )
         run_job(data={"my_variable": "my_value"}, request=None, commit=False, job_result_pk=job_result.pk)

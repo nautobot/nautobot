@@ -142,8 +142,14 @@ FILTERS_NULL_CHOICE_VALUE = "null"
 #
 
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
+current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
+# We support all major.minor API versions from 1.2 to the present latest version.
+# This will need to be elaborated upon when we move to version 2.0
+assert current_major == "1", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
+REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+
 REST_FRAMEWORK = {
-    "ALLOWED_VERSIONS": [REST_FRAMEWORK_VERSION],
+    "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
@@ -156,8 +162,10 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
-    "DEFAULT_VERSION": REST_FRAMEWORK_VERSION,
-    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
+    # Version to use if the client doesn't request otherwise.
+    # This should only change (if at all) with Nautobot major (breaking) releases.
+    "DEFAULT_VERSION": "1.2",
+    "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAcceptHeaderVersioning",
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings
@@ -311,7 +319,6 @@ MIDDLEWARE = [
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
-    "nautobot.core.middleware.APIVersionMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]

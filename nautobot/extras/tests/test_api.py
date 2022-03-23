@@ -945,7 +945,9 @@ class ImageAttachmentTest(
 
 
 class JobAPIRunTestMixin:
-    """Mixin providing test cases for the "run" API endpoint, shared between JobModelTestCase and JobTest."""
+    """
+    Mixin providing test cases for the "run" API endpoint, shared between the different versions of Job API testing.
+    """
 
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         """To be implemented by classes using this mixin."""
@@ -1247,7 +1249,7 @@ class JobAPIRunTestMixin:
         )
 
 
-class JobModelTestCase(
+class JobTestVersion13(
     JobAPIRunTestMixin,
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
     APIViewTestCases.GetObjectViewTestCase,
@@ -1255,6 +1257,8 @@ class JobModelTestCase(
     APIViewTestCases.UpdateObjectViewTestCase,
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
+    """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
+
     model = Job
     brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "source", "url"]
     choices_fields = None
@@ -1289,6 +1293,7 @@ class JobModelTestCase(
     validation_excluded_fields = []
 
     run_success_response_status = status.HTTP_201_CREATED
+    api_version = "1.3"
 
     def setUp(self):
         super().setUp()
@@ -1298,27 +1303,13 @@ class JobModelTestCase(
 
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
-        return reverse("extras-api:jobmodel-run", kwargs={"pk": job_model.pk})
-
-    def _get_detail_url(self, instance):
-        """
-        Override default implementation as we're under "jobmodel-detail" rather than "job-detail".
-        """
-        viewname = f"{self._get_view_namespace()}:jobmodel-detail"
-        return reverse(viewname, kwargs={"pk": instance.pk})
-
-    def _get_list_url(self):
-        """
-        Override default implementation as we're under "jobmodel-list" rather than "job-list".
-        """
-        viewname = f"{self._get_view_namespace()}:jobmodel-list"
-        return reverse(viewname)
+        return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
 
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
         response = self.client.get(
-            reverse(f"{self._get_view_namespace()}:jobmodel-variables", kwargs={"pk": self.job_model.pk}),
+            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
             **self.header,
         )
         self.assertEqual(4, len(response.data))  # 4 variables, in order
@@ -1378,13 +1369,14 @@ class JobModelTestCase(
         self.assertIsNone(response.data["job_result"])
 
 
-class JobTest(
+class JobTestVersion12(
     JobAPIRunTestMixin,
     APITestCase,
 ):
-    """Tests for deprecated Job-class-based views."""
+    """Test cases for the Jobs REST API under API version 1.2 - deprecated JobClass-based API pattern."""
 
     run_success_response_status = status.HTTP_200_OK
+    api_version = "1.2"
 
     def setUp(self):
         super().setUp()
@@ -1452,6 +1444,16 @@ class JobTest(
         url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/NoSuchJob"})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+
+class JobTestVersionDefault(JobTestVersion12):
+    """
+    Test cases for the Jobs REST API when not explicitly requesting a specific API version.
+
+    Currently we default to version 1.2, but this may change in a future major release.
+    """
+
+    api_version = None
 
 
 class JobResultTest(APITestCase):

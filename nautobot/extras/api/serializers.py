@@ -602,7 +602,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
         model = Job
@@ -745,14 +745,26 @@ class JobClassSerializer(serializers.Serializer):
         lookup_url_kwarg="class_path",
     )
     id = serializers.CharField(read_only=True, source="class_path")
+    pk = serializers.SerializerMethodField(read_only=True)
     name = serializers.CharField(max_length=255, read_only=True)
     description = serializers.CharField(max_length=255, required=False, read_only=True)
     test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
     vars = serializers.SerializerMethodField(read_only=True)
-    result = NestedJobResultSerializer()
+    result = NestedJobResultSerializer(required=False)
 
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
+
+    @swagger_serializer_method(serializer_or_field=serializers.UUIDField)
+    def get_pk(self, instance):
+        try:
+            jobs = Job.objects
+            if "request" in self.context and self.context["request"].user is not None:
+                jobs = jobs.restrict(self.context["request"].user, "view")
+            job_model = jobs.get_for_class_path(instance.class_path)
+            return job_model.pk
+        except Job.DoesNotExist:
+            return None
 
 
 class JobClassDetailSerializer(JobClassSerializer):
