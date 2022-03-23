@@ -94,6 +94,9 @@ class VRFForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipMod
         help_texts = {
             "rd": "Route distinguisher in any format",
         }
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class VRFCSVForm(CustomFieldModelCSVForm):
@@ -154,6 +157,9 @@ class RouteTargetForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relatio
             "tenant",
             "tags",
         ]
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class RouteTargetCSVForm(CustomFieldModelCSVForm):
@@ -217,6 +223,9 @@ class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "is_private",
             "description",
         ]
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class RIRCSVForm(CustomFieldModelCSVForm):
@@ -331,6 +340,9 @@ class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "weight",
             "description",
         ]
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True}),
+        }
 
 
 class RoleCSVForm(CustomFieldModelCSVForm):
@@ -1002,6 +1014,9 @@ class VLANGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm)
             "slug",
             "description",
         ]
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class VLANGroupCSVForm(CustomFieldModelCSVForm):
@@ -1071,6 +1086,9 @@ class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipMo
             "name": "Configured VLAN name",
             "status": "Operational status of this VLAN",
             "role": "The primary function of this VLAN",
+        }
+        widgets = {
+            "vid": forms.TextInput(attrs={"autofocus": True, "placeholder": "ID"}),
         }
 
 

@@ -38,6 +38,9 @@ class TenantGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFor
             "slug",
             "description",
         ]
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class TenantGroupCSVForm(CustomFieldModelCSVForm):
@@ -74,6 +77,9 @@ class TenantForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "comments",
             "tags",
         )
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class TenantCSVForm(CustomFieldModelCSVForm):

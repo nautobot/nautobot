@@ -55,6 +55,7 @@ class ProviderForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
         widgets = {
             "noc_contact": SmallTextarea(attrs={"rows": 5}),
             "admin_contact": SmallTextarea(attrs={"rows": 5}),
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
         help_texts = {
             "name": "Full name of the provider",
@@ -62,6 +63,7 @@ class ProviderForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "portal_url": "URL of the provider's customer support portal",
             "noc_contact": "NOC email address and phone number",
             "admin_contact": "Administrative contact email address and phone number",
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
 
 
@@ -120,6 +122,9 @@ class CircuitTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFor
             "slug",
             "description",
         ]
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class CircuitTypeCSVForm(CustomFieldModelCSVForm):
@@ -163,6 +168,7 @@ class CircuitForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationshi
         }
         widgets = {
             "install_date": DatePicker(),
+            "cid": forms.TextInput(attrs={"autofocus": True, "placeholder": "Circuit ID"}),
         }
 
 
