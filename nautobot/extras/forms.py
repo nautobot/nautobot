@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db.models.fields import TextField
-from django.forms import inlineformset_factory
+from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
@@ -1384,10 +1384,11 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
 class TagForm(NautobotModelForm):
     slug = SlugField()
-    content_types = MultipleContentTypeField(
+    content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
         queryset=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset,
         required=False,
+        help_text="Leave empty if tag should be available to all content_types",
     )
 
     class Meta:

@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
-from django.forms import ModelMultipleChoiceField
 from django.urls import reverse
 from django.utils.text import slugify
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
