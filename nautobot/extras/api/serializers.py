@@ -752,10 +752,11 @@ class JobClassSerializer(serializers.Serializer):
     vars = serializers.SerializerMethodField(read_only=True)
     result = NestedJobResultSerializer(required=False)
 
+    @extend_schema_field(serializers.JSONField)
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
 
-    @swagger_serializer_method(serializer_or_field=serializers.UUIDField)
+    @extend_schema_field(serializers.UUIDField)
     def get_pk(self, instance):
         try:
             jobs = Job.objects

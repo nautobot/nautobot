@@ -585,7 +585,7 @@ class JobViewSet(
     @extend_schema(
         deprecated=True,
         methods=["post"],
-        request_body=serializers.JobInputSerializer,
+        request=serializers.JobInputSerializer,
         responses={"200": serializers.JobClassDetailSerializer()},
         operation_id="extras_jobs_run_deprecated",
     )
