@@ -63,7 +63,6 @@ class ProviderForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "portal_url": "URL of the provider's customer support portal",
             "noc_contact": "NOC email address and phone number",
             "admin_contact": "Administrative contact email address and phone number",
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
 
 
