@@ -1054,6 +1054,9 @@ class TagTestCase(TestCase):
         cls.site_content_type = ContentType.objects.get_for_model(Site)
         cls.tags[0].content_types.add(cls.site_content_type)
 
+        for tag in cls.tags[1:]:
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
+
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
