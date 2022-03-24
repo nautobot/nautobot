@@ -50,21 +50,16 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
 
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
-Based on a feature from NetBox 3 originally authored by Jeremy Stretch.
 Introduce the `/api/users/tokens/` REST API endpoint, which includes a child endpoint that can be employed by a user to provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
 
 ```
 $ curl -X POST \
--H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \
-https://nautobot/api/users/tokens/provision/ \
---data '{
-    "username": "hankhill",
-    "password: "I<3C3H8",
-}'
+-u "hankhill:I<3C3H8" \
+https://nautobot/api/users/tokens/provision/
 ```
 
-If the supplied credentials are valid, Nautobot will create and return a new token for the user.
+Basic Authentication is provided by this endpoint exclusively but also support other configured authentication methods.
 #### REST API Versioning ([#1465](https://github.com/nautobot/nautobot/issues/1465))
 
 Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:

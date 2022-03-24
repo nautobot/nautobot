@@ -1,5 +1,3 @@
-from django.urls import include, path
-
 from nautobot.core.api import OrderedDefaultRouter
 from . import views
 
@@ -21,7 +19,4 @@ router.register("permissions", views.ObjectPermissionViewSet)
 router.register("config", views.UserConfigViewSet, basename="userconfig")
 
 app_name = "users-api"
-urlpatterns = [
-    path("tokens/provision/", views.TokenProvisionView.as_view(), name="token_provision"),
-    path("", include(router.urls)),
-]
+urlpatterns = router.urls

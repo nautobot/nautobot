@@ -92,99 +92,119 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         for token in tokens:
             token.save()
 
+        self.basic_auth_user_password = "abc123"
+        self.basic_auth_user_granted = User.objects.create_user(username="basicusergranted", password=self.basic_auth_user_password)
+
+        obj_perm = ObjectPermission(name="Test permission", actions=["add", "edit", "view", "delete"])
+        obj_perm.save()
+        obj_perm.users.add(self.basic_auth_user_granted)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        self.basic_auth_user_permissionless = User.objects.create_user(username="basicuserpermissionless", password=self.basic_auth_user_password)
+
         self.create_data = [
             {
-                "user": self.user.pk,
+                "description": "token1",
             },
             {
-                "user": self.user.pk,
+                "description": "token2",
             },
             {
-                "user": self.user.pk,
+                "description": "token3",
             },
         ]
 
-    def test_provision_token_valid(self):
+    def test_create_token_basic_authentication(self):
         """
         Test the provisioning of a new REST API token given a valid username and password.
         """
-        data = {
-            "username": "user1",
-            "password": "abc123",
-        }
-        user = User.objects.create_user(**data)
-        url = reverse("users-api:token_provision")
+        self.client.login(username=self.basic_auth_user_granted.username, password=self.basic_auth_user_password)
+        response = self.client.post(self._get_list_url())
+        self.client.logout()
 
-        response = self.client.post(url, data=data)
         self.assertEqual(response.status_code, 201)
         self.assertIn("key", response.data)
         self.assertEqual(len(response.data["key"]), 40)
-        token = Token.objects.get(user=user)
+        token = Token.objects.get(user=self.basic_auth_user_granted)
         self.assertEqual(token.key, response.data["key"])
 
-    def test_provision_token_invalid_username(self):
+    def test_create_token_basic_authentication_permissionless_user(self):
         """
-        Test the behavior of the token provisioning view when a invalid username is supplied.
+        Test the behavior of the token create view when a user cannot create tokens
         """
-        data = {
-            "username": "nonexistentuser",
-            "password": "abc123",
-        }
-        url = reverse("users-api:token_provision")
-
-        response = self.client.post(url, data=data)
+        self.client.login(username=self.basic_auth_user_permissionless.username, password=self.basic_auth_user_password)
+        response = self.client.post(self._get_list_url())
+        self.client.logout()
+        
         self.assertEqual(response.status_code, 403)
 
-    def test_provision_token_invalid_password(self):
+    def test_create_token_basic_authentication_invalid_password(self):
         """
-        Test the behavior of the token provisioning view when a invalid password is supplied.
+        Test the behavior of the token create view when an invalid password is supplied
         """
-        data = {
-            "username": "user1",
-            "password": "password",
-        }
-        User.objects.create_user(**data)
-        data = {
-            "username": "user1",
-            "password": "hunter2",
-        }
-        url = reverse("users-api:token_provision")
-
-        response = self.client.post(url, data=data)
+        self.client.login(username=self.basic_auth_user_granted.username, password="hunter2")
+        response = self.client.post(self._get_list_url())
+        self.client.logout()
+        
         self.assertEqual(response.status_code, 403)
 
-    def test_tokens_are_restricted_by_user(self):
+    def test_create_token_basic_authentication_invalid_user(self):
+        """
+        Test the behavior of the token create view when the user supplied is not a valid user
+        """
+        self.client.login(username="iamnotreal", password="P1n0cc#10")
+        response = self.client.post(self._get_list_url())
+        self.client.logout()
+        
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_other_user_token_restriction(self):
+
+        # List all tokens available to user1
+        self.add_permissions("users.add_token")
+        self.add_permissions("users.edit_token")
+        self.add_permissions("users.view_token")
+        previous_token_count = len(Token.objects.filter(user=self.basic_auth_user_granted))
+        self.client.post(self._get_list_url(), data={"user": self.basic_auth_user_granted.id}, **self.header)
+        self.assertEqual(len(Token.objects.filter(user=self.basic_auth_user_granted)),previous_token_count)
+
+
+    def test_edit_other_user_token_restriction(self):
+        other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
+
+        self.add_permissions("users.add_token")
+        self.add_permissions("users.edit_token")
+        self.add_permissions("users.view_token")
+        # Check to make sure user1 can't modify another user's token
+        response = self.client.patch(self._get_detail_url(other_user_token), data={"description": "Meep."}, format='json', **self.header)
+        self.assertEqual(response.status_code, 404)
+
+        # Check to make sure user1 can't take over another user's token
+        previous_token_count = len(Token.objects.filter(user=self.user))
+        response = self.client.patch(self._get_detail_url(other_user_token), data={"user": self.user.id}, format='json', **self.header)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(len(Token.objects.filter(user=self.user)),previous_token_count)
+
+    def test_list_tokens_restrictions(self):
         """
         Test that the tokens API can only access tokens belonging to the authenticated user.
         """
         # Create users and tokens
-        data = {
-            "username": "user1",
-            "password": "abc123",
-        }
-        self.user = User.objects.create_user(**data)
-        Token(user=self.user).save()
-        data = {
-            "username": "user2",
-            "password": "abc123",
-        }
-        self.user2 = User.objects.create_user(**data)
-        Token(user=self.user2).save()
-
-        token = Token.objects.get(user=self.user)
-        self.header = {
-            "HTTP_AUTHORIZATION": "Token {}".format(token.key),
-        }
+        other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
 
         # List all tokens available to user1
         self.add_permissions("users.view_token")
         response = self.client.get(self._get_list_url(), **self.header)
         # Assert that only the user1_token appears in the results
-        self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["id"], str(token.id))
+        self.assertEqual(len(response.data["results"]), 3)
+        self.assertEqual(response.data["results"][0]["id"], str(self.token.id))
 
-        # Try to retrieve a token belonging to another user by ID
-        response = self.client.get(self._get_detail_url(Token.objects.filter(user=self.user2).first()), **self.header)
+        # Check to make sure user1 can't search for another user's tokens
+        response = self.client.get(self._get_list_url(), data={"id": other_user_token.id}, **self.header)
+        self.assertEqual(len(response.data["results"]), 0)
+
+        # Check to make sure user1 can't access another user's tokens
+        response = self.client.get(self._get_detail_url(other_user_token), **self.header)
         self.assertEqual(response.status_code, 404)
 
 

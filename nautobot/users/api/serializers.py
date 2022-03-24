@@ -73,17 +73,14 @@ class TokenSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = Token
-        fields = ("id", "url", "display", "user", "created", "expires", "key", "write_enabled", "description")
+        fields = ("id", "url", "display", "created", "expires", "key", "write_enabled", "description")
 
     def to_internal_value(self, data):
+        data = super().to_internal_value(data)
         if "key" not in data:
             data["key"] = Token.generate_key()
-        return super().to_internal_value(data)
-
-
-class TokenProvisionSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    password = serializers.CharField()
+        data["user"] = self.context["request"].user
+        return data
 
 
 class ObjectPermissionSerializer(ValidatedModelSerializer):
