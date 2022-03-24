@@ -59,7 +59,7 @@ These lookup expressions can be applied by adding a suffix to the desired field'
 
 ### Numeric Fields
 
-Numeric based fields (ASN, VLAN ID, etc) support these lookup expressions:
+Numeric-based fields (ASN, VLAN ID, etc.) support these lookup expressions:
 
 - `n` - not equal to (negation)
 - `lt` - less than
@@ -69,23 +69,26 @@ Numeric based fields (ASN, VLAN ID, etc) support these lookup expressions:
 
 ### String Fields
 
-String based (char) fields (Name, Address, etc) support these lookup expressions:
+String-based (char) fields (Name, Address, etc.) support these lookup expressions:
 
 - `n` - not equal to (negation)
-- `ic` - case insensitive contains
-- `nic` - negated case insensitive contains
-- `isw` - case insensitive starts with
-- `nisw` - negated case insensitive starts with
-- `iew` - case insensitive ends with
-- `niew` - negated case insensitive ends with
-- `ie` - case insensitive exact match
-- `nie` - negated case insensitive exact match
+- `ic` - case-insensitive contains
+- `nic` - negated case-insensitive contains
+- `isw` - case-insensitive starts-with
+- `nisw` - negated case-insensitive starts-with
+- `iew` - case-insensitive ends-with
+- `niew` - negated case-insensitive ends-with
+- `ie` - case-insensitive exact match
+- `nie` - negated case-insensitive exact match
+- `re` - case-sensitive regular expression match
+- `nre` - negated case-sensitive regular expression match
+- `ire` - case-insensitive regular expression match
+- `nire` - negated case-insensitive regular expression match
 
 ### Foreign Keys & Other Fields
 
 Certain other fields, namely foreign key relationships support just the negation
 expression: `n`.
-
 
 ### Network and Host Fields
 
