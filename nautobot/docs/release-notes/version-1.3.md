@@ -14,9 +14,6 @@ A new data model for representing [dynamic groups](../models/extras/dynamicgroup
 
 For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported. 
 
-!!! note
-  For this first 1.3 beta release, this feature is not yet documented. Dynamic Groups be found by navigating to **Organization** > **Dynamic Groups** in the web interface.
-
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
 GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [user guide](../user-guides/graphql.md#filtering-queries) for examples.
@@ -48,6 +45,12 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 #### Python 3.10 Support ([#1255](https://github.com/nautobot/nautobot/pull/1255))
 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
+
+#### Regular Expression Support in API Filtering ([#1525](https://github.com/nautobot/nautobot/issues/1525))
+
+[New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
+
+The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
 
 #### REST API Versioning ([#1465](https://github.com/nautobot/nautobot/issues/1465))
 
@@ -88,9 +91,11 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
 - [#1465](https://github.com/nautobot/nautobot/issues/1465) - Implemented REST API versioning
+- [#1525](https://github.com/nautobot/nautobot/issues/1525) - Implemented support for regex lookup expressions for `BaseFilterSet` filter fields in the API.
 
 ### Changed
 
+- [#814](https://github.com/nautobot/nautobot/issues/814) - Extended documentation for configuring Celery for use Redis Sentinel clustering.
 - [#1225](https://github.com/nautobot/nautobot/issues/1225) - Relaxed uniqueness constraint on Webhook creation, allowing multiple webhooks to send to the same target address so long as their content-type(s) and action(s) do not overlap.
 - [#1478](https://github.com/nautobot/nautobot/issues/1478) - ScheduledJob REST API endpoints now enforce `extras.approve_job` permissions as appropriate.
 - [#1502](https://github.com/nautobot/nautobot/issues/1502) Finalized Dynamic Groups implementation for 1.3 release (including documentation and integration tests)
