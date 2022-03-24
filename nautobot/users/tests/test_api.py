@@ -93,14 +93,18 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
             token.save()
 
         self.basic_auth_user_password = "abc123"
-        self.basic_auth_user_granted = User.objects.create_user(username="basicusergranted", password=self.basic_auth_user_password)
+        self.basic_auth_user_granted = User.objects.create_user(
+            username="basicusergranted", password=self.basic_auth_user_password
+        )
 
         obj_perm = ObjectPermission(name="Test permission", actions=["add", "edit", "view", "delete"])
         obj_perm.save()
         obj_perm.users.add(self.basic_auth_user_granted)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-        self.basic_auth_user_permissionless = User.objects.create_user(username="basicuserpermissionless", password=self.basic_auth_user_password)
+        self.basic_auth_user_permissionless = User.objects.create_user(
+            username="basicuserpermissionless", password=self.basic_auth_user_password
+        )
 
         self.create_data = [
             {
@@ -135,7 +139,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.client.login(username=self.basic_auth_user_permissionless.username, password=self.basic_auth_user_password)
         response = self.client.post(self._get_list_url())
         self.client.logout()
-        
+
         self.assertEqual(response.status_code, 403)
 
     def test_create_token_basic_authentication_invalid_password(self):
@@ -145,7 +149,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.client.login(username=self.basic_auth_user_granted.username, password="hunter2")
         response = self.client.post(self._get_list_url())
         self.client.logout()
-        
+
         self.assertEqual(response.status_code, 403)
 
     def test_create_token_basic_authentication_invalid_user(self):
@@ -155,7 +159,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.client.login(username="iamnotreal", password="P1n0cc#10")
         response = self.client.post(self._get_list_url())
         self.client.logout()
-        
+
         self.assertEqual(response.status_code, 403)
 
     def test_create_other_user_token_restriction(self):
@@ -166,8 +170,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("users.view_token")
         previous_token_count = len(Token.objects.filter(user=self.basic_auth_user_granted))
         self.client.post(self._get_list_url(), data={"user": self.basic_auth_user_granted.id}, **self.header)
-        self.assertEqual(len(Token.objects.filter(user=self.basic_auth_user_granted)),previous_token_count)
-
+        self.assertEqual(len(Token.objects.filter(user=self.basic_auth_user_granted)), previous_token_count)
 
     def test_edit_other_user_token_restriction(self):
         other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
@@ -176,14 +179,18 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("users.edit_token")
         self.add_permissions("users.view_token")
         # Check to make sure user1 can't modify another user's token
-        response = self.client.patch(self._get_detail_url(other_user_token), data={"description": "Meep."}, format='json', **self.header)
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
+        )
         self.assertEqual(response.status_code, 404)
 
         # Check to make sure user1 can't take over another user's token
         previous_token_count = len(Token.objects.filter(user=self.user))
-        response = self.client.patch(self._get_detail_url(other_user_token), data={"user": self.user.id}, format='json', **self.header)
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"user": self.user.id}, format="json", **self.header
+        )
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(len(Token.objects.filter(user=self.user)),previous_token_count)
+        self.assertEqual(len(Token.objects.filter(user=self.user)), previous_token_count)
 
     def test_list_tokens_restrictions(self):
         """
