@@ -123,7 +123,7 @@
     https://github.com/nautobot/nautobot/issues/1467
     */
     let setBodyPaddingTop = () => {
-        document.querySelector('body').style.paddingTop = `${parseInt(window.getComputedStyle(document.querySelector('.navbar')).height) + 60}px`
+        document.querySelector('body').style.paddingTop = `${parseInt(window.getComputedStyle(document.querySelector('.navbar')).height)+10}px`
     }
     window.addEventListener("resize", setBodyPaddingTop);
     window.addEventListener("load", setBodyPaddingTop);
