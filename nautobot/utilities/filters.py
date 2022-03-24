@@ -175,17 +175,7 @@ class ContentTypeFilterMixin:
     Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.site").
     """
 
-    def filter(self, qs, value, include_null=False):
-        """
-        Filter queryset
-
-        Args:
-            qs (Queryset):
-            value (str)
-            include_null (bool): True if content_types with null value should be included.
-                            i.e content_types with null values represent tags that are
-                            available to all content_types
-        """
+    def filter(self, qs, value):
         if value in EMPTY_VALUES:
             return qs
 
@@ -194,19 +184,12 @@ class ContentTypeFilterMixin:
         except ValueError:
             return qs.none()
 
-        q = models.Q()
-
-        if include_null:
-            q |= models.Q(content_types__isnull=True)
-
-        q |= models.Q(
+        return qs.filter(
             **{
                 f"{self.field_name}__app_label": app_label,
                 f"{self.field_name}__model": model,
             }
         )
-
-        return qs.filter(q)
 
 
 class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
@@ -248,13 +231,6 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     """
 
     def __init__(self, *args, **kwargs):
-        self.include_null = False
-
-        # include content_types with null values
-        if "include_null" in kwargs:
-            include_null = kwargs.pop("include_null")
-            self.include_null = include_null
-
         kwargs.setdefault("conjoined", True)
         super().__init__(*args, **kwargs)
 
@@ -263,16 +239,12 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
 
         e.g. `['dcim.device', 'dcim.rack']`
         """
-
         if not self.conjoined:
-            if self.include_null:
-                q = models.Q(content_types__isnull=True)
-            else:
-                q = models.Q()
+            q = models.Q()
 
         for v in value:
             if self.conjoined:
-                qs = ContentTypeFilter.filter(self, qs, v, include_null=self.include_null)
+                qs = ContentTypeFilter.filter(self, qs, v)
             else:
                 # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
                 # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
