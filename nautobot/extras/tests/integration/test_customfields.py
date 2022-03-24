@@ -18,6 +18,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
+        self.device = create_test_device()
 
     def tearDown(self):
         self.logout()
@@ -186,12 +187,12 @@ class CustomFieldTestCase(SeleniumTestCase):
 
     def test_custom_field_advanced_ui(self):
         """
-        This test creates a device and a custom field for that device.
+        This test creates a custom field with a type of "text"
         It first leaves the custom field advanced_ui default of False to be show on the primary information
         tab in the UI and checks it is there.
         It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it appears ONLY there!.
         """
-        device = create_test_device()
+        device = self.device
         custom_field = CustomField(
             type="text",
             label="Device Custom Field",
@@ -224,3 +225,53 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.assertTrue(self.browser.is_text_present("Device Custom Field"))
         self.assertTrue(self.browser.is_text_present("This is some testing text"))
+
+    def test_json_type_with_valid_json(self):
+        """
+        This test creates a custom field with a type of "json"
+        It then edits the value of the custom field by adding valid json
+        """
+        device = self.device
+        custom_field = CustomField(
+            type="json",
+            label="Device Valid JSON Field",
+            name="test_valid_json_field",
+            required=False,
+        )
+        custom_field.save()
+        device_content_type = ContentType.objects.get_for_model(Device)
+        custom_field.content_types.set([device_content_type])
+        # Visit the device edit page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        self.browser.find_by_id("id_cf_test_valid_json_field").first.type("test")
+        active_web_element = self.browser.driver.switch_to.active_element
+        # Type invalid JSON data into the form
+        active_web_element.send_keys('{"test_json_key": "Test JSON Value"}')
+        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        self.assertTrue(self.browser.is_text_present("Test Device"))
+        # Confirm the JSON data is visible
+        self.assertTrue(self.browser.is_text_present("Test JSON Value"))
+
+    def test_json_type_with_invalid_json(self):
+        """
+        This test creates a custom field with a type of "json"
+        It then edits the value of the custom field by adding invalid json
+        """
+        device = self.device
+        custom_field = CustomField(
+            type="json",
+            label="Device Invalid JSON Field",
+            name="test_invalid_json_field",
+            required=False,
+        )
+        custom_field.save()
+        device_content_type = ContentType.objects.get_for_model(Device)
+        custom_field.content_types.set([device_content_type])
+        # Visit the device edit page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        self.browser.find_by_id("id_cf_test_invalid_json_field").first.type("test")
+        active_web_element = self.browser.driver.switch_to.active_element
+        # Type invalid JSON data into the form
+        active_web_element.send_keys('{test_json_key: "Test Invalid JSON Value"}')
+        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        self.assertTrue(self.browser.is_text_present("Enter a valid JSON"))
