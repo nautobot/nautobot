@@ -56,7 +56,7 @@ Introduce the `/api/users/tokens/` REST API endpoint, which includes a child end
 $ curl -X POST \
 -H "Accept: application/json; indent=4" \
 -u "hankhill:I<3C3H8" \
-https://nautobot/api/users/tokens/provision/
+https://nautobot/api/users/tokens/
 ```
 
 Basic Authentication is provided by this endpoint exclusively but also support other configured authentication methods.
