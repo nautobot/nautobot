@@ -46,6 +46,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.utils import ModelSubclassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -2122,6 +2123,17 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
         self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+
+    def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
+
+        tag = Tag.objects.get(slug=self.create_data[0]["slug"])
+        self.assertEqual(
+            tag.content_types.count(),
+            ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset.count(),
+        )
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

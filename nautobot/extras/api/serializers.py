@@ -1044,6 +1044,15 @@ class TagSerializer(CustomFieldModelSerializer):
             "last_updated",
         ]
 
+    def validate(self, attr):
+        data = super().validate(attr)
+
+        # All relevant content_types should be assigned to tag without content_types
+        if not data.get("content_types"):
+            data["content_types"] = ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset
+
+        return data
+
 
 #
 # Webhook
