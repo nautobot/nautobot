@@ -1,7 +1,11 @@
 from django.conf.urls import include
 from django.urls import path, re_path
 from drf_spectacular.views import (
-    SpectacularAPIView, SpectacularJSONAPIView, SpectacularRedocView, SpectacularSwaggerView, SpectacularYAMLAPIView
+    SpectacularAPIView,
+    SpectacularJSONAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+    SpectacularYAMLAPIView,
 )
 
 from nautobot.core.api.views import APIRootView, StatusView, GraphQLDRFAPIView

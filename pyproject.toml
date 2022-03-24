@@ -83,7 +83,8 @@ django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.13.1"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.21.2", extras = ["sidecar"]}
+# TODO: fix for #688 is in master, not yet released
+drf-spectacular = {git = "https://github.com/tfranzel/drf-spectacular.git", rev = "8ff0d6bd2ba60d7b4d15d8a527fe31b9597cfe04", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "~1.20.0", extras = ["validation"]}
 # Git integrations for Python

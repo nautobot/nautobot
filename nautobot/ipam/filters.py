@@ -2,6 +2,8 @@ import django_filters
 import netaddr
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from netaddr.core import AddrFormatError
 
 from nautobot.dcim.models import Device, Interface, Region, Site
@@ -226,14 +228,16 @@ class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetM
         to_field_name="rd",
         label="VRF (RD)",
     )
-    present_in_vrf_id = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF"
+    present_in_vrf_id = extend_schema_field(OpenApiTypes.UUID)(
+        django_filters.ModelChoiceFilter(queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF")
     )
-    present_in_vrf = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(),
-        method="filter_present_in_vrf",
-        to_field_name="rd",
-        label="VRF (RD)",
+    present_in_vrf = extend_schema_field(str)(
+        django_filters.ModelChoiceFilter(
+            queryset=VRF.objects.all(),
+            method="filter_present_in_vrf",
+            to_field_name="rd",
+            label="VRF (RD)",
+        )
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -370,9 +374,11 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         method="search_by_parent",
         label="Parent prefix",
     )
-    address = MultiValueCharFilter(
-        method="filter_address",
-        label="Address",
+    address = extend_schema_field(str)(
+        MultiValueCharFilter(
+            method="filter_address",
+            label="Address",
+        )
     )
     mask_length = django_filters.NumberFilter(
         method="filter_mask_length",
@@ -388,34 +394,44 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         to_field_name="rd",
         label="VRF (RD)",
     )
-    present_in_vrf_id = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF"
+    present_in_vrf_id = extend_schema_field(OpenApiTypes.UUID)(
+        django_filters.ModelChoiceFilter(queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF")
     )
-    present_in_vrf = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(),
-        method="filter_present_in_vrf",
-        to_field_name="rd",
-        label="VRF (RD)",
+    present_in_vrf = extend_schema_field(str)(
+        django_filters.ModelChoiceFilter(
+            queryset=VRF.objects.all(),
+            method="filter_present_in_vrf",
+            to_field_name="rd",
+            label="VRF (RD)",
+        )
     )
-    device = MultiValueCharFilter(
-        method="filter_device",
-        field_name="name",
-        label="Device (name)",
+    device = extend_schema_field(str)(
+        MultiValueCharFilter(
+            method="filter_device",
+            field_name="name",
+            label="Device (name)",
+        )
     )
-    device_id = MultiValueCharFilter(
-        method="filter_device",
-        field_name="pk",
-        label="Device (ID)",
+    device_id = extend_schema_field(OpenApiTypes.UUID)(
+        MultiValueCharFilter(
+            method="filter_device",
+            field_name="pk",
+            label="Device (ID)",
+        )
     )
-    virtual_machine = MultiValueCharFilter(
-        method="filter_virtual_machine",
-        field_name="name",
-        label="Virtual machine (name)",
+    virtual_machine = extend_schema_field(str)(
+        MultiValueCharFilter(
+            method="filter_virtual_machine",
+            field_name="name",
+            label="Virtual machine (name)",
+        )
     )
-    virtual_machine_id = MultiValueCharFilter(
-        method="filter_virtual_machine",
-        field_name="pk",
-        label="Virtual machine (ID)",
+    virtual_machine_id = extend_schema_field(OpenApiTypes.UUID)(
+        MultiValueCharFilter(
+            method="filter_virtual_machine",
+            field_name="pk",
+            label="Virtual machine (ID)",
+        )
     )
     interface = django_filters.ModelMultipleChoiceFilter(
         field_name="interface__name",

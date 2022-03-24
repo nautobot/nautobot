@@ -8,7 +8,7 @@ from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 
-@extend_schema_field({"value": "any", "label": "string"})
+@extend_schema_field({"type": "object", "properties": {"value": {}, "label": {"type": "string"}}})
 class ChoiceField(serializers.Field):
     """
     Represent a ChoiceField as {'value': <DB value>, 'label': <string>}. Accepts a single value on write.

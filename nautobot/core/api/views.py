@@ -366,18 +366,22 @@ class StatusView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(responses={200: {
-        "type": "object",
-        "properties": {
-            "django-version": {"type": "string"},
-            "installed-apps": {"type": "object"},
-            "nautobot-version": {"type": "string"},
-            "plugins": {"type": "object"},
-            "python-version": {"type": "string"},
-            "rq-workers-running": {"type": "integer"},
-            "celery-workers-running": {"type": "integer"},
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "django-version": {"type": "string"},
+                    "installed-apps": {"type": "object"},
+                    "nautobot-version": {"type": "string"},
+                    "plugins": {"type": "object"},
+                    "python-version": {"type": "string"},
+                    "rq-workers-running": {"type": "integer"},
+                    "celery-workers-running": {"type": "integer"},
+                },
+            }
         }
-    }})
+    )
     def get(self, request):
         # Gather the version numbers from all installed Django apps
         installed_apps = {}

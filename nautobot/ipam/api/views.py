@@ -124,7 +124,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 
     @extend_schema(methods=["get"], responses={200: serializers.AvailablePrefixSerializer(many=True)})
     @extend_schema(methods=["post"], responses={201: serializers.PrefixSerializer(many=False)})
-    @action(detail=True, url_path="available-prefixes", methods=["get", "post"])
+    @action(detail=True, url_path="available-prefixes", methods=["get", "post"], filterset_class=None)
     def available_prefixes(self, request, pk=None):
         """
         A convenience method for returning available child prefixes within a parent.
@@ -206,7 +206,8 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         detail=True,
         url_path="available-ips",
         methods=["get", "post"],
-        # queryset=IPAddress.objects.all(),
+        queryset=IPAddress.objects.all(),
+        filterset_class=None,
     )
     def available_ips(self, request, pk=None):
         """

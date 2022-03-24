@@ -524,7 +524,7 @@ class JobViewSet(
         return Response(serializer.data)
 
     @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
-    @action(detail=True)
+    @action(detail=True, filterset_class=None)
     def variables(self, request, pk):
         """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()

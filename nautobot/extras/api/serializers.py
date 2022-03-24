@@ -752,7 +752,7 @@ class JobClassSerializer(serializers.Serializer):
     vars = serializers.SerializerMethodField(read_only=True)
     result = NestedJobResultSerializer(required=False)
 
-    @extend_schema_field(serializers.JSONField)
+    @extend_schema_field(serializers.DictField)
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
 

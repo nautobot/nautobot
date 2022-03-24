@@ -1,6 +1,8 @@
 import django_filters
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
@@ -915,6 +917,7 @@ class InterfaceFilterSet(
         except Device.DoesNotExist:
             return queryset.none()
 
+    @extend_schema_field(OpenApiTypes.UUID)
     def filter_device_id(self, queryset, name, id_list):
         # Include interfaces belonging to peer virtual chassis members
         vc_interface_ids = []
@@ -1125,6 +1128,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             return queryset
         return queryset.filter(label__icontains=value)
 
+    @extend_schema_field(str)
     def filter_device(self, queryset, name, value):
         queryset = queryset.filter(
             Q(**{"_termination_a_{}__in".format(name): value}) | Q(**{"_termination_b_{}__in".format(name): value})
