@@ -6,14 +6,11 @@
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
     <link rel="stylesheet"
-          href="{% static 'materialdesignicons-5.4.55/css/materialdesignicons.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-5.4.55/css/materialdesignicons.min.css'">
+          href="{% static 'materialdesignicons-6.5.95/css/materialdesignicons.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-6.5.95/css/materialdesignicons.min.css'">
     <link rel="stylesheet"
-          href="{% static 'jquery-ui-1.12.1/jquery-ui.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.css'">
-    <link rel="stylesheet"
-          href="{% static 'flatpickr-4.6.3/themes/light.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.3/themes/light.css'">
+          href="{% static 'jquery-ui-1.13.1/jquery-ui.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.css'">
     <link rel="stylesheet"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
@@ -34,8 +31,8 @@
 {% block extra_scripts %}
 <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
-<script src="{% static 'jquery-ui-1.12.1/jquery-ui.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.min.js'"></script>
+<script src="{% static 'jquery-ui-1.13.1/jquery-ui.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.js'"></script>
 <script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
 {% endblock %}

@@ -27,11 +27,11 @@ As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facil
 
 ## Update Prerequisites to Required Versions
 
-Nautobot v1.0.0 and later requires the following:
+Nautobot v1.3.0 and later requires the following:
 
 | Dependency | Minimum Version |
 |------------|-----------------|
-| Python     | 3.6             |
+| Python     | 3.7             |
 | PostgreSQL | 9.6             |
 | Redis      | 4.0             |
 

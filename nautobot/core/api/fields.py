@@ -21,7 +21,7 @@ class ChoiceField(serializers.Field):
 
         # Unpack grouped choices
         for k, v in choices:
-            if type(v) in [list, tuple]:
+            if isinstance(v, (list, tuple)):
                 for k2, v2 in v:
                     self._choices[k2] = v2
             else:

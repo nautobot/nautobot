@@ -49,6 +49,7 @@ class CustomFieldTypeChoices(ChoiceSet):
     TYPE_URL = "url"
     TYPE_SELECT = "select"
     TYPE_MULTISELECT = "multi-select"
+    TYPE_JSON = "json"
 
     CHOICES = (
         (TYPE_TEXT, "Text"),
@@ -58,6 +59,7 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_URL, "URL"),
         (TYPE_SELECT, "Selection"),
         (TYPE_MULTISELECT, "Multiple selection"),
+        (TYPE_JSON, "JSON"),
     )
 
 
@@ -88,8 +90,21 @@ class CustomLinkButtonClassChoices(ChoiceSet):
 
 
 #
-# JobExecutionType
+# Jobs
 #
+
+
+class JobSourceChoices(ChoiceSet):
+
+    SOURCE_LOCAL = "local"
+    SOURCE_GIT = "git"
+    SOURCE_PLUGIN = "plugins"
+
+    CHOICES = (
+        (SOURCE_LOCAL, "Installed in $JOBS_ROOT"),
+        (SOURCE_GIT, "Provided by a Git repository"),
+        (SOURCE_PLUGIN, "Part of a plugin"),
+    )
 
 
 class JobExecutionType(ChoiceSet):

@@ -29,6 +29,11 @@ def multivalue_field_factory(field_class):
         def to_python(self, value):
             if not value:
                 return []
+
+            # Make it a list if it's a string.
+            if isinstance(value, str):
+                value = [value]
+
             return [
                 # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
                 super(field_class, self).to_python(v)
@@ -74,6 +79,40 @@ class MACAddressFilter(django_filters.CharFilter):
 
 class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(MACAddressField)
+
+
+class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
+    """
+    BooleanFilter for related objects that will explicitly perform `exclude=True` and `isnull`
+    lookups. The `field_name` argument is required and must be set to the related field on the
+    model.
+
+    This should be used instead of a default `BooleanFilter` paired `method=`
+    argument to test for the existence of related objects.
+
+    Example:
+
+        has_interfaces = RelatedMembershipBooleanFilter(
+            field_name="interfaces",
+            label="Has interfaces",
+        )
+    """
+
+    def __init__(
+        self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=False, exclude=True, **kwargs
+    ):
+        if field_name is None:
+            raise ValueError(f"Field name is required for {self.__class__.__name__}")
+
+        super().__init__(
+            field_name=field_name,
+            lookup_expr=lookup_expr,
+            label=label,
+            method=method,
+            distinct=distinct,
+            exclude=exclude,
+            **kwargs,
+        )
 
 
 class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
@@ -131,9 +170,9 @@ class NumericArrayFilter(django_filters.NumberFilter):
         return super().filter(qs, value)
 
 
-class ContentTypeFilter(django_filters.CharFilter):
+class ContentTypeFilterMixin:
     """
-    Allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.site").
+    Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.site").
     """
 
     def filter(self, qs, value):
@@ -152,6 +191,29 @@ class ContentTypeFilter(django_filters.CharFilter):
         )
 
 
+class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
+    """
+    Allows character-based ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+
+    Does not support limiting of choices. Can be used without arguments on a `FilterSet`:
+
+        content_type = ContentTypeFilter()
+    """
+
+
+class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilter):
+    """
+    Allows character-based ContentType filtering by <app_label>.<model> (e.g.
+    "dcim.site") but an explicit set of choices must be provided.
+
+    Example use on a `FilterSet`:
+
+        content_type = ContentTypeChoiceFilter(
+            choices=FeatureQuery("dynamic_groups").get_choices,
+        )
+    """
+
+
 class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     """
     Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
@@ -162,7 +224,7 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     Example use on a `FilterSet`:
 
         content_types = ContentTypeMultipleChoiceFilter(
-            choices=FeatureQuery('statuses').get_choices,
+            choices=FeatureQuery("statuses").get_choices,
         )
     """
 
@@ -225,6 +287,8 @@ class BaseFilterSet(django_filters.FilterSet):
             models.EmailField: {"filter_class": MultiValueCharFilter},
             models.FloatField: {"filter_class": MultiValueNumberFilter},
             models.IntegerField: {"filter_class": MultiValueNumberFilter},
+            # Ref: https://github.com/carltongibson/django-filter/issues/1107
+            models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": ["icontains"]}},
             models.PositiveIntegerField: {"filter_class": MultiValueNumberFilter},
             models.PositiveSmallIntegerField: {"filter_class": MultiValueNumberFilter},
             models.SlugField: {"filter_class": MultiValueCharFilter},

@@ -1,0 +1,25 @@
+{% if not advanced_ui %}
+    {% if object.has_computed_fields_basic %}
+        {% load computed_fields %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Computed Fields</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% computed_fields object advanced_ui %}
+            </table>
+        </div>
+    {% endif %}
+{% else %}
+    {% if object.has_computed_fields_advanced %}
+        {% load computed_fields %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Computed Fields</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% computed_fields object advanced_ui %}
+            </table>
+        </div>
+    {% endif %}
+{% endif %}
