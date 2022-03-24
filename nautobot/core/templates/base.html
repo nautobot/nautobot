@@ -85,11 +85,13 @@
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i> <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a> &middot;
-                        <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
-                        <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
-                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
+                        <span class="mdi mdi-theme-light-dark text-primary" onclick="toggleTheme('light');" id="btn-light-theme"><a href="javascript:void(0)">Light</a></span>
+                        <span class="mdi mdi-theme-light-dark text-primary" onclick="toggleTheme('dark');" id="btn-dark-theme"><a href="javascript:void(0)">Dark</a></span> &middot;
+                        <span class="mdi mdi-book-open-page-variant text-primary"></span> <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a> &middot;
+                        <span class="mdi mdi-cloud-braces text-primary"></span> <a href="{% url 'api_docs' %}">API</a> &middot;
+                        <span class="mdi mdi-graphql text-primary"></span> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
+                        <span class="mdi mdi-xml text-primary"></span> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
+                        <span class="mdi mdi-lifebuoy text-primary"></span> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
                     </p>
                 </div>
             </div>
@@ -119,6 +121,7 @@
         loading.hide();
     });
 </script>
+<script src="{% static 'js/theme.js' %}"></script>
 {% block javascript %}{% endblock %}
 </body>
 </html>
