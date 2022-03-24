@@ -2,7 +2,7 @@ from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Site, Device
 from nautobot.extras.models import Status, Tag
 from nautobot.utilities.testing import APITestCase
 
@@ -82,6 +82,8 @@ class TaggedItemTest(APITestCase):
     def test_create_invalid_tagged_item(self):
         """Test creating a Site with a tag that does not include Site's Content type as its content_type"""
         tag = Tag.objects.create(name="Tag One", slug="tag-one")
+        app_label, model = Device._meta.label_lower.split(".")
+        tag.content_types.add(ContentType.objects.get(app_label=app_label, model=model))
         data = {
             "name": "Test Site",
             "slug": "test-site",
