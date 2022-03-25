@@ -423,7 +423,10 @@ def check_schema(context, api_version=None):
         api_versions = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
 
     for api_version in api_versions:
-        command = f"nautobot-server spectacular --api-version {api_version} --validate --fail-on-warn --file /dev/null"
+        command = (
+            "nautobot-server --config=nautobot/core/tests/nautobot_config.py spectacular "
+            f"--api-version {api_version} --validate --fail-on-warn --file /dev/null"
+        )
         run_command(context, command)
 
 
