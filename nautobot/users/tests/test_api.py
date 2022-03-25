@@ -83,14 +83,13 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
     def setUp(self):
         super().setUp()
 
-        tokens = (
+        tokens = [
             # We already start with one Token, created by the test class
-            Token(user=self.user),
-            Token(user=self.user),
-        )
-        # Use save() instead of bulk_create() to ensure keys get automatically generated
-        for token in tokens:
-            token.save()
+            Token.objects.create(user=self.user),
+            Token.objects.create(user=self.user),
+        ]
+
+        self.tokens = tokens + [self.token]
 
         self.basic_auth_user_password = "abc123"
         self.basic_auth_user_granted = User.objects.create_user(
@@ -226,7 +225,11 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(self._get_list_url(), **self.header)
         # Assert that only the user1_token appears in the results
         self.assertEqual(len(response.data["results"]), 3)
-        self.assertEqual(response.data["results"][0]["id"], str(self.token.id))
+
+        token_ids_sot = sorted(map(lambda t: str(t.id), self.tokens))
+        token_ids_response = sorted(map(lambda t: t["id"], response.data["results"]))
+
+        self.assertEqual(token_ids_sot, token_ids_response)
 
         # Check to make sure user1 can't search for another user's tokens
         response = self.client.get(self._get_list_url(), data={"id": other_user_token.id}, **self.header)

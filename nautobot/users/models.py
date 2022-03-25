@@ -172,7 +172,7 @@ class Token(BaseModel):
     description = models.CharField(max_length=200, blank=True)
 
     class Meta:
-        pass
+        ordering = ["created"]
 
     def __str__(self):
         # Only display the last 24 bits of the token to avoid accidental exposure.
