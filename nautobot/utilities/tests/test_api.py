@@ -1,5 +1,3 @@
-import urllib.parse
-
 from django.contrib.contenttypes.models import ContentType
 from django.test import Client, TestCase
 from django.urls import reverse
