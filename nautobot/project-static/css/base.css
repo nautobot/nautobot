@@ -4,7 +4,6 @@
 }
 html {
   overflow-y: scroll;
-  transition: color 1300ms, background-color 1300ms;
 }
 html[data-theme="dark"] {
   background: #000;
@@ -17,6 +16,7 @@ html[data-theme="dark"] img {
 html,
 body {
   height: 100%;
+  overflow: auto;
 }
 body {
   padding-top: 70px;
