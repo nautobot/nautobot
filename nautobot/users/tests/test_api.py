@@ -97,7 +97,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
             username="basicusergranted", password=self.basic_auth_user_password
         )
 
-        obj_perm = ObjectPermission(name="Test permission", actions=["add", "edit", "view", "delete"])
+        obj_perm = ObjectPermission(name="Test permission", actions=["add", "change", "view", "delete"])
         obj_perm.save()
         obj_perm.users.add(self.basic_auth_user_granted)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
@@ -166,7 +166,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
 
         # List all tokens available to user1
         self.add_permissions("users.add_token")
-        self.add_permissions("users.edit_token")
+        self.add_permissions("users.change_token")
         self.add_permissions("users.view_token")
         previous_token_count = len(Token.objects.filter(user=self.basic_auth_user_granted))
         self.client.post(self._get_list_url(), data={"user": self.basic_auth_user_granted.id}, **self.header)
@@ -175,16 +175,38 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
     def test_edit_other_user_token_restriction(self):
         other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
 
+        # Check to make sure user1 can't modify another user's token, without permissions
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 403)
+
         self.add_permissions("users.add_token")
-        self.add_permissions("users.edit_token")
+        self.add_permissions("users.change_token")
         self.add_permissions("users.view_token")
-        # Check to make sure user1 can't modify another user's token
+        # Check to make sure user1 can't modify another user's token, with permissions
         response = self.client.patch(
             self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
         )
         self.assertEqual(response.status_code, 404)
 
-        # Check to make sure user1 can't take over another user's token
+        # Check to make sure user1 can't take over another user's token, with permissions
+        previous_token_count = len(Token.objects.filter(user=self.user))
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"user": self.user.id}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(len(Token.objects.filter(user=self.user)), previous_token_count)
+
+        self.user.is_superuser = True
+        self.user.save()
+        # Check to make sure user1 can't modify another user's token, even as superuser
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 404)
+
+        # Check to make sure user1 can't take over another user's token, even as superuser
         previous_token_count = len(Token.objects.filter(user=self.user))
         response = self.client.patch(
             self._get_detail_url(other_user_token), data={"user": self.user.id}, format="json", **self.header
