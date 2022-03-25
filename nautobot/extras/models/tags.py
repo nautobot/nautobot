@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils.text import slugify
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
-from taggit.managers import TaggableManager
+from taggit.managers import TaggableManager as TaggitTaggableManager
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
@@ -72,7 +72,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
         return (self.name, self.slug, self.color, self.description)
 
 
-class TaggableManagerField(TaggableManager):
+class TaggableManager(TaggitTaggableManager):
     """
     Helper class for overriding TaggableManager formfield method
     """

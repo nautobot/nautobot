@@ -15,17 +15,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="cluster",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="virtualmachine",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="vminterface",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(
+            field=nautobot.extras.models.tags.TaggableManager(
                 related_name="vminterface", through="extras.TaggedItem", to="extras.Tag"
             ),
         ),

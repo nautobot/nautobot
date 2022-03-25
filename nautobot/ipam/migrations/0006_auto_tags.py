@@ -15,36 +15,36 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="aggregate",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="ipaddress",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="prefix",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="routetarget",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="service",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="vlan",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="vrf",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManagerField(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
     ]

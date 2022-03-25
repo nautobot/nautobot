@@ -2,7 +2,7 @@ from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.mixins import DynamicGroupMixin
-from nautobot.extras.models.tags import TaggableManagerField, TaggedItem
+from nautobot.extras.models.tags import TaggableManager, TaggedItem
 from nautobot.core.models import BaseModel
 
 
@@ -31,7 +31,7 @@ class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     tangible or logical resources on the network, or within the organization.
     """
 
-    tags = TaggableManagerField(through=TaggedItem)
+    tags = TaggableManager(through=TaggedItem)
 
     class Meta:
         abstract = True

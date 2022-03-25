@@ -9,7 +9,7 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     StatusModel,
-    TaggableManagerField,
+    TaggableManager,
     TaggedItem,
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -420,7 +420,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         object_id_field="assigned_object_id",
         related_query_name="vminterface",
     )
-    tags = TaggableManagerField(through=TaggedItem, related_name="vminterface")
+    tags = TaggableManager(through=TaggedItem, related_name="vminterface")
 
     csv_headers = [
         "virtual_machine",

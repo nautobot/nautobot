@@ -31,7 +31,7 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
-    TaggableManagerField,
+    TaggableManager,
     TaggedItem,
 )
 from nautobot.extras.utils import extras_features
@@ -68,7 +68,7 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
     description = models.CharField(max_length=200, blank=True)
-    tags = TaggableManagerField(through=TaggedItem)
+    tags = TaggableManager(through=TaggedItem)
 
     class Meta:
         abstract = True
