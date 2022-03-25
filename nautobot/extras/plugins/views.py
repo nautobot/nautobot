@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 
 from django_tables2 import RequestConfig
 
+from nautobot.core.api.views import NautobotAPIVersionMixin
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
@@ -82,7 +83,7 @@ class InstalledPluginDetailView(LoginRequiredMixin, View):
         )
 
 
-class InstalledPluginsAPIView(APIView):
+class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
     """
     API view for listing all installed plugins
     """
@@ -112,7 +113,7 @@ class InstalledPluginsAPIView(APIView):
         return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
 
 
-class PluginsAPIRootView(APIView):
+class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
     _ignore_model_permissions = True
     exclude_from_schema = True
     swagger_schema = None

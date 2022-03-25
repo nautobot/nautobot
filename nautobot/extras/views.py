@@ -511,6 +511,14 @@ class DynamicGroupView(generic.ObjectView):
         if table_class is not None:
             members = instance.get_queryset()
             members_table = table_class(members, orderable=False)
+
+            # Paginate the members table.
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(members_table)
+
             context["members_table"] = members_table
 
         return context
@@ -1148,11 +1156,7 @@ class JobApprovalRequestView(generic.ObjectView):
             if not (
                 self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
                 and job_model is not None
-                and (
-                    JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
-                    # A user can deny (revoke) their own approval requests, even without general job-approval permission
-                    or request.user == scheduled_job.user
-                )
+                and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
             ):
                 messages.error(request, "You do not have permission to deny this request.")
             else:

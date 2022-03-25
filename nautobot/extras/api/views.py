@@ -11,7 +11,6 @@ from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -55,7 +54,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.jobs import get_job, run_job
+from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
@@ -222,12 +221,12 @@ class DynamicGroupViewSet(ModelViewSet):
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
-    # FIXME(jathan): Figure out how to do `request_body` serializer based on the
-    # content_type of the DynamicGroup? Likely a `DynamicGroupMemberSerializer`
-    # that emits the appropriate serializer? This seems messy.
-    # @swagger_auto_schema(method="get", request_body=serializers.GitRepositorySerializer)
+    # FIXME(jathan): Figure out how to do dynamic `responses` serializer based on the `content_type`
+    # of the DynamicGroup? May not be possible or even desirable to have a "dynamic schema".
+    # @swagger_auto_schema(method="get", responses={200: member_response})
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
+        """List member objects of the same type as the `content_type` for this dynamic group."""
         instance = get_object_or_404(self.queryset, pk=pk)
 
         # Retrieve the serializer for the content_type and paginate the results
@@ -433,7 +432,7 @@ def _run_job(request, job_model, legacy_response=False):
         return Response(data, status=status.HTTP_201_CREATED)
 
 
-class JobModelViewSet(
+class JobViewSet(
     # DRF mixins:
     # note no CreateModelMixin
     mixins.ListModelMixin,
@@ -451,9 +450,83 @@ class JobModelViewSet(
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
+    # I don't see an easy way for swagger_auto_schema to provide a different schema depending on the API version.
+    # Since for now we default to the pre-1.3 API behavior, document that version in the schema for now.
+    @swagger_auto_schema(responses={"200": serializers.JobClassSerializer(many=True)})
+    def list(self, request, *args, **kwargs):
+        """List all known Jobs. Note that filtering of this list is only supported with API version 1.3 or later."""
+        if request.major_version > 1 or request.minor_version >= 3:
+            # API version 1.3 or later - standard model-based response
+            return super().list(request, *args, **kwargs)
+
+        # API version 1.2 or earlier - serialize JobClass records
+        if not request.user.has_perm("extras.view_job"):
+            raise PermissionDenied("This user does not have permission to view jobs.")
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        results = {
+            r.name: r
+            for r in JobResult.objects.filter(
+                obj_type=job_content_type,
+                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+            )
+            .defer("data")
+            .order_by("created")
+        }
+
+        job_models = Job.objects.restrict(request.user, "view")
+        jobs_list = [
+            job_model.job_class()  # TODO: why do we need to instantiate the job_class?
+            for job_model in job_models
+            if job_model.installed and job_model.job_class is not None
+        ]
+        for job_instance in jobs_list:
+            job_instance.result = results.get(job_instance.class_path, None)
+
+        serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
+
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        deprecated=True,
+        operation_id="extras_jobs_read_deprecated",
+        responses={"200": serializers.JobClassDetailSerializer()},
+    )
+    @action(
+        detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
+        methods=["get"],
+        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)",  # /api/extras/jobs/<class_path>/
+        url_name="detail",
+    )
+    def retrieve_deprecated(self, request, class_path):
+        """
+        Get details of a Job as identified by its class-path.
+
+        This API endpoint is deprecated; it is recommended to use the extras_jobs_read endpoint instead.
+        """
+        if not request.user.has_perm("extras.view_job"):
+            raise PermissionDenied("This user does not have permission to view jobs.")
+        try:
+            job_model = Job.objects.restrict(request.user, "view").get_for_class_path(class_path)
+        except Job.DoesNotExist:
+            raise Http404
+        if not job_model.installed or job_model.job_class is None:
+            raise Http404
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        job = job_model.job_class()  # TODO: why do we need to instantiate the job_class?
+        job.result = JobResult.objects.filter(
+            obj_type=job_content_type,
+            name=job.class_path,
+            status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+        ).first()
+
+        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
+
+        return Response(serializer.data)
+
     @swagger_auto_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True)
     def variables(self, request, pk):
+        """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
         job_class = job_model.job_class
         if job_class is None:
@@ -499,74 +572,36 @@ class JobModelViewSet(
         }
 
     @swagger_auto_schema(
-        method="post",
+        methods=["post"],
         request_body=serializers.JobInputSerializer,
         responses={"201": serializers.JobRunResponseSerializer},
     )
     @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
-    def run(self, request, pk):
+    def run(self, request, *args, pk, **kwargs):
+        """Run the specified Job."""
         job_model = self.get_object()
         return _run_job(request, job_model)
 
+    @swagger_auto_schema(
+        deprecated=True,
+        methods=["post"],
+        request_body=serializers.JobInputSerializer,
+        responses={"200": serializers.JobClassDetailSerializer()},
+        operation_id="extras_jobs_run_deprecated",
+    )
+    @action(
+        detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
+        methods=["post"],
+        permission_classes=[JobRunTokenPermissions],
+        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)/run",  # /api/extras/jobs/<class_path>/run/
+        url_name="run",
+    )
+    def run_deprecated(self, request, class_path):
+        """
+        Run a Job as identified by its class-path.
 
-class JobViewSet(viewsets.ViewSet):
-    """Deprecated Job-class-based views. Use Job-model-based views instead."""
-
-    permission_classes = [IsAuthenticated]
-    lookup_field = "class_path"
-    lookup_value_regex = "[^/]+/[^/]+/[^/]+"  # e.g. "git.repo_name/module_name/JobName"
-
-    def list(self, request):
-        if not request.user.has_perm("extras.view_job"):
-            raise PermissionDenied("This user does not have permission to view jobs.")
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        results = {
-            r.name: r
-            for r in JobResult.objects.filter(
-                obj_type=job_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
-            )
-            .defer("data")
-            .order_by("created")
-        }
-
-        job_models = Job.objects.restrict(request.user, "view")
-        jobs_list = [
-            job_model.job_class()  # TODO: why do we need to instantiate the job_class?
-            for job_model in job_models
-            if job_model.installed and job_model.job_class is not None
-        ]
-        for job_instance in jobs_list:
-            job_instance.result = results.get(job_instance.class_path, None)
-
-        serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
-
-        return Response(serializer.data)
-
-    def retrieve(self, request, class_path):
-        if not request.user.has_perm("extras.view_job"):
-            raise PermissionDenied("This user does not have permission to view jobs.")
-        try:
-            job_model = Job.objects.restrict(request.user, "view").get_for_class_path(class_path)
-        except Job.DoesNotExist:
-            raise Http404
-        if not job_model.installed or job_model.job_class is None:
-            raise Http404
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        job = job_model.job_class()  # TODO: why do we need to instantiate the job_class?
-        job.result = JobResult.objects.filter(
-            obj_type=job_content_type,
-            name=job.class_path,
-            status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
-        ).first()
-
-        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
-
-        return Response(serializer.data)
-
-    @swagger_auto_schema(method="post", request_body=serializers.JobInputSerializer)
-    @action(detail=True, methods=["post"])
-    def run(self, request, class_path):
+        This API endpoint is deprecated; it is recommended to use the extras_jobs_run endpoint instead.
+        """
         if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("This user does not have permission to run jobs.")
         try:
@@ -622,6 +657,27 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
 
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /approve/, /deny/, and /dry-run/ endpoints.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        action_to_method = {"approve": "change", "deny": "delete", "dry-run": "view"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class ScheduledJobChangePermissions(TokenPermissions):
+        """
+        As nautobot.core.api.authentication.TokenPermissions, but enforcing change_scheduledjob not add_scheduledjob.
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.change_%(model_name)s"],
+        }
+
     @swagger_auto_schema(
         method="post",
         responses={"200": serializers.ScheduledJobSerializer},
@@ -635,12 +691,12 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             )
         ],
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobChangePermissions])
     def approve(self, request, pk):
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied()
+        scheduled_job = get_object_or_404(self.queryset, pk=pk)
 
-        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
+            raise PermissionDenied("You do not have permission to approve this request.")
 
         # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
         if request.user == scheduled_job.user:
@@ -664,47 +720,61 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
         return Response(serializer.data)
 
+    class ScheduledJobDeletePermissions(TokenPermissions):
+        """
+        As nautobot.core.api.authentication.TokenPermissions, but enforcing delete_scheduledjob not add_scheduledjob.
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.delete_%(model_name)s"],
+        }
+
     @swagger_auto_schema(
         method="post",
         request_body=no_body,
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobDeletePermissions])
     def deny(self, request, pk):
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied()
-
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
+            raise PermissionDenied("You do not have permission to deny this request.")
 
         scheduled_job.delete()
 
         return Response(None)
+
+    class ScheduledJobViewPermissions(TokenPermissions):
+        """
+        As nautobot.core.api.authentication.TokenPermissions, but enforcing view_scheduledjob not add_scheduledjob.
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.view_%(model_name)s"],
+        }
 
     @swagger_auto_schema(
         method="post",
         responses={"200": serializers.JobResultSerializer},
         request_body=no_body,
     )
-    @action(detail=True, url_path="dry-run", methods=["post"])
+    @action(detail=True, url_path="dry-run", methods=["post"], permission_classes=[ScheduledJobViewPermissions])
     def dry_run(self, request, pk):
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied()
-
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
-        # TODO enforce object-level permissions on run_job here as well?
-        job_class = get_job(scheduled_job.job_class)
-        if job_class is None:
-            raise Http404
-        job = job_class()
-        grouping, module, class_name = job_class.class_path.split("/", 2)
+        job_model = scheduled_job.job_model
+        if job_model is None or not job_model.runnable:
+            raise MethodNotAllowed("This job cannot be dry-run at this time.")
+        if not Job.objects.check_perms(request.user, instance=job_model, action="run"):
+            raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job with commit=False
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = JobResult.enqueue_job(
             run_job,
-            job.class_path,
+            job_model.class_path,
             job_content_type,
-            scheduled_job.user,
-            data=scheduled_job.kwargs["data"],
+            request.user,
+            data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run
         )
