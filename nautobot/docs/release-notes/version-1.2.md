@@ -140,6 +140,37 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
+## v1.2.11 (2022-MM-DD)
+
+### Added
+
+- [#1529](https://github.com/nautobot/nautobot/pull/1529) - Added list of standard hex colors to the Tags documentation.
+
+### Changed
+
+### Fixed
+
+- [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
+- [#1467](https://github.com/nautobot/nautobot/issues/1467) - Fixed an issue where at certain browser widths the nav bar would cover the top of the page content.
+- [#1548](https://github.com/nautobot/nautobot/issues/1548) - Pin Jinja2 version for mkdocs requirements to fix RTD docs builds related to API deprecation in Jinja2 >= 3.1.0
+
+## v1.2.10 (2022-03-21)
+
+### Added
+
+- [#1492](https://github.com/nautobot/nautobot/pull/1492) - Added note in the Jobs documentation about the use of `AbortTransaction` to end the job and force rollback.
+- [#1517](https://github.com/nautobot/nautobot/pull/1517) - Added password filtering example to advanced logging section in docs.
+
+### Changed
+
+- [#1514](https://github.com/nautobot/nautobot/pull/1514) - Simplified switching between PostgreSQL and MySQL database backends in the developer environment.
+- [#1518](https://github.com/nautobot/nautobot/pull/1518) - Updated GitHub Pull Request template to include detail section, todo list.
+
+### Fixed
+
+- [#1511](https://github.com/nautobot/nautobot/issues/1511) - Fixed left column of Read The Docs being cut off.
+- [#1522](https://github.com/nautobot/nautobot/pull/1522) - Fixed link name attribute name in developer docs.
+
 ## v1.2.9 (2022-03-14)
 
 ### Fixed
