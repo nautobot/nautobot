@@ -147,7 +147,7 @@ Return x/y as a percentage.
 
 ### placeholder
 
-Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value is false, else render the provided value.
+Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value is falsey, else render the provided value.
 
 ```django
 {{ html | placeholder }}
