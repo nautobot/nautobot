@@ -413,7 +413,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
 
 class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     """
-    API View for GraphQL to integrate properly with DRF authentication mecanism.
+    API View for GraphQL to integrate properly with DRF authentication mechanism.
     The code is a stripped down version of graphene-django default View
     https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
     """
