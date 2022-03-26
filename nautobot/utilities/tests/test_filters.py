@@ -172,6 +172,14 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["charfield__iew"].exclude, False)
         self.assertEqual(self.filters["charfield__niew"].lookup_expr, "iendswith")
         self.assertEqual(self.filters["charfield__niew"].exclude, True)
+        self.assertEqual(self.filters["charfield__re"].lookup_expr, "regex")
+        self.assertEqual(self.filters["charfield__re"].exclude, False)
+        self.assertEqual(self.filters["charfield__nre"].lookup_expr, "regex")
+        self.assertEqual(self.filters["charfield__nre"].exclude, True)
+        self.assertEqual(self.filters["charfield__ire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["charfield__ire"].exclude, False)
+        self.assertEqual(self.filters["charfield__nire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["charfield__nire"].exclude, True)
 
     def test_mac_address_filter(self):
         self.assertIsInstance(self.filters["macaddressfield"], MACAddressFilter)
@@ -195,6 +203,14 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["macaddressfield__iew"].exclude, False)
         self.assertEqual(self.filters["macaddressfield__niew"].lookup_expr, "iendswith")
         self.assertEqual(self.filters["macaddressfield__niew"].exclude, True)
+        self.assertEqual(self.filters["macaddressfield__re"].lookup_expr, "regex")
+        self.assertEqual(self.filters["macaddressfield__re"].exclude, False)
+        self.assertEqual(self.filters["macaddressfield__nre"].lookup_expr, "regex")
+        self.assertEqual(self.filters["macaddressfield__nre"].exclude, True)
+        self.assertEqual(self.filters["macaddressfield__ire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["macaddressfield__ire"].exclude, False)
+        self.assertEqual(self.filters["macaddressfield__nire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["macaddressfield__nire"].exclude, True)
 
     def test_model_choice_filter(self):
         self.assertIsInstance(self.filters["modelchoicefield"], django_filters.ModelChoiceFilter)
@@ -235,6 +251,14 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["multivaluecharfield__iew"].exclude, False)
         self.assertEqual(self.filters["multivaluecharfield__niew"].lookup_expr, "iendswith")
         self.assertEqual(self.filters["multivaluecharfield__niew"].exclude, True)
+        self.assertEqual(self.filters["multivaluecharfield__re"].lookup_expr, "regex")
+        self.assertEqual(self.filters["multivaluecharfield__re"].exclude, False)
+        self.assertEqual(self.filters["multivaluecharfield__nre"].lookup_expr, "regex")
+        self.assertEqual(self.filters["multivaluecharfield__nre"].exclude, True)
+        self.assertEqual(self.filters["multivaluecharfield__ire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["multivaluecharfield__ire"].exclude, False)
+        self.assertEqual(self.filters["multivaluecharfield__nire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["multivaluecharfield__nire"].exclude, True)
 
     def test_textfield_multi_value_char_filter(self):
         self.assertIsInstance(self.filters["textfield"], MultiValueCharFilter)
@@ -258,6 +282,14 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["textfield__iew"].exclude, False)
         self.assertEqual(self.filters["textfield__niew"].lookup_expr, "iendswith")
         self.assertEqual(self.filters["textfield__niew"].exclude, True)
+        self.assertEqual(self.filters["textfield__re"].lookup_expr, "regex")
+        self.assertEqual(self.filters["textfield__re"].exclude, False)
+        self.assertEqual(self.filters["textfield__nre"].lookup_expr, "regex")
+        self.assertEqual(self.filters["textfield__nre"].exclude, True)
+        self.assertEqual(self.filters["textfield__ire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["textfield__ire"].exclude, False)
+        self.assertEqual(self.filters["textfield__nire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["textfield__nire"].exclude, True)
 
     def test_multi_value_date_filter(self):
         self.assertIsInstance(self.filters["datefield"], MultiValueDateFilter)
@@ -341,6 +373,14 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["multiplechoicefield__iew"].exclude, False)
         self.assertEqual(self.filters["multiplechoicefield__niew"].lookup_expr, "iendswith")
         self.assertEqual(self.filters["multiplechoicefield__niew"].exclude, True)
+        self.assertEqual(self.filters["multiplechoicefield__re"].lookup_expr, "regex")
+        self.assertEqual(self.filters["multiplechoicefield__re"].exclude, False)
+        self.assertEqual(self.filters["multiplechoicefield__nre"].lookup_expr, "regex")
+        self.assertEqual(self.filters["multiplechoicefield__nre"].exclude, True)
+        self.assertEqual(self.filters["multiplechoicefield__ire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["multiplechoicefield__ire"].exclude, False)
+        self.assertEqual(self.filters["multiplechoicefield__nire"].lookup_expr, "iregex")
+        self.assertEqual(self.filters["multiplechoicefield__nire"].exclude, True)
 
     def test_tag_filter(self):
         self.assertIsInstance(self.filters["tagfield"], TagFilter)
@@ -531,6 +571,22 @@ class DynamicFilterLookupExpressionTest(TestCase):
         params = {"slug__niew": ["-1"]}
         self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
 
+    def test_site_slug_regex(self):
+        params = {"slug__re": ["-1$"]}
+        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
+
+    def test_site_slug_regex_negation(self):
+        params = {"slug__nre": ["-1$"]}
+        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+
+    def test_site_slug_iregex(self):
+        params = {"slug__ire": ["SITE"]}
+        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 3)
+
+    def test_site_slug_iregex_negation(self):
+        params = {"slug__nire": ["SITE"]}
+        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 0)
+
     def test_site_asn_lt(self):
         params = {"asn__lt": [65101]}
         self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
@@ -615,6 +671,22 @@ class DynamicFilterLookupExpressionTest(TestCase):
         params = {"mac_address__nic": ["aa:", "bb"]}
         self.assertEqual(DeviceFilterSet(params, self.device_queryset).qs.count(), 1)
 
+    def test_device_mac_address_regex(self):
+        params = {"mac_address__re": ["^AA:"]}
+        self.assertEqual(DeviceFilterSet(params, self.device_queryset).qs.count(), 1)
+
+    def test_device_mac_address_iregex(self):
+        params = {"mac_address__ire": ["^aa:"]}
+        self.assertEqual(DeviceFilterSet(params, self.device_queryset).qs.count(), 1)
+
+    def test_device_mac_address_regex_negation(self):
+        params = {"mac_address__nre": ["^AA:"]}
+        self.assertEqual(DeviceFilterSet(params, self.device_queryset).qs.count(), 2)
+
+    def test_device_mac_address_iregex_negation(self):
+        params = {"mac_address__nire": ["^aa:"]}
+        self.assertEqual(DeviceFilterSet(params, self.device_queryset).qs.count(), 2)
+
     def test_device_comments_multiple_value_charfield(self):
         params = {"comments": ["Device 1 comments"]}
         self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 1)
@@ -622,3 +694,19 @@ class DynamicFilterLookupExpressionTest(TestCase):
         self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 2)
         params = {"comments": ["Device 1 comments", "Device 2 comments", "Device 3 comments"]}
         self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 3)
+
+    def test_device_comments_multiple_value_charfield_regex(self):
+        params = {"comments__re": ["^Device"]}
+        self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 3)
+
+    def test_device_comments_multiple_value_charfield_regex_negation(self):
+        params = {"comments__nre": ["^Device"]}
+        self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 0)
+
+    def test_device_comments_multiple_value_charfield_iregex(self):
+        params = {"comments__ire": ["^device"]}
+        self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 3)
+
+    def test_device_comments_multiple_value_charfield_iregex_negation(self):
+        params = {"comments__nire": ["^device"]}
+        self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 0)

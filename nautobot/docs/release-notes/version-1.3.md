@@ -14,9 +14,6 @@ A new data model for representing [dynamic groups](../models/extras/dynamicgroup
 
 For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported. 
 
-!!! note
-  For this first 1.3 beta release, this feature is not yet documented. Dynamic Groups be found by navigating to **Organization** > **Dynamic Groups** in the web interface.
-
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
 GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [user guide](../user-guides/graphql.md#filtering-queries) for examples.
@@ -28,11 +25,8 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - The Jobs listing UI view can now be filtered and searched like most other Nautobot table/list views.
 - Job attributes (name, description, approval requirements, etc.) can now be managed via the Nautobot UI by an administrator or user with appropriate permissions to customize or override the attributes defined in the Job source code.
 - Jobs can now be identified by a `slug` as well as by their `class_path`.
-- A new set of REST API endpoints have been added at `api/extras/job-models`. The existing `api/extras/jobs` REST API continues to work but should be considered as deprecated.
-
-!!! warning
-    The new Jobs REST API endpoint URL is likely to change before the final release of Nautobot 1.3.
-
+- A new set of REST API endpoints have been added to `/api/extras/jobs/<uuid>/`. The existing `/api/extras/jobs/<class_path>/` REST API endpoints continue to work but should be considered as deprecated.
+  - A new version of the REST API `/api/extras/jobs/` list endpoint has been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
 - As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
 
 !!! note
@@ -52,6 +46,24 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
 
+#### Regular Expression Support in API Filtering ([#1525](https://github.com/nautobot/nautobot/issues/1525))
+
+[New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
+
+The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
+
+#### REST API Versioning ([#1465](https://github.com/nautobot/nautobot/issues/1465))
+
+Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
+
+- The only REST API endpoint that is versioned in the 1.3.0 release is the `/api/extras/jobs/` listing endpoint, as described above. All others are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
+- If a REST API client does not request a specific REST API version (in other words, requests `Accept: application/json` rather than `Accept: application/json; version=1.3`) the API behavior will be compatible with Nautobot 1.2, at a minimum for the remainder of the Nautobot 1.x release cycle.
+- The API behavior may change to a newer default version in a Nautobot major release (e.g. 2.0).
+- To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the new Jobs REST API, `Accept: application/json; version=1.3`).
+
+!!! tip
+    As a best practice, when developing a Nautobot REST API integration, your client should _always_ request the current API version it is being developed against, rather than relying on the default API behavior (which may change with a new Nautobot major release, as noted, and which also may not include the latest and greatest API endpoints already available but not yet made default in the current release).
+
 ### Changed
 
 #### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
@@ -61,6 +73,10 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 #### Docker Images Now Default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
 
 As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
+
+#### Job Approval Now Controlled By `extras.approve_job` Permission ([#1490](https://github.com/nautobot/nautobot/pull/1490))
+
+Similar to the existing `extras.run_job` permission, a new `extras.approve_job` permission is now enforced by the UI and the REST API when approving scheduled jobs. Only users with this permission can approve or deny approval requests; additionally such users also now require the `extras.view_scheduledjob`, `extras.change_scheduledjob`, and `extras.delete_scheduledjob` permissions as well.
 
 ### Removed
 
@@ -72,11 +88,19 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
+- [#1465](https://github.com/nautobot/nautobot/issues/1465) - Implemented REST API versioning
+- [#1525](https://github.com/nautobot/nautobot/issues/1525) - Implemented support for regex lookup expressions for `BaseFilterSet` filter fields in the API.
 
 ### Changed
 
+- [#814](https://github.com/nautobot/nautobot/issues/814) - Extended documentation for configuring Celery for use Redis Sentinel clustering.
 - [#1225](https://github.com/nautobot/nautobot/issues/1225) - Relaxed uniqueness constraint on Webhook creation, allowing multiple webhooks to send to the same target address so long as their content-type(s) and action(s) do not overlap.
+- [#1478](https://github.com/nautobot/nautobot/issues/1478) - ScheduledJob REST API endpoints now enforce `extras.approve_job` permissions as appropriate.
+- [#1479](https://github.com/nautobot/nautobot/issues/1479) - Updated Jobs documentation regarding the concrete Job database model.
+- [#1502](https://github.com/nautobot/nautobot/issues/1502) Finalized Dynamic Groups implementation for 1.3 release (including documentation and integration tests)
+- [#1521](https://github.com/nautobot/nautobot/pull/1521) - Consolidated Job REST API endpoints, taking advantage of REST API versioning.
 
 ## v1.3.0b1 (2022-03-11)
 

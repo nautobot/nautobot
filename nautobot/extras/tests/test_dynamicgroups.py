@@ -7,7 +7,6 @@ from nautobot.dcim.forms import DeviceForm, DeviceFilterForm
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import DynamicGroup, Status
 from nautobot.extras.filters import DynamicGroupFilterSet
-from nautobot.extras.groups import dynamicgroup_map_factory
 from nautobot.utilities.testing import TestCase
 
 
@@ -163,36 +162,66 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group2.count, 0)
         self.assertEqual(group3.count, 1)
 
-    def get_queryset(self):
+    def test_get_queryset(self):
         """Test `DynamicGroup.get_queryset()`."""
         group = self.groups[0]
         device1 = self.devices[0]
 
-        # Test it no args.
-        queryset = group.get_queryset()
-        devices_site1 = group.content_type.model_class().objects.filter(site=device1.site)
-        devices_flat = sorted(devices_site1.values_list("pk", flat=True))
-        self.assertEqual(
-            sorted(queryset.values_list("pk", flat=True)),
-            devices_flat,
-        )
+        # Test that we can get a full queryset
+        qs = group.get_queryset()
+        devices = group.model.objects.filter(site=device1.site)
 
-        # Test it with `flat=True`
-        queryset_flat = group.get_queryset(flat=True)
-        self.assertEqual(
-            sorted(queryset_flat),
-            devices_flat,
-        )
+        # Expect a single-member qs/list of Device names (only `device1`)
+        expected = [device1.name]
+        self.assertIn(device1, devices)
+        self.assertIn(device1, qs)
+        self.assertEqual(list(map(str, devices)), expected)
+        self.assertEqual(list(map(str, qs)), expected)
+        self.assertEqual(list(qs), list(devices))
 
-    def test_map(self):
-        """Test `DynamicGroup.map`."""
-        # New instances should not have a map unless `content_type` is set.
+        # A new group that doesn't have a content_type and therefore
+        # `self.model`, should raise a RuntimeError
+        new_group = DynamicGroup()
+        with self.assertRaises(RuntimeError):
+            new_group.get_queryset()
+
+    def test_model(self):
+        """Test `DynamicGroup.model`."""
+        # New instances should not have a model unless `content_type` is set.
         new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
-        self.assertIs(new_group.map, None)
+        self.assertIsNone(new_group.model)
 
-        # Setting the content_type will now allow `.map` to be accessed.
+        # Setting the content_type will now allow `.model` to be accessed.
         new_group.content_type = self.device_ct
-        self.assertIsNot(new_group.map, None)
+        self.assertIsNotNone(new_group.model)
+
+    def test_set_object_classes(self):
+        """Test `DynamicGroup._set_object_classes()`."""
+        # New instances should fail to map until `content_type` is set.
+        new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
+        objects_mapped = new_group._set_object_classes(new_group.model)
+        self.assertFalse(objects_mapped)
+
+        # Existing groups w/ `content_type` set work as expected.
+        group = self.groups[0]
+        model = group.content_type.model_class()
+        objects_mapped = group._set_object_classes(model)
+
+        self.assertTrue(objects_mapped)
+        self.assertEqual(group.model, model)
+        self.assertEqual(group.filterset_class, DeviceFilterSet)
+        self.assertEqual(group.filterform_class, DeviceFilterForm)
+        self.assertEqual(group.form_class, DeviceForm)
+
+    def test_members_base_url(self):
+        """Test `DynamicGroup.members_base_url`."""
+        # New instances should not have `members_base_url` unless `content_type` is set.
+        new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
+        self.assertEqual(new_group.members_base_url, "")
+
+        # Setting the content_type will now allow `.members_base_url` to be accessed.
+        new_group.content_type = self.device_ct
+        self.assertEqual(new_group.members_base_url, reverse("dcim:device_list"))
 
     def test_get_group_members_url(self):
         """Test `DynamicGroup.get_group_members_url()."""
@@ -206,6 +235,17 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         new_group = DynamicGroup()
         self.assertEqual(new_group.get_group_members_url(), "")
 
+    def test_map_filter_fields(self):
+        """Test `DynamicGroup._map_filter_fields`."""
+        group = self.groups[0]
+        fields = group._map_filter_fields
+
+        # Test that it's a dict with or without certain key fields.
+        self.assertIsInstance(fields, dict)
+        self.assertNotEqual(fields, {})
+        self.assertNotIn("q", fields)
+        self.assertIn("name", fields)
+
     def test_get_filter_fields(self):
         """Test `DynamicGroup.get_filter_fields()`."""
         # New instances should return {} `content_type` is set.
@@ -218,6 +258,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         filter_fields = group.get_filter_fields()
         self.assertIsInstance(filter_fields, dict)
         self.assertNotEqual(filter_fields, {})
+        self.assertNotIn("q", filter_fields)
         self.assertIn("name", filter_fields)
 
     def test_generate_filter_form(self):
@@ -275,72 +316,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Cleanup because we're using class-based fixtures in `setUpTestData()`
         group.refresh_from_db()
-
-
-class DynamicGroupMapTest(DynamicGroupTestBase):
-    def test_dynamicgroup_map_factory(self):
-        """Test `dynamicgroup_map_factory()`."""
-        group = self.groups[0]
-        model = group.content_type.model_class()
-        dynamicgroup_map = dynamicgroup_map_factory(model)
-        self.assertEqual(dynamicgroup_map.model, model)
-        self.assertEqual(dynamicgroup_map.filterset_class, DeviceFilterSet)
-        self.assertEqual(dynamicgroup_map.filterform_class, DeviceFilterForm)
-        self.assertEqual(dynamicgroup_map.form_class, DeviceForm)
-
-        # Bogus input errors
-        with self.assertRaises(TypeError):
-            dynamicgroup_map_factory(False)
-
-    def test_base_url(self):
-        """Test `DynamicGroup.map.base_url`."""
-        group = self.groups[0]
-        self.assertEqual(group.map.base_url, reverse("dcim:device_list"))
-
-    def test_fields(self):
-        """Test `DynamicGroup.map.fields()`."""
-        group = self.groups[0]
-        fields = group.map.fields()
-
-        # Test that it's a dict with or without certain key fields.
-        self.assertIsInstance(fields, dict)
-        self.assertNotEqual(fields, {})
-        self.assertNotIn("q", fields)
-        self.assertIn("name", fields)
-
-    def test_get_queryset(self):
-        """Test `DynamicGroup.map.get_queryset()`."""
-        group = self.groups[0]
-        device1 = self.devices[0]
-
-        # Test that we can get a full queryset
-        qs = group.map.get_queryset(group.filter)
-        devices = group.content_type.model_class().objects.filter(site=device1.site)
-        # Expect a single-member qs/list of Device names (only `device1`)
-        expected = [device1.name]
-        self.assertIn(device1, devices)
-        self.assertIn(device1, qs)
-        self.assertEqual(list(map(str, devices)), expected)
-        self.assertEqual(list(map(str, qs)), expected)
-        self.assertEqual(list(qs), list(devices))
-
-        # ... or just a list of UUIDs
-        qs_flat = group.map.get_queryset(group.filter, flat=True)
-        devices_flat = devices.values_list("pk", flat=True)
-
-        # Expect a single-member qs/list of Device UUIDs (only `device1`)
-        expected = [device1.pk]
-        self.assertIn(device1.pk, devices_flat)
-        self.assertIn(device1.pk, qs_flat)
-        self.assertEqual(list(devices_flat), expected)
-        self.assertEqual(sorted(qs_flat), expected)
-
-    def test_urlencode(self):
-        """Test `DynamicGroup.map.urlencode()`."""
-        group = self.groups[0]
-        params = group.map.urlencode(group.filter)
-        expected = "site=site-1"
-        self.assertEqual(params, expected)
 
 
 class DynamicGroupFilterTest(DynamicGroupTestBase):

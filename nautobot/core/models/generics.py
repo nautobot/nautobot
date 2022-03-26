@@ -1,8 +1,8 @@
 from nautobot.extras.managers import TaggableManager
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.mixins import DynamicGroupMixin
+from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.tags import TaggedItem
 from nautobot.core.models import BaseModel
 
