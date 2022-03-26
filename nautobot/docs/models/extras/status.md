@@ -18,13 +18,14 @@ For example, the default **Active** status has a slug of `active`, so the `activ
 
 ## Customizing Statuses
 
-With Status as a model, statuses can be customized. This can be as simple as removing the option to configure an existing status with a particular model or to remove that status entirely. 
+With Status as a model, statuses can be customized. This can be as simple as removing the option to configure an existing status with a particular model or to remove that status entirely.
 
-The real benefit of custom status is adding your own organization status and process names directly to Nautobot. An example of custom statuses would be including End of Life information for your devices. A simple End of Life status could be EOx for a device hitting any end of life milestone; more specific statuses like EOSS (End of Software Support), EOS (End of Sale), and Pre-EOS (for 1 year prior to EOS) to be more specific. Once the end of life information is tracked as a status, developing a report for Devices that have reached EOSS is trivial. 
+The real benefit of custom status is adding your own organization status and process names directly to Nautobot. An example of custom statuses would be including End of Life information for your devices. A simple End of Life status could be EOx for a device hitting any end of life milestone; more specific statuses like EOSS (End of Software Support), EOS (End of Sale), and Pre-EOS (for 1 year prior to EOS) to be more specific. Once the end of life information is tracked as a status, developing a report for Devices that have reached EOSS is trivial.
 
 Another example for sites is tracking the nature of a specific site's installation status. A site that is under construction could received a status like 'Pre Production'.
 
 For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be customized to reflect the specific [Nova virtual machine states](https://docs.openstack.org/nova/latest/reference/vm-states.html).
+
 ## Status Internals
 
 !!! warning
@@ -58,7 +59,7 @@ Any model form that is intended to have a `status` field must inherit from one o
 
 Any serializer that is intended to have a `status` field must inherit from `extras.api.serializers.StatusModelSerializerMixin`. This adds an `extras.api.fields.StatusSerializerField` to the serializer.
 
-The `StatusSerializerField` is a writable slug-related choicee field that allows writing to the field using the `name` value of the status (e.g. `"active"`). Writing to this field is normalized to always be lowercased.
+The `StatusSerializerField` is a writable slug-related choice field that allows writing to the field using the `name` value of the status (e.g. `"active"`). Writing to this field is normalized to always be converted to lowercase.
 
 ### Table field
 

@@ -3,12 +3,12 @@
 IP addressing is by nature hierarchical. The first few levels of the IPv4 hierarchy, for example, look like this:
 
 * 0.0.0.0/0
-    * 0.0.0.0/1
-        * 0.0.0.0/2
-        * 64.0.0.0/2
-    * 128.0.0.0/1
-        * 128.0.0.0/2
-        * 192.0.0.0/2
+  * 0.0.0.0/1
+    * 0.0.0.0/2
+    * 64.0.0.0/2
+  * 128.0.0.0/1
+    * 128.0.0.0/2
+    * 192.0.0.0/2
 
 This hierarchy comprises 33 tiers of addressing, from /0 all the way down to individual /32 address (and much, much further to /128 for IPv6). Of course, most organizations are concerned with only relatively small portions of the total IP space, so tracking the uppermost of these tiers isn't necessary.
 

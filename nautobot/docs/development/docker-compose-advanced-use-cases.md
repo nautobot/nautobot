@@ -46,7 +46,6 @@ In the `docker` directory you will find the following files:
 
 If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
 
-
 ```yaml
 ---
 nautobot:

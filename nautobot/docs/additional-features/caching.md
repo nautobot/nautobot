@@ -14,7 +14,7 @@ Nautobot supports database query caching using [`django-cacheops`](https://githu
 
 If a change is made to any of the objects returned by the cached query within that time, or if the timeout expires, the cached results are automatically invalidated and the next request for those results will be sent to the database.
 
-Caching is a complex topic and there are some important details to clarify with how caching is implemented and configureed in Nautobot.
+Caching is a complex topic and there are some important details to clarify with how caching is implemented and configured in Nautobot.
 
 ### Caching in Django
 
@@ -24,7 +24,7 @@ Django includes with its own [cache framework](https://docs.djangoproject.com/en
 
 The [`CACHES`](../../configuration/required-settings/#caches) setting is used to, among other things, configure Django's built-in caching. You'll observe that, even though we aren't using Django's built-in caching, *we still have this as a required setting*. Here's why:
 
-Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin which allows it to use Redis as a backend for caching and session storage. This is used to provide a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. 
+Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin which allows it to use Redis as a backend for caching and session storage. This is used to provide a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ.
 
 `django-redis` *also* uses the [`CACHES`](../../configuration/required-settings/#caches) setting, in its case to simplify the configuration for establishing concurrent write locks, and also for referencing the correct Redis connection information when defining RQ task queues using the  [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) setting.
 
@@ -42,8 +42,8 @@ For more information on the required settings needed to configure Cacheops, plea
 
 The optional settings include:
 
-- [`CACHEOPS_DEFAULTS`](../../configuration/optional-settings/#cacheops_defaults): To define the cache timeout value (Defaults to 15 minutes)
-- [`CACHEOPS_ENABLED`](../../configuration/optional-settings/#cacheops_enabled) : To turn on/off caching (Defaults to `True`)
+* [`CACHEOPS_DEFAULTS`](../../configuration/optional-settings/#cacheops_defaults): To define the cache timeout value (Defaults to 15 minutes)
+* [`CACHEOPS_ENABLED`](../../configuration/optional-settings/#cacheops_enabled) : To turn on/off caching (Defaults to `True`)
 
 ## Invalidating Cached Data
 

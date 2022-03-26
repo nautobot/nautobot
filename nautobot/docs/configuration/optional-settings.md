@@ -4,19 +4,19 @@
 
 As of Nautobot 1.2.0, it is now possible to configure a number of settings via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
-- [BANNER_BOTTOM](#banner_bottom)
-- [BANNER_LOGIN](#banner_login)
-- [BANNER_TOP](#banner_top)
-- [CHANGELOG_RETENTION](#changelog_retention)
-- [HIDE_RESTRICTED_UI](#hide_restricted_ui)
-- [MAX_PAGE_SIZE](#max_page_size)
-- [PAGINATE_COUNT](#paginate_count)
-- PER_PAGE_DEFAULTS
-- [PREFER_IPV4](#prefer_ipv4)
-- [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
-- [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
-- [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
-- [RELEASE_CHECK_URL](#release_check_url)
+* [BANNER_BOTTOM](#banner_bottom)
+* [BANNER_LOGIN](#banner_login)
+* [BANNER_TOP](#banner_top)
+* [CHANGELOG_RETENTION](#changelog_retention)
+* [HIDE_RESTRICTED_UI](#hide_restricted_ui)
+* [MAX_PAGE_SIZE](#max_page_size)
+* [PAGINATE_COUNT](#paginate_count)
+* PER_PAGE_DEFAULTS
+* [PREFER_IPV4](#prefer_ipv4)
+* [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
+* [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
+* [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
+* [RELEASE_CHECK_URL](#release_check_url)
 
 ## Extra Applications
 
@@ -809,6 +809,7 @@ This parameter defines the URL of the repository that will be checked periodical
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
+
 ## SESSION_COOKIE_AGE
 
 Default: `1209600` (2 weeks, in seconds)

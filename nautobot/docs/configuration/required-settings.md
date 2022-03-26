@@ -91,7 +91,7 @@ For example:
 ```python
 DATABASES = {
     "default": {
-        # Other setttings...
+        # Other settings...
         "OPTIONS": {"charset": "utf8mb4"},  # Add this line
     }
 }
@@ -292,7 +292,7 @@ $ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
-Alternatively use the following command to generate a secret even before `nautobot-server` is runable:
+Alternatively use the following command to generate a secret even before `nautobot-server` is runnable:
 
 ```no-highlight
 $ LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1

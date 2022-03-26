@@ -70,7 +70,7 @@ The plugin source directory contains all of the actual Python code and other res
 
 To get started with a project using [Python Poetry](https://python-poetry.org/) you use the `poetry init` command. This will guide you through the prompts necessary to generate a pyproject.toml with details required for packaging.
 
-```
+```bash
 This command will guide you through creating your pyproject.toml config.
 
 Package name [tmp]:  nautobot-animal-sounds
@@ -364,9 +364,10 @@ def leet_speak(input_str):
 
 This filter will then be available for use in computed field templates like so:
 
-```
+```python
 {{ "HELLO WORLD" | leet_speak }}
 ```
+
 The output of this template results in the string `"H3110 W0R1D"`.
 
 ### Including Jobs
@@ -399,7 +400,7 @@ jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]
 
 Plugins can register custom validator classes which implement model validation logic to be executed during a model's `clean()` method. Like template extensions, custom validators are registered to a single model and offer a method which plugin authors override to implement their validation logic. This is accomplished by subclassing `PluginCustomValidator` and implementing the `clean()` method.
 
-Plugin authors must raise `django.core.exceptions.ValidationError` within the `clean()` method to trigger validation error messages which are propgated to the user and prevent saving of the model instance. A convenience method `validation_error()` may be used to simplify this process. Raising a `ValidationError` is no different than vanilla Django, and the convenience method will simply pass the provided message through to the exception.
+Plugin authors must raise `django.core.exceptions.ValidationError` within the `clean()` method to trigger validation error messages which are propagated to the user and prevent saving of the model instance. A convenience method `validation_error()` may be used to simplify this process. Raising a `ValidationError` is no different than vanilla Django, and the convenience method will simply pass the provided message through to the exception.
 
 When a PluginCustomValidator is instantiated, the model instance is assigned to context dictionary using the `object` key, much like PluginTemplateExtensions. E.g. `self.context['object']`.
 
@@ -553,10 +554,10 @@ A plugin can define and register additional providers (sources) for [Secrets](..
 
 To define a new `SecretsProvider` subclass, we must specify the following:
 
-- A unique `slug` string identifying this provider
-- A human-readable `name` string (optional; the `slug` will be used if this is not specified)
-- A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
-- An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
+* A unique `slug` string identifying this provider
+* A human-readable `name` string (optional; the `slug` will be used if this is not specified)
+* A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
+* An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
 
 For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
 
@@ -778,15 +779,15 @@ For authentication either a request object or user object needs to be passed in.
 Arguments:
 
 * `execute_query()`:
-    * `query` (str): String with GraphQL query.
-    * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
-    * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
-    * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
+  * `query` (str): String with GraphQL query.
+  * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
+  * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
 * `execute_saved_query()`:
-    * `saved_query_slug` (str): Slug of a saved GraphQL query.
-    * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
-    * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
-    * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
+  * `saved_query_slug` (str): Slug of a saved GraphQL query.
+  * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
+  * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
 
 Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
 

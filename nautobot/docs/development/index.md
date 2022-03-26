@@ -31,6 +31,7 @@ Nautobot components are arranged into functional subsections called _apps_ (a ca
 ## Release Management
 
 ### Roadmap
+
 In order to best understand how to contribute and where to open an issue or discussion, you should understand how work moves from idea to feature and how the roadmap is structured.
 
 There are three major "buckets" of work to be aware of within the lifecycle of getting contributions committed and released:
@@ -137,7 +138,6 @@ categories for discussions:
   feature request. These ideas are what will be in scope to review when moving work from _Future_ to _Near Term_ as stated in the previous section.
 - **Q&A** - Request help with installing or using Nautobot.
 
-
 ## Contributing
 
 We welcome many forms of contributions to Nautobot. While we understand most contributions will commonly come from developers, we encourage others to contribute in the form of docs, tutorials, and user guides. If you have other ideas for contributing, don't hesitate to open an issue or have a discussion in one of the forums above.
@@ -236,4 +236,3 @@ Feature requests will follow our published workflow from inbound triage to ultim
       * All unit tests pass successfully
       * PEP 8 compliance is enforced, with the exception that lines may be
         greater than 80 characters in length
-
