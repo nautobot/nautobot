@@ -121,10 +121,10 @@ A `NavMenuGroup` has the following attributes:
 A `NavMenuItem` has the following attributes:
 
 * `link` - The name of the URL path to which this menu item links
-* `link_text` - The text presented to the user
+* `name` - The text presented to the user
 * `weight` - Defines the position the object should be displayed at (optional)
 * `permissions` - A list of permissions required to display this link (optional)
-* `buttons` - An iterable of NavMenuButton instances to display (optional)
+* `buttons` - An iterable of NavMenuButton (or subclasses of NavMenuButton) instances to display (optional)
 
 !!! note
     Any buttons associated within a menu item will be hidden if the user does not have permission to access the menu item, regardless of what permissions are set on the buttons.
@@ -137,3 +137,7 @@ A `NavMenuButton` has the following attributes:
 * `icon_class` - Button icon CSS classes (Nautobot currently supports [Material Design Icons](https://materialdesignicons.com) or one of the choices provided by `ButtonActionIconChoices`)
 * `button_class` - One of the choices provided by `ButtonActionColorChoices` (optional)
 * `permissions` - A list of permissions required to display this button (optional)
+
+
+!!! note
+    `NavMenuAddButton` and `NavMenuImportButton` are subclasses of `NavMenuButton` that can be used to provide the commonly used "Add" and "Import" buttons.

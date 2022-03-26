@@ -67,14 +67,13 @@ $ nautobot-server invalidate all
 
 ## High Availability Caching
 
-[Redis](https://redis.io/) provides two different methods to achieve high availability, the first is [Redis Sentinel](https://redis.io/topics/sentinel) and the second is the newer [Redis Clustering](https://redis.io/topics/cluster-tutorial) feature.  Unfortunately, due to an [issue](https://github.com/Suor/django-cacheops/issues/35) with django-cacheops Nautobot is unable to support Redis Clustering at this time.  Nautobot can however support Redis Sentinel.
+[Redis](https://redis.io/) provides two different methods to achieve high availability: The first is [Redis Sentinel](https://redis.io/topics/sentinel) and the second is the newer [Redis Clustering](https://redis.io/topics/cluster-tutorial) feature. Unfortunately, due to an [known issue with django-cacheops](https://github.com/Suor/django-cacheops/issues/35) (last updated November 2021) Nautobot is unable to support Redis Clustering at this time. Therefore, Nautobot only supports Redis Sentinel for high availability.
 
 ### Using Redis Sentinel
 
-The installation/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary
-to configure Nautobot to connect to a Sentinel cluster.
+The installation/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary to configure Nautobot to connect to a Sentinel cluster.
 
-We need to configure `django-redis`, `django-cacheops`, and `celery` to use Sentinel, of course each library is configured differently so pay close attention to the details:
+We need to configure `django-redis`, `django-cacheops`, and `celery` to use Sentinel. Each library is configured differently, so please pay close attention to the details.
 
 #### `django-redis` Sentinel Configuration
 
@@ -156,9 +155,17 @@ For more details on how to configure Cacheops to use Redis Sentinel see the docu
 
 #### `celery` Sentinel Configuration
 
-Celery Sentinel configuration is controlled by 4 variables `BROKER_URL`, `BROKER_TRANSPORT_OPTIONS`, `RESULT_BACKEND`, and `RESULT_BACKEND_TRANSPORT_OPTIONS`.  These parameters can
-be specified in the django settings in `nautobot_config.py` by prefixing these variable names with `CELERY_`.  By default Nautobot configures the celery broker and results backend with the
-same configuration.
+!!! note
+	Celery is not directly related caching but it does utilize Redis, therefore in more advanced deployments if Redis Sentinel is required for caching, Celery must also be configured to use Redis Sentinel to high availability.
+
+Celery Sentinel configuration is controlled by four settings within your `nautobot_config.py`:
+
+-  [`CELERY_BROKER_URL`](../../configuration/optional-settings#celery_broker_url)
+-  [`CELERY_BROKER_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_broker_transport_options)
+-  [`CELERY_RESULT_BACKEND`](../../configuration/optional-settings#celery_result_backend)
+-  [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_result_backend_transport_options)
+
+By default Nautobot configures the celery broker and results backend with the same settings, so this pattern is mirrored here.
 
 ```python
 redis_password = ""
@@ -179,4 +186,6 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 ```
 
-For more details on how to configure Celery to use Redis Sentinel see the documentation for [Celery](https://docs.celeryproject.org/en/stable/getting-started/backends-and-brokers/redis.html#configuration).
+Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
+
+Please also see the [Nautobot documentation on required settings for Celery](../../configuration/required-settings#task-queuing-with-celery) for additional information.

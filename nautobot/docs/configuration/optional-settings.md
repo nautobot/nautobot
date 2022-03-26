@@ -191,6 +191,14 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_BROKER_TRANSPORT_OPTIONS
+
+Default: `{}`
+
+A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration).
+
+---
+
 ## CELERY_BROKER_URL
 
 Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
@@ -208,6 +216,14 @@ Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
 Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
 
 Celery result backend used to tell workers where to store task results (tombstones).
+
+---
+
+## CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS
+
+Default: `{}`
+
+A dict of additional options passed to the Celery result backend transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration).
 
 ---
 
