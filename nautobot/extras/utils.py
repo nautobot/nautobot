@@ -89,13 +89,14 @@ class ModelSubclassesQuery:
     """
 
     def __init__(self, klass):
-        self.klass = import_object(klass)
+        self.klass = klass
 
     def list_subclasses(self):
         """
         Return a list of classes that inherits from self.klass
         """
-        return [_class for _class in apps.get_models() if issubclass(_class, self.klass)]
+        klass = import_object(self.klass)
+        return [_class for _class in apps.get_models() if issubclass(_class, klass)]
 
     def __call__(self):
         return self.get_query()
