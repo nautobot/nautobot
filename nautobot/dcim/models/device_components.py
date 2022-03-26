@@ -27,11 +27,11 @@ from nautobot.dcim.constants import (
 )
 
 from nautobot.dcim.fields import MACAddressCharField
+from nautobot.extras.managers import TaggableManager
 from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
-    TaggableManager,
     TaggedItem,
 )
 from nautobot.extras.utils import extras_features

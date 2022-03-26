@@ -28,16 +28,16 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="gitrepository",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="job",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
             model_name="secret",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
     ]

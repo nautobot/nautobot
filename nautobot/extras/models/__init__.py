@@ -25,7 +25,8 @@ from .models import (
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
-from .tags import Tag, TaggableManager, TaggedItem
+from .tags import Tag, TaggedItem
+
 
 __all__ = (
     "ChangeLoggedModel",
@@ -61,7 +62,6 @@ __all__ = (
     "StatusField",
     "StatusModel",
     "Tag",
-    "TaggableManager",
     "TaggedItem",
     "Webhook",
 )

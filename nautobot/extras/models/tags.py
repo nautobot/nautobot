@@ -1,10 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.db.models import Q
 from django.urls import reverse
 from django.utils.text import slugify
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
-from taggit.managers import TaggableManager as TaggitTaggableManager
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
@@ -12,7 +10,6 @@ from nautobot.extras.utils import extras_features, ModelSubclassesQuery
 from nautobot.core.models import BaseModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.fields import ColorField
-from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
 from nautobot.utilities.querysets import RestrictedQuerySet
 
 
@@ -70,26 +67,6 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
     def to_csv(self):
         return (self.name, self.slug, self.color, self.description)
-
-
-class TaggableManager(TaggitTaggableManager):
-    """
-    Helper class for overriding TaggableManager formfield method
-    """
-
-    def formfield(self, form_class=DynamicModelMultipleChoiceField, **kwargs):
-        queryset = Tag.objects.filter(
-            Q(
-                content_types__model=self.model._meta.model_name,
-                content_types__app_label=self.model._meta.app_label,
-            )
-            | Q(content_types__isnull=True)
-        )
-        kwargs.setdefault("queryset", queryset)
-        kwargs.setdefault("required", False)
-        kwargs.setdefault("query_params", {"content_types": self.model._meta.label_lower})
-
-        return super().formfield(form_class, **kwargs)
 
 
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):

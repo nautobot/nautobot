@@ -3,7 +3,6 @@ from django.conf import settings
 from django.db import models
 from django.test import TestCase
 from mptt.fields import TreeForeignKey
-from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import DeviceFaceChoices
 from nautobot.dcim.fields import MACAddressField
@@ -19,6 +18,7 @@ from nautobot.dcim.models import (
     Region,
     Site,
 )
+from nautobot.extras.managers import TaggableManager
 from nautobot.extras.models import Status, TaggedItem
 from nautobot.utilities.filters import (
     BaseFilterSet,

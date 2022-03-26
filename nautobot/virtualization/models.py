@@ -4,12 +4,12 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.dcim.models import BaseInterface, Device
+from nautobot.extras.managers import TaggableManager
 from nautobot.extras.models import (
     ConfigContextModel,
     CustomFieldModel,
     ObjectChange,
     StatusModel,
-    TaggableManager,
     TaggedItem,
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet

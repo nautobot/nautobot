@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="tenant",
             name="tags",
-            field=nautobot.extras.models.tags.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.extras.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
     ]
