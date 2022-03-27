@@ -73,6 +73,7 @@ Each relationship must have a Name, Slug, Type, Source Object(s), and Destinatio
 
 Once a new relationship is added, the Relationship configuration section will appear under that device in the UI edit screen. Once a specific instance relationship has been configured for the object, that new relationship will appear under the Relationship section heading when viewing the object.
 
+When creating a relationship, if "Move to Advanced tab" is checked, this relationship won't appear on the object's main detail tab in the UI, but will appear in the "Advanced" tab. This is useful when the requirement is to hide this relationship from the main detail tab when, for instance, it is only required for machine-to-machine communication and not user consumption.
 
 # API
 

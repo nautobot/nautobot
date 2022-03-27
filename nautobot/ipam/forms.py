@@ -7,7 +7,7 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
-    RelationshipModelForm,
+    NautobotModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -70,7 +70,7 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 #
 
 
-class VRFForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
@@ -145,7 +145,7 @@ class VRFFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
 #
 
 
-class RouteTargetForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class RouteTargetForm(NautobotModelForm, TenancyForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -212,7 +212,7 @@ class RouteTargetFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilter
 #
 
 
-class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RIRForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -251,7 +251,7 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldModelForm, RelationshipModelForm):
+class AggregateForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -329,7 +329,7 @@ class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
 #
 
 
-class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RoleForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -356,7 +356,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(BootstrapMixin, PrefixFieldMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -510,7 +510,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
         "is_pool",
         "expand",
     ]
-    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput())
+    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
     within_include = forms.CharField(
         required=False,
@@ -567,14 +567,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
 #
 
 
-class IPAddressForm(
-    BootstrapMixin,
-    TenancyForm,
-    ReturnURLForm,
-    AddressFieldMixin,
-    CustomFieldModelForm,
-    RelationshipModelForm,
-):
+class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -688,18 +681,18 @@ class IPAddressForm(
         initial = kwargs.get("initial", {}).copy()
 
         if instance:
-            if type(instance.assigned_object) is Interface:
+            if isinstance(instance.assigned_object, Interface):
                 initial["interface"] = instance.assigned_object
-            elif type(instance.assigned_object) is VMInterface:
+            elif isinstance(instance.assigned_object, VMInterface):
                 initial["vminterface"] = instance.assigned_object
             if instance.nat_inside:
                 nat_inside_parent = instance.nat_inside.assigned_object
-                if type(nat_inside_parent) is Interface:
+                if isinstance(nat_inside_parent, Interface):
                     initial["nat_site"] = nat_inside_parent.device.site.pk
                     if nat_inside_parent.device.rack:
                         initial["nat_rack"] = nat_inside_parent.device.rack.pk
                     initial["nat_device"] = nat_inside_parent.device.pk
-                elif type(nat_inside_parent) is VMInterface:
+                elif isinstance(nat_inside_parent, VMInterface):
                     initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
                     initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
         kwargs["initial"] = initial
@@ -996,7 +989,7 @@ class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMix
 #
 
 
-class VLANGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class VLANGroupForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -1049,7 +1042,7 @@ class VLANGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VLANForm(NautobotModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -1201,7 +1194,7 @@ class VLANFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
 #
 
 
-class ServiceForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ServiceForm(NautobotModelForm):
     ports = NumericArrayField(
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",

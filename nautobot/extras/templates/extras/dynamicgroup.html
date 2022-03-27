@@ -1,0 +1,40 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Dynamic Group</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td><span>{{ object.name }}</span></td>
+            </tr>
+            <tr>
+                <td>Slug</td>
+                <td><span>{{ object.slug }}</span></td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td><span>{{ object.description }}</span></td>
+            </tr>
+            <tr>
+                <td>Content Type</td>
+                <td><span>{{ object.content_type }}</span></td>
+            </tr>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Filter</strong>
+        </div>
+        <div class="panel-body">
+            <pre>{{ object.filter | render_json }}</pre>
+        </div>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Dynamic Group members' %}
+{% endblock content_right_page %}

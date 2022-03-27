@@ -57,7 +57,7 @@ class NautobotSwaggerAutoSchema(SwaggerAutoSchema):
                 properties[child_name] = None
 
         if properties:
-            if type(serializer) not in self.writable_serializers:
+            if not isinstance(serializer, tuple(self.writable_serializers)):
                 writable_name = "Writable" + type(serializer).__name__
                 meta_class = getattr(type(serializer), "Meta", None)
                 if meta_class:
@@ -98,12 +98,12 @@ class ChoiceFieldInspector(FieldInspector):
                 # - subdevice_role and connection_status are booleans, although subdevice_role includes None
                 # - face is an integer set {0, 1} which is easily confused with {False, True}
                 schema_type = openapi.TYPE_STRING
-                if all(type(x) == bool for x in [c for c in choice_value if c is not None]):
+                if all(isinstance(x, bool) for x in [c for c in choice_value if c is not None]):
                     schema_type = openapi.TYPE_BOOLEAN
                 value_schema = openapi.Schema(type=schema_type, enum=choice_value)
                 value_schema["x-nullable"] = True
 
-            if all(type(x) == int for x in [c for c in choice_value if c is not None]):
+            if all(isinstance(x, int) for x in [c for c in choice_value if c is not None]):
                 # Change value_schema for IPAddressFamilyChoices, RackWidthChoices
                 value_schema = openapi.Schema(type=openapi.TYPE_INTEGER, enum=choice_value)
 

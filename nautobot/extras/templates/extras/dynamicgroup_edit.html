@@ -1,0 +1,30 @@
+{% extends "generic/object_edit.html" %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Dynamic Group</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.slug %}
+            {% render_field form.description %}
+            {% render_field form.content_type %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Filter Fields</strong></div>
+        <div class="panel-body">
+            {% if filter_form %}
+            <span class="help-block">
+                Select the filtering criteria to determine membership of objects matching the Content Type for this Dynamic Group. Fields that are not a dropdown are expected to have string inputs and do not support multiple values.
+            </span>
+            {% render_form filter_form %}
+            {% else %}
+            <span class="help-block">
+                Filtering criteria will be available after initially saving this group and returning to this page.
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}

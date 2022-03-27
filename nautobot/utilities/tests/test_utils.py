@@ -3,13 +3,20 @@ from django.test import TestCase
 
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.utils import (
-    get_filterset_for_model,
     deepmerge,
     dict_to_filter_params,
+    get_form_for_model,
+    get_filterset_for_model,
+    get_route_for_model,
+    get_table_for_model,
     normalize_querydict,
 )
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
+from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
+from nautobot.dcim.tables import DeviceTable, SiteTable
+
+from example_plugin.models import ExampleModel
 
 
 class DictToFilterParamsTest(TestCase):
@@ -134,10 +141,27 @@ class DeepMergeTest(TestCase):
         self.assertEqual(deepmerge(dict1, dict2), merged)
 
 
-class GetFiltersetModelTest(TestCase):
+class GetFooForModelTest(TestCase):
+    """Tests for the various `get_foo_for_model()` functions."""
+
     def test_get_filterset_for_model(self):
         self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)
+
+    def test_get_form_for_model(self):
+        self.assertEqual(get_form_for_model(Device, "Filter"), DeviceFilterForm)
+        self.assertEqual(get_form_for_model(Site, "Filter"), SiteFilterForm)
+        self.assertEqual(get_form_for_model(Device), DeviceForm)
+        self.assertEqual(get_form_for_model(Site), SiteForm)
+
+    def test_get_route_for_model(self):
+        self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
+        self.assertEqual(get_route_for_model(Site, "list"), "dcim:site_list")
+        self.assertEqual(get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+
+    def test_get_table_for_model(self):
+        self.assertEqual(get_table_for_model(Device), DeviceTable)
+        self.assertEqual(get_table_for_model(Site), SiteTable)
 
 
 class IsTruthyTest(TestCase):

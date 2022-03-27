@@ -4,8 +4,8 @@ from django.db.models import Q
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
     LocalContextFilterSet,
+    NautobotFilterSet,
     StatusModelFilterSetMixin,
 )
 from nautobot.tenancy.filters import TenancyFilterSet
@@ -27,29 +27,19 @@ __all__ = (
 )
 
 
-class ClusterTypeFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = ClusterType
         fields = ["id", "name", "slug", "description"]
 
 
-class ClusterGroupFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = ClusterGroup
         fields = ["id", "name", "slug", "description"]
 
 
-class ClusterFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -109,14 +99,7 @@ class ClusterFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSe
         return queryset.filter(Q(name__icontains=value) | Q(comments__icontains=value))
 
 
-class VirtualMachineFilterSet(
-    BaseFilterSet,
-    LocalContextFilterSet,
-    TenancyFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.choices import DeviceFaceChoices, PowerOutletFeedLegChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.models import (
     Cable,
@@ -466,10 +466,15 @@ class CableTestCase(TestCase):
             rear_port_position=1,
         )
         self.provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=self.provider)
         self.circuittype = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        self.circuit = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="1")
-        self.circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=site, term_side="A")
-        self.circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=site, term_side="Z")
+        self.circuit1 = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="1")
+        self.circuit2 = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="2")
+        self.circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="A")
+        self.circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="Z")
+        self.circuittermination3 = CircuitTermination.objects.create(
+            circuit=self.circuit2, provider_network=provider_network, term_side="Z"
+        )
 
     def test_cable_creation(self):
         """
@@ -536,6 +541,14 @@ class CableTestCase(TestCase):
         """
         # Try to create a cable with the same interface terminations
         cable = Cable(termination_a=self.interface2, termination_b=self.interface1)
+        with self.assertRaises(ValidationError):
+            cable.clean()
+
+    def test_cable_cannot_terminate_to_a_provider_network_circuittermination(self):
+        """
+        Neither side of a cable can be terminated to a CircuitTermination which is attached to a Provider Network
+        """
+        cable = Cable(termination_a=self.interface3, termination_b=self.circuittermination3)
         with self.assertRaises(ValidationError):
             cable.clean()
 

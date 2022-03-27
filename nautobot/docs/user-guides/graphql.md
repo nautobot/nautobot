@@ -248,6 +248,24 @@ query {
 }
 ```
 
+<div>
+  <details>
+    <summary>View GraphQL Query Results</summary>
+    <img src="../images/graphql/11-graphql-query-06.png">
+  </details>
+</div>
+
+<br />
+You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
+
+```graphql
+query {
+  devices(site: "ams01", , limit: 1, offset: 1) {
+    name
+  }
+}
+```
+
 ## Using the GraphQL API in Nautobot
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.

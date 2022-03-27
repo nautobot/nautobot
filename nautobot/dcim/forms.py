@@ -19,10 +19,10 @@ from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     CustomFieldFilterForm,
     CustomFieldModelForm,
+    NautobotModelForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
-    RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -247,7 +247,7 @@ class MACAddressField(forms.Field):
 #
 
 
-class RegionForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RegionForm(NautobotModelForm):
     parent = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
     slug = SlugField()
 
@@ -287,7 +287,7 @@ class RegionFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class SiteForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class SiteForm(NautobotModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
     slug = SlugField()
     comments = CommentField()
@@ -402,7 +402,7 @@ class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
 #
 
 
-class RackGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RackGroupForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
     parent = DynamicModelChoiceField(
@@ -469,7 +469,7 @@ class RackGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class RackRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RackRoleForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -499,7 +499,7 @@ class RackRoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class RackForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class RackForm(NautobotModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
     group = DynamicModelChoiceField(
@@ -601,7 +601,7 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     role = DynamicModelChoiceField(queryset=RackRole.objects.all(), required=False)
-    serial = forms.CharField(max_length=50, required=False, label="Serial Number")
+    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     asset_tag = forms.CharField(max_length=50, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(RackTypeChoices),
@@ -709,7 +709,7 @@ class RackElevationFilterForm(RackFilterForm):
 #
 
 
-class RackReservationForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class RackReservationForm(NautobotModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -845,7 +845,7 @@ class RackReservationFilterForm(BootstrapMixin, TenancyFilterForm):
 #
 
 
-class ManufacturerForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ManufacturerForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -871,7 +871,7 @@ class ManufacturerCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class DeviceTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
     slug = SlugField(slug_source="model")
     comments = CommentField()
@@ -998,7 +998,7 @@ class ComponentTemplateCreateForm(ComponentForm):
     description = forms.CharField(required=False)
 
 
-class ConsolePortTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ConsolePortTemplateForm(NautobotModelForm):
     class Meta:
         model = ConsolePortTemplate
         fields = [
@@ -1038,7 +1038,7 @@ class ConsolePortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
         nullable_fields = ["label", "type", "description"]
 
 
-class ConsoleServerPortTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ConsoleServerPortTemplateForm(NautobotModelForm):
     class Meta:
         model = ConsoleServerPortTemplate
         fields = [
@@ -1082,7 +1082,7 @@ class ConsoleServerPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditF
         nullable_fields = ["label", "type", "description"]
 
 
-class PowerPortTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class PowerPortTemplateForm(NautobotModelForm):
     class Meta:
         model = PowerPortTemplate
         fields = [
@@ -1137,7 +1137,7 @@ class PowerPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
         ]
 
 
-class PowerOutletTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class PowerOutletTemplateForm(NautobotModelForm):
     class Meta:
         model = PowerOutletTemplate
         fields = [
@@ -1226,7 +1226,7 @@ class PowerOutletTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
             self.fields["power_port"].widget.attrs["disabled"] = True
 
 
-class InterfaceTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class InterfaceTemplateForm(NautobotModelForm):
     class Meta:
         model = InterfaceTemplate
         fields = [
@@ -1272,7 +1272,7 @@ class InterfaceTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
         nullable_fields = ["label", "description"]
 
 
-class FrontPortTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class FrontPortTemplateForm(NautobotModelForm):
     class Meta:
         model = FrontPortTemplate
         fields = [
@@ -1379,7 +1379,7 @@ class FrontPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
         nullable_fields = ["description"]
 
 
-class RearPortTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RearPortTemplateForm(NautobotModelForm):
     class Meta:
         model = RearPortTemplate
         fields = [
@@ -1432,7 +1432,7 @@ class RearPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
         nullable_fields = ["description"]
 
 
-class DeviceBayTemplateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class DeviceBayTemplateForm(NautobotModelForm):
     class Meta:
         model = DeviceBayTemplate
         fields = [
@@ -1600,7 +1600,7 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
 #
 
 
-class DeviceRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class DeviceRoleForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -1631,7 +1631,7 @@ class DeviceRoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PlatformForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class PlatformForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     slug = SlugField(max_length=64)
 
@@ -1669,7 +1669,7 @@ class PlatformCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm):
+class DeviceForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
     rack_group = DynamicModelChoiceField(
@@ -2008,7 +2008,7 @@ class DeviceBulkEditForm(
     device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    serial = forms.CharField(max_length=50, required=False, label="Serial Number")
+    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
 
     class Meta:
@@ -2167,7 +2167,7 @@ class ConsolePortFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class ConsolePortForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ConsolePortForm(NautobotModelForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -2237,7 +2237,7 @@ class ConsoleServerPortFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class ConsoleServerPortForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ConsoleServerPortForm(NautobotModelForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -2307,7 +2307,7 @@ class PowerPortFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class PowerPortForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class PowerPortForm(NautobotModelForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -2394,7 +2394,7 @@ class PowerOutletFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class PowerOutletForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class PowerOutletForm(NautobotModelForm):
     power_port = forms.ModelChoiceField(queryset=PowerPort.objects.all(), required=False)
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -2543,7 +2543,7 @@ class InterfaceFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class InterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm, RelationshipModelForm):
+class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -2859,7 +2859,7 @@ class FrontPortFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class FrontPortForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class FrontPortForm(NautobotModelForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -3026,7 +3026,7 @@ class RearPortFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class RearPortForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RearPortForm(NautobotModelForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -3114,7 +3114,7 @@ class DeviceBayFilterForm(DeviceComponentFilterForm):
     tag = TagFilterField(model)
 
 
-class DeviceBayForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class DeviceBayForm(NautobotModelForm):
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -3220,7 +3220,7 @@ class DeviceBayCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class InventoryItemForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class InventoryItemForm(NautobotModelForm):
     device = DynamicModelChoiceField(queryset=Device.objects.all())
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
@@ -3255,7 +3255,7 @@ class InventoryItemCreateForm(ComponentCreateForm):
     )
     part_id = forms.CharField(max_length=50, required=False, label="Part ID")
     serial = forms.CharField(
-        max_length=50,
+        max_length=255,
         required=False,
     )
     asset_tag = forms.CharField(
@@ -3814,7 +3814,7 @@ class DeviceSelectionForm(forms.Form):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VirtualChassisCreateForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class VirtualChassisCreateForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -3872,7 +3872,7 @@ class VirtualChassisCreateForm(BootstrapMixin, CustomFieldModelForm, Relationshi
         return instance
 
 
-class VirtualChassisForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class VirtualChassisForm(NautobotModelForm):
     master = forms.ModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -4030,7 +4030,7 @@ class VirtualChassisFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class PowerPanelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class PowerPanelForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
     rack_group = DynamicModelChoiceField(
@@ -4119,7 +4119,7 @@ class PowerPanelFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class PowerFeedForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class PowerFeedForm(NautobotModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False,

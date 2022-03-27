@@ -11,12 +11,19 @@
         <div class="col-md-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
-                {% if associated_record and associated_record.name %}
-                    <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
-                        {{ associated_record.name }}
+                {% if result.job_model is not None %}
+                    <li>{{ result.job_model.grouping }}</li>
+                    <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.slug }}">
+                        {{ result.job_model }}
                     </a></li>
                 {% elif associated_record %}
-                    <li>{{ associated_record }}</li>
+                    {% if associated_record.name %}
+                        <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
+                            {{ associated_record.name }}
+                        </a></li>
+                    {% else %}
+                        <li>{{ associated_record }}</li>
+                    {% endif %}
                 {% elif job %}
                     <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
                         {{ job.class_path }}
@@ -38,16 +45,26 @@
     </div>
     <h1>
         {% block title %}
-        {% if associated_record %}{{ associated_record }}{% elif job %}{{ job }}{% else %}{{ result.name }}{% endif %} - Job Result
-        - {{ result.get_status_display }}
+        {% if result.job_model is not None %}
+            {{ result.job_model }}
+        {% elif associated_record %}
+            {{ associated_record }}
+        {% elif job %}
+            {{ job }}
+        {% else %}
+            {{ result.name }}
+        {% endif %}
+        - Job Result - {{ result.get_status_display }}
         {% endblock %}
     </h1>
 
     <div class="pull-right noprint">
         {% custom_links result %}
     </div>
-    {% if job %}
-        <p>{{ job.description }}</p>
+    {% if result.job_model is not None %}
+        <p>{{ result.job_model.description | render_markdown }}</p>
+    {% elif job %}
+        <p>{{ job.description | render_markdown }}</p>
     {% endif %}
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">

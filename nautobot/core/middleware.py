@@ -97,21 +97,6 @@ class ObjectChangeMiddleware(object):
         return response
 
 
-class APIVersionMiddleware(object):
-    """
-    If the request is for an API endpoint, include the API version as a response header.
-    """
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        response = self.get_response(request)
-        if is_api_request(request):
-            response["API-Version"] = settings.REST_FRAMEWORK_VERSION
-        return response
-
-
 class ExceptionHandlingMiddleware(object):
     """
     Intercept certain exceptions which are likely indicative of installation issues and provide helpful instructions

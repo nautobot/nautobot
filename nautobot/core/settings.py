@@ -142,8 +142,14 @@ FILTERS_NULL_CHOICE_VALUE = "null"
 #
 
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
+current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
+# We support all major.minor API versions from 1.2 to the present latest version.
+# This will need to be elaborated upon when we move to version 2.0
+assert current_major == "1", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
+REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+
 REST_FRAMEWORK = {
-    "ALLOWED_VERSIONS": [REST_FRAMEWORK_VERSION],
+    "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
@@ -156,8 +162,10 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
-    "DEFAULT_VERSION": REST_FRAMEWORK_VERSION,
-    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
+    # Version to use if the client doesn't request otherwise.
+    # This should only change (if at all) with Nautobot major (breaking) releases.
+    "DEFAULT_VERSION": "1.2",
+    "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAcceptHeaderVersioning",
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings
@@ -196,7 +204,7 @@ SWAGGER_SETTINGS = {
     "DEFAULT_FILTER_INSPECTORS": [
         "drf_yasg.inspectors.CoreAPICompatInspector",
     ],
-    "DEFAULT_INFO": "nautobot.core.urls.openapi_info",
+    "DEFAULT_INFO": "nautobot.core.api.urls.openapi_info",
     "DEFAULT_MODEL_DEPTH": 1,
     "DEFAULT_PAGINATOR_INSPECTORS": [
         "nautobot.utilities.custom_inspectors.NullablePaginatorInspector",
@@ -273,7 +281,7 @@ INSTALLED_APPS = [
     "social_django",
     "taggit",
     "timezone_field",
-    "nautobot.core.apps.NautobotServerConfig",  # overridden form of "constance" AppConfig
+    "nautobot.core.apps.NautobotConstanceConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
     "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
     "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
@@ -293,7 +301,7 @@ INSTALLED_APPS = [
     "health_check.cache",
     "health_check.storage",
     "django_extensions",
-    "constance.backends.database",
+    "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
     "django_ajax_tables",
 ]
 
@@ -311,7 +319,6 @@ MIDDLEWARE = [
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
-    "nautobot.core.middleware.APIVersionMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
