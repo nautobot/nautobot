@@ -9,7 +9,10 @@ from django.urls import reverse
 
 import netaddr
 
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy.filters import TenantFilterSet
+from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
 from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation
@@ -80,6 +83,14 @@ class PluginTest(TestCase):
             RelationshipAssociationCustomValidator,
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
         )
+
+    def test_filter_extension_registration(self):
+        """
+        Check that plugin custom filter extensions are registered correctly.
+        """
+        from example_plugin.filter_extensions import TenantFilterSetExtension
+
+        self.assertIn(TenantFilterSetExtension, registry["plugin_filter_extensions"]["tenancy.tenant"])
 
     def test_jinja_filter_registration(self):
         """
@@ -464,6 +475,123 @@ class PluginCustomValidationTest(TestCase):
         relationship_assoc = RelationshipAssociation(relationship=relationship, source=prefix, destination=ipaddress)
         with self.assertRaises(ValidationError):
             relationship_assoc.clean()
+
+
+class FilterExtensionTest(TestCase):
+    """
+    Tests for adding filter extensions
+    """
+
+    queryset = Tenant.objects.all()
+    filterset = TenantFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        tenant_groups = (
+            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
+            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
+            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
+        )
+
+        Tenant.objects.create(
+            name="Tenant 1", slug="tenant-1", group=tenant_groups[0], description="tenant-1.nautobot.com"
+        )
+        Tenant.objects.create(
+            name="Tenant 2", slug="tenant-2", group=tenant_groups[1], description="tenant-2.nautobot.com"
+        )
+        Tenant.objects.create(
+            name="Tenant 3", slug="tenant-3", group=tenant_groups[2], description="tenant-3.nautobot.com"
+        )
+
+        Site.objects.create(name="Site 1", slug="site-1", tenant=Tenant.objects.get(slug="tenant-1"))
+        Site.objects.create(name="Site 2", slug="site-2", tenant=Tenant.objects.get(slug="tenant-2"))
+        Site.objects.create(name="Site 3", slug="site-3", tenant=Tenant.objects.get(slug="tenant-3"))
+
+        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
+        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
+
+        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
+        DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
+
+        DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            model="Model 1",
+            slug="model-1",
+            part_number="Part Number 1",
+            u_height=1,
+            is_full_depth=True,
+        )
+        DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            model="Model 2",
+            slug="model-2",
+            part_number="Part Number 2",
+            u_height=2,
+            is_full_depth=True,
+        )
+        DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            model="Model 3",
+            slug="model-3",
+            part_number="Part Number 3",
+            u_height=3,
+            is_full_depth=False,
+        )
+
+        Device.objects.create(
+            name="Device 1",
+            device_type=DeviceType.objects.get(slug="model-1"),
+            device_role=DeviceRole.objects.get(slug="device-role-1"),
+            tenant=Tenant.objects.get(slug="tenant-1"),
+            site=Site.objects.get(slug="site-1"),
+        )
+        Device.objects.create(
+            name="Device 2",
+            device_type=DeviceType.objects.get(slug="model-2"),
+            device_role=DeviceRole.objects.get(slug="device-role-2"),
+            tenant=Tenant.objects.get(slug="tenant-2"),
+            site=Site.objects.get(slug="site-2"),
+        )
+        Device.objects.create(
+            name="Device 3",
+            device_type=DeviceType.objects.get(slug="model-2"),
+            device_role=DeviceRole.objects.get(slug="device-role-3"),
+            tenant=Tenant.objects.get(slug="tenant-3"),
+            site=Site.objects.get(slug="site-3"),
+        )
+
+    def test_basic_custom_filter(self):
+        params = {"example_plugin_description": ["tenant-1.nautobot.com"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_added_lookup(self):
+        params = {"example_plugin_description__ic": ["tenant-1.nautobot"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_nested_lookup(self):
+        params = {"example_plugin_dtype": ["model-1"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"example_plugin_dtype": ["model-2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_filter_method_param(self):
+        params = {"example_plugin_sdescrip": ["tenant-1"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_filter_form(self):
+        form = TenantFilterForm(
+            data={
+                "example_plugin_description": "tenant-1.nautobot.com",
+                "example_plugin_dtype": "model-1",
+                "slug__ic": "tenant-1",
+                "slug": "tenant-1",
+                "example_plugin_sdescrip": "tenant-1",
+            }
+        )
+        self.assertTrue(form.is_valid())
+        self.assertIn("example_plugin_description", form.declared_fields.keys())
 
 
 class LoadPluginTest(TestCase):

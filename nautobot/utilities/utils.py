@@ -503,5 +503,19 @@ def get_table_for_model(model):
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
 
 
+def get_content_type_string(model):
+    """Return the the content type string given model.
+
+    Returns:
+        The name of the model in "{app_label}.{model_name}" format
+    """
+    if not inspect.isclass(model):
+        raise TypeError(f"model class {model} was passes as an instance!")
+    if not issubclass(model, Model):
+        raise TypeError(f"{model} is not a subclass of Django Model class")
+
+    return f"{model._meta.app_label}.{model._meta.model_name}"
+
+
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])

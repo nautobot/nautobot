@@ -29,6 +29,7 @@ plugin_name/
     - banner.py             # Banners
     - custom_validators.py  # Custom Validators
     - datasources.py        # Loading Data from a Git Repository
+    - filter_extensions.py  # Extending Filters
     - graphql/
       - types.py            # GraphQL Type Objects
     - homepage.py           # Home Page Content
@@ -813,6 +814,114 @@ class RandomAnimalView(View):
 ```
 
 This view retrieves a random animal from the database and and passes it as a context variable when rendering a template named `animal.html`, which doesn't exist yet. To create this template, first create a directory named `templates/nautobot_animal_sounds/` within the plugin source directory. (We use the plugin's name as a subdirectory to guard against naming collisions with other plugins.) Then, create a template named `animal.html` as described below.
+
+### Extending Filters
+
+Plugins can extend the current FilterSet's and FilterForm's that are natively provided.
+
+The basic requirements (additional requirements for each is described below) to extend a filter set or a filter form is:
+* The file must be named `filter_extensions.py`
+* The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclassed classes
+* The `model` attribute must be defined on the class to a valid model
+
+Nautobot already dynamically creates many filters for each field type which allows the extension of related fields. Specfically, the there are additional `lookup_expr` that are created when there is neither a `lookup_expr` nor `method` parameter set (method is a filterset parameter not a class method in this context), with the `django-filter` field based on the type of `django-filter` field used such as `CHAR` vs `NUMERIC` as hinted in the variable defintions seen below. Additionally, Nautobot will add the negation of any fields, meaning not only will `icontains` be added but so will `not icontains` using the `ic` and `nic` keys respectively.
+
+```python
+FILTER_CHAR_BASED_LOOKUP_MAP = dict(
+    n="exact",
+    ic="icontains",
+    nic="icontains",
+    iew="iendswith",
+    niew="iendswith",
+    isw="istartswith",
+    nisw="istartswith",
+    ie="iexact",
+    nie="iexact",
+    re="regex",
+    nre="regex",
+    ire="iregex",
+    nire="iregex",
+)
+
+FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")
+
+FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
+
+FILTER_TREENODE_NEGATION_LOOKUP_MAP = dict(n="in")
+```
+
+!!! tip
+    For developers of plugins, this should be noted when creating your own filters that the above is dynmically added, as long as the class correctly inherits from `nautobot.utilities.filters.BaseFilterSet`.
+
+However, that does not cover every possible use case, to list a few examples:
+
+* Usage of a custom "method", which would allow arbitrary filtering, this is how the "q" search logic is currently performed, but that opionion may or may not match your ideal use case.
+* Creation of a filter on a field that does not currently have filtering support
+* Convenience methods for highly nested fields
+* Allow usage of a custom lookup
+
+There are several conditions that must be met in order to extend a filter:
+* The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
+* Every key that is defined, must start with the plugin `name`, as defined within the plugin, e.g. `example_plugin_description` not `description`
+* The filterset method must return a valid dict of key/value pairs, with the key being the name and the value being a valid `django-filters` filter
+
+Similar to filter sets Nautobot provides a default list of filter forms, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
+* The base filter form does not include a custom filter defined by the plugin as described above
+* The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
+
+There are several conditions that must be met in order to extend a filter
+* The original FilterSet must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
+* The `filter_form` method must return a valid dictionary of Django form fields
+
+Example:
+```python
+# filter_extensions.py
+from django import forms
+
+from nautobot.extras.plugins import PluginFilterExtension
+from nautobot.utilities.filters import MultiValueCharFilter
+
+
+def suffix_search(queryset, name, value):
+    return queryset.filter(description=f"{value[0]}.nautobot.com")
+
+
+class TenantFilterSetExtension(PluginFilterExtension):
+    model = "tenancy.tenant"
+
+    def filterset(self):
+        description = MultiValueCharFilter(field_name="description", label="Description")  # Creation of a new filter
+        sdescrip = MultiValueCharFilter(
+            field_name="description", label="Description", method=suffix_search
+        )  # Creation of new filter with custom method
+        dtype = MultiValueCharFilter(
+            field_name="sites__devices__device_type__slug", label="Device Type"
+        )  # Creation of a nested filter
+        return {
+            "example_plugin_description": description,
+            "example_plugin_dtype": dtype,
+            "example_plugin_sdescrip": sdescrip,
+        }
+
+    def filter_form(self):
+        description = forms.CharField(required=False, label="Description")  # Leveraging a custom filter
+        dtype = forms.CharField(required=False, label="Device Type")  # Leveraging a custom and nested filter
+        slug__ic = forms.CharField(required=False, label="Slug Contains")  # Leveraging an existing filter
+        sdescrip = forms.CharField(
+            required=False, label="Suffix Description"
+        )  # Leveraging a custom method search filter
+        return {
+            "example_plugin_description": description,
+            "example_plugin_dtype": dtype,
+            "slug__ic": slug__ic,
+            "example_plugin_sdescrip": sdescrip,
+        }
+
+filter_extensions = [TenantFilterSetExtension]
+```
+
+!!! tip
+    The `method` parameter must be a callable and will not effect dynamic groups by design
 
 ### Extending the Base Template
 

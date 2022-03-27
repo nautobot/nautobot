@@ -29,6 +29,7 @@ from nautobot.utilities.choices import ButtonColorChoices
 # registry["datasource_content"], registry["secrets_providers"] are not plugin-exclusive; initialized in extras.registry
 registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
+registry["plugin_filter_extensions"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
@@ -84,6 +85,7 @@ class PluginConfig(NautobotConfig):
     banner_function = "banner.banner"
     custom_validators = "custom_validators.custom_validators"
     datasource_contents = "datasources.datasource_contents"
+    filter_extensions = "filter_extensions.filter_extensions"
     graphql_types = "graphql.types.graphql_types"
     homepage_layout = "homepage.layout"
     jinja_filters = "jinja_filters"
@@ -171,6 +173,29 @@ class PluginConfig(NautobotConfig):
             for secrets_provider in secrets_providers:
                 register_secrets_provider(secrets_provider)
             self.features["secrets_providers"] = secrets_providers
+
+        # Register custom filters (if any)
+        filter_extensions = import_object(f"{self.__module__}.{self.filter_extensions}")
+        if filter_extensions is not None:
+            register_filter_extensions(filter_extensions, self.name)
+            self.features["filter_extensions"] = {"filterset": [], "filter_form": []}
+            for extension in filter_extensions:
+                if extension().filterset():
+                    for name in extension().filterset().keys():
+                        self.features["filter_extensions"]["filterset"].append(
+                            f"{extension.model} -> filterset -> {name}"
+                        )
+                if extension().filter_form():
+                    for name in extension().filter_form().keys():
+                        self.features["filter_extensions"]["filter_form"].append(
+                            f"{extension.model} -> filter_form -> {name}"
+                        )
+
+            # TODO: Determine if this bruteforce design is the best way forward
+            from nautobot.utilities.filters import FILTER_CLASS_STRINGS
+
+            for name in FILTER_CLASS_STRINGS:
+                name.get_filters()
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -356,6 +381,39 @@ def register_jobs(class_list):
 
     # Note that we do not (and cannot) update the Job records in the Nautobot database at this time.
     # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
+
+
+class PluginFilterExtension:
+    """Class that may be returned by a registered Filter Extension function."""
+
+    model = None
+
+    def filterset(self):
+        return None
+
+    def filter_form(self):
+        return None
+
+
+def register_filter_extensions(class_list, name):
+    """
+    Register a list of PluginFilterExtension classes
+    """
+    # Validation
+    for filter_extension in class_list:
+        if not inspect.isclass(filter_extension):
+            raise TypeError(f"PluginFilterExtension class {filter_extension} was passed as an instance!")
+        if not issubclass(filter_extension, PluginFilterExtension):
+            raise TypeError(f"{filter_extension} is not a subclass of extras.plugins.PluginFilterExtension!")
+        if filter_extension.model is None:
+            raise TypeError(f"PluginFilterExtension class {filter_extension} does not define a valid model!")
+
+        if filter_extension().filterset():
+            for key in filter_extension().filterset().keys():
+                if not key.startswith(name):
+                    raise ValueError(f"Attempted to create a custom filter `{key}` that did not start with `{name}`")
+
+        registry["plugin_filter_extensions"][filter_extension.model].append(filter_extension)
 
 
 #

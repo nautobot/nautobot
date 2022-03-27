@@ -147,6 +147,27 @@
                                 </td>
                             </tr>
                             <tr>
+                                <td>Filters</td>
+                                <td>
+                                    {% if features.filter_extensions %}
+                                        <ul class="list-unstyled">
+                                            {% if features.filter_extensions.filterset %}
+                                                {% for filter in features.filter_extensions.filterset %}
+                                                    <li><code>{{ filter }}</code></li>
+                                                {% endfor %}
+                                            {% endif %}
+                                            {% if features.filter_extensions.filter_form %}
+                                                {% for filter in features.filter_extensions.filter_form %}
+                                                    <li><code>{{ filter }}</code></li>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.filter_extensions %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Home Page Content</td>
                                 <td>{% include 'utilities/render_boolean.html' with value=features.home_page %}</td>
                             </tr>
