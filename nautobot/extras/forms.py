@@ -692,6 +692,9 @@ class DynamicGroupForm(NautobotModelForm):
             "description",
             "content_type",
         ]
+        widgets = {
+            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
+        }
 
 
 class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
