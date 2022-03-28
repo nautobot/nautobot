@@ -66,7 +66,7 @@ Nautobot's REST API now supports multiple versions, which may requested by modif
 
 #### Webhook Pre/Post-change Data Added to Request Body ([#330](https://github.com/nautobot/nautobot/issues/330))
 
-Webhooks now provide a snapshot of data before and after a change. This also includes the differences between the old and new data.
+Webhooks now provide a snapshot of data before and after a change. This also includes the differences between the old and new data. See the default request body section in webhook docs [here](../models/extras/webhook.md#default-request-body).
 
 ### Changed
 
