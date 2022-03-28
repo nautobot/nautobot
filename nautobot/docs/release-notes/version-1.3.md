@@ -64,6 +64,10 @@ Nautobot's REST API now supports multiple versions, which may requested by modif
 !!! tip
     As a best practice, when developing a Nautobot REST API integration, your client should _always_ request the current API version it is being developed against, rather than relying on the default API behavior (which may change with a new Nautobot major release, as noted, and which also may not include the latest and greatest API endpoints already available but not yet made default in the current release).
 
+#### Webhook Pre/Post-change Data Added to Request Body ([#330](https://github.com/nautobot/nautobot/issues/330))
+
+Webhooks now provide a snapshot of data before and after a change. This also includes the differences between the old and new data. See the default request body section in webhook docs [here](../models/extras/webhook.md#default-request-body).
+
 ### Changed
 
 #### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
