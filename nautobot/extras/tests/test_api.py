@@ -1108,7 +1108,7 @@ class JobAPIRunTestMixin:
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_object_var_no_schedule(self, mock_get_worker_count):
         """
-        Run a job without providing a schedule and if approval_required.
+        Run a job with `approval_required` without providing a schedule.
 
         Assert an immediate schedule that enforces it.
         """
@@ -1130,15 +1130,19 @@ class JobAPIRunTestMixin:
         data = {
             "data": job_data,
             "commit": True,
-            # schedule is ommitted
+            # schedule is omitted
         }
 
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        # Assert that we have an immediate schedule and that it matches the job_model.
+        # Assert that a JobResult was NOT created.
+        self.assertFalse(JobResult.objects.exists())
+
+        # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
+        self.assertIsNotNone(schedule)
         self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
         self.assertEqual(schedule.approval_required, self.job_model.approval_required)
         self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
