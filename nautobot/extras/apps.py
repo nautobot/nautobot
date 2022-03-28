@@ -45,9 +45,10 @@ class ExtrasConfig(NautobotConfig):
             )
 
         # Register the DatabaseBackend health check
-        from nautobot.extras.health_checks import DatabaseBackend
+        from nautobot.extras.health_checks import DatabaseBackend, RedisBackend
 
         plugin_dir.register(DatabaseBackend)
+        plugin_dir.register(RedisBackend)
 
         # Register built-in SecretsProvider classes
         from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider
