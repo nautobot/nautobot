@@ -731,9 +731,14 @@ class IPAddressForm(
         # If `primary_for_parent` is unset, clear the `primary_ip{version}` for the
         # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
         # also checks for the `_primary_ip_unset_by_form` value.
-        currently_primary_ip = Device.objects.filter(
+        device_primary_ip = Device.objects.filter(
             Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)
         ).exists()
+        vm_primary_ip = VirtualMachine.objects.filter(
+            Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)
+        ).exists()
+        
+        currently_primary_ip = device_primary_ip or vm_primary_ip
 
         if not primary_for_parent and self.instance._original_assigned_object is not None and currently_primary_ip:
             self.instance._primary_ip_unset_by_form = True
