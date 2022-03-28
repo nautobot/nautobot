@@ -5,70 +5,14 @@ from drf_yasg.inspectors import (
     NotHandled,
     PaginatorInspector,
     RelatedFieldInspector,
-    SwaggerAutoSchema,
 )
-from drf_yasg.utils import get_serializer_ref_name
-from rest_framework.relations import ManyRelatedField
 
 from nautobot.core.api import (
     ChoiceField,
     SerializedPKRelatedField,
-    WritableNestedSerializer,
 )
 from nautobot.extras.api.customfields import CustomFieldsDataField
 from nautobot.extras.api.fields import StatusSerializerField
-
-
-class NautobotSwaggerAutoSchema(SwaggerAutoSchema):
-    writable_serializers = {}
-
-    def get_operation_id(self, operation_keys=None):
-        operation_keys = operation_keys or self.operation_keys
-        operation_id = self.overrides.get("operation_id", "")
-        if not operation_id:
-            # Overwrite the action for bulk update/bulk delete views to ensure they get an operation ID that's
-            # unique from their single-object counterparts (see #3436)
-            if operation_keys[-1] in ("delete", "partial_update", "update") and not self.view.detail:
-                operation_keys[-1] = f"bulk_{operation_keys[-1]}"
-            operation_id = "_".join(operation_keys)
-
-        return operation_id
-
-    def get_request_serializer(self):
-        serializer = super().get_request_serializer()
-
-        if serializer is not None and self.method in self.implicit_body_methods:
-            writable_class = self.get_writable_class(serializer)
-            if writable_class is not None:
-                if hasattr(serializer, "child"):
-                    child_serializer = self.get_writable_class(serializer.child)
-                    serializer = writable_class(child=child_serializer)
-                else:
-                    serializer = writable_class()
-        return serializer
-
-    def get_writable_class(self, serializer):
-        properties = {}
-        fields = {} if hasattr(serializer, "child") else serializer.fields
-        for child_name, child in fields.items():
-            if isinstance(child, (ChoiceField, WritableNestedSerializer)):
-                properties[child_name] = None
-            elif isinstance(child, ManyRelatedField) and isinstance(child.child_relation, SerializedPKRelatedField):
-                properties[child_name] = None
-
-        if properties:
-            if not isinstance(serializer, tuple(self.writable_serializers)):
-                writable_name = "Writable" + type(serializer).__name__
-                meta_class = getattr(type(serializer), "Meta", None)
-                if meta_class:
-                    ref_name = "Writable" + get_serializer_ref_name(serializer)
-                    writable_meta = type("Meta", (meta_class,), {"ref_name": ref_name})
-                    properties["Meta"] = writable_meta
-
-                self.writable_serializers[type(serializer)] = type(writable_name, (type(serializer),), properties)
-
-            writable_class = self.writable_serializers[type(serializer)]
-            return writable_class
 
 
 class SerializedPKRelatedFieldInspector(FieldInspector):
