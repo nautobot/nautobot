@@ -938,7 +938,6 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
                 run_job,
                 job.class_path,
                 job_content_type,
-                scheduled_job.user,
                 request.user,
                 data=job_class.serialize_data(initial),
                 request=copy_safe_request(request),
