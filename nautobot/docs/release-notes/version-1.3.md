@@ -106,6 +106,11 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1502](https://github.com/nautobot/nautobot/issues/1502) Finalized Dynamic Groups implementation for 1.3 release (including documentation and integration tests)
 - [#1521](https://github.com/nautobot/nautobot/pull/1521) - Consolidated Job REST API endpoints, taking advantage of REST API versioning.
 
+### Fixed
+
+- [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
+
+
 ## v1.3.0b1 (2022-03-11)
 
 ### Added
