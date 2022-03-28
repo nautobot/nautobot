@@ -13,6 +13,16 @@ html[data-theme="dark"] {
 html[data-theme="dark"] img {
   filter: invert(1) hue-rotate(180deg);
 }
+html[data-theme="dark"] button {
+  color: black;
+}
+html[data-theme="dark"] .btn {
+  color: black;
+}
+html[data-theme="dark"] .label {
+  color: black !important;
+}
+
 html,
 body {
   height: 100%;
