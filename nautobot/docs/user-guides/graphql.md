@@ -12,7 +12,9 @@ When interacting with APIs, It's often necessary to build relationships between 
 
 Simply querying the `/api/dcim/devices/` API route provides:
 
-#### View API Results
+<!-- markdownlint-disable MD033 -->
+<details>
+<summary>View API Results</summary>
 
 ```json
 {
@@ -89,6 +91,8 @@ Simply querying the `/api/dcim/devices/` API route provides:
 }
 ```
 
+</details>
+<br />
 There is a lot of useful information in that API call, but there is also a lot of information that is missing; such as interfaces and ip addresses associated with the devices. There is also potentially a lot of information that isn't needed for the specific task. To retrieve the missing information, subsequent API calls would need to be performed; and those API results would need to be correlated to the correct device.
 
 GraphQL reduces the complexity of performing multiple API calls and correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.

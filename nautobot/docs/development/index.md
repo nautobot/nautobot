@@ -79,10 +79,10 @@ Here is what you need to know about Nautobot releases:
 - For information pertaining to patch releases, which will be released on a schedule, please see the [Patch Releases](#patch-releases) section below.
 - Given the core team is estimating quarterly releases, there will not be firm dates for releases.
 - In order to provide more visibility into the development and release schedule of Nautobot, there will be structured notifications as follows:
-  - At the start of a release cycle, the estimated timeframe for release will be a 4-6 week window.
-  - Halfway through the release cycle (~6 weeks), the estimated timeframe for release will be narrowed to a 3-4 week window
-  - After 8-9 weeks within the development cycle, the estimated timeframe for release will be narrowed further to a 2 week window.
-  - The final notification will be provided 3-5 days before the release drops.
+    - At the start of a release cycle, the estimated timeframe for release will be a 4-6 week window.
+    - Halfway through the release cycle (~6 weeks), the estimated timeframe for release will be narrowed to a 3-4 week window
+    - After 8-9 weeks within the development cycle, the estimated timeframe for release will be narrowed further to a 2 week window.
+    - The final notification will be provided 3-5 days before the release drops.
 - The dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
 
 #### Patch Releases

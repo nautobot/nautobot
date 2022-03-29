@@ -364,7 +364,7 @@ def leet_speak(input_str):
 
 This filter will then be available for use in computed field templates like so:
 
-```python
+```jinja2
 {{ "HELLO WORLD" | leet_speak }}
 ```
 
@@ -779,15 +779,15 @@ For authentication either a request object or user object needs to be passed in.
 Arguments:
 
 * `execute_query()`:
-  * `query` (str): String with GraphQL query.
-  * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
-  * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
-  * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
+    * `query` (str): String with GraphQL query.
+    * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
+    * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
+    * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
 * `execute_saved_query()`:
-  * `saved_query_slug` (str): Slug of a saved GraphQL query.
-  * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
-  * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
-  * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
+    * `saved_query_slug` (str): Slug of a saved GraphQL query.
+    * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
+    * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
+    * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
 
 Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
 

@@ -19,7 +19,7 @@ The following example will show:
 
 * Creating a `vlan 200` without a site assignment (*global* scope)
 * Creating two VLANs, each with overlapping Names and IDs: ID = `100` and Name = `vlan 100`
-  * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different site (*site-specific* scope)
+    * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different site (*site-specific* scope)
 * How the *site-specific* and *global* scopes affect which VLANs can be assigned on which Devices
 
 !!! note

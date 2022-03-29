@@ -1,3 +1,4 @@
+<!-- markdownlint-disable-next-line -->
 ![Nautobot](nautobot_logo.svg "Nautobot logo")
 
 # What is Nautobot?

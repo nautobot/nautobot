@@ -73,7 +73,7 @@ Once a new relationship is added, the Relationship configuration section will ap
 
 When creating a relationship, if "Move to Advanced tab" is checked, this relationship won't appear on the object's main detail tab in the UI, but will appear in the "Advanced" tab. This is useful when the requirement is to hide this relationship from the main detail tab when, for instance, it is only required for machine-to-machine communication and not user consumption.
 
-## API
+## REST API
 
 Relationships are fully supported by the API.
 

@@ -138,6 +138,5 @@ A `NavMenuButton` has the following attributes:
 * `button_class` - One of the choices provided by `ButtonActionColorChoices` (optional)
 * `permissions` - A list of permissions required to display this button (optional)
 
-
 !!! note
     `NavMenuAddButton` and `NavMenuImportButton` are subclasses of `NavMenuButton` that can be used to provide the commonly used "Add" and "Import" buttons.

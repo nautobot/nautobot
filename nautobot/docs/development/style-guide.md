@@ -16,14 +16,14 @@ enable this check after changing the above import pattern.
 
 The `flake8`, `black` and `hadolint` utilities are used by the CI process to enforce code style. It is strongly recommended to include these as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `flake8` and `black --check` prior to every commit attempt and abort if the validation fails.
 
-```
+```bash
 $ cd .git/hooks/
 $ ln -s ../../scripts/git-hooks/pre-commit
 ```
 
 You can also invoke these utilities manually against the development Docker containers by running:
 
-```
+```no-highlight
 invoke flake8
 invoke black
 invoke hadolint

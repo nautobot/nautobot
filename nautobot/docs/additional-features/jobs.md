@@ -19,13 +19,13 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 Jobs may be installed in one of three ways:
 
 * Manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
-  * The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
-  * Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
+    * The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
+    * Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
 * Imported from an external [Git repository](../models/extras/gitrepository.md#jobs).
-  * The repository's `jobs/` directory *must* contain a file named `__init__.py`.
-  * Each Job file in the repository is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
+    * The repository's `jobs/` directory *must* contain a file named `__init__.py`.
+    * Each Job file in the repository is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
 * Packaged as part of a [plugin](../plugins/development.md#including-jobs).
-  * Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
+    * Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
 
 In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
@@ -446,15 +446,15 @@ An administrator or user with `extras.change_job` permission can edit the Job to
 
 An administrator or user with `extras.change_job` permission can also edit a Job database record to optionally override any or all of the following metadata attributes defined by the Job module or class:
 
-- `grouping`
-- `name`
-- `description`
-- `approval_required`
-- `commit_default`
-- `hidden`
-- `read_only`
-- `soft_time_limit`
-- `time_limit`
+* `grouping`
+* `name`
+* `description`
+* `approval_required`
+* `commit_default`
+* `hidden`
+* `read_only`
+* `soft_time_limit`
+* `time_limit`
 
 This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 

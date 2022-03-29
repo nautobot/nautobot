@@ -115,7 +115,7 @@ By default, a REST API request that does not specify an API version number will 
 Non-breaking (forward- and backward-compatible) REST API changes may be introduced in major or minor Nautobot releases. Since these changes are non-breaking, they will _not_ correspond to the introduction of a new API version, but will be added seamlessly to the existing API version, and so will immediately be available to existing REST API clients. Examples would include:
 
 * Addition of new fields in GET responses
-* Understanding of new, _optional_ fields in POST/PUT/PATCH requests
+* Added support for new, _optional_ fields in POST/PUT/PATCH requests
 * Deprecation (but not removal) of existing fields
 
 !!! important

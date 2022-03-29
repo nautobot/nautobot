@@ -8,11 +8,11 @@ Additional information on Regions is in the [Regions section of the Nautobot doc
 In the following exercise, we will create three Regions:
 
 * North America
-  * Intended to hold Regions that represent each component country
+    * Intended to hold Regions that represent each component country
 * Canada
-  * Intended to hold Regions that represent markets in Canada
+    * Intended to hold Regions that represent markets in Canada
 * Vancouver
-  * Intended to hold Sites within the Vancouver market
+    * Intended to hold Sites within the Vancouver market
 
 ## Creating a Region
 

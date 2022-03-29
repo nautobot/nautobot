@@ -29,12 +29,13 @@ For OpenID connect, you'll need to install the `sso` Python extra.
 $ pip3 install "nautobot[sso]"
 ```
 
+<!-- markdownlint-disable-next-line -->
 #### SAML
 
 For SAML, additional system-level dependencies are required so that the specialized XML libraries can be built and compiled for your system.
 
 !!! note
-	These instructions have only been certified on Ubuntu 20.04 at this time.
+    These instructions have only been certified on Ubuntu 20.04 at this time.
 
 Install the system dependencies as `root`:
 
@@ -60,7 +61,7 @@ To use external authentication, you'll need to define `AUTHENTICATION_BACKENDS` 
 * You must also ensure that `nautobot.core.authentication.ObjectPermissionBackend` is always the second item in the list. It is an error to exclude this backend.
 
 !!! note
-	It is critical that you include the `ObjectPermissionsBackend` provided by Nautobot after the desired backend so that object-level permissions features can work properly.
+    It is critical that you include the `ObjectPermissionsBackend` provided by Nautobot after the desired backend so that object-level permissions features can work properly.
 
 For example, if you wanted to use Google OAuth2 as your authentication backend:
 
@@ -76,7 +77,6 @@ AUTHENTICATION_BACKENDS = [
 
 !!! warning
     You should only enable one social authentication authentication backend. It is technically possible to use multiple backends but we cannot officially support more than one at this time.
-
 
 ### Custom Authentication Backends
 

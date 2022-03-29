@@ -63,7 +63,7 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
 !!! note
     If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
-```bash
+```nginxconf
 server {
     listen 443 ssl http2 default_server;
     listen [::]:443 ssl http2 default_server;

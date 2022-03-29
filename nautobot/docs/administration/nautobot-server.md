@@ -286,22 +286,22 @@ This will run the following management commands with default settings, in order:
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
 
-`--no-clearsessions`
+`--no-clearsessions`  
 Do not automatically clean out expired sessions.
 
-`--no-collectstatic`
+`--no-collectstatic`  
 Do not automatically collect static files into a single location.
 
-`--no-invalidate-all`
+`--no-invalidate-all`  
 Do not automatically invalidate cache for entire application.
 
-`--no-migrate`
+`--no-migrate`  
 Do not automatically perform any database migrations.
 
-`--no-remove-stale-contenttypes`
+`--no-remove-stale-contenttypes`  
 Do not automatically remove stale content types.
 
-`--no-trace-paths`
+`--no-trace-paths`  
 Do not automatically generate missing cable paths.
 
 ```no-highlight

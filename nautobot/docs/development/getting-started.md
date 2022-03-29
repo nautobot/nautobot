@@ -50,8 +50,8 @@ Upon cloning Nautobot for the first time, you will have only a single remote:
 
 ```no-highlight
 $ git remote -v
-origin git@github.com:yourusername/nautobot.git (fetch)
-origin git@github.com:yourusername/nautobot.git (push)
+origin    git@github.com:yourusername/nautobot.git (fetch)
+origin    git@github.com:yourusername/nautobot.git (push)
 ```
 
 Add the official Nautobot repo as a the `upstream` remote:
@@ -64,10 +64,10 @@ View your remotes again to confirm you've got both `origin` pointing to your for
 
 ```no-highlight
 $ git remote -v
-origin git@github.com:yourusername/nautobot.git (fetch)
-origin git@github.com:yourusername/nautobot.git (push)
-upstream git@github.com:nautobot/nautobot.git (fetch)
-upstream git@github.com:nautobot/nautobot.git (push)
+origin    git@github.com:yourusername/nautobot.git (fetch)
+origin    git@github.com:yourusername/nautobot.git (push)
+upstream    git@github.com:nautobot/nautobot.git (fetch)
+upstream    git@github.com:nautobot/nautobot.git (push)
 ```
 
 You're now ready to proceed to the next steps.
