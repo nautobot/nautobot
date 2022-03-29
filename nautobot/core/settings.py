@@ -194,6 +194,21 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "REDOC_DIST": "SIDECAR",
+    # These choice enums need to be overriden because they get assigned to the `type` field and
+    # result in this error:
+    #    enum naming encountered a non-optimally resolvable collision for fields named "type".
+    "ENUM_NAME_OVERRIDES": {
+        "CableTypeChoices": "nautobot.dcim.choices.CableTypeChoices",
+        "ConsolePortTypeChoices": "nautobot.dcim.choices.ConsolePortTypeChoices",
+        "CustomFieldTypeChoices": "nautobot.extras.choices.CustomFieldTypeChoices",
+        "InterfaceTypeChoices": "nautobot.dcim.choices.InterfaceTypeChoices",
+        "PortTypeChoices": "nautobot.dcim.choices.PortTypeChoices",
+        "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
+        "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
+        "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
+        "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
+        "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
+    },
 }
 
 

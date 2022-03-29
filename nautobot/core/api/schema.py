@@ -79,6 +79,10 @@ class NautobotAutoSchema(AutoSchema):
         # TODO why these specific types?
         fields = {} if hasattr(serializer, "child") else serializer.fields
         for child_name, child in fields.items():
+            # Don't keep read_only fields (since this is a writable serializer).
+            if child.read_only:
+                continue
+
             if isinstance(child, (ChoiceField, WritableNestedSerializer)):
                 properties[child_name] = None
             elif isinstance(child, ManyRelatedField) and isinstance(child.child_relation, SerializedPKRelatedField):
