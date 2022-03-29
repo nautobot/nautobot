@@ -1,6 +1,8 @@
 import logging
 import re
 
+from django.utils.functional import cached_property
+from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
@@ -65,8 +67,8 @@ class NautobotAutoSchema(AutoSchema):
 
         return serializer
 
+    # Cache of existing dynamically-defined WritableFooSerializer classes.
     writable_serializers = {}
-    """Cache of existing dynamically-defined WritableFooSerializer classes."""
 
     def get_writable_class(self, serializer):
         """
@@ -125,3 +127,28 @@ class NautobotAutoSchema(AutoSchema):
         if ref_name.endswith("Serializer"):
             ref_name = ref_name[: -len("Serializer")]
         return ref_name
+
+
+class StatusFieldFix(OpenApiSerializerFieldExtension):
+    """
+    Schema field fix for objects with `status` fields, since they are writable slug-related fields
+    that have choices.
+
+    This asserts one central list of choices that emits as `StatusEnum`.
+    """
+
+    target_class = "nautobot.extras.api.fields.StatusSerializerField"
+
+    @cached_property
+    def _choices(self):
+        """Cache the available Status choices to optimize repeated calls."""
+        from nautobot.extras.models import Status  # To avoid circular imports.
+
+        return list(Status.objects.values_list("slug", flat=True))
+
+    def map_serializer_field(self, auto_schema, direction):
+        """Explicitly return a choice enum matching all status choices."""
+        return {
+            "type": "string",
+            "enum": self._choices,
+        }

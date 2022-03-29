@@ -109,6 +109,7 @@ class NullablePaginatorInspector(PaginatorInspector):
         return result
 
 
+# TODO(jathan): Deprecated by `nautobot.core.api.schema.StatusFieldFix`.
 class StatusFieldInspector(RelatedFieldInspector):
     """
     Inspector for status fields, since they are writable slug-related fields
