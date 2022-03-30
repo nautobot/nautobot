@@ -283,9 +283,11 @@ If we wanted to assign this IP address to a virtual machine interface instead, w
 
 Most API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
 
-```json
+```no-highlight
 GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
+```
 
+```json
 {
     "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
     "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
@@ -324,9 +326,11 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
 
 The brief format is much more terse:
 
-```json
+```no-highlight
 GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
+```
 
+```json
 {
     "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
     "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
