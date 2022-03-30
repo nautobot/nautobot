@@ -179,4 +179,4 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 ```
 
-For more details on how to configure Celery to use Redis Sentinel see the documentation for [Celery](https://docs.celeryproject.org/en/stable/getting-started/backends-and-brokers/redis.html#configuration).
+For more details on how to configure Celery to use Redis Sentinel see the documentation for [Celery](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html#configuration).
