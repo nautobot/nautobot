@@ -22,7 +22,6 @@ html[data-theme="dark"] .btn {
 html[data-theme="dark"] .label {
   color: black !important;
 }
-
 html,
 body {
   height: 100%;
@@ -40,8 +39,7 @@ body {
 .navbar-brand {
   padding: 12px 15px 8px;
 }
-.footer,
-.push {
+.footer, .push {
   height: 48px; /* .push must be the same height as .footer */
 }
 .footer {
@@ -63,82 +61,81 @@ footer p {
 /* Hide the username in the navigation menu on displays less than 1470px wide */
 @media (max-width: 1469px) {
   #navbar_user {
-    display: none;
+      display: none;
   }
 }
 
 /* Hide the search bar in the navigation menu on displays less than 1384px wide */
 @media (max-width: 1383px) {
   #navbar_search {
-    display: none;
+      display: none;
   }
 }
 
 /* Printer friendly CSS class and various fixes for printing. */
 @media print {
   body {
-    padding-top: 0px;
+      padding-top: 0px;
   }
   a[href]:after {
-    content: none !important;
+      content: none !important;
   }
   .noprint {
-    display: none !important;
+      display: none !important;
   }
 }
 
 /* Scroll the drop-down menus at or above 768px wide to match bootstrap's behavior for hiding dropdown menus */
 @media (min-width: 768px) {
   .navbar-nav > li > ul {
-    max-height: calc(80vh - 50px);
-    overflow-y: auto;
+      max-height: calc(80vh - 50px);
+      overflow-y: auto;
   }
 }
 
 /* Collapse the nav menu on displays less than 1180px wide */
 @media (max-width: 1179px) {
   #navbar {
-    max-height: calc(80vh - 50px);
-    overflow-y: auto;
+      max-height: calc(80vh - 50px);
+      overflow-y: auto;
   }
   .navbar-header {
-    float: none;
+      float: none;
   }
-  .navbar-left,
-  .navbar-right {
-    float: none !important;
+  .navbar-left, .navbar-right {
+      float: none !important;
   }
   .navbar-toggle {
-    display: block;
+      display: block;
   }
   .navbar-collapse {
-    border-top: 1px solid transparent;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border-top: 1px solid transparent;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   .navbar-fixed-top {
-    top: 0;
-    border-width: 0 0 1px;
+      top: 0;
+      border-width: 0 0 1px;
   }
   .navbar-collapse.collapse {
-    display: none !important;
-    max-height: none;
+      display: none !important;
+      max-height: none;
   }
   .navbar-nav {
-    float: none !important;
-    margin-top: 7.5px;
+      float: none !important;
+      margin-top: 7.5px;
   }
   .navbar-nav > li {
-    float: none;
+      float: none;
   }
   .navbar-nav > li > a {
-    padding-top: 10px;
-    padding-bottom: 10px;
+      padding-top: 10px;
+      padding-bottom: 10px;
   }
   .collapse.in {
-    display: block !important;
+      display: block !important;
   }
   #navbar_user {
-    display: inline;
+      display: inline;
   }
 }
 
@@ -168,9 +165,9 @@ input[name="pk"] {
   margin-top: 0;
 }
 
+
 /* Tables */
-th.pk,
-td.pk {
+th.pk, td.pk {
   padding-bottom: 6px;
   padding-top: 10px;
   width: 30px;
@@ -271,7 +268,7 @@ table.report th a {
   z-index: 2;
 }
 .cable-trace .active {
-  border: 3px solid #30c030;
+  border: 3px solid #30C030;
 }
 .cable-trace .cable {
   border-left-style: solid;
@@ -353,7 +350,7 @@ table.report th a {
   right: 0;
 }
 .loading:before {
-  content: "";
+  content: '';
   display: block;
   position: fixed;
   top: 0;
@@ -374,7 +371,7 @@ table.report th a {
   width: 1.5em;
   height: 1.5em;
   border: 1px solid grey;
-  border-radius: 0.25em;
+  border-radius: .25em;
   vertical-align: middle;
 }
 .text-nowrap {
@@ -396,8 +393,7 @@ table.report th a {
   max-height: 400px;
   overflow: auto;
 }
-ul.nav-tabs,
-ul.nav-pills {
+ul.nav-tabs, ul.nav-pills {
   margin-bottom: 20px;
 }
 ul.nav-tabs li a {
@@ -439,14 +435,14 @@ textarea {
   top: 3px;
 }
 .btn-inline {
-  font-size: 0.9em;
-  line-height: 0.9em;
+  font-size: .9em;
+  line-height: .9em;
   vertical-align: baseline;
   border-radius: 3px;
   padding: 1px 5px;
 }
 .btn-inline .mdi::before {
-  font-size: 0.9em;
+  font-size: .9em;
   top: 0px;
 }
 .dropdown-menu .mdi {
@@ -460,7 +456,7 @@ textarea {
 .navbar .navbar-toggle .mdi::before {
   position: relative;
   top: 4px;
-  color: #fff;
+  color: #FFF;
 }
 .breadcrumb .mdi::before {
   position: relative;
@@ -492,7 +488,7 @@ textarea {
 .list-group-item .mdi::before {
   position: relative;
   top: 3px;
-  left: -3px;
+  left: -3px
 }
 .badge .mdi::before {
   font-size: 12px;
@@ -509,7 +505,7 @@ span.hover_copy:hover .hover_copy_button {
 }
 
 .powered-by-nautobot {
-  background: url("/static/img/nautobot_icon_blue.svg");
+  background: url('/static/img/nautobot_icon_blue.svg');
   background-repeat: no-repeat;
   background-size: 16px 16px;
   background-position: center bottom;
@@ -528,11 +524,7 @@ span.hover_copy:hover .hover_copy_button {
   padding: 0;
   text-decoration: none;
 }
-.accordion-toggle:hover,
-.accordion-toggle:active,
-.accordion-toggle:visited,
-.accordion-toggle:link,
-.accordion-toggle:focus {
+.accordion-toggle:hover, .accordion-toggle:active, .accordion-toggle:visited, .accordion-toggle:link, .accordion-toggle:focus {
   border: 0;
   color: black;
   outline: 0;
