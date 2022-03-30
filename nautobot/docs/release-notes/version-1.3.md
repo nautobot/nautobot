@@ -46,6 +46,12 @@ A [data model](../models/circuits/providernetwork.md) has been added to support 
 
 Python 3.10 is officially supported by Nautobot now, and we are building and publishing Docker images with Python 3.10 now.
 
+#### Regular Expression Support in API Filtering ([#1525](https://github.com/nautobot/nautobot/issues/1525))
+
+[New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
+
+The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
+
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
 Introduce the `/api/users/tokens/` REST API endpoint, which includes a child endpoint that can be employed by a user to provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
 
@@ -57,12 +63,6 @@ https://nautobot/api/users/tokens/
 ```
 
 This endpoint specifically supports Basic Authentication in addition to the other REST API authentication methods.
-
-#### Regular Expression Support in API Filtering ([#1525](https://github.com/nautobot/nautobot/issues/1525))
-
-[New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
-
-The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
 
 #### REST API Versioning ([#1465](https://github.com/nautobot/nautobot/issues/1465))
 
@@ -102,6 +102,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
+- [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
 - [#1465](https://github.com/nautobot/nautobot/issues/1465) - Implemented REST API versioning
 - [#1525](https://github.com/nautobot/nautobot/issues/1525) - Implemented support for regex lookup expressions for `BaseFilterSet` filter fields in the API.
 
@@ -133,7 +134,6 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1109](https://github.com/nautobot/nautobot/issues/1109) - Added pagination support for GraphQL list queries.
 - [#1255](https://github.com/nautobot/nautobot/pull/1255) - Added Python 3.10 support.
 - [#1350](https://github.com/nautobot/nautobot/issues/1350) - Added missing methods on Circuit Termination detail view.
-- [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
 - [#1411](https://github.com/nautobot/nautobot/pull/1411) - Added concrete Job database model; added database signals to populate Job records in the database; added detail, edit, and delete views for Job records.
 - [#1457](https://github.com/nautobot/nautobot/pull/1457) - Added new Jobs REST API, added control logic to use JobModel rather than JobClass where appropriate; improved permissions enforcement for Jobs
 
