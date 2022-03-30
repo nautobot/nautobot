@@ -85,8 +85,8 @@
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
-                        <span class="mdi mdi-theme-light-dark text-primary" onclick="toggleTheme('light');" id="btn-light-theme"><a href="javascript:void(0)">Light</a></span>
-                        <span class="mdi mdi-theme-light-dark text-primary" onclick="toggleTheme('dark');" id="btn-dark-theme"><a href="javascript:void(0)">Dark</a></span> &middot;
+                        <!-- <span class="mdi mdi-theme-light-dark text-primary" onclick="toggleTheme('light');" id="btn-light-theme"><a href="javascript:void(0)">Light</a></span> -->
+                        <span class="mdi mdi-theme-light-dark text-primary" data-toggle="modal" data-target="#modalTheme" id="btn-theme-modal"><a href="modals">Theme</a></span> &middot;
                         <span class="mdi mdi-book-open-page-variant text-primary"></span> <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a> &middot;
                         <span class="mdi mdi-cloud-braces text-primary"></span> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <span class="mdi mdi-graphql text-primary"></span> <a href="{% url 'graphql' %}">GraphQL</a> &middot;

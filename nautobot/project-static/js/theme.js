@@ -74,3 +74,18 @@ function setLightTheme() {
     htmlEl.dataset.theme = "light";
     displayDarkBtn();
 }
+
+$('#modalTheme').on('show.bs.modal', function(event) {
+    var button = $(event.relatedTarget) // Button that triggered the modal
+  
+    var modal = $(this)
+  
+    modal.find('.modal-title').text('Select Nautobot Theme ')
+    modal.find('.modal-result').load('/modalTheme/')
+  })
+
+$('#modalTheme').on('hidden.bs.modal', function() {
+    var modal = $(this)
+    modal.find('.modal-title').text('')
+    modal.find('.modal-result').text('')
+})
