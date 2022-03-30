@@ -149,9 +149,10 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         """
         Test the behavior of the token create view when a user cannot create tokens
         """
-        self.client.login(username=self.basic_auth_user_permissionless.username, password=self.basic_auth_user_password)
-        response = self.client.post(self._get_list_url())
-        self.client.logout()
+        auth = self._create_basic_authentication_header(
+            username=self.basic_auth_user_permissionless.username, password=self.basic_auth_user_password
+        )
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
         self.assertEqual(response.status_code, 403)
 
@@ -159,9 +160,10 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         """
         Test the behavior of the token create view when an invalid password is supplied
         """
-        self.client.login(username=self.basic_auth_user_granted.username, password="hunter2")
-        response = self.client.post(self._get_list_url())
-        self.client.logout()
+        auth = self._create_basic_authentication_header(
+            username=self.basic_auth_user_granted.username, password="hunter2"
+        )
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
         self.assertEqual(response.status_code, 403)
 
@@ -169,9 +171,8 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         """
         Test the behavior of the token create view when the user supplied is not a valid user
         """
-        self.client.login(username="iamnotreal", password="P1n0cc#10")
-        response = self.client.post(self._get_list_url())
-        self.client.logout()
+        auth = self._create_basic_authentication_header(username="iamnotreal", password="P1n0cc#10")
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
         self.assertEqual(response.status_code, 403)
 
