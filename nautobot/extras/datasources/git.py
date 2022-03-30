@@ -1,6 +1,7 @@
 """Git data source functionality."""
 
 from collections import defaultdict
+from functools import lru_cache
 import logging
 import mimetypes
 import os
@@ -121,6 +122,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         job_result.save()
 
 
+@lru_cache
 def ensure_git_repository(repository_record, job_result=None, logger=None, head=None):
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
 
