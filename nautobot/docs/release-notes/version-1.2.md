@@ -148,6 +148,8 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Changed
 
+- [#1584](https://github.com/nautobot/nautobot/issues/1584) - Replaced links in docs to celeryproject.org with celeryq.dev
+
 ### Fixed
 
 - [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
