@@ -1,3 +1,4 @@
+import base64
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -6,6 +7,8 @@ from django.urls import reverse
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.testing import APIViewTestCases, APITestCase
 from nautobot.utilities.utils import deepmerge
+
+from rest_framework import HTTP_HEADER_ENCODING
 
 
 # Use the proper swappable User model
@@ -117,13 +120,24 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def _create_basic_authentication_header(self, username, password):
+        """
+        Given username, password create a valid Basic authenticaition header string.
+
+        Same procedure used to test DRF.
+        """
+        credentials = f"{username}:{password}"
+        base64_credentials = base64.b64encode(credentials.encode(HTTP_HEADER_ENCODING)).decode(HTTP_HEADER_ENCODING)
+        return "Basic %s" % base64_credentials
+
     def test_create_token_basic_authentication(self):
         """
         Test the provisioning of a new REST API token given a valid username and password.
         """
-        self.client.login(username=self.basic_auth_user_granted.username, password=self.basic_auth_user_password)
-        response = self.client.post(self._get_list_url())
-        self.client.logout()
+        auth = self._create_basic_authentication_header(
+            username=self.basic_auth_user_granted.username, password=self.basic_auth_user_password
+        )
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
         self.assertEqual(response.status_code, 201)
         self.assertIn("key", response.data)
