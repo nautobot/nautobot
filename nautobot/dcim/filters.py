@@ -1,8 +1,6 @@
 import django_filters
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema_field
 
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
@@ -18,6 +16,7 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
+    MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
     TagFilter,
@@ -874,7 +873,7 @@ class InterfaceFilterSet(
         field_name="name",
         label="Device (name)",
     )
-    device_id = MultiValueCharFilter(
+    device_id = MultiValueUUIDFilter(
         method="filter_device_id",
         field_name="pk",
         label="Device (ID)",
@@ -917,7 +916,6 @@ class InterfaceFilterSet(
         except Device.DoesNotExist:
             return queryset.none()
 
-    @extend_schema_field(OpenApiTypes.UUID)
     def filter_device_id(self, queryset, name, id_list):
         # Include interfaces belonging to peer virtual chassis members
         vc_interface_ids = []
@@ -1109,13 +1107,13 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     )
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
-    rack_id = MultiValueCharFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
+    rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
-    site_id = MultiValueCharFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
+    site_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
     site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
-    tenant_id = MultiValueCharFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
+    tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     tag = TagFilter()
 
@@ -1128,7 +1126,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             return queryset
         return queryset.filter(label__icontains=value)
 
-    @extend_schema_field(str)
     def filter_device(self, queryset, name, value):
         queryset = queryset.filter(
             Q(**{"_termination_a_{}__in".format(name): value}) | Q(**{"_termination_b_{}__in".format(name): value})
@@ -1153,7 +1150,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
@@ -1166,7 +1163,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
@@ -1179,7 +1176,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:

@@ -2,8 +2,6 @@ import django_filters
 import netaddr
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema_field
 from netaddr.core import AddrFormatError
 
 from nautobot.dcim.models import Device, Interface, Region, Site
@@ -11,6 +9,7 @@ from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     MultiValueCharFilter,
+    MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     NumericArrayFilter,
     TagFilter,
@@ -228,16 +227,18 @@ class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetM
         to_field_name="rd",
         label="VRF (RD)",
     )
-    present_in_vrf_id = extend_schema_field(OpenApiTypes.UUID)(
-        django_filters.ModelChoiceFilter(queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF")
+    present_in_vrf_id = django_filters.ModelChoiceFilter(
+        field_name="vrf",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        label="VRF",
     )
-    present_in_vrf = extend_schema_field(str)(
-        django_filters.ModelChoiceFilter(
-            queryset=VRF.objects.all(),
-            method="filter_present_in_vrf",
-            to_field_name="rd",
-            label="VRF (RD)",
-        )
+    present_in_vrf = django_filters.ModelChoiceFilter(
+        field_name="vrf__rd",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        to_field_name="rd",
+        label="VRF (RD)",
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -352,10 +353,10 @@ class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetM
         except (AddrFormatError, ValueError):
             return queryset.none()
 
-    def filter_present_in_vrf(self, queryset, name, vrf):
-        if vrf is None:
+    def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
         return queryset.ip_family(value)
@@ -374,11 +375,9 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         method="search_by_parent",
         label="Parent prefix",
     )
-    address = extend_schema_field(str)(
-        MultiValueCharFilter(
-            method="filter_address",
-            label="Address",
-        )
+    address = MultiValueCharFilter(
+        method="filter_address",
+        label="Address",
     )
     mask_length = django_filters.NumberFilter(
         method="filter_mask_length",
@@ -394,44 +393,38 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         to_field_name="rd",
         label="VRF (RD)",
     )
-    present_in_vrf_id = extend_schema_field(OpenApiTypes.UUID)(
-        django_filters.ModelChoiceFilter(queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF")
+    present_in_vrf_id = django_filters.ModelChoiceFilter(
+        field_name="vrf",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        label="VRF",
     )
-    present_in_vrf = extend_schema_field(str)(
-        django_filters.ModelChoiceFilter(
-            queryset=VRF.objects.all(),
-            method="filter_present_in_vrf",
-            to_field_name="rd",
-            label="VRF (RD)",
-        )
+    present_in_vrf = django_filters.ModelChoiceFilter(
+        field_name="vrf__rd",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        to_field_name="rd",
+        label="VRF (RD)",
     )
-    device = extend_schema_field(str)(
-        MultiValueCharFilter(
-            method="filter_device",
-            field_name="name",
-            label="Device (name)",
-        )
+    device = MultiValueCharFilter(
+        method="filter_device",
+        field_name="name",
+        label="Device (name)",
     )
-    device_id = extend_schema_field(OpenApiTypes.UUID)(
-        MultiValueCharFilter(
-            method="filter_device",
-            field_name="pk",
-            label="Device (ID)",
-        )
+    device_id = MultiValueUUIDFilter(
+        method="filter_device",
+        field_name="pk",
+        label="Device (ID)",
     )
-    virtual_machine = extend_schema_field(str)(
-        MultiValueCharFilter(
-            method="filter_virtual_machine",
-            field_name="name",
-            label="Virtual machine (name)",
-        )
+    virtual_machine = MultiValueCharFilter(
+        method="filter_virtual_machine",
+        field_name="name",
+        label="Virtual machine (name)",
     )
-    virtual_machine_id = extend_schema_field(OpenApiTypes.UUID)(
-        MultiValueCharFilter(
-            method="filter_virtual_machine",
-            field_name="pk",
-            label="Virtual machine (ID)",
-        )
+    virtual_machine_id = MultiValueUUIDFilter(
+        method="filter_virtual_machine",
+        field_name="pk",
+        label="Virtual machine (ID)",
     )
     interface = django_filters.ModelMultipleChoiceFilter(
         field_name="interface__name",
@@ -495,10 +488,10 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
             return queryset
         return queryset.filter(prefix_length=value)
 
-    def filter_present_in_vrf(self, queryset, name, vrf):
-        if vrf is None:
+    def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
         return queryset.ip_family(value)
