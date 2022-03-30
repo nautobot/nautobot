@@ -56,7 +56,8 @@ $ curl -X POST \
 https://nautobot/api/users/tokens/
 ```
 
-Basic Authentication is provided by this endpoint exclusively but also support other configured authentication methods.
+This endpoint specifically supports Basic Authentication in addition to the other REST API authentication methods.
+
 #### Regular Expression Support in API Filtering ([#1525](https://github.com/nautobot/nautobot/issues/1525))
 
 [New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
