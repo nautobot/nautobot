@@ -787,6 +787,7 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
+@cached(timeout=60)
 def get_jobs():
     """
     Compile a dictionary of all jobs available across all modules in the jobs path(s).
