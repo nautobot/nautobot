@@ -258,7 +258,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -298,7 +298,7 @@ class ConfigContextSchemaSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -454,7 +454,7 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
             "file_extension",
         ]
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -756,7 +756,7 @@ class JobClassSerializer(serializers.Serializer):
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
 
-    @extend_schema_field(serializers.UUIDField)
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
     def get_pk(self, instance):
         try:
             jobs = Job.objects
@@ -824,7 +824,7 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
             "object_data",
         ]
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_changed_object(self, obj):
         """
         Serialize a nested representation of the changed object.

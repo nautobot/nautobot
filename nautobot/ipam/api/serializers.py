@@ -430,7 +430,7 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
         read_only_fields = ["family"]
         opt_in_fields = ["computed_fields"]
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None

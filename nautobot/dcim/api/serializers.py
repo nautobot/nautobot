@@ -126,13 +126,13 @@ class CableTerminationSerializer(serializers.ModelSerializer):
     cable_peer_type = serializers.SerializerMethodField(read_only=True)
     cable_peer = serializers.SerializerMethodField(read_only=True)
 
-    @extend_schema_field(serializers.CharField)
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_cable_peer_type(self, obj):
         if obj._cable_peer is not None:
             return f"{obj._cable_peer._meta.app_label}.{obj._cable_peer._meta.model_name}"
         return None
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_cable_peer(self, obj):
         """
         Return the appropriate serializer for the cable termination model.
@@ -149,13 +149,13 @@ class ConnectedEndpointSerializer(ValidatedModelSerializer):
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
     connected_endpoint_reachable = serializers.SerializerMethodField(read_only=True)
 
-    @extend_schema_field(serializers.CharField)
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_connected_endpoint_type(self, obj):
         if obj._path is not None and obj._path.destination is not None:
             return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
         return None
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_connected_endpoint(self, obj):
         """
         Return the appropriate serializer for the type of connected object.
@@ -1260,11 +1260,11 @@ class CableSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custom
 
         return data
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_termination_a(self, obj):
         return self._get_termination(obj, "a")
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_termination_b(self, obj):
         return self._get_termination(obj, "b")
 
@@ -1319,7 +1319,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         context = {"request": self.context["request"]}
         return serializer(obj.origin, context=context).data
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_destination(self, obj):
         """
         Return the appropriate serializer for the destination, if any.
