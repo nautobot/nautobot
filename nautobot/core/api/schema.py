@@ -185,6 +185,20 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
             }
 
 
+class SerializedPKRelatedFieldFix(OpenApiSerializerFieldExtension):
+    """
+    Schema field fix for SerializedPKRelatedField fields.
+    """
+
+    target_class = "nautobot.core.api.fields.SerializedPKRelatedField"
+
+    def map_serializer_field(self, auto_schema, direction):
+        """
+        On requests, require PK only; on responses, represent the entire nested serializer.
+        """
+        return auto_schema._map_serializer(self.target.serializer, direction)
+
+
 class StatusFieldFix(OpenApiSerializerFieldExtension):
     """
     Schema field fix for StatusSerializerField fields.

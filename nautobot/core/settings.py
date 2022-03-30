@@ -212,43 +212,6 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-#
-# drf_yasg (OpenAPI/Swagger)
-#
-
-SWAGGER_SETTINGS = {
-    "DEFAULT_FIELD_INSPECTORS": [
-        "nautobot.utilities.custom_inspectors.SerializedPKRelatedFieldInspector",
-        "drf_yasg.inspectors.CamelCaseJSONFilter",
-        "drf_yasg.inspectors.ReferencingSerializerInspector",
-        "drf_yasg.inspectors.RelatedFieldInspector",
-        "drf_yasg.inspectors.ChoiceFieldInspector",
-        "drf_yasg.inspectors.FileFieldInspector",
-        "drf_yasg.inspectors.DictFieldInspector",
-        "drf_yasg.inspectors.SerializerMethodFieldInspector",
-        "drf_yasg.inspectors.SimpleFieldInspector",
-        "drf_yasg.inspectors.StringDefaultFieldInspector",
-    ],
-    "DEFAULT_FILTER_INSPECTORS": [
-        "drf_yasg.inspectors.CoreAPICompatInspector",
-    ],
-    "DEFAULT_INFO": "nautobot.core.api.urls.openapi_info",
-    "DEFAULT_MODEL_DEPTH": 1,
-    "DEFAULT_PAGINATOR_INSPECTORS": [
-        "drf_yasg.inspectors.DjangoRestResponsePagination",
-        "drf_yasg.inspectors.CoreAPICompatInspector",
-    ],
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-        }
-    },
-    "VALIDATOR_URL": None,
-}
-
-
 ##############################################
 # DJANGO - Core settings required for Django #
 ##############################################
