@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.extras.models.secrets import SecretsGroupAssociation
@@ -1012,6 +1013,16 @@ class StatusModelSerializerMixin(serializers.Serializer):
     """Mixin to add `status` choice field to model serializers."""
 
     status = StatusSerializerField(queryset=Status.objects.all())
+
+    @classproperty
+    def status_choices(cls):
+        """
+        Get the list of valid status values for this serializer.
+
+        May be necessary to use with settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] at some point if
+        we ever end up with multiple serializers whose default set of status choices are identical.
+        """
+        return list(cls().fields["status"].get_choices().keys())
 
 
 #

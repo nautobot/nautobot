@@ -1,7 +1,6 @@
 import logging
 import re
 
-from django.utils.functional import cached_property
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from rest_framework import serializers
@@ -20,6 +19,8 @@ logger = logging.getLogger(__name__)
 class NautobotAutoSchema(AutoSchema):
     """Nautobot-specific extensions to drf-spectacular's AutoSchema."""
 
+    custom_actions = ["bulk_update", "bulk_partial_update", "bulk_destroy"]
+
     def get_operation_id(self):
         """Extend the base method to handle Nautobot's REST API bulk operations.
 
@@ -29,7 +30,7 @@ class NautobotAutoSchema(AutoSchema):
 
         With this extension, the bulk endpoints automatically get a different operation-id from the non-bulk endpoints.
         """
-        if hasattr(self.view, "action") and self.view.action in ["bulk_update", "bulk_partial_update", "bulk_destroy"]:
+        if hasattr(self.view, "action") and self.view.action in self.custom_actions:
             # Same basic sequence of calls as AutoSchema.get_operation_id,
             # except we use "self.view.action" instead of "self.method_mapping[self.method]" to get the action verb
             tokenized_path = self._tokenize_path()
@@ -129,26 +130,106 @@ class NautobotAutoSchema(AutoSchema):
         return ref_name
 
 
+class ChoiceFieldFix(OpenApiSerializerFieldExtension):
+    """
+    Schema field fix for ChoiceField fields.
+
+    These are asymmetric, taking a literal value on write but returning a dict of {value, label} on read.
+
+    If we have two models that both have ChoiceFields with the same exact set of choices, drf-spectacular will
+    complain about this with a warning like:
+
+        enum naming encountered a non-optimally resolvable collision for fields named "type"
+
+    This happens for a number of our fields already. The workaround is to explicitly declare an enum name for each
+    such colliding serializer field under `settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`, for example:
+
+        "CableTypeChoices": "nautobot.dcim.choices.CableTypeChoices",
+    """
+
+    target_class = "nautobot.core.api.fields.ChoiceField"
+
+    def map_serializer_field(self, auto_schema, direction):
+        """
+        Define the OpenAPI schema for a given ChoiceField (self.target) for the given request/response direction.
+        """
+        choices = self.target._choices
+
+        value_type = "string"
+        # IPAddressFamilyChoices and RackWidthChoices are int values, not strings
+        if all(isinstance(x, int) for x in [c for c in list(choices.keys()) if c is not None]):
+            value_type = "integer"
+        # I don't think we have any of these left in the code base at present,
+        # but historically in NetBox there were ChoiceFields with boolean values
+        if all(isinstance(x, bool) for x in [c for c in list(choices.keys()) if c is not None]):
+            value_type = "boolean"
+
+        if direction == "request":
+            return {
+                "type": value_type,
+                "enum": list(choices.keys()),
+            }
+        else:
+            return {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": value_type,
+                        "enum": list(choices.keys()),
+                    },
+                    "label": {
+                        "type": "string",
+                        "enum": list(choices.values()),
+                    },
+                },
+            }
+
+
 class StatusFieldFix(OpenApiSerializerFieldExtension):
     """
-    Schema field fix for objects with `status` fields, since they are writable slug-related fields
-    that have choices.
+    Schema field fix for StatusSerializerField fields.
 
-    This asserts one central list of choices that emits as `StatusEnum`.
+    This is very similar to the fix for ChoiceFields (above), but the lists of choices are dynamic instead of static,
+    and the values are always strings (slugs).
+
+    Note that if we have two models/serializers with the same exact set of valid status choices, drf-spectacular will
+    likely complain about this with a warning like:
+
+        enum naming encountered a non-optimally resolvable collision for fields named "status"
+
+    In that case, the workaround will be to explicitly declare names for each colliding serializer field under
+    `settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`, for example:
+
+        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
+
+    Since, unlike ChoiceField, the status choices are not predefined as a ChoiceSet class, we have provided a
+    `@classproperty status_choices` on the StatusModelSerializerMixin that allows for the choices to "look like" a
+    static list to make drf-spectacular happy.
     """
 
     target_class = "nautobot.extras.api.fields.StatusSerializerField"
 
-    @cached_property
-    def _choices(self):
-        """Cache the available Status choices to optimize repeated calls."""
-        from nautobot.extras.models import Status  # To avoid circular imports.
-
-        return list(Status.objects.values_list("slug", flat=True))
-
     def map_serializer_field(self, auto_schema, direction):
-        """Explicitly return a choice enum matching all status choices."""
-        return {
-            "type": "string",
-            "enum": self._choices,
-        }
+        """
+        Define OpenAPI schema for a given StatusSerializerField (self.target) for the given request/response direction.
+        """
+        choices = self.target.get_choices()
+        if direction == "request":
+            return {
+                "type": "string",
+                "enum": list(choices.keys()),
+            }
+        else:
+            return {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "string",
+                        "enum": list(choices.keys()),
+                    },
+                    "label": {
+                        "type": "string",
+                        "enum": list(choices.values()),
+                    },
+                },
+            }
