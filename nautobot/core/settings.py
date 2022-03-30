@@ -217,12 +217,8 @@ SPECTACULAR_SETTINGS = {
 #
 
 SWAGGER_SETTINGS = {
-    "DEFAULT_AUTO_SCHEMA_CLASS": "nautobot.utilities.custom_inspectors.NautobotSwaggerAutoSchema",
     "DEFAULT_FIELD_INSPECTORS": [
         "nautobot.utilities.custom_inspectors.StatusFieldInspector",
-        "nautobot.utilities.custom_inspectors.CustomFieldsDataFieldInspector",
-        "nautobot.utilities.custom_inspectors.JSONFieldInspector",
-        "nautobot.utilities.custom_inspectors.NullableBooleanFieldInspector",
         "nautobot.utilities.custom_inspectors.ChoiceFieldInspector",
         "nautobot.utilities.custom_inspectors.SerializedPKRelatedFieldInspector",
         "drf_yasg.inspectors.CamelCaseJSONFilter",
@@ -241,7 +237,6 @@ SWAGGER_SETTINGS = {
     "DEFAULT_INFO": "nautobot.core.api.urls.openapi_info",
     "DEFAULT_MODEL_DEPTH": 1,
     "DEFAULT_PAGINATOR_INSPECTORS": [
-        "nautobot.utilities.custom_inspectors.NullablePaginatorInspector",
         "drf_yasg.inspectors.DjangoRestResponsePagination",
         "drf_yasg.inspectors.CoreAPICompatInspector",
     ],

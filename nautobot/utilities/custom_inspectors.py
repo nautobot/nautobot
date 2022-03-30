@@ -1,9 +1,7 @@
-from django.db.models import JSONField
 from drf_yasg import openapi
 from drf_yasg.inspectors import (
     FieldInspector,
     NotHandled,
-    PaginatorInspector,
     RelatedFieldInspector,
 )
 
@@ -11,7 +9,6 @@ from nautobot.core.api import (
     ChoiceField,
     SerializedPKRelatedField,
 )
-from nautobot.extras.api.customfields import CustomFieldsDataField
 from nautobot.extras.api.fields import StatusSerializerField
 
 
@@ -63,50 +60,6 @@ class ChoiceFieldInspector(FieldInspector):
             return schema
 
         return NotHandled
-
-
-class NullableBooleanFieldInspector(FieldInspector):
-    def process_result(self, result, method_name, obj, **kwargs):
-
-        if isinstance(result, openapi.Schema) and isinstance(obj, ChoiceField) and result.type == "boolean":
-            keys = obj.choices.keys()
-            if set(keys) == {None, True, False}:
-                result["x-nullable"] = True
-                result.type = "boolean"
-
-        return result
-
-
-class CustomFieldsDataFieldInspector(FieldInspector):
-    def field_to_swagger_object(self, field, swagger_object_type, use_references, **kwargs):
-        SwaggerType, ChildSwaggerType = self._get_partial_types(field, swagger_object_type, use_references, **kwargs)
-
-        if isinstance(field, CustomFieldsDataField) and swagger_object_type == openapi.Schema:
-            return SwaggerType(type=openapi.TYPE_OBJECT)
-
-        return NotHandled
-
-
-class JSONFieldInspector(FieldInspector):
-    """Required because by default, Swagger sees a JSONField as a string and not dict"""
-
-    def process_result(self, result, method_name, obj, **kwargs):
-        if isinstance(result, openapi.Schema) and isinstance(obj, JSONField):
-            result.type = "dict"
-        return result
-
-
-class NullablePaginatorInspector(PaginatorInspector):
-    def process_result(self, result, method_name, obj, **kwargs):
-        if method_name == "get_paginated_response" and isinstance(result, openapi.Schema):
-            next = result.properties["next"]
-            if isinstance(next, openapi.Schema):
-                next["x-nullable"] = True
-            previous = result.properties["previous"]
-            if isinstance(previous, openapi.Schema):
-                previous["x-nullable"] = True
-
-        return result
 
 
 # TODO(jathan): Deprecated by `nautobot.core.api.schema.StatusFieldFix`.

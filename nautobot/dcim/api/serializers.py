@@ -166,7 +166,7 @@ class ConnectedEndpointSerializer(ValidatedModelSerializer):
             return serializer(obj._path.destination, context=context).data
         return None
 
-    @extend_schema_field(serializers.BooleanField)
+    @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
         if obj._path is not None:
             return obj._path.is_active
@@ -1359,7 +1359,7 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
         context = {"request": self.context["request"]}
         return NestedInterfaceSerializer(instance=obj, context=context).data
 
-    @extend_schema_field(serializers.BooleanField)
+    @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
         if obj._path is not None:
             return obj._path.is_active
