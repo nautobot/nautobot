@@ -440,7 +440,22 @@ class APIVersioningGetSchemaURLMixin:
 
 
 class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, SpectacularSwaggerView):
-    """Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter."""
+    """
+    Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter and page styling.
+    """
+
+    template_name = "swagger_ui.html"
+
+    @extend_schema(exclude=True)
+    def get(self, request, *args, **kwargs):
+        """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
+        # drf-spectacular uses "settings" in the rendering context as a way to inject custom JavaScript if desired,
+        # which of course conflicts with Nautobot's use of "settings" as a representation of django.settings.
+        # So we need to intercept it and fix it up.
+        response = super().get(request, *args, **kwargs)
+        response.data["swagger_settings"] = response.data["settings"]
+        del response.data["settings"]
+        return response
 
 
 class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRedocView):
