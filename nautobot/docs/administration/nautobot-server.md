@@ -68,7 +68,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 ```
 
 !!! note
-    The internals of this command are built into Celery. Please see the [official Celery workers guide](https://docs.celeryproject.org/en/stable/userguide/workers.html) for more information.
+    The internals of this command are built into Celery. Please see the [official Celery workers guide](https://docs.celeryq.dev/en/stable/userguide/workers.html) for more information.
 
 ### `collectstatic`
 
