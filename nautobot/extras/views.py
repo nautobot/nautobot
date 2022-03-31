@@ -950,7 +950,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
 
-        job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+        try:
+            job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+        except RuntimeError as err:
+            messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
+            return redirect("extras:job_list")
+
         schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
 
         return render(
