@@ -281,6 +281,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
     class Meta:
         model = VirtualMachine
         fields = [
