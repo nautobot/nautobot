@@ -661,6 +661,28 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @skipIf(
+        "dummy_plugin" not in settings.PLUGINS,
+        "dummy_plugin not in settings.PLUGINS",
+    )
+    def test_create_with_plugin_provided_contents(self):
+        """Test that `provided_contents` published by a plugin works."""
+        self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
+        url = self._get_list_url()
+        data = {
+            "name": "plugin_test",
+            "slug": "plugin-test",
+            "remote_url": "https://localhost/plugin-test",
+            "provided_contents": ["dummy_plugin.textfile"],
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        # FIXME(jathan): Figure out why response.data is coming back as a set and requires being
+        # cast to a list??
+        self.assertEqual(list(response.data["provided_contents"]), data["provided_contents"])
+
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
