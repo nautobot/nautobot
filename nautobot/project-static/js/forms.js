@@ -124,6 +124,8 @@ $(document).ready(function() {
     // API backed selection
     // Includes live search and chained fields
     // The `multiple` setting may be controlled via a data-* attribute
+    let api_version;
+
     $('.nautobot-select2-api').select2({
         allowClear: true,
         placeholder: "---------",
@@ -134,6 +136,7 @@ $(document).ready(function() {
 
             url: function(params) {
                 var element = this[0];
+                api_version = $(element).attr("data-api-version") // Set api_version
                 var url = parseURL(element.getAttribute("data-url"));
 
                 if (url.includes("{{")) {
@@ -249,6 +252,11 @@ $(document).ready(function() {
                         more: page
                     }
                 };
+            },
+
+            beforeSend: function(xhr){
+                if(api_version)
+                    xhr.setRequestHeader('Accept', `application/json; version=1.3`);
             }
         }
     });

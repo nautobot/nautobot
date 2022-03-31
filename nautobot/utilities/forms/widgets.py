@@ -121,10 +121,15 @@ class APISelect(SelectWithDisabled):
     :param api_url: API endpoint URL. Required if not set automatically by the parent field.
     """
 
-    def __init__(self, api_url=None, full=False, *args, **kwargs):
+    def __init__(self, api_url=None, full=False, api_version=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.attrs["class"] = "nautobot-select2-api"
+
+        if api_version:
+            # Set Request Accept Header api-version e.g Accept: application/json; version=1.2
+            self.attrs["data-api-version"] = api_version
+
         if api_url:
             # Prefix the URL w/ the script prefix (e.g. `/nautobot`)
             self.attrs["data-url"] = urljoin(get_script_prefix(), api_url.lstrip("/"))
