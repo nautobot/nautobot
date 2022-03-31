@@ -1,5 +1,6 @@
-<!-- markdownlint-disable-next-line -->
+<!-- markdownlint-disable MD041 -->
 ![Nautobot](nautobot_logo.svg "Nautobot logo")
+<!-- markdownlint-enable MD041 -->
 
 # What is Nautobot?
 
