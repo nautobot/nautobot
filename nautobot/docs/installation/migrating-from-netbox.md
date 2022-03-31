@@ -206,7 +206,7 @@ This field *can* be used in nested filter expressions, for example:
 >>> Device.objects.filter(primary_ip4__host="1.1.1.1")
 ```
 
-##### `prefix_length` contains the prefix length (IP address)
+##### IPAddress `prefix_length` contains the prefix length
 
 This is an integer, such as `30` for `/30`.
 
