@@ -256,7 +256,7 @@ $(document).ready(function() {
 
             beforeSend: function(xhr){
                 if(api_version)
-                    xhr.setRequestHeader('Accept', `application/json; version=1.3`);
+                    xhr.setRequestHeader('Accept', `application/json; version=${api_version}`);
             }
         }
     });
