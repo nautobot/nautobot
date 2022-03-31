@@ -5,6 +5,10 @@
 MD007:
     indent: 4
 
+# MD010 - No hard tabs
+# No hard tabs allowed in docs. Use 4 spaces instead.
+# This is disabled inline when used. E.g. docs/development/getting-started.md
+
 # MD013 - Line length
 # Defaults to 80 characters.
 MD013: false
@@ -13,6 +17,14 @@ MD013: false
 # Ignores terminal examples using dollar signs without any output examples after.
 # These occur in multiple places throughout our docs.
 MD014: false
+
+# MD033 - Inline HTML
+# Triggered when raw HTML is used in a markdown document
+# Used/disabled in a few files. E.g. docs/user-guides/graphql.md
+
+# MD041 - First line in a file should be a top-level heading
+# This requires a top-level heading as the first line in every doc.
+# This is only ignored inline in docs/index.md, but enabled globally elsewhere.
 
 # MD046 - Code block style
 # This rule is triggered when unwanted or different code block styles are used in the same document.
