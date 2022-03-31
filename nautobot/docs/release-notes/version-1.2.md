@@ -144,6 +144,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
+- [#1501](https://github.com/nautobot/nautobot/issues/1501) - Add IP field to CSV export of device.
 - [#1529](https://github.com/nautobot/nautobot/pull/1529) - Added list of standard hex colors to the Tags documentation.
 
 ### Changed
