@@ -1049,6 +1049,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         to_field_name="slug",
         widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+        brief_mode=False,
     )
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
