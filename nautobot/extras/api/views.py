@@ -325,7 +325,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, approval_required, request):
+def _create_schedule(serializer, data, commit, job, job_model, request):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -345,17 +345,26 @@ def _create_schedule(serializer, data, commit, job, approval_required, request):
     else:
         time = serializer["start_time"]
         name = serializer["name"]
+
+    # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
+    #
+    # We pass in job_class and job_model here partly for forward/backward compatibility logic, and
+    # part fallback safety. It's mildly useful to store both the class_path string and the JobModel
+    # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
+    # null) you still have a bit of context on the ScheduledJob as to what it was originally
+    # scheduled for.
     scheduled_job = ScheduledJob(
         name=name,
         task="nautobot.extras.jobs.scheduled_job_handler",
         job_class=job.class_path,
+        job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
         kwargs=job_kwargs,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
-        approval_required=approval_required,
+        approval_required=job_model.approval_required,
     )
     scheduled_job.save()
     return scheduled_job
@@ -395,14 +404,24 @@ def _run_job(request, job_model, legacy_response=False):
         raise CeleryWorkerNotRunningException()
 
     job_content_type = ContentType.objects.get(app_label="extras", model="job")
-
     schedule_data = input_serializer.data.get("schedule")
-    # BUG TODO: it looks like by omitting "schedule" you can immediately run an approval_required job here...
+
+    # Default to a null JobResult.
+    job_result = None
+
+    # Assert that a job with `approval_required=True` has a schedule that enforces approval and
+    # executes immediately.
+    if schedule_data is None and job_model.approval_required:
+        schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
+
+    # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model.approval_required, request)
-        job_result = None
+        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request)
     else:
         schedule = None
+
+    # ... If we can't create one, create a JobResult instead.
+    if schedule is None:
         job_result = JobResult.enqueue_job(
             run_job,
             job.class_path,

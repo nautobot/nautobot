@@ -64,6 +64,10 @@ Nautobot's REST API now supports multiple versions, which may requested by modif
 !!! tip
     As a best practice, when developing a Nautobot REST API integration, your client should _always_ request the current API version it is being developed against, rather than relying on the default API behavior (which may change with a new Nautobot major release, as noted, and which also may not include the latest and greatest API endpoints already available but not yet made default in the current release).
 
+#### Webhook Pre/Post-change Data Added to Request Body ([#330](https://github.com/nautobot/nautobot/issues/330))
+
+Webhooks now provide a snapshot of data before and after a change. This also includes the differences between the old and new data. See the default request body section in webhook docs [here](../models/extras/webhook.md#default-request-body).
+
 ### Changed
 
 #### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
@@ -101,6 +105,11 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1479](https://github.com/nautobot/nautobot/issues/1479) - Updated Jobs documentation regarding the concrete Job database model.
 - [#1502](https://github.com/nautobot/nautobot/issues/1502) Finalized Dynamic Groups implementation for 1.3 release (including documentation and integration tests)
 - [#1521](https://github.com/nautobot/nautobot/pull/1521) - Consolidated Job REST API endpoints, taking advantage of REST API versioning.
+
+### Fixed
+
+- [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
+- [#1476](https://github.com/nautobot/nautobot/issues/1476) - Fixed a bug wherein a Job run via the REST API with a missing `schedule` would allow `approval_required` to be bypassed.
 
 ## v1.3.0b1 (2022-03-11)
 
