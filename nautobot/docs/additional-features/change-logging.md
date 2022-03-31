@@ -18,3 +18,4 @@ Change records can also be accessed via the read-only GraphQL endpoint `/api/gra
     object_repr
   }
 }
+```

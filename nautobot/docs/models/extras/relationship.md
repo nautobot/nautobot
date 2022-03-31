@@ -77,7 +77,7 @@ When creating a relationship, if "Move to Advanced tab" is checked, this relatio
 
 Relationships are fully supported by the API.
 
-## Adding a new type of Relationship
+### Adding a new type of Relationship
 
 The API endpoint for relationship creation is `/extras/relationships/`
 
@@ -93,7 +93,7 @@ From our many to many example above, we would use the following data to create t
 }
 ```
 
-## Configuring the Relationship between Objects
+### Configuring the Relationship between Objects
 
 Configuring the relationship is similarly easy. Send a request to `/extras/relationship-associations/` like the following:
 

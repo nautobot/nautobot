@@ -67,7 +67,7 @@ The base template for object import is `generic/object_import.html`, with the fo
 
 The base template for object deletion is `generic/object_delete.html`, with the following blocks:
 
-* `message`: is the confirmation message for deletion that can be overridden.
+* `message`: is the confirmation message for deletion, which can be overridden.
     * `message_extra`: provides a way to add to the default message without
       overriding it.
 
