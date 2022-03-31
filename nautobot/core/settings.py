@@ -167,7 +167,7 @@ REST_FRAMEWORK = {
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
     "DEFAULT_VERSION": "1.2",
-    "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAcceptHeaderVersioning",
+    "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings

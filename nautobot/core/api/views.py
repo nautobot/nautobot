@@ -18,7 +18,9 @@ from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
+from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.utils import extend_schema
+from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
 from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
@@ -417,6 +419,32 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "celery-workers-running": worker_count,
             }
         )
+
+
+class APIVersioningGetSchemaURLMixin:
+    """Mixin to override the way that Swagger/Redoc views request the schema JSON from the server."""
+
+    def _get_schema_url(self, request):
+        schema_url = self.url or get_relative_url(reverse(self.url_name, request=request))
+        return set_query_parameters(
+            url=schema_url,
+            lan=request.GET.get("lang"),
+            # Default in drf-spectacular here is `version=request.GET.get("version")`, which assumes that the
+            # query parameter to both views is called "version".
+            # 1. We should use `request.version` instead of `request.GET.get("version") as that also allows
+            # for accept-header versioning in the initial request, not just query-parameter versioning
+            # 2. We need to pass `api_version` rather than `version` as the query parameter since that's what
+            # Nautobot API versioning expects.
+            api_version=request.version,
+        )
+
+
+class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, SpectacularSwaggerView):
+    """Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter."""
+
+
+class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRedocView):
+    """Extend SpectacularRedocView to support Nautobot's ?api_version=<version> query parameter."""
 
 
 #
