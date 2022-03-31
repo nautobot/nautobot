@@ -1,6 +1,7 @@
 from unittest import skipIf
 
 import netaddr
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase, override_settings
@@ -425,6 +426,13 @@ class TestIPAddress(TestCase):
         )
 
         self.assertRaises(ValidationError, ipaddress.clean)
+
+        IPAddress.objects.create(
+            address=netaddr.IPNetwork("192.0.2.1/24"),
+            role=IPAddressRoleChoices.ROLE_VIP,
+            assigned_object_id=interface.id,
+            assigned_object_type=ContentType.objects.get_for_model(Interface),
+        )
 
 
 class TestVLANGroup(TestCase):
