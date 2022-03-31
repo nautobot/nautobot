@@ -110,6 +110,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
 - [#1476](https://github.com/nautobot/nautobot/issues/1476) - Fixed a bug wherein a Job run via the REST API with a missing `schedule` would allow `approval_required` to be bypassed.
+- [#1563](https://github.com/nautobot/nautobot/issues/1563) - Fixed UI crash when trying to execute Jobs provided by disabled plugins. A friendly error message will now be displayed.
 
 ## v1.3.0b1 (2022-03-11)
 
