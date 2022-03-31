@@ -1,0 +1,21 @@
+---
+# MD007 - Unordered list indentation
+# Sets nested list indents to 4 spaces instead of the default of 2.
+# Required for proper ReadTheDocs rendering.
+MD007:
+    indent: 4
+
+# MD013 - Line length
+# Defaults to 80 characters.
+MD013: false
+
+# MD014 - Dollar signs used before commands without showing output
+# Ignores terminal examples using dollar signs without any output examples after.
+# These occur in multiple places throughout our docs.
+MD014: false
+
+# MD046 - Code block style
+# This rule is triggered when unwanted or different code block styles are used in the same document.
+# However this conflicts with how ReadTheDocs renders "warning", "note", etc boxes, as those use indentation
+#  but code blocks do not.
+MD046: false
