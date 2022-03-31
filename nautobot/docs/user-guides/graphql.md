@@ -133,10 +133,11 @@ query {
 
 This query will retrieve a list of all devices by their hostname.
 
-#### View GraphQL Query Results 1
-
-![View GraphQL Query Results 1](./images/graphql/04-graphql-query-01.png)
-
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/04-graphql-query-01.png">
+</details>
+<br />
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
 ![GraphQL: Autocompletion](./images/graphql/05-graphiql-autocomplete.png)
@@ -154,10 +155,11 @@ query {
 
 The result is a list of all the devices by their hostname and associated interfaces by their names.
 
-#### View GraphQL Query Results 2
-
-![View GraphQL Query Results 2](./images/graphql/06-graphql-query-02.png)
-
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/06-graphql-query-02.png">
+</details>
+<br />
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
 ```graphql
@@ -178,20 +180,22 @@ query {
 
 The results of the query look like:
 
-#### View GraphQL Query Results 3
-
-![View GraphQL Query Results 3](./images/graphql/07-graphql-query-03.png)
-
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/07-graphql-query-03.png">
+</details>
+<br />
 ### Filtering Queries
 
 These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 
 As an example. We can query devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 
-#### View GraphQL Query Results 4
-
-![View GraphQL Query Results 4](./images/graphql/08-graphql-query-04.png)
-
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/08-graphql-query-04.png">
+</details>
+<br />
 GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`.
 
 ```graphql
@@ -202,10 +206,11 @@ query {
 }
 ```
 
-#### View GraphQL Query Results 5
-
-![View GraphQL Query Results 5](./images/graphql/09-graphql-query-05.png)
-
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/09-graphql-query-05.png">
+</details>
+<br />
 You can also filter at deeper levels of the query. On many to one relationships you can filter the results based on an attribute of the field. Any attribute that relates to a GraphQLType can be filtered.
 
 ```graphql
@@ -232,10 +237,11 @@ query {
 }
 ```
 
-#### View GraphQL Query Results 6
-
-![View GraphQL query results 6](./images/graphql/11-graphql-query-06.png)
-
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/11-graphql-query-06.png">
+</details>
+<br />
 You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
 
 ```graphql

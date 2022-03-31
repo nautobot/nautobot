@@ -70,7 +70,7 @@ The plugin source directory contains all of the actual Python code and other res
 
 To get started with a project using [Python Poetry](https://python-poetry.org/) you use the `poetry init` command. This will guide you through the prompts necessary to generate a pyproject.toml with details required for packaging.
 
-```bash
+```no-highlight
 This command will guide you through creating your pyproject.toml config.
 
 Package name [tmp]:  nautobot-animal-sounds

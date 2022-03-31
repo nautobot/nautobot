@@ -47,13 +47,13 @@ Git refers to remote repositories as *remotes*. When you make your initial clone
 Remote repos are managed using the `git remote` command.
 
 Upon cloning Nautobot for the first time, you will have only a single remote:
-
+<!-- markdownlint-disable MD010 -->
 ```no-highlight
 $ git remote -v
-origin    git@github.com:yourusername/nautobot.git (fetch)
-origin    git@github.com:yourusername/nautobot.git (push)
+origin	git@github.com:yourusername/nautobot.git (fetch)
+origin	git@github.com:yourusername/nautobot.git (push)
 ```
-
+<!-- markdownlint-enable MD010 -->
 Add the official Nautobot repo as a the `upstream` remote:
 
 ```no-highlight
@@ -61,15 +61,15 @@ $ git remote add upstream git@github.com:nautobot/nautobot.git
 ```
 
 View your remotes again to confirm you've got both `origin` pointing to your fork and `upstream` pointing to the official repo:
-
+<!-- markdownlint-disable MD010 -->
 ```no-highlight
 $ git remote -v
-origin    git@github.com:yourusername/nautobot.git (fetch)
-origin    git@github.com:yourusername/nautobot.git (push)
-upstream    git@github.com:nautobot/nautobot.git (fetch)
-upstream    git@github.com:nautobot/nautobot.git (push)
+origin	git@github.com:yourusername/nautobot.git (fetch)
+origin	git@github.com:yourusername/nautobot.git (push)
+upstream	git@github.com:nautobot/nautobot.git (fetch)
+upstream	git@github.com:nautobot/nautobot.git (push)
 ```
-
+<!-- markdownlint-enable MD010 -->
 You're now ready to proceed to the next steps.
 
 !!! hint

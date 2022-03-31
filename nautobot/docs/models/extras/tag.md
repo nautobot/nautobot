@@ -58,7 +58,3 @@ Tag.objects.get_or_create(
     color="2196f3"
 )
 ```
-
-___
-!!! note
-    Tags were changed substantially in NetBox v2.9. They are no longer created on-demand when editing an object, and their representation in the REST API now includes a complete depiction of the tag rather than only its label.

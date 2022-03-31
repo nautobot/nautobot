@@ -15,6 +15,9 @@ An authentication token is attached to a request by setting the `Authorization` 
 $ curl -H "Authorization: Token $TOKEN" \
 -H "Accept: application/json; indent=4" \
 http://nautobot/api/dcim/sites/
+```
+
+```json
 {
     "count": 10,
     "next": null,
@@ -27,6 +30,9 @@ A token is not required for read-only operations which have been exempted from p
 
 ```bash
 $ curl http://nautobot/api/dcim/sites/
+```
+
+```json
 {
     "detail": "Authentication credentials were not provided."
 }

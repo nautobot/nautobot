@@ -14,7 +14,7 @@ Python packages are defined inside of `pyproject.toml`. The `[tool.poetry.depend
 
 Where possible, we use [tilde requirements](https://python-poetry.org/docs/dependency-specification/#tilde-requirements) to specify a minimal version with some ability to update, for example:
 
-```no-highlight
+```toml
 # REST API framework
 djangorestframework = "~3.12.2"
 ```

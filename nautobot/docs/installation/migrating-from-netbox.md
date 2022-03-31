@@ -228,7 +228,7 @@ For example, if you have multiple `IPAddress` objects with the same `host` value
 <IPAddressQuerySet [<IPAddress: 1.1.1.1/30>]>
 ```
 
-##### `broadcast` contains the broadcast address (IP address)
+##### IPAddress `broadcast` contains the broadcast address
 
 If the prefix length is that of a host prefix (e.g. `/32`), `broadcast` will be the same as the `host` :
 
@@ -283,7 +283,7 @@ The network component of the address is now stored in the `network` field.
 '1.1.1.0'
 ```
 
-##### `prefix_length` contains the prefix length (network)
+##### Aggregate/Prefix `prefix_length` contains the prefix length
 
 This is an integer, such as `24` for `/24`.
 
@@ -305,7 +305,7 @@ For example, if you have multiple `Prefix` objects with the same `network` value
 <PrefixQuerySet [<Prefix: 1.1.1.0/25>]>
 ```
 
-##### `broadcast` contains the broadcast address (prefix)
+##### Aggregate/Prefix `broadcast` contains the broadcast address
 
 The `broadcast` will be derived from the `prefix_length` and will be that of the last network address for that prefix length (e.g. `1.1.1.255`):
 

@@ -383,10 +383,10 @@ Done.
 
 Run a job (script, report) to validate or update data in Nautobot.
 
-`--commit`
+`--commit`  
 Commit changes to DB (defaults to dry-run if unset). `--username` is mandatory if using this argument.
 
-`--username <username>`
+`--username <username>`  
 User account to impersonate as the requester of this job.
 
 ```no-highlight
@@ -471,10 +471,10 @@ Generate any missing cable paths among all cable termination objects in Nautobot
 
 After upgrading the database or working with Cables, Circuits, or other related objects, there may be a need to rebuild cached cable paths.
 
-`--force`
+`--force`  
 Force recalculation of all existing cable paths.
 
-`--no-input`
+`--no-input`  
 Do not prompt user for any input/confirmation.
 
 ```no-highlight
@@ -498,10 +498,10 @@ Finished.
 
 Start a simple listener to display received HTTP requests.
 
-`--port PORT`
+`--port PORT`  
 Optional port number (default: `9000`)
 
-`--no-headers`
+`--no-headers`  
 Hide HTTP request headers.
 
 ```no-highlight

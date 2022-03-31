@@ -29,8 +29,7 @@ For OpenID connect, you'll need to install the `sso` Python extra.
 $ pip3 install "nautobot[sso]"
 ```
 
-<!-- markdownlint-disable-next-line -->
-#### SAML
+#### OpenID Connect Dependencies
 
 For SAML, additional system-level dependencies are required so that the specialized XML libraries can be built and compiled for your system.
 
@@ -231,7 +230,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<Secret ID from Google>'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 ```
 
-### SAML
+### SAML Dependencies
 
 This guide will walk you through configuring Nautobot to authenticate using SAML with Google as the identity provider.
 
