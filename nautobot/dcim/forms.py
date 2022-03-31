@@ -746,6 +746,9 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
             "description",
             "tags",
         ]
+        widgets = {
+            "description": forms.TextInput(attrs={"autofocus": True, "placeholder": "Description"}),
+        }
 
 
 class RackReservationCSVForm(CustomFieldModelCSVForm):
