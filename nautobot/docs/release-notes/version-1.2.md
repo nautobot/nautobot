@@ -155,6 +155,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
 - [#1467](https://github.com/nautobot/nautobot/issues/1467) - Fixed an issue where at certain browser widths the nav bar would cover the top of the page content.
 - [#1548](https://github.com/nautobot/nautobot/issues/1548) - Pin Jinja2 version for mkdocs requirements to fix RTD docs builds related to API deprecation in Jinja2 >= 3.1.0
+- [#1583](https://github.com/nautobot/nautobot/issues/1583) - Fixed Nautobot service definition in PostgreSQL-backed development environment.
 
 ## v1.2.10 (2022-03-21)
 
