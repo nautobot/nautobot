@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-
+from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -27,7 +27,6 @@ from nautobot.dcim.constants import (
 )
 
 from nautobot.dcim.fields import MACAddressCharField
-from nautobot.extras.managers import TaggableManager
 from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,

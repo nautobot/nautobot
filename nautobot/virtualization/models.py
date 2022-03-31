@@ -2,9 +2,9 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from taggit.managers import TaggableManager
 
 from nautobot.dcim.models import BaseInterface, Device
-from nautobot.extras.managers import TaggableManager
 from nautobot.extras.models import (
     ConfigContextModel,
     CustomFieldModel,

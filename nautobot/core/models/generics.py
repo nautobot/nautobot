@@ -1,4 +1,5 @@
-from nautobot.extras.managers import TaggableManager
+from taggit.managers import TaggableManager
+
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.mixins import DynamicGroupMixin

@@ -38,6 +38,7 @@ def setup():
 
     import taggit.managers
 
+    # 2.0 TODO: Remove this and just change everything to directly import ours in migrations.
     # Monkey-patching TaggableManager for backwards-compatibility with earlier Nautobot versions
     # e.g plugins still importing TaggableManager from taggit.managers
     taggit.managers.TaggableManager = TaggableManager

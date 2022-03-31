@@ -25,19 +25,4 @@ class Migration(migrations.Migration):
                 to="contenttypes.ContentType",
             ),
         ),
-        migrations.AlterField(
-            model_name="gitrepository",
-            name="tags",
-            field=nautobot.extras.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
-        ),
-        migrations.AlterField(
-            model_name="job",
-            name="tags",
-            field=nautobot.extras.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
-        ),
-        migrations.AlterField(
-            model_name="secret",
-            name="tags",
-            field=nautobot.extras.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
-        ),
     ]
