@@ -298,7 +298,6 @@ INSTALLED_APPS = [
     "drf_yasg",
     "graphene_django",
     "health_check",
-    "health_check.cache",
     "health_check.storage",
     "django_extensions",
     "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
