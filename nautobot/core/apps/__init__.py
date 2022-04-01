@@ -651,6 +651,7 @@ class CoreConfig(NautobotConfig):
         # Magical monkey-patch TaggableManager to replace the `formfield()` method from our mixin.
         from nautobot.extras.models import mixins
         from taggit.managers import TaggableManager
+
         monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
 
 

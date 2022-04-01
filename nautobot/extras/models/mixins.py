@@ -27,7 +27,7 @@ class DynamicGroupMixin:
         return self._dynamic_group_queryset
 
 
-# 2.0 TODO: Remove after v2 since we will longer care about backwards-incompatibility.
+# 2.0 TODO: Remove after v2 since we will no longer care about backwards-incompatibility.
 class TaggableManagerMonkeyMixin:
     """
     Dynamically-applied monkey-patch mixin that is used to replace any defined
@@ -56,11 +56,12 @@ class TaggableManagerMonkeyMixin:
         # Django migrations create lots of fake models, just skip them
         # NOTE: we make it here rather then inside _install_hotfix()
         #       because we don't want @once_per() to hold refs to all of them.
-        if cls.__module__ != '__fake__' and family_has_profile(cls):
+        if cls.__module__ != "__fake__" and family_has_profile(cls):
             self._install_hotfix(cls)
 
     def formfield(self, form_class=DynamicModelMultipleChoiceField, **kwargs):
         from nautobot.extras.models.tags import Tag
+
         queryset = Tag.objects.filter(
             Q(
                 content_types__model=self.model._meta.model_name,
