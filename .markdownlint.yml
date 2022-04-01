@@ -19,6 +19,11 @@ MD013: false
 # These occur in multiple places throughout our docs.
 MD014: false
 
+# MD024 - Multiple headings with the same content
+# Multiple identical headings in the document are not allowed
+# This is disabled on all of the release notes pages in docs/release-notes
+MD024: true
+
 # MD033 - Inline HTML
 # Triggered when raw HTML is used in a markdown document
 # Used/disabled in a few files. E.g. docs/user-guides/graphql.md
