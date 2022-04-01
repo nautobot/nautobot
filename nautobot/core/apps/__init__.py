@@ -4,7 +4,6 @@ import os
 from abc import ABC, abstractproperty
 from collections import OrderedDict
 
-from cacheops.utils import monkey_mix
 from django.apps import AppConfig, apps as global_apps
 from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
@@ -649,6 +648,7 @@ class CoreConfig(NautobotConfig):
         super().ready()
 
         # Magical monkey-patch TaggableManager to replace the `formfield()` method from our mixin.
+        from cacheops.utils import monkey_mix
         from nautobot.extras.models import mixins
         from taggit.managers import TaggableManager
 
