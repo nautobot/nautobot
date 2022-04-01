@@ -9,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
 from rest_framework import status
 from rest_framework.response import Response
@@ -19,6 +20,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
+from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
 from rq.worker import Worker as RQWorker
@@ -444,11 +446,22 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter and page styling.
     """
 
+    class DummyOpenAPIRenderer(OpenApiJsonRenderer):
+        """For backwards-compatibility with drf-yasg, allow `?format=openapi` as a way to request the schema JSON."""
+
+        format = "openapi"
+
+    renderer_classes = SpectacularSwaggerView.renderer_classes + [DummyOpenAPIRenderer]
+
     template_name = "swagger_ui.html"
 
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
+        # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
+        if request.GET.get("format") == "openapi":
+            return redirect("schema_json", permanent=True)
+
         # drf-spectacular uses "settings" in the rendering context as a way to inject custom JavaScript if desired,
         # which of course conflicts with Nautobot's use of "settings" as a representation of django.settings.
         # So we need to intercept it and fix it up.

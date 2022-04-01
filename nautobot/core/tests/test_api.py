@@ -31,6 +31,17 @@ class AppTest(APITestCase):
         response_json = json.loads(response.content)
         self.assertEqual(response_json, {"detail": "Not found."})
 
+    def test_docs(self):
+        url = reverse("api_docs")
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, 200)
+        self.assertIn("text/html", response.headers["Content-Type"])
+
+        # Under drf-yasg, ?format=openapi was the way to get the JSON schema for the docs.
+        response = self.client.get(f"{url}?format=openapi", follow=True, **self.header)
+        self.assertHttpStatus(response, 200)
+        self.assertIn("application/vnd.oai.openapi+json", response.headers["Content-Type"])
+
 
 class APIPaginationTestCase(APITestCase):
     """

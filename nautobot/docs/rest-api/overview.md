@@ -98,7 +98,7 @@ See the [filtering documentation](filtering.md) for more details.
 
 ## Versioning
 
-As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a major.minor Nautobot version number in its request in one of two ways:
+As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
 
 1. A client may include a `version` in its HTTP Accept header, for example `Accept: application/json; version=1.3`
 2. A client may include an `api_version` as a URL query parameter, for example `/api/extras/jobs/?api_version=1.3`

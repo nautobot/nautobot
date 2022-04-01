@@ -79,10 +79,11 @@ class NautobotAutoSchema(AutoSchema):
         """
         properties = {}
         # Does this serializer have any fields of certain special types?
-        # TODO why these specific types?
+        # These are the field types that are asymmetric between request (write) and response (read); if any such fields
+        # are present, we should generate a distinct WritableFooSerializer to reflect that asymmetry in the schema.
         fields = {} if hasattr(serializer, "child") else serializer.fields
         for child_name, child in fields.items():
-            # Don't keep read_only fields (since this is a writable serializer).
+            # Don't consider read_only fields (since we're planning specifically for the writable serializer).
             if child.read_only:
                 continue
 
