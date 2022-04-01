@@ -34,14 +34,6 @@ def setup():
 
     from nautobot.core import cli
     from nautobot.core.runner import configure_app
-    from nautobot.extras.managers import TaggableManager
-
-    import taggit.managers
-
-    # 2.0 TODO: Remove this and just change everything to directly import ours in migrations.
-    # Monkey-patching TaggableManager for backwards-compatibility with earlier Nautobot versions
-    # e.g plugins still importing TaggableManager from taggit.managers
-    taggit.managers.TaggableManager = TaggableManager
 
     configure_app(
         project="nautobot",
