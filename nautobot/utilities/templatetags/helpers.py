@@ -304,8 +304,8 @@ def percentage(x, y):
 
 @library.filter()
 @register.filter()
-def get_docs(model):
-    """Render and return documentation for the specified model.
+def get_docs_url(model):
+    """Return the documentation URL for the specified model.
 
     Args:
         model (models.Model): Instance of a Django model
@@ -317,19 +317,7 @@ def get_docs(model):
         >>> get_docs(obj)
         "some text"
     """
-    path = "{}/models/{}/{}.md".format(settings.DOCS_ROOT, model._meta.app_label, model._meta.model_name)
-    try:
-        with open(path, encoding="utf-8") as docfile:
-            content = docfile.read()
-    except FileNotFoundError:
-        return "Unable to load documentation, file not found: {}".format(path)
-    except IOError:
-        return "Unable to load documentation, error reading file: {}".format(path)
-
-    # Render Markdown with the admonition extension
-    content = markdown(content, extensions=["admonition", "fenced_code", "tables"])
-
-    return mark_safe(content)
+    return f"{settings.STATIC_URL}{f'{model._meta.app_label}/' if model._meta.app_label in settings.PLUGINS else ''}docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
 
 
 @library.filter()

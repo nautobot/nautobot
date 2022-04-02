@@ -17,7 +17,7 @@ from nautobot.utilities.templatetags.helpers import (
     fgcolor,
     divide,
     percentage,
-    get_docs,
+    get_docs_url,
     has_perms,
     has_one_or_more_perms,
     split,
@@ -110,9 +110,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(percentage(2, 10), 20)
         self.assertEqual(percentage(10, 3), 333)
 
-    def test_get_docs(self):
-        self.assertTrue(callable(get_docs))
-        # TODO add unit tests for get_docs
+    def test_get_docs_url(self):
+        self.assertTrue(callable(get_docs_url))
+        # TODO add unit tests for get_docs_url
 
     def test_has_perms(self):
         self.assertTrue(callable(has_perms))
