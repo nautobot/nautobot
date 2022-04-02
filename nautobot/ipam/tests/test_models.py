@@ -418,21 +418,23 @@ class TestIPAddress(TestCase):
             status=device_status,
         )
         interface = Interface.objects.create(device=device, name="eth0")
-        ipaddress = IPAddress(
+        ipaddress_1 = IPAddress(
             address=netaddr.IPNetwork("192.0.2.1/24"),
             role=IPAddressRoleChoices.ROLE_VIP,
             assigned_object_id=interface.id,
-            # assigned_object_type="",
         )
 
-        self.assertRaises(ValidationError, ipaddress.clean)
+        self.assertRaises(ValidationError, ipaddress_1.clean)
 
-        IPAddress.objects.create(
+        # Test IPAddress.clean() raises no exception if assigned_object_id and assigned_object_type
+        # are both provided
+        ipaddress_2 = IPAddress(
             address=netaddr.IPNetwork("192.0.2.1/24"),
             role=IPAddressRoleChoices.ROLE_VIP,
             assigned_object_id=interface.id,
             assigned_object_type=ContentType.objects.get_for_model(Interface),
         )
+        self.assertIsNone(ipaddress_2.clean())
 
 
 class TestVLANGroup(TestCase):
