@@ -99,13 +99,6 @@ class ModelSubclassesQuery:
         return [_class for _class in apps.get_models() if issubclass(_class, klass)]
 
     def __call__(self):
-        return self.get_query()
-
-    @property
-    def as_queryset(self):
-        return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
-
-    def get_query(self):
         """
         Given an extras feature, return a Q object for content type lookup
         """
@@ -114,6 +107,10 @@ class ModelSubclassesQuery:
             query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
 
         return query
+
+    @property
+    def as_queryset(self):
+        return ContentType.objects.filter(self()).order_by("app_label", "model")
 
     def get_choices(self):
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]

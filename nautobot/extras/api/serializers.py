@@ -1033,9 +1033,7 @@ class TagSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
     content_types = ContentTypeField(
-        queryset=ContentType.objects.filter(
-            ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").get_query()
-        ),
+        queryset=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset,
         many=True,
         required=False,
     )

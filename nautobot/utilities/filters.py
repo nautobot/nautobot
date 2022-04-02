@@ -226,7 +226,6 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
 
         content_types = ContentTypeMultipleChoiceFilter(
             choices=FeatureQuery("statuses").get_choices,
-            include_null: False # True if content_types with null values be included in queryset
         )
     """
 
