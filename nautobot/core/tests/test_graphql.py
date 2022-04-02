@@ -1365,5 +1365,6 @@ query {
         self.device1.save()
         result = self.execute_query(query, variables={"device_id": str(self.device1.id)})
         self.assertNotIn("error", str(result))
-        self.assertIn(f"'interfaces': [{{'ip_addresses':"
-                      f" [{{'primary_ip4_for': {{'id': '{self.device1.id}'}}", str(result))
+        self.assertIn(
+            f"'interfaces': [{{'ip_addresses':" f" [{{'primary_ip4_for': {{'id': '{self.device1.id}'}}", str(result)
+        )
