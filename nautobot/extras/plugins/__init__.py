@@ -79,6 +79,9 @@ class PluginConfig(NautobotConfig):
     home_view_name = None
     config_view_name = None
 
+    # Documentation is provided by the plugin
+    docs_enabled = False
+
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
     banner_function = "banner.banner"

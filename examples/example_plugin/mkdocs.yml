@@ -1,0 +1,23 @@
+dev_addr: '127.0.0.1:8001'
+site_dir: example_plugin/static/example_plugin/docs
+site_name: Example Plugin Documentation
+python:
+    install:
+        - requirements: docs/requirements.txt
+theme:
+    name: readthedocs
+    navigation_depth: 4
+    hljs_languages:
+        - django
+        - yaml
+extra_css:
+    - extra.css
+markdown_extensions:
+    - admonition:
+    - toc:
+        permalink: true
+plugins:
+    - search
+    - include-markdown
+nav:
+    - Introduction: 'index.md'

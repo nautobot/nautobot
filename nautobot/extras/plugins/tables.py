@@ -34,6 +34,14 @@ class InstalledPluginsTable(tables.Table):
             {% endif %}
                 <i class="mdi mdi-cog"></i>
             </a>
+            {% load static %}
+            {% if record.actions.docs %}
+            <a href="{% static record.package_name|add:'/docs/index.html' %}" class="btn btn-info btn-xs" title="docs">
+            {% else %}
+            <a href="" class="btn btn-info btn-xs disabled" title="No docs provided">
+            {% endif %}
+                <i class="mdi mdi-book-open-page-variant"></i>
+            </a>
         """,
         attrs={"td": {"class": "text-right text-nowrap noprint"}},
         verbose_name="",

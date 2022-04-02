@@ -41,6 +41,7 @@ class InstalledPluginsView(LoginRequiredMixin, View):
                     "actions": {
                         "home": plugin.home_view_name,
                         "configure": plugin.config_view_name,
+                        "docs": plugin.docs_enabled,
                     },
                 }
             )
