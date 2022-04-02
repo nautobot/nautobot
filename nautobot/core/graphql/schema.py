@@ -179,7 +179,7 @@ def extend_schema_type_filter(schema_type, model):
     """
     for field in model._meta.get_fields():
         # Check attribute is a ManyToOne field
-        # OneToOneRel is a subclass or ManyToOneRel, but we don't want to treat is as a list
+        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat is as a list
         if not isinstance(field, ManyToOneRel) or isinstance(field, OneToOneRel):
             continue
         child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
