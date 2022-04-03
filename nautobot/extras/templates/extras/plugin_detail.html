@@ -157,8 +157,8 @@
                                                 {% endfor %}
                                             {% endif %}
                                             {% if features.filter_extensions.filter_form %}
-                                                {% for filter in features.filter_extensions.filter_form %}
-                                                    <li><code>{{ filter }}</code></li>
+                                                {% for formfield in features.filter_extensions.filter_form %}
+                                                    <li><code>{{ formfield }}</code></li>
                                                 {% endfor %}
                                             {% endif %}
                                         </ul>

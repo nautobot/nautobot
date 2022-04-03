@@ -410,7 +410,7 @@ def register_filter_extensions(class_list, name):
 
         if filter_extension().filterset():
             for key in filter_extension().filterset().keys():
-                if not key.startswith(name):
+                if not key.startswith(f"{name}_"):
                     raise ValueError(f"Attempted to create a custom filter `{key}` that did not start with `{name}`")
 
         registry["plugin_filter_extensions"][filter_extension.model].append(filter_extension)
