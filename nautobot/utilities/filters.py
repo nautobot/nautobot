@@ -440,8 +440,6 @@ class BaseFilterSet(django_filters.FilterSet):
                 new_filters[new_filter_name] = new_filter
 
         filters.update(new_filters)
-        # TODO: Verify that this brute force method is the best way to ensure pluggable filters gets updated
-        cls.base_filters = filters
         return filters
 
 

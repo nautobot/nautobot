@@ -658,7 +658,7 @@ However, that does not cover every possible use case, to list a few examples:
 There are several conditions that must be met in order to extend a filter:
 
 * The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
-* The `PluginFilterExtension.filterset()` method must return a valid dict, with each key being the filter name (which must start with the plugin's `name`, e.g. `example_plugin_description`, not merely `description`) and each value being a valid [django-filter)[https://django-filter.readthedocs.io/en/main/) filter
+* The `PluginFilterExtension.filterset()` method must return a valid dict, with each key being the filter name (which must start with the plugin's `name`, e.g. `example_plugin_description`, not merely `description`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
 
 Similar to filtersets, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
 
