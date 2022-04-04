@@ -949,8 +949,8 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     model = ObjectChange
     q = forms.CharField(required=False, label="Search")
-    time_after = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
-    time_before = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
+    time__gte = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
+    time__lte = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
     action = forms.ChoiceField(
         choices=add_blank_choice(ObjectChangeActionChoices),
         required=False,
