@@ -938,7 +938,6 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
                 run_job,
                 job.class_path,
                 job_content_type,
-                scheduled_job.user,
                 request.user,
                 data=job_class.serialize_data(initial),
                 request=copy_safe_request(request),
@@ -1139,6 +1138,26 @@ class ObjectChangeListView(generic.ObjectListView):
     table = tables.ObjectChangeTable
     template_name = "extras/objectchange_list.html"
     action_buttons = ("export",)
+
+    # TODO: Remove this remapping in 2.0 as it is addressing a potentially breaking change
+    def get(self, request, **kwargs):
+
+        # Remappings below allow previous queries of time_before and time_after to use
+        # newer methods specifying the lookup method.
+
+        # They will only use the previous arguments if the newer ones are undefined
+
+        if request.GET.get("time_after") and request.GET.get("time__gte") is None:
+            request.GET._mutable = True
+            request.GET.update({"time__gte": request.GET.get("time_after")})
+            request.GET._mutable = False
+
+        if request.GET.get("time_before") and request.GET.get("time__lte") is None:
+            request.GET._mutable = True
+            request.GET.update({"time__lte": request.GET.get("time_before")})
+            request.GET._mutable = False
+
+        return super().get(request=request, **kwargs)
 
 
 class ObjectChangeView(generic.ObjectView):

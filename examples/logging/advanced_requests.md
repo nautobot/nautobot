@@ -4,6 +4,13 @@ By default django logs [4xx and 5xx requests](https://docs.djangoproject.com/en/
 but is missing details such as the request user name.  This can be helpful in debugging. This example 
 shows how the request user can be added to the logs for 4xx and 5xx responses.
 
+Using the django-request-logging module can lead to password leaks if not configured correctly. If using in production, make sure that you capture all passwords and mask them in logs. The example below uses defines a function, `mask_password`, to manipulate the message before logged. This is just one way to mask a password. Be mindful that other places are captured as well. Here is the "before/after" example of the function `mask_password`:
+
+> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=mysecretpassword
+
+> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=***
+
+
 ```python
 def add_username(record):
     if hasattr(record, "request") and hasattr(record.request, "user"):
@@ -12,6 +19,9 @@ def add_username(record):
         record.username = ""
     return True
 
+def mask_password(record):
+    record.msg = re.sub(r"password=(.*?)($|&|\n)", r"password=*****\g<2>", record.msg)
+    return True
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING = {
@@ -37,13 +47,17 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "request",
-            "filters": ["add_username"],
+            "filters": ["add_username", "mask_password"],
         },
     },
     "filters": {
         "add_username": {
             "()": "django.utils.log.CallbackFilter",
             "callback": add_username,
+        },
+        "mask_password": {
+            "()": "django.utils.log.CallbackFilter",
+            "callback": mask_password,
         }
     },
     "loggers": {

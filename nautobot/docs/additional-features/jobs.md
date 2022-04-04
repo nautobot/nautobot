@@ -309,7 +309,7 @@ It is advised to log a message for each object that is evaluated so that the res
 Markdown rendering is supported for log messages.
 
 !!! note
-    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job. To end a job early, you can use a Python `raise` or `return` as appropriate.
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising `nautobot.utilities.exceptions.AbortTransaction` will ensure that any database changes are rolled back as part of the process of ending the job.
 
 ### Accessing Request Data
 
