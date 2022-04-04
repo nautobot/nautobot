@@ -26,10 +26,16 @@ from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
     CableType,
     CablePathType,
+    ConsolePortType,
     ConsoleServerPortType,
     DeviceType,
+    FrontPortType,
     InterfaceType,
+    PowerFeedType,
+    PowerOutletType,
+    PowerPortType,
     RackType,
+    RearPortType,
     SiteType,
 )
 from nautobot.extras.registry import registry
@@ -46,10 +52,16 @@ registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationTyp
 registry["graphql_types"]["contenttypes.contenttype"] = ContentTypeType
 registry["graphql_types"]["dcim.cable"] = CableType
 registry["graphql_types"]["dcim.cablepath"] = CablePathType
+registry["graphql_types"]["dcim.consoleport"] = ConsolePortType
 registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
 registry["graphql_types"]["dcim.device"] = DeviceType
+registry["graphql_types"]["dcim.frontport"] = FrontPortType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
+registry["graphql_types"]["dcim.powerfeed"] = PowerFeedType
+registry["graphql_types"]["dcim.poweroutlet"] = PowerOutletType
+registry["graphql_types"]["dcim.powerport"] = PowerPortType
 registry["graphql_types"]["dcim.rack"] = RackType
+registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.site"] = SiteType
 registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.aggregate"] = AggregateType
