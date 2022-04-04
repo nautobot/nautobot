@@ -2211,7 +2211,7 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         tag = Tag.objects.get(slug=self.create_data[0]["slug"])
         self.assertEqual(
             tag.content_types.count(),
-            ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset.count(),
+            ModelSubclassesQuery().as_queryset.count(),
         )
 
 

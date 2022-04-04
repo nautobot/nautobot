@@ -1033,7 +1033,7 @@ class TagSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
     content_types = ContentTypeField(
-        queryset=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset,
+        queryset=ModelSubclassesQuery().as_queryset,
         many=True,
         required=False,
     )
@@ -1059,7 +1059,7 @@ class TagSerializer(CustomFieldModelSerializer):
 
         # All relevant content_types should be assigned to tag without content_types
         if not data.get("content_types"):
-            data["content_types"] = ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset
+            data["content_types"] = ModelSubclassesQuery().as_queryset
 
         return data
 

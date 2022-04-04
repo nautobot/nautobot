@@ -1386,7 +1386,7 @@ class TagForm(NautobotModelForm):
     slug = SlugField()
     content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
-        queryset=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset,
+        queryset=ModelSubclassesQuery().as_queryset,
         required=False,
         help_text="Leave empty if tag should be available to all content_types",
     )
@@ -1434,7 +1434,7 @@ class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
         choices_as_strings=True,
         required=False,
         label="Content Type(s)",
-        queryset=ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset,
+        queryset=ModelSubclassesQuery().as_queryset,
     )
 
 

@@ -85,18 +85,18 @@ class FeatureQuery:
 @deconstructible
 class ModelSubclassesQuery:
     """
-    Helper class to get ContentType models that are subclasses of self.klass
+    Helper class to get ContentType models that implements tags(TaggableManager)
     """
-
-    def __init__(self, klass):
-        self.klass = klass
 
     def list_subclasses(self):
         """
-        Return a list of classes that inherits from self.klass
+        Return a list of classes that has implements tags e.g tags = TaggableManager(...)
         """
-        klass = import_object(self.klass)
-        return [_class for _class in apps.get_models() if issubclass(_class, klass)]
+        return [
+            _class
+            for _class in apps.get_models()
+            if hasattr(_class, "tags") and isinstance(_class.tags, _TaggableManager)
+        ]
 
     def __call__(self):
         """

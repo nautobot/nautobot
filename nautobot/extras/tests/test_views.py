@@ -1895,7 +1895,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         tag = Tag.objects.get(slug=self.form_data["slug"])
         self.assertEqual(
             tag.content_types.count(),
-            ModelSubclassesQuery("nautobot.core.models.generics.PrimaryModel").as_queryset.count(),
+            ModelSubclassesQuery().as_queryset.count(),
         )
 
 
