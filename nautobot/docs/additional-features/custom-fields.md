@@ -42,7 +42,7 @@ Nautobot supports limited custom validation for custom field values. Following a
 * Integer: Minimum and/or maximum value (optional)
 * JSON: If not empty, this field must contain valid JSON data
 * Selection: Must exactly match one of the prescribed choices
-  * Selection Fields: Regular expression (optional)
+    * Selection Fields: Regular expression (optional)
 
 ### Custom Selection Fields
 

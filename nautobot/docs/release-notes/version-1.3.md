@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.3
 
 This document describes all new features and changes in Nautobot 1.3.
@@ -12,7 +13,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 A new data model for representing [dynamic groups](../models/extras/dynamicgroup.md) of objects has been implemented. Dynamic groups can be used to organize objects together by matching criteria such as their site location or region, for example, and are dynamically updated whenever new matching objects are created, or existing objects are updated.
 
-For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported. 
+For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported.
 
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
@@ -26,7 +27,7 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - Job attributes (name, description, approval requirements, etc.) can now be managed via the Nautobot UI by an administrator or user with appropriate permissions to customize or override the attributes defined in the Job source code.
 - Jobs can now be identified by a `slug` as well as by their `class_path`.
 - A new set of REST API endpoints have been added to `/api/extras/jobs/<uuid>/`. The existing `/api/extras/jobs/<class_path>/` REST API endpoints continue to work but should be considered as deprecated.
-  - A new version of the REST API `/api/extras/jobs/` list endpoint has been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
+    - A new version of the REST API `/api/extras/jobs/` list endpoint has been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
 - As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
 
 !!! note

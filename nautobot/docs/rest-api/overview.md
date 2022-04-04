@@ -87,7 +87,7 @@ Each model generally has two views associated with it: a list view and a detail 
 
 Lists of objects can be filtered using a set of query parameters. For example, to find all interfaces belonging to the device with ID 6a522ebb-5739-4c5c-922f-ab4a2dc12eb0:
 
-```
+```no-highlight
 GET /api/dcim/interfaces/?device_id=6a522ebb-5739-4c5c-922f-ab4a2dc12eb0
 ```
 
@@ -112,11 +112,11 @@ By default, a REST API request that does not specify an API version number will 
 
 ### Non-Breaking Changes
 
-Non-breaking (forward- and backward-compatible) REST API changes may be introduced in major or minor Nautobot releases. Since these changes are non-breaking, they will *not* correspond to the introduction of a new API version, but will be added seamlessly to the existing API version, and so will immediately be available to existing REST API clients. Examples would include:
+Non-breaking (forward- and backward-compatible) REST API changes may be introduced in major or minor Nautobot releases. Since these changes are non-breaking, they will _not_ correspond to the introduction of a new API version, but will be added seamlessly to the existing API version, and so will immediately be available to existing REST API clients. Examples would include:
 
-- Addition of new fields in GET responses
-- Understanding of new, _optional_ fields in POST/PUT/PATCH requests
-- Deprecation (but not removal) of existing fields
+* Addition of new fields in GET responses
+* Added support for new, _optional_ fields in POST/PUT/PATCH requests
+* Deprecation (but not removal) of existing fields
 
 !!! important
     There is no way to "opt out" of backwards-compatible enhancements to the REST API; because they are fully backwards-compatible there should never be a need to do so. Thus, for example, a client requesting API version `1.2` from a Nautobot 1.3 server may actually receive the (updated but still backwards-compatible) `1.3` API version as a response. For this reason, clients should always default to ignoring additional fields in an API response that they do not understand, rather than reporting an error.
@@ -125,10 +125,10 @@ Non-breaking (forward- and backward-compatible) REST API changes may be introduc
 
 Breaking (non-backward-compatible) REST API changes also may be introduced in major or minor Nautobot releases. Examples would include:
 
-- Removal of deprecated fields
-- Addition of new, _required_ fields in POST/PUT/PATCH requests
-- Changed field types (for example, changing a single value to a list of values)
-- Redesigned API (for example, listing and accessing Job instances by UUID primary-key instead of by class-path string)
+* Removal of deprecated fields
+* Addition of new, _required_ fields in POST/PUT/PATCH requests
+* Changed field types (for example, changing a single value to a list of values)
+* Redesigned API (for example, listing and accessing Job instances by UUID primary-key instead of by class-path string)
 
 Per Nautobot's [feature-deprecation policy](../development/index.md#deprecation-policy), the previous REST API version will continue to be supported for some time before eventually being removed.
 
@@ -283,9 +283,11 @@ If we wanted to assign this IP address to a virtual machine interface instead, w
 
 Most API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
 
-```
+```no-highlight
 GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
+```
 
+```json
 {
     "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
     "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
@@ -324,9 +326,11 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
 
 The brief format is much more terse:
 
-```
+```no-highlight
 GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
+```
 
+```json
 {
     "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
     "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
@@ -352,7 +356,7 @@ API responses which contain a list of many objects will be paginated for efficie
 
 Here is an example of a paginated response:
 
-```
+```json
 HTTP 200 OK
 Allow: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
 API-Version: 1.2
@@ -381,7 +385,7 @@ Vary: Accept
 
 The default page is determined by the [`PAGINATE_COUNT`](../../configuration/optional-settings/#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
 
-```
+```no-highlight
 http://nautobot/api/dcim/devices/?limit=100
 ```
 

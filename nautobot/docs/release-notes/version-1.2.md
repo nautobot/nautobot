@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.2
 
 This document describes all new features and changes in Nautobot 1.2.
@@ -51,8 +52,8 @@ query {
 
 #### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
 
-Complex GraphQL queries have been greatly optimized thanks to integration of 
-[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+Complex GraphQL queries have been greatly optimized thanks to integration of
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot!
 
 In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
 
