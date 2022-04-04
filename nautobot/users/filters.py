@@ -82,7 +82,7 @@ class TokenFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(user__name__icontains=value) | Q(description__icontains=value))
+        return queryset.filter(Q(description__icontains=value))
 
 
 class ObjectPermissionFilterSet(BaseFilterSet):
