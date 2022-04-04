@@ -1100,7 +1100,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         DeviceRole.objects.create(name="Device Role 8")
 
         cls.form_data = {
-            "name": "Devie Role X",
+            "name": "Device Role X",
             "slug": "device-role-x",
             "color": "c0c0c0",
             "vm_role": False,

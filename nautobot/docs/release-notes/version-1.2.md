@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.2
 
 This document describes all new features and changes in Nautobot 1.2.
@@ -51,8 +52,8 @@ query {
 
 #### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
 
-Complex GraphQL queries have been greatly optimized thanks to integration of 
-[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+Complex GraphQL queries have been greatly optimized thanks to integration of
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot!
 
 In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
 
@@ -81,7 +82,7 @@ Jobs can now be optionally defined as `approval_required = True`, in which case 
 Jobs can now be scheduled for execution at a future date and time (such as during a planned maintenance window), and can also be scheduled for repeated execution on an hourly, daily, or weekly recurring cadence.
 
 !!! note
-    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
+    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
 Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
 
@@ -144,15 +145,20 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
+- [#1501](https://github.com/nautobot/nautobot/issues/1501) - Add IP field to CSV export of device.
 - [#1529](https://github.com/nautobot/nautobot/pull/1529) - Added list of standard hex colors to the Tags documentation.
 
 ### Changed
+
+- [#1536](https://github.com/nautobot/nautobot/pull/1536) - Removed the ServiceUnavailable exception when no primary_ip is available for a device, as other connection options available.
+- [#1584](https://github.com/nautobot/nautobot/issues/1584) - Replaced links in docs to celeryproject.org with celeryq.dev
 
 ### Fixed
 
 - [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
 - [#1467](https://github.com/nautobot/nautobot/issues/1467) - Fixed an issue where at certain browser widths the nav bar would cover the top of the page content.
 - [#1548](https://github.com/nautobot/nautobot/issues/1548) - Pin Jinja2 version for mkdocs requirements to fix RTD docs builds related to API deprecation in Jinja2 >= 3.1.0
+- [#1583](https://github.com/nautobot/nautobot/issues/1583) - Fixed Nautobot service definition in PostgreSQL-backed development environment.
 
 ## v1.2.10 (2022-03-21)
 

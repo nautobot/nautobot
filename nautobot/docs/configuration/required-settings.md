@@ -13,7 +13,7 @@ Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs
 
 Example:
 
-```
+```python
 ALLOWED_HOSTS = ['nautobot.example.com', '192.0.2.123']
 ```
 
@@ -22,7 +22,7 @@ ALLOWED_HOSTS = ['nautobot.example.com', '192.0.2.123']
 
 If you are not yet sure what the domain name and/or IP address of the Nautobot installation will be, and are comfortable accepting the risks in doing so, you can set this to a wildcard (asterisk) to allow all host values:
 
-```
+```python
 ALLOWED_HOSTS = ['*']
 ```
 
@@ -91,7 +91,7 @@ For example:
 ```python
 DATABASES = {
     "default": {
-        # Other setttings...
+        # Other settings...
         "OPTIONS": {"charset": "utf8mb4"},  # Add this line
     }
 }
@@ -113,7 +113,6 @@ to different Redis instances/databases per feature.
 
 !!! tip
     The default Redis settings in your `nautobot_config.py` should be suitable for most deployments and should only require customization for more advanced configurations.
-
 
 ### Caching
 
@@ -177,7 +176,7 @@ CACHES = {
 ### Task Queuing with RQ
 
 !!! warning
-	As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
+    As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
 
 Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
 
@@ -313,7 +312,7 @@ $ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
-Alternatively use the following command to generate a secret even before `nautobot-server` is runable:
+Alternatively use the following command to generate a secret even before `nautobot-server` is runnable:
 
 ```no-highlight
 $ LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1

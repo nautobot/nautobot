@@ -60,13 +60,13 @@ django-filter = "~21.1"
 django-health-check = "~3.16.5"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.10.0"
-# Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
+# Modified Pre-order Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.13.4"
 # Prometheus metrics for Django
 django-prometheus = "~2.2.0"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
-# RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
+# RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
 django-rq = "~2.5.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.12.3", optional = true}

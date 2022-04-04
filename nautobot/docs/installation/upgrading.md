@@ -64,7 +64,7 @@ $ pip3 install --upgrade nautobot
 If you do not have any optional dependencies, you may skip this step.
 
 Once the new code is in place, verify that any optional Python packages required by your deployment (e.g. `napalm` or
-`django-auth-ldap`) are listed in `local_requirements.txt`. 
+`django-auth-ldap`) are listed in `local_requirements.txt`.
 
 Then, upgrade your dependencies using `pip3`:
 

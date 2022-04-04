@@ -16,14 +16,14 @@ enable this check after changing the above import pattern.
 
 The `flake8`, `black` and `hadolint` utilities are used by the CI process to enforce code style. It is strongly recommended to include these as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `flake8` and `black --check` prior to every commit attempt and abort if the validation fails.
 
-```
+```bash
 $ cd .git/hooks/
 $ ln -s ../../scripts/git-hooks/pre-commit
 ```
 
 You can also invoke these utilities manually against the development Docker containers by running:
 
-```
+```no-highlight
 invoke flake8
 invoke black
 invoke hadolint
@@ -56,9 +56,9 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * Nested API serializers generate minimal representations of an object. These are stored separately from the primary serializers to avoid circular dependencies. Always import nested serializers from other apps directly. For example, from within the DCIM app you would write `from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer`.
 
-* The combination of `nautbot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedFilterSet` and `nautobot.extras.filters.CustomFieldModelFilterSet` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these three classes.
+* The combination of `nautobot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedFilterSet` and `nautobot.extras.filters.CustomFieldModelFilterSet` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these three classes.
 
-* The combination of `nautbot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelForm` and `nautobot.extras.forms.RelationshipModelForm` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these three classes.
+* The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelForm` and `nautobot.extras.forms.RelationshipModelForm` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these three classes.
 
 ## Branding
 

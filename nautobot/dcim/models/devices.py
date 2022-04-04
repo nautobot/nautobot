@@ -271,7 +271,7 @@ class DeviceType(PrimaryModel):
         elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufactuer_id={self.manufacturer_id}&device_type_id={self.pk}"
+                url = f"{reverse('dcim:device_list')}?manufacturer_id={self.manufacturer_id}&device_type_id={self.pk}"
                 raise ValidationError(
                     {
                         "u_height": mark_safe(
@@ -562,6 +562,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "position",
         "face",
         "secrets_group",
+        "primary_ip",
         "comments",
     ]
     clone_fields = [
@@ -784,6 +785,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.position,
             self.get_face_display(),
             self.secrets_group.name if self.secrets_group else None,
+            self.primary_ip if self.primary_ip else None,
             self.comments,
         )
 

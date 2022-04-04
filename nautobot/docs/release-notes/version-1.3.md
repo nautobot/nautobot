@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.3
 
 This document describes all new features and changes in Nautobot 1.3.
@@ -12,7 +13,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 A new data model for representing [dynamic groups](../models/extras/dynamicgroup.md) of objects has been implemented. Dynamic groups can be used to organize objects together by matching criteria such as their site location or region, for example, and are dynamically updated whenever new matching objects are created, or existing objects are updated.
 
-For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported. 
+For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported.
 
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
@@ -26,7 +27,7 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - Job attributes (name, description, approval requirements, etc.) can now be managed via the Nautobot UI by an administrator or user with appropriate permissions to customize or override the attributes defined in the Job source code.
 - Jobs can now be identified by a `slug` as well as by their `class_path`.
 - A new set of REST API endpoints have been added to `/api/extras/jobs/<uuid>/`. The existing `/api/extras/jobs/<class_path>/` REST API endpoints continue to work but should be considered as deprecated.
-  - A new version of the REST API `/api/extras/jobs/` list endpoint has been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
+    - A new version of the REST API `/api/extras/jobs/` list endpoint has been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
 - As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
 
 !!! note
@@ -52,6 +53,18 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 
 The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
 
+#### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
+Introduce the `/api/users/tokens/` REST API endpoint, which includes a child endpoint that can be employed by a user to provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
+
+```
+$ curl -X POST \
+-H "Accept: application/json; indent=4" \
+-u "hankhill:I<3C3H8" \
+https://nautobot/api/users/tokens/
+```
+
+This endpoint specifically supports Basic Authentication in addition to the other REST API authentication methods.
+
 #### REST API Versioning ([#1465](https://github.com/nautobot/nautobot/issues/1465))
 
 Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
@@ -63,6 +76,10 @@ Nautobot's REST API now supports multiple versions, which may requested by modif
 
 !!! tip
     As a best practice, when developing a Nautobot REST API integration, your client should _always_ request the current API version it is being developed against, rather than relying on the default API behavior (which may change with a new Nautobot major release, as noted, and which also may not include the latest and greatest API endpoints already available but not yet made default in the current release).
+
+#### Webhook Pre/Post-change Data Added to Request Body ([#330](https://github.com/nautobot/nautobot/issues/330))
+
+Webhooks now provide a snapshot of data before and after a change. This also includes the differences between the old and new data. See the default request body section in webhook docs [here](../models/extras/webhook.md#default-request-body).
 
 ### Changed
 
@@ -90,6 +107,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
+- [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
 - [#1465](https://github.com/nautobot/nautobot/issues/1465) - Implemented REST API versioning
 - [#1525](https://github.com/nautobot/nautobot/issues/1525) - Implemented support for regex lookup expressions for `BaseFilterSet` filter fields in the API.
 
@@ -101,6 +119,13 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1479](https://github.com/nautobot/nautobot/issues/1479) - Updated Jobs documentation regarding the concrete Job database model.
 - [#1502](https://github.com/nautobot/nautobot/issues/1502) Finalized Dynamic Groups implementation for 1.3 release (including documentation and integration tests)
 - [#1521](https://github.com/nautobot/nautobot/pull/1521) - Consolidated Job REST API endpoints, taking advantage of REST API versioning.
+- [#1556](https://github.com/nautobot/nautobot/issues/1556) - Cleaned up typos and formatting issues across docs, few code spots.
+
+### Fixed
+
+- [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
+- [#1476](https://github.com/nautobot/nautobot/issues/1476) - Fixed a bug wherein a Job run via the REST API with a missing `schedule` would allow `approval_required` to be bypassed.
+- [#1563](https://github.com/nautobot/nautobot/issues/1563) - Fixed UI crash when trying to execute Jobs provided by disabled plugins. A friendly error message will now be displayed.
 
 ## v1.3.0b1 (2022-03-11)
 

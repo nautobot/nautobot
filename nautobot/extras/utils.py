@@ -32,7 +32,7 @@ def is_taggable(obj):
 
 def image_upload(instance, filename):
     """
-    Return a path for uploading image attchments.
+    Return a path for uploading image attachments.
     """
     path = "image-attachments/"
 

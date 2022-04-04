@@ -949,6 +949,12 @@ class JobAPIRunTestMixin:
     Mixin providing test cases for the "run" API endpoint, shared between the different versions of Job API testing.
     """
 
+    def setUp(self):
+        super().setUp()
+        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        self.job_model.enabled = True
+        self.job_model.validated_save()
+
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         """To be implemented by classes using this mixin."""
         raise NotImplementedError
@@ -1094,6 +1100,51 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         schedule = ScheduledJob.objects.last()
+        self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_var_no_schedule(self, mock_get_worker_count):
+        """
+        Run a job with `approval_required` without providing a schedule.
+
+        Assert an immediate schedule that enforces it.
+        """
+        # Set approval_required=True
+        self.job_model.approval_required = True
+        self.job_model.save()
+
+        # Do the stuff.
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": device_role.pk,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+            # schedule is omitted
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        # Assert that a JobResult was NOT created.
+        self.assertFalse(JobResult.objects.exists())
+
+        # Assert that we have an immediate ScheduledJob and that it matches the job_model.
+        schedule = ScheduledJob.objects.last()
+        self.assertIsNotNone(schedule)
+        self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
+        self.assertEqual(schedule.approval_required, self.job_model.approval_required)
         self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
 
         return (response, schedule)  # so subclasses can do additional testing
@@ -1295,12 +1346,6 @@ class JobTestVersion13(
     run_success_response_status = status.HTTP_201_CREATED
     api_version = "1.3"
 
-    def setUp(self):
-        super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        self.job_model.enabled = True
-        self.job_model.validated_save()
-
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
         return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
@@ -1377,12 +1422,6 @@ class JobTestVersion12(
 
     run_success_response_status = status.HTTP_200_OK
     api_version = "1.2"
-
-    def setUp(self):
-        super().setUp()
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        job_model.enabled = True
-        job_model.validated_save()
 
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         return reverse("extras-api:job-run", kwargs={"class_path": class_path})

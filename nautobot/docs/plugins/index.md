@@ -24,8 +24,8 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 
 ### Add entirely new features
 
-* **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.) These models can be integrated with core implmentations of GraphQL, webhooks, logging, custom relationships, custom fields, and tags.
-* **Add new URLs and views.** A plugin can register URLs under the `/plugins/` root path to provide browsable views (pages) for users.
+* **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.) These models can be integrated with core implementations of GraphQL, webhooks, logging, custom relationships, custom fields, and tags.
+* **Add new URLs and views.** A plugin can register URLs under the `/plugins/` root path to provide browseable views (pages) for users.
 * **Add new REST API endpoints.** A plugin can register URLs under the `/api/plugins/` root path to provide new REST API views.
 * **Add custom middleware.** A plugin can provide and register custom Django middleware.
 
@@ -54,7 +54,7 @@ The instructions below detail the process for installing and enabling a Nautobot
 You must be **absolutely** sure to install the plugin within Nautobot's virtual environment.
 
 !!! note
-	If you installed Nautobot in a production environment, you'll want to sudo to the nautobot user first using `sudo -iu nautobot`.
+    If you installed Nautobot in a production environment, you'll want to sudo to the nautobot user first using `sudo -iu nautobot`.
 
 ### Install the Package
 
@@ -95,9 +95,9 @@ PLUGINS_CONFIG = {
 
 After installing or upgrading a plugin, you should always run [`nautobot-server post_upgrade`](../administration/nautobot-server.md#post_upgrade). This command will ensure that any necessary post-installation tasks are run, for example:
 
-- Migrating the database to include any new or updated data models from the plugin
-- Collecting any static files provided by the plugin
-- Etc.
+* Migrating the database to include any new or updated data models from the plugin
+* Collecting any static files provided by the plugin
+* Etc.
 
 ```no-highlight
 # nautobot-server post_upgrade
