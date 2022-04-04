@@ -63,9 +63,6 @@ class TokenViewSet(ModelViewSet):
         Limit users to their own Tokens.
         """
         queryset = super().get_queryset()
-        # Workaround for schema generation (drf_yasg)
-        if getattr(self, "swagger_fake_view", False):
-            return queryset.none()
         return queryset.filter(user=self.request.user)
 
 
