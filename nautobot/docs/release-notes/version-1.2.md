@@ -150,11 +150,12 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Changed
 
-- [#1536](https://github.com/nautobot/nautobot/pull/1536) - Removed the ServiceUnavailable exception when no primary_ip is available for a device, as other connection options available.
+- [#1536](https://github.com/nautobot/nautobot/pull/1536) - Removed the ServiceUnavailable exception when no `primary_ip` is available for a device, but other connection options are available.
 - [#1584](https://github.com/nautobot/nautobot/issues/1584) - Replaced links in docs to celeryproject.org with celeryq.dev
 
 ### Fixed
 
+- [#1313](https://github.com/nautobot/nautobot/issues/1313) - Fixed GraphQL query error on OneToOneFields such as `IPAddress.primary_ip4_for`
 - [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
 - [#1467](https://github.com/nautobot/nautobot/issues/1467) - Fixed an issue where at certain browser widths the nav bar would cover the top of the page content.
 - [#1548](https://github.com/nautobot/nautobot/issues/1548) - Pin Jinja2 version for mkdocs requirements to fix RTD docs builds related to API deprecation in Jinja2 >= 3.1.0
