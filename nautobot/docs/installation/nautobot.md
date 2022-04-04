@@ -4,20 +4,20 @@ This section of the documentation discusses installing and configuring the Nauto
 
 These instructions will guide you through the following actions:
 
-- Establish a Nautobot root directory for the application environment
-- Create a `nautobot` system account
-- Create a Python virtual environment (virtualenv)
-- Install Nautobot and all required Python packages
-- Run the database schema migrations
-- Aggregate static resource files on disk
-- Verify the installation using the development/test server
+* Establish a Nautobot root directory for the application environment
+* Create a `nautobot` system account
+* Create a Python virtual environment (virtualenv)
+* Install Nautobot and all required Python packages
+* Run the database schema migrations
+* Aggregate static resource files on disk
+* Verify the installation using the development/test server
 
 !!! important
     Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
 
 ## Choose your `NAUTOBOT_ROOT`
 
-You need to select a directory path where everything related to Nautobot will be installed. We will use this value across the documentation and it will be referred to as `NAUTOBOT_ROOT`. 
+You need to select a directory path where everything related to Nautobot will be installed. We will use this value across the documentation and it will be referred to as `NAUTOBOT_ROOT`.
 
 We will be using this path as the home directory of the `nautobot` user.
 
@@ -49,7 +49,7 @@ In the following steps, we will have you create the virtualenv within the `NAUTO
 
 ### Create the Virtual Environment
 
-As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libaries.
+As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libraries.
 
 ```no-highlight
 $ sudo -u nautobot python3 -m venv /opt/nautobot
@@ -90,18 +90,19 @@ $ echo $NAUTOBOT_ROOT
 Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
 
 In Ubuntu 20.04:
+
 ```no-highlight
 $ echo $PATH
 /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 ```
 
 Due to differences between OS, in CentOS `$PATH` will appear as:
+
 ```no-highlight
 $ echo $PATH
 /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
 
 ```
-
 
 Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
 
@@ -136,16 +137,16 @@ Use Pip to install Nautobot:
 $ pip3 install nautobot
 ```
 
-!!! hint 
+!!! hint
     If you are using MySQL as your database backend, use `pip3 install "nautobot[mysql]"` to install Nautobot and the `mysqlclient` library together!
 
 ### Install MySQL client library
 
-If you are using MySQL as your database server you must install the `mysqlclient` database client for Python. 
+If you are using MySQL as your database server you must install the `mysqlclient` database client for Python.
 
 !!! warning
     If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
-    
+
 ```no-highlight
 $ pip3 install "nautobot[mysql]"
 ```
@@ -247,10 +248,10 @@ $ nautobot-server createsuperuser
 
 Nautobot relies upon many static files including:
 
-- `git` - For storing [Git repositories](../../models/extras/gitrepository)
-- `jobs` - For storing [custom Jobs](../../additional-features/jobs)
-- `media` - For storing [uploaded images and attachments](../../configuration/optional-settings/#media_root) (such as device type images)
-- `static` - The home for [CSS, JavaScript, and images](../../configuration/optional-settings/#static_root) used to serve the web interface
+* `git` - For storing [Git repositories](../../models/extras/gitrepository)
+* `jobs` - For storing [custom Jobs](../../additional-features/jobs)
+* `media` - For storing [uploaded images and attachments](../../configuration/optional-settings/#media_root) (such as device type images)
+* `static` - The home for [CSS, JavaScript, and images](../../configuration/optional-settings/#static_root) used to serve the web interface
 
 Each of these have their own corresponding setting that defined in `nautobot_config.py`, but by default they will all be placed in `NAUTOBOT_ROOT` unless you tell Nautobot otherwise by customizing their unique variable.
 

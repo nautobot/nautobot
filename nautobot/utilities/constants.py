@@ -12,6 +12,10 @@ FILTER_CHAR_BASED_LOOKUP_MAP = dict(
     nisw="istartswith",
     ie="iexact",
     nie="iexact",
+    re="regex",
+    nre="regex",
+    ire="iregex",
+    nire="iregex",
 )
 
 FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")

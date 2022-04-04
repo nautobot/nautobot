@@ -14,7 +14,7 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 ```
 
 !!! tip
-    The [Nautobot Installation Docs](../installation/nautobot.md#choose-your-nautobot_root) example sets `NAUTOBOT_ROOT` to `/opt/nautobot`, so `nautobot_config.py` would be found at `/opt/nautobot/nautobot_config.py`. 
+    The [Nautobot Installation Docs](../installation/nautobot.md#choose-your-nautobot_root) example sets `NAUTOBOT_ROOT` to `/opt/nautobot`, so `nautobot_config.py` would be found at `/opt/nautobot/nautobot_config.py`.
 
 You may specify a different location for the configuration as the argument to `init`:
 

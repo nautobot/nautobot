@@ -271,7 +271,7 @@ class DeviceType(PrimaryModel):
         elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufactuer_id={self.manufacturer_id}&device_type_id={self.pk}"
+                url = f"{reverse('dcim:device_list')}?manufacturer_id={self.manufacturer_id}&device_type_id={self.pk}"
                 raise ValidationError(
                     {
                         "u_height": mark_safe(
@@ -438,6 +438,7 @@ class Platform(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -475,7 +476,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     )
     name = models.CharField(max_length=64, blank=True, null=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True)
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number")
     asset_tag = models.CharField(
         max_length=50,
         blank=True,
@@ -561,6 +562,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "position",
         "face",
         "secrets_group",
+        "primary_ip",
         "comments",
     ]
     clone_fields = [
@@ -728,6 +730,18 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                 {"vc_position": "A device assigned to a virtual chassis must have its position defined."}
             )
 
+        # Validate device isn't being removed from a virtual chassis when it is the master
+        if not self.virtual_chassis and self.present_in_database:
+            existing_virtual_chassis = Device.objects.get(id=self.id).virtual_chassis
+            if existing_virtual_chassis and existing_virtual_chassis.master == self:
+                raise ValidationError(
+                    {
+                        "virtual_chassis": "The master device for the virtual chassis ({}) may not be removed".format(
+                            existing_virtual_chassis
+                        )
+                    }
+                )
+
     def save(self, *args, **kwargs):
 
         is_new = not self.present_in_database
@@ -770,6 +784,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.rack.name if self.rack else None,
             self.position,
             self.get_face_display(),
+            self.secrets_group.name if self.secrets_group else None,
+            self.primary_ip if self.primary_ip else None,
             self.comments,
         )
 

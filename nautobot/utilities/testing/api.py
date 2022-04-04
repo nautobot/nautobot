@@ -35,10 +35,12 @@ class APITestCase(ModelTestCase):
 
     client_class: Test client class
     view_namespace: Namespace for API views. If None, the model's app_label will be used.
+    api_version: Specific API version to test. Leave unset to test the default behavior. Override with set_api_version()
     """
 
     client_class = APIClient
     view_namespace = None
+    api_version = None
 
     def setUp(self):
         """
@@ -49,6 +51,15 @@ class APITestCase(ModelTestCase):
         self.add_permissions(*self.user_permissions)
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+        if self.api_version:
+            self.set_api_version(self.api_version)
+
+    def set_api_version(self, api_version):
+        """Set or unset a specific API version for requests in this test case."""
+        if api_version is None:
+            self.header["HTTP_ACCEPT"] = "application/json"
+        else:
+            self.header["HTTP_ACCEPT"] = f"application/json; version={api_version}"
 
     def _get_view_namespace(self):
         if self.view_namespace:
@@ -156,6 +167,8 @@ class APIViewTestCases:
             else:
                 response = self.client.get(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertIsInstance(response.data, dict)
+                self.assertIn("results", response.data)
                 self.assertEqual(len(response.data["results"]), self._get_queryset().count())
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -168,6 +181,8 @@ class APIViewTestCases:
             response = self.client.get(url, **self.header)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
             self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
 
@@ -207,6 +222,8 @@ class APIViewTestCases:
             # Try GET to permitted objects
             response = self.client.get(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), 2)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -228,9 +245,17 @@ class APIViewTestCases:
 
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            data = response.json()
+
+            self.assertIn("actions", data)
 
             # Grab any field that has choices defined (fields with enums)
-            field_choices = {k: v["choices"] for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+            if "POST" in data["actions"]:
+                field_choices = {k: v["choices"] for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
+                field_choices = {k: v["choices"] for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            else:
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
             # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
             # Broken down to provide better failure messages
@@ -254,9 +279,17 @@ class APIViewTestCases:
 
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            data = response.json()
+
+            self.assertIn("actions", data)
 
             # Grab any field name that has choices defined (fields with enums)
-            field_choices = {k for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+            if "POST" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
+                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            else:
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
             self.assertEqual(set(self.choices_fields), field_choices)
 
@@ -275,7 +308,12 @@ class APIViewTestCases:
             self.user.save()
 
             response = self.client.options(self._get_list_url(), **self.header)
-            actions = response.json()["actions"]["POST"]
+            data = response.json()
+
+            self.assertIn("actions", data)
+            self.assertIn("POST", data["actions"])
+
+            actions = data["actions"]["POST"]
             choices = actions["status"]["choices"]
 
             # Import Status here to avoid circular import issues w/ test utilities.

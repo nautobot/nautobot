@@ -421,8 +421,6 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         Execute a NAPALM method on a Device
         """
         device = get_object_or_404(self.queryset, pk=pk)
-        if not device.primary_ip:
-            raise ServiceUnavailable("This device does not have a primary IP address configured.")
         if device.platform is None:
             raise ServiceUnavailable("No platform is configured for this device.")
         if not device.platform.napalm_driver:

@@ -4,6 +4,13 @@
 {% block extra_buttons %}
         {% if perms.extras.change_gitrepository %}
             <form class="form-inline" style="display: inline-block"
+                  method="post" action="{% url 'extras:gitrepository_dryrun' slug=object.slug %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-info">
+                    <i class="mdi mdi-book-refresh" aria-hidden="true"></i> Dry-Run
+                </button>
+            </form>
+            <form class="form-inline" style="display: inline-block"
                   method="post" action="{% url 'extras:gitrepository_sync' slug=object.slug %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-primary">
@@ -13,19 +20,11 @@
         {% endif %}
 {% endblock extra_buttons %}
 
-{% block nav_tabs %}
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Git Repository</a>
-        </li>
+{% block extra_nav_tabs %}
         <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
              <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
         </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:gitrepository_changelog' slug=object.slug %}">Change Log</a>
-            </li>
-        {% endif %}
-{% endblock nav_tabs %}
+{% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
             <div class="panel panel-default">
@@ -85,9 +84,9 @@
                                 {{ entry.name|title }}</td>
                             <td>
                                 {% if entry.content_identifier in object.provided_contents %}
-                                    <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                                    {{ true | render_boolean }}
                                 {% else %}
-                                    <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                                    {{ false | render_boolean }}
                                 {% endif %}
                             </td>
                         </tr>

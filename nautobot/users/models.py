@@ -58,7 +58,7 @@ class User(BaseModel, AbstractUser):
 
         # Iterate down the hierarchy, returning the default value if any invalid key is encountered
         for key in keys:
-            if type(d) is dict and key in d:
+            if isinstance(d, dict) and key in d:
                 d = d.get(key)
             else:
                 return default
@@ -92,7 +92,7 @@ class User(BaseModel, AbstractUser):
         # Iterate through the hierarchy to find the key we're setting. Raise TypeError if we encounter any
         # interim leaf nodes (keys which do not contain dictionaries).
         for i, key in enumerate(keys[:-1]):
-            if key in d and type(d[key]) is dict:
+            if key in d and isinstance(d[key], dict):
                 d = d[key]
             elif key in d:
                 err_path = ".".join(path.split(".")[: i + 1])
@@ -102,7 +102,7 @@ class User(BaseModel, AbstractUser):
 
         # Set a key based on the last item in the path. Raise TypeError if attempting to overwrite a non-leaf node.
         key = keys[-1]
-        if key in d and type(d[key]) is dict:
+        if key in d and isinstance(d[key], dict):
             raise TypeError(f"Key '{path}' has child keys; cannot assign a value")
         else:
             d[key] = value
@@ -128,7 +128,7 @@ class User(BaseModel, AbstractUser):
         for key in keys[:-1]:
             if key not in d:
                 break
-            if type(d[key]) is dict:
+            if isinstance(d[key], dict):
                 d = d[key]
 
         key = keys[-1]
@@ -172,18 +172,19 @@ class Token(BaseModel):
     description = models.CharField(max_length=200, blank=True)
 
     class Meta:
-        pass
+        ordering = ["created"]
 
     def __str__(self):
         # Only display the last 24 bits of the token to avoid accidental exposure.
-        return "{} ({})".format(self.key[-6:], self.user)
+        return f"{self.key[-6:]} ({self.user})"
 
     def save(self, *args, **kwargs):
         if not self.key:
             self.key = self.generate_key()
         return super().save(*args, **kwargs)
 
-    def generate_key(self):
+    @staticmethod
+    def generate_key():
         # Generate a random 160-bit key expressed in hexadecimal.
         return binascii.hexlify(os.urandom(20)).decode()
 
@@ -252,6 +253,6 @@ class ObjectPermission(BaseModel):
         """
         Return all constraint sets as a list (even if only a single set is defined).
         """
-        if type(self.constraints) is not list:
+        if not isinstance(self.constraints, list):
             return [self.constraints]
         return self.constraints

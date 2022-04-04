@@ -2,24 +2,24 @@
 {% load form_helpers %}
 {% load helpers %}
 
-{% block title %}{{ job }}{% endblock %}
+{% block title %}{{ job_model }}{% endblock %}
 
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
-                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}">{{ grouping|bettertitle }}</a></li>
-                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}.module.{{ module }}">{{ module }}</a></li>
-                <li>{{ job }}</li>
+                <li>{{ job_model.grouping | bettertitle }}</li>
+                <li><a href="{{ job_model.get_absolute_url }}">{{ job_model }}</a></li>
+                <li>Submission and Scheduling</li>
             </ol>
         </div>
     </div>
-    <h1>{{ job }}</h1>
-    {% if job.read_only %}
+    <h1>{{ job_model }}</h1>
+    {% if job_model.read_only %}
         <label class="label label-default">Read-only</label>
     {% endif %}
-    <p>{{ job.description }}</p>
+    <p>{{ job_model.description | render_markdown }}</p>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
             <a href="#run" role="tab" data-toggle="tab" class="active">Run</a>
@@ -36,6 +36,15 @@
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i>
                             You do not have permission to run jobs.
+                        </div>
+                    {% endif %}
+                    {% if not job_model.installed or job_model.job_class is None %}
+                        <div class="alert alert-warning">
+                            <i class="mdi mdi-alert"></i> This job is not presently installed and cannot be run.
+                        </div>
+                    {% elif not job_model.enabled %}
+                        <div class="alert alert-warning">
+                            <i class="mdi mdi-alert"></i> This job is not enabled to be run.
                         </div>
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
@@ -72,7 +81,7 @@
                             <div class="panel-body">
                                 {% render_form schedule_form %}
                             </div>
-                            {% if job.approval_required %}
+                            {% if job_model.approval_required %}
                                 <div class="panel-footer">
                                     <span class="help-block">
                                         <i class="mdi mdi-information-outline"></i>
@@ -82,7 +91,13 @@
                             {% endif %}
                         </div>
                         <div class="pull-right">
-                            <button type="submit" name="_run" id="id__run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Run Job Now</button>
+                            <button type="submit" name="_run" id="id__run" class="btn btn-primary"
+                                {% if not perms.extras.run_job or not job_model.runnable %}
+                                    disabled="disabled"
+                                {% endif %}
+                            >
+                                <i class="mdi mdi-play"></i> Run Job Now
+                            </button>
                             <a href="{% url 'extras:job_list' %}" class="btn btn-default">Cancel</a>
                         </div>
                     </form>
@@ -90,14 +105,16 @@
             </div>
         </div>
         <div role="tabpanel" class="tab-pane" id="source">
-            <p><code>{{ job.filename }}</code></p>
-            <pre>{{ job.source }}</pre>
+            {% if job_model.installed and job_model.job_class is not None %}
+                <p><code>{{ job_model.job_class.filename }}</code></p>
+                <pre>{{ job_model.job_class.source }}</pre>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
 {% block javascript %}
 <script type="text/javascript">
-    var requires_approval = {{ job.approval_required|yesno:"true,false" }};
+    var requires_approval = {{ job_model.approval_required|yesno:"true,false" }};
     var run_now_text;
     var schedule_text;
 

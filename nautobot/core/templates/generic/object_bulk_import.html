@@ -88,13 +88,7 @@
                                 <td>
                                     <code>{{ name }}</code>
                                 </td>
-                                <td>
-                                    {% if field.required %}
-                                        <i class="mdi mdi-check-bold text-success" title="Required"></i>
-                                    {% else %}
-                                        <span class="text-muted">&mdash;</span>
-                                    {% endif %}
-                                </td>
+                                <td>{{ field.required | render_boolean }}</td>
                                 <td>
                                     {% if field.to_field_name %}
                                         <code>{{ field.to_field_name }}</code>

@@ -19,7 +19,7 @@ def post_data(data):
     for key, value in data.items():
         if value is None:
             ret[key] = ""
-        elif type(value) in (list, tuple):
+        elif isinstance(value, (list, tuple)):
             if value and hasattr(value[0], "pk"):
                 # Value is a list of instances
                 ret[key] = [v.pk for v in value]

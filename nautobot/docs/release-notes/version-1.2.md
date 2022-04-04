@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.2
 
 This document describes all new features and changes in Nautobot 1.2.
@@ -51,8 +52,8 @@ query {
 
 #### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
 
-Complex GraphQL queries have been greatly optimized thanks to integration of 
-[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+Complex GraphQL queries have been greatly optimized thanks to integration of
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot!
 
 In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
 
@@ -81,7 +82,7 @@ Jobs can now be optionally defined as `approval_required = True`, in which case 
 Jobs can now be scheduled for execution at a future date and time (such as during a planned maintenance window), and can also be scheduled for repeated execution on an hourly, daily, or weekly recurring cadence.
 
 !!! note
-    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
+    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
 Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
 
@@ -129,7 +130,7 @@ The Admin sub-site within Nautobot (`/admin/` and its child pages) has been reva
 Job log messages are now stored in a separate database table as a separate `JobLogEntry` data model, instead of being stored as JSON on the `JobResult` model/table. This provides faster and more robust rendering of `JobResult`-related views and lays groundwork for future enhancements of the Jobs feature.
 
 !!! note
-    If you use Jobs inside tests, your TestCase class(es) should have `@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)`. This will allow the tests and the `JobLogEntry` objects to use the `default` database.
+    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../additional-features/jobs.md#testing-jobs) for details.
 
 !!! note
     Because `JobLogEntry` records reference their associated `JobResult`, the pattern `job.job_result = JobResult()` (creating only an in-memory `JobResult` object, rather than a database entry) will no longer work. Instead you will need to create a proper JobResult database object `job.job_result = JobResult.objects.create(...)`.
@@ -139,6 +140,95 @@ Job log messages are now stored in a separate database table as a separate `JobL
 All models that have `slug` fields now use `AutoSlugField` from the `django-extensions` package. This means that when creating a record via the REST API, CSV import, or direct ORM Python calls, the `slug` field is now fully optional; if unspecified, it will be automatically assigned a unique value, just as how a `slug` is auto-populated in the UI when creating a new record.
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
+
+## v1.2.11 (2022-MM-DD)
+
+### Added
+
+- [#1501](https://github.com/nautobot/nautobot/issues/1501) - Add IP field to CSV export of device.
+- [#1529](https://github.com/nautobot/nautobot/pull/1529) - Added list of standard hex colors to the Tags documentation.
+
+### Changed
+
+- [#1536](https://github.com/nautobot/nautobot/pull/1536) - Removed the ServiceUnavailable exception when no primary_ip is available for a device, as other connection options available.
+- [#1584](https://github.com/nautobot/nautobot/issues/1584) - Replaced links in docs to celeryproject.org with celeryq.dev
+
+### Fixed
+
+- [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
+- [#1467](https://github.com/nautobot/nautobot/issues/1467) - Fixed an issue where at certain browser widths the nav bar would cover the top of the page content.
+- [#1548](https://github.com/nautobot/nautobot/issues/1548) - Pin Jinja2 version for mkdocs requirements to fix RTD docs builds related to API deprecation in Jinja2 >= 3.1.0
+- [#1583](https://github.com/nautobot/nautobot/issues/1583) - Fixed Nautobot service definition in PostgreSQL-backed development environment.
+
+## v1.2.10 (2022-03-21)
+
+### Added
+
+- [#1492](https://github.com/nautobot/nautobot/pull/1492) - Added note in the Jobs documentation about the use of `AbortTransaction` to end the job and force rollback.
+- [#1517](https://github.com/nautobot/nautobot/pull/1517) - Added password filtering example to advanced logging section in docs.
+
+### Changed
+
+- [#1514](https://github.com/nautobot/nautobot/pull/1514) - Simplified switching between PostgreSQL and MySQL database backends in the developer environment.
+- [#1518](https://github.com/nautobot/nautobot/pull/1518) - Updated GitHub Pull Request template to include detail section, todo list.
+
+### Fixed
+
+- [#1511](https://github.com/nautobot/nautobot/issues/1511) - Fixed left column of Read The Docs being cut off.
+- [#1522](https://github.com/nautobot/nautobot/pull/1522) - Fixed link name attribute name in developer docs.
+
+## v1.2.9 (2022-03-14)
+
+### Fixed
+
+- [#1431](https://github.com/nautobot/nautobot/issues/1431) - Fixed potential failure of `extras.0017_joblog_data_migration` migration when the job logs contain messages mistakenly logged as object references.
+- [#1459](https://github.com/nautobot/nautobot/issues/1459) - Fixed incorrect display of related devices and VMs in the Cluster Type and Cluster Group detail views.
+- [#1469](https://github.com/nautobot/nautobot/issues/1469) - Fixed incorrect CSV export for devices
+
+### Security
+
+!!! danger
+    It is highly recommended that users of Python 3.6 prioritize upgrading to a newer version of Python. **Nautobot will be removing support for Python 3.6 in a future update.**
+
+!!! important
+    For users remaining on Python 3.6, please know that upgrading to Nautobot v1.2.9 **will not resolve these CVEs for your installation**. The only remedy at this time is to upgrade your systems to utilize Python 3.7 or later.
+
+- [#1487](https://github.com/nautobot/nautobot/issues/1487) - Implemented fixes for [CVE-2022-22817](https://github.com/advisories/GHSA-8vj2-vxx3-667w), [CVE-2022-24303](https://github.com/advisories/GHSA-9j59-75qj-795w), and [potential infinite loop](https://github.com/advisories/GHSA-4fx9-vc88-q2xc) by requiring Pillow >=9.0.1 for Python version >=3.7. For Python version <3.7 (e.g. 3.6), it is recommended that you prioritize upgrading your environment to use Python 3.7 or higher. Support for Python 3.6 will be removed in a future update.
+
+## v1.2.8 (2022-03-07)
+
+### Added
+
+- [#839](https://github.com/nautobot/nautobot/issues/839) - Add CODE_OF_CONDUCT.md to repository.
+- [#1242](https://github.com/nautobot/nautobot/issues/1242) - Add MAJOR.MINOR tags to Docker images upon release.
+- [#1299](https://github.com/nautobot/nautobot/pull/1299) - Add SECURITY.md to repository.
+- [#1388](https://github.com/nautobot/nautobot/pull/1388) - Added beta version of GitHub Issue Form style for feature request.
+- [#1419](https://github.com/nautobot/nautobot/pull/1419) - Add documentation for specifying a CA cert file for LDAP authentication backend.
+- [#1446](https://github.com/nautobot/nautobot/pull/1446) - Apply title labels to Docker images.
+
+### Changed
+
+- [#1348](https://github.com/nautobot/nautobot/pull/1348) - Pin Selenium Grid container version to match Python Client version.
+- [#1432](https://github.com/nautobot/nautobot/issues/1432) - Update django-redis to `5.2.x` to address `5.1.x` blocking redis `4.x` versions.
+- [#1447](https://github.com/nautobot/nautobot/pull/1447) - Minor `nit` on Github Issue Form styling.
+- [#1452](https://github.com/nautobot/nautobot/pull/1452) - Changed GitHub release workflow to not run on prerelease releases.
+- [#1453](https://github.com/nautobot/nautobot/pull/1453) - Changed feature request to use GitHub Issue Form.
+
+### Fixed
+
+- [#1301](https://github.com/nautobot/nautobot/issues/1301) - Fixed window history handling for views with tabs in Safari/Firefox.
+- [#1302](https://github.com/nautobot/nautobot/issues/1302) - Fixed missing Advanced tab on Virtual Machine detail view.
+- [#1398](https://github.com/nautobot/nautobot/issues/1398) - Fixed missing safeguard for removing master from Virtual Chassis via API.
+- [#1399](https://github.com/nautobot/nautobot/issues/1399) - Fixed not being able to set master to `null` on Virtual Chassis API.
+- [#1405](https://github.com/nautobot/nautobot/issues/1405) - Fixed incorrect import in 'startplugin' template code.
+- [#1412](https://github.com/nautobot/nautobot/issues/1412) - Fixed not being able to query for prefix family via GraphQL.
+- [#1442](https://github.com/nautobot/nautobot/issues/1442) - Fixed missing Advanced tab on Job Result, Git Repository, and Config Context Schema detail views.
+
+## v1.2.7 (2022-02-22)
+
+### Changed
+
+- [#1403](https://github.com/nautobot/nautobot/issues/1403) - Changes the GitHub Action on Release version template variable name.
 
 ## v1.2.6 (2022-02-22)
 
