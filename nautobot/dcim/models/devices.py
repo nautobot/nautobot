@@ -561,6 +561,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "position",
         "face",
         "secrets_group",
+        "primary_ip",
         "comments",
     ]
     clone_fields = [
@@ -783,6 +784,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.position,
             self.get_face_display(),
             self.secrets_group.name if self.secrets_group else None,
+            self.primary_ip if self.primary_ip else None,
             self.comments,
         )
 

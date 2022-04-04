@@ -4,7 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.fields.reverse_related import ManyToOneRel
+from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
 
 import graphene
 from graphene.types import generic
@@ -179,7 +179,8 @@ def extend_schema_type_filter(schema_type, model):
     """
     for field in model._meta.get_fields():
         # Check attribute is a ManyToOne field
-        if not isinstance(field, ManyToOneRel):
+        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat is as a list
+        if not isinstance(field, ManyToOneRel) or isinstance(field, OneToOneRel):
             continue
         child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
         if child_schema_type:
