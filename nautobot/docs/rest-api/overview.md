@@ -65,6 +65,9 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 
 Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
+!!! tip
+    You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=1.3` or `/api/?api_version=1.2`
+
 ## Endpoint Hierarchy
 
 Nautobot's entire REST API is housed under the API root at `https://<hostname>/api/`. The URL structure is divided at the root level by application: circuits, DCIM, extras, IPAM, plugins, tenancy, users, and virtualization. Within each application exists a separate path for each model. For example, the provider and circuit objects are located under the "circuits" application:
@@ -95,7 +98,12 @@ See the [filtering documentation](filtering.md) for more details.
 
 ## Versioning
 
-As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request the API version as implemented in a given Nautobot release by including the major.minor version number in the HTTP Accept header, for example `Accept: application/json; version=1.3`.
+As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
+
+1. A client may include a `version` in its HTTP Accept header, for example `Accept: application/json; version=1.3`
+2. A client may include an `api_version` as a URL query parameter, for example `/api/extras/jobs/?api_version=1.3`
+
+Generally the former approach is recommended when writing automated API integrations, as it can be set as a general request header alongside the [authentication token](authentication.md) and re-used across a series of REST API interactions, while the latter approach may be more convenient when initially exploring the REST API via the interactive documentation as described above.
 
 ### Default Versions and Backward Compatibility
 
@@ -145,23 +153,23 @@ As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-com
 | API endpoint        | Requested API version | Response                                     |
 | ------------------- | --------------------- | -------------------------------------------- |
 | `/api/extras/jobs/` | (unspecified)         | Deprecated 1.2-compatible REST API           |
-| `/api/extras/jobs/` | `version=1.2`         | Deprecated 1.2-compatible REST API           |
-| `/api/extras/jobs/` | `version=1.3`         | New/updated 1.3-compatible REST API          |
+| `/api/extras/jobs/` | `1.2`                 | Deprecated 1.2-compatible REST API           |
+| `/api/extras/jobs/` | `1.3`                 | New/updated 1.3-compatible REST API          |
 
 !!! important
-    Note again that if not specifying an API version, the client _would not_ receive the latest API version when breaking changes are present. Even though the server had Nautobot version 1.3, the default Jobs REST API behavior would be that of Nautobot 1.2. Only by actually specifying `version=1.3` was the client able to access the new Jobs REST API.
+    Note again that if not specifying an API version, the client _would not_ receive the latest API version when breaking changes are present. Even though the server had Nautobot version 1.3, the default Jobs REST API behavior would be that of Nautobot 1.2. Only by actually requesting API version `1.3` was the client able to access the new Jobs REST API.
 
 | API endpoint        | Requested API version | Response                                     |
 | ------------------- | --------------------- | -------------------------------------------- |
 | `/api/dcim/sites/`  | (unspecified)         | 1.3-updated, 1.2-compatible REST API         |
-| `/api/dcim/sites/`  | `version=1.2`         | 1.3-updated, 1.2-compatible REST API         |
-| `/api/dcim/sites/`  | `version=1.3`         | 1.3-updated, 1.2-compatible REST API         |
+| `/api/dcim/sites/`  | `1.2`                 | 1.3-updated, 1.2-compatible REST API         |
+| `/api/dcim/sites/`  | `1.3`                 | 1.3-updated, 1.2-compatible REST API         |
 
 | API endpoint        | Requested API version | Response                                     |
 | ------------------- | --------------------- | -------------------------------------------- |
 | `/api/dcim/racks/`  | (unspecified)         | 1.2-compatible REST API (unchanged)          |
-| `/api/dcim/racks/`  | `version=1.2`         | 1.2-compatible REST API (unchanged)          |
-| `/api/dcim/racks/`  | `version=1.3`         | 1.3-compatible REST API (unchanged from 1.2) |
+| `/api/dcim/racks/`  | `1.2`                 | 1.2-compatible REST API (unchanged)          |
+| `/api/dcim/racks/`  | `1.3`                 | 1.3-compatible REST API (unchanged from 1.2) |
 
 ## Serialization
 

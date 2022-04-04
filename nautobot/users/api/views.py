@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.models import Count
+from drf_spectacular.utils import extend_schema, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -62,9 +63,6 @@ class TokenViewSet(ModelViewSet):
         Limit users to their own Tokens.
         """
         queryset = super().get_queryset()
-        # Workaround for schema generation (drf_yasg)
-        if getattr(self, "swagger_fake_view", False):
-            return queryset.none()
         return queryset.filter(user=self.request.user)
 
 
@@ -91,12 +89,14 @@ class UserConfigViewSet(ViewSet):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
     def list(self, request):
         """
         Return the config_data for the currently authenticated User.
         """
         return Response(request.user.config_data)
 
+    @extend_schema(request=OpenApiTypes.OBJECT)
     def patch(self, request):
         """
         Update the config_data for the currently authenticated User.

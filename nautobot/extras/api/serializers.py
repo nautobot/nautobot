@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from drf_yasg.utils import swagger_serializer_method
+from django.utils.functional import classproperty
+from drf_spectacular.utils import extend_schema_field
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.extras.models.secrets import SecretsGroupAssociation
 from rest_framework import serializers
@@ -258,7 +259,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -298,7 +299,7 @@ class ConfigContextSchemaSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -320,7 +321,7 @@ class ContentTypeSerializer(serializers.ModelSerializer):
         model = ContentType
         fields = ["id", "url", "app_label", "model", "display"]
 
-    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
         return obj.app_labeled_name
 
@@ -454,7 +455,7 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
             "file_extension",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -580,7 +581,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
         return data
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_parent(self, obj):
 
         # Static mapping of models to their nested serializers
@@ -752,10 +753,11 @@ class JobClassSerializer(serializers.Serializer):
     vars = serializers.SerializerMethodField(read_only=True)
     result = NestedJobResultSerializer(required=False)
 
+    @extend_schema_field(serializers.DictField)
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
 
-    @swagger_serializer_method(serializer_or_field=serializers.UUIDField)
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
     def get_pk(self, instance):
         try:
             jobs = Job.objects
@@ -823,7 +825,7 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
             "object_data",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_changed_object(self, obj):
         """
         Serialize a nested representation of the changed object.
@@ -1011,6 +1013,16 @@ class StatusModelSerializerMixin(serializers.Serializer):
     """Mixin to add `status` choice field to model serializers."""
 
     status = StatusSerializerField(queryset=Status.objects.all())
+
+    @classproperty
+    def status_choices(cls):
+        """
+        Get the list of valid status values for this serializer.
+
+        May be necessary to use with settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] at some point if
+        we ever end up with multiple serializers whose default set of status choices are identical.
+        """
+        return list(cls().fields["status"].get_choices().keys())
 
 
 #
