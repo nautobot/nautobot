@@ -1343,3 +1343,27 @@ query {
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device_types"], list, result)
         self.assertEqual(result.data["device_types"][0]["model"], self.devicetype.model, result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_with_nested_onetoone(self):
+        """Test that querying a nested OneToOne field works as expected"""
+        query = """
+        query ($device_id: ID!) {
+            device(id: $device_id) {
+                interfaces {
+                    ip_addresses {
+                        primary_ip4_for {
+                            id
+                        }
+                    }
+                }
+            }
+        }
+        """
+        # set device1.primary_ip4
+        self.device1.primary_ip4 = self.ipaddr1
+        self.device1.save()
+        result = self.execute_query(query, variables={"device_id": str(self.device1.id)})
+        self.assertNotIn("error", str(result))
+        expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": {"id": str(self.device1.id)}}]}
+        self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
