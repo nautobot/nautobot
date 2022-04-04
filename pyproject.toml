@@ -158,7 +158,7 @@ invoke = "~1.5.0"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~3.0.1"
 # Rendering docs to HTML
-mkdocs = "~1.2.3"
+mkdocs = "~1.3.0"
 # Integration Tests
 requests = "~2.25.1"
 # Selenium web drivers for live integration testing
