@@ -144,6 +144,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
+- [#1123](https://github.com/nautobot/nautobot/issues/1123) - Add validation for IPAddress assigned_object_type and assigned_object_id.
 - [#1146](https://github.com/nautobot/nautobot/issues/1146) - Added change date filtering lookup expressions to GraphQL.
 - [#1501](https://github.com/nautobot/nautobot/issues/1501) - Add IP field to CSV export of device.
 - [#1529](https://github.com/nautobot/nautobot/pull/1529) - Added list of standard hex colors to the Tags documentation.

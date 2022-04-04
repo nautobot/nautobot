@@ -858,6 +858,13 @@ class IPAddress(PrimaryModel, StatusModel):
     def clean(self):
         super().clean()
 
+        # Validate both assigned_object_type and assigned_object_id are either null or not null
+        fields = [self.assigned_object_type, self.assigned_object_id]
+        if not all(fields) and any(fields):
+            raise ValidationError(
+                {"__all__": "assigned_object_type and assigned_object_id must either both be null or both be non-null"}
+            )
+
         if self.address:
 
             # /0 masks are not acceptable
