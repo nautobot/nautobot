@@ -759,7 +759,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
             "name": "plugin_test",
             "slug": "plugin-test",
             "remote_url": "https://localhost/plugin-test",
-            "provided_contents": ["dummy_plugin.textfile"],
+            "provided_contents": ["example_plugin.textfile"],
         }
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
