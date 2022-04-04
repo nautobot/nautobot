@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.models import Count
+from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
@@ -8,7 +9,7 @@ from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.views import ModelViewSet
 from nautobot.users import filters
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import deepmerge
 from . import serializers
@@ -38,6 +39,33 @@ class GroupViewSet(ModelViewSet):
     queryset = RestrictedQuerySet(model=Group).annotate(user_count=Count("user")).order_by("name")
     serializer_class = serializers.GroupSerializer
     filterset_class = filters.GroupFilterSet
+
+
+#
+# REST API tokens
+#
+
+
+class TokenViewSet(ModelViewSet):
+    queryset = RestrictedQuerySet(model=Token).prefetch_related("user")
+    serializer_class = serializers.TokenSerializer
+    filterset_class = filters.TokenFilterSet
+
+    @property
+    def authentication_classes(self):
+        """Inherit default authentication_classes and basic authentication."""
+        classes = super().authentication_classes
+        return classes + [BasicAuthentication]
+
+    def get_queryset(self):
+        """
+        Limit users to their own Tokens.
+        """
+        queryset = super().get_queryset()
+        # Workaround for schema generation (drf_yasg)
+        if getattr(self, "swagger_fake_view", False):
+            return queryset.none()
+        return queryset.filter(user=self.request.user)
 
 
 #
