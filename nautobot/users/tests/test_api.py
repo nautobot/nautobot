@@ -177,9 +177,9 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_create_other_user_token_restriction(self):
-    """
-    Test to ensure that a user cannot create a token belonging to a different user.
-    """
+        """
+        Test to ensure that a user cannot create a token belonging to a different user.
+        """
         # List all tokens available to user1
         self.add_permissions("users.add_token")
         self.add_permissions("users.change_token")
@@ -189,9 +189,9 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(len(Token.objects.filter(user=self.basic_auth_user_granted)), previous_token_count)
 
     def test_edit_other_user_token_restriction(self):
-    """
-    Tests to ensure that a user cannot modify tokens belonging to other users.
-    """
+        """
+        Tests to ensure that a user cannot modify tokens belonging to other users.
+        """
         other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
 
         # Check to make sure user1 can't modify another user's token, without permissions
