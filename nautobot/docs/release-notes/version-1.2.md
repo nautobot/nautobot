@@ -151,6 +151,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Changed
 
 - [#1536](https://github.com/nautobot/nautobot/pull/1536) - Removed the ServiceUnavailable exception when no `primary_ip` is available for a device, but other connection options are available.
+- [#1581](https://github.com/nautobot/nautobot/issues/1581) - Changed MultipleChoiceJSONField to accept choices as a callable, fixing Datasource Contents provided by plugins are not accepted as valid choice by REST API.
 - [#1584](https://github.com/nautobot/nautobot/issues/1584) - Replaced links in docs to celeryproject.org with celeryq.dev
 
 ### Fixed
