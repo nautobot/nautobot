@@ -908,7 +908,7 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
 class DeviceTypeBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
-    u_height = forms.IntegerField(min_value=1, required=False)
+    u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
 
     class Meta:
