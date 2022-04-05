@@ -478,7 +478,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
 
     provided_contents = MultipleChoiceJSONField(
-        choices=get_datasource_content_choices("extras.gitrepository"),
+        choices=lambda: get_datasource_content_choices("extras.gitrepository"),
         allow_blank=True,
         required=False,
     )
