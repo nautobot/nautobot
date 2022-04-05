@@ -62,12 +62,12 @@ Return the ideal foreground color (black `"#000000"` or white `"#ffffff"`) given
 color: {{ object.status.color|fgcolor }}
 ```
 
-### get_docs_url
+### get_docs
 
-Return the documentation URL for the specified model.
+Render and return documentation for the specified model.
 
 ```django
-{{ obj | get_docs_url }}
+{{ obj | get_docs }}
 ```
 
 
