@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from django import forms
 from django.conf import settings
+from django.core.validators import MaxValueValidator
 from django.db import models
 import django_filters
 from django_filters.constants import EMPTY_VALUES
@@ -47,29 +48,44 @@ def multivalue_field_factory(field_class):
 #
 # Filters
 #
+# Note that for the various MultipleChoiceFilter subclasses below, they additionally inherit from `CharFilter`,
+# `DateFilter`, `DateTimeFilter`, etc. This has no particular impact on the behavior of these filters (as we're
+# explicitly overriding their `field_class` attribute anyway), but is done as a means of type hinting
+# for generating a more accurate REST API OpenAPI schema for these filter types.
+#
 
 
-class MultiValueCharFilter(django_filters.MultipleChoiceFilter):
+class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(forms.CharField)
 
 
-class MultiValueDateFilter(django_filters.MultipleChoiceFilter):
+class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(forms.DateField)
 
 
-class MultiValueDateTimeFilter(django_filters.MultipleChoiceFilter):
+class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(forms.DateTimeField)
 
 
-class MultiValueNumberFilter(django_filters.MultipleChoiceFilter):
+class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(forms.IntegerField)
+
+    class MultiValueMaxValueValidator(MaxValueValidator):
+        """As django.core.validators.MaxValueValidator, but apply to a list of values rather than a single value."""
+
+        def compare(self, values, limit_value):
+            return any(int(value) > limit_value for value in values)
+
+    def get_max_validator(self):
+        """Like django_filters.NumberFilter, limit the maximum value for any single entry as an anti-DoS measure."""
+        return self.MultiValueMaxValueValidator(1e50)
 
 
 class MultiValueBigNumberFilter(MultiValueNumberFilter):
     """Subclass of MultiValueNumberFilter used for BigInteger model fields."""
 
 
-class MultiValueTimeFilter(django_filters.MultipleChoiceFilter):
+class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(forms.TimeField)
 
 
@@ -79,6 +95,10 @@ class MACAddressFilter(django_filters.CharFilter):
 
 class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(MACAddressField)
+
+
+class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
+    field_class = multivalue_field_factory(forms.UUIDField)
 
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
@@ -296,7 +316,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.TextField: {"filter_class": MultiValueCharFilter},
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
-            models.UUIDField: {"filter_class": MultiValueCharFilter},
+            models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             MACAddressField: {"filter_class": MultiValueMACAddressFilter},
         }
     )

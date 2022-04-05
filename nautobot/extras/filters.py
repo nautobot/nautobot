@@ -742,7 +742,6 @@ class ObjectChangeFilterSet(BaseFilterSet):
         method="search",
         label="Search",
     )
-    time = django_filters.DateTimeFromToRangeFilter()
     changed_object_type = ContentTypeFilter()
     user_id = django_filters.ModelMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -766,6 +765,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
             "changed_object_type_id",
             "changed_object_id",
             "object_repr",
+            "time",
         ]
 
     def search(self, queryset, name, value):
