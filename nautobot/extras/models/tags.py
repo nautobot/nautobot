@@ -39,7 +39,6 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
         to=ContentType,
         related_name="tags",
         limit_choices_to=ModelSubclassesQuery(),
-        help_text="The content type(s) to which this tag applies.",
         blank=True,
     )
     color = ColorField(default=ColorChoices.COLOR_GREY)

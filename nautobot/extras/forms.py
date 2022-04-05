@@ -1387,20 +1387,7 @@ class TagForm(NautobotModelForm):
     content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
         queryset=ModelSubclassesQuery().as_queryset,
-        required=False,
-        help_text="Leave empty if tag should be available to all content_types",
     )
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        # All relevant content_types should be assigned to tag without content_types
-        if not self.cleaned_data.get("content_types"):
-            self.cleaned_data["content_types"] = ModelSubclassesQuery(
-                "nautobot.core.models.generics.PrimaryModel"
-            ).as_queryset
-
-        return cleaned_data
 
     class Meta:
         model = Tag

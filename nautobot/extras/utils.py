@@ -15,7 +15,6 @@ from taggit.managers import _TaggableManager
 
 from nautobot.core.fields import slugify_dots_to_dashes
 from nautobot.extras.constants import EXTRAS_FEATURES, JOB_OVERRIDABLE_FIELDS
-from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
 
 

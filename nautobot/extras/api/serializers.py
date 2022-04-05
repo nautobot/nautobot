@@ -1054,12 +1054,24 @@ class TagSerializer(CustomFieldModelSerializer):
             "last_updated",
         ]
 
-    def validate(self, attr):
-        data = super().validate(attr)
+    def validate(self, data):
+        data = super().validate(data)
 
-        # All relevant content_types should be assigned to tag without content_types
-        if not data.get("content_types"):
-            data["content_types"] = ModelSubclassesQuery().as_queryset
+        errors = {}
+
+        request = self.context["request"]
+
+        # If API Version is >= 1.3
+        if request.major_version > 1 or request.minor_version >= 3:
+            if not data.get("content_types"):
+                errors["errors"] = ["content_types is required"]
+        else:
+            # All relevant content_types should be assigned to tag without content_types for API Version <1.3
+            if not data.get("content_types"):
+                data["content_types"] = ModelSubclassesQuery().as_queryset
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         return data
 

@@ -2154,7 +2154,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
         """
 
 
-class TagTest(APIViewTestCases.APIViewTestCase):
+class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag
     brief_fields = ["color", "display", "id", "name", "slug", "url"]
     create_data = [
@@ -2213,6 +2213,43 @@ class TagTest(APIViewTestCases.APIViewTestCase):
             tag.content_types.count(),
             ModelSubclassesQuery().as_queryset.count(),
         )
+
+
+class TagTestVersion13(
+    APIViewTestCases.CreateObjectViewTestCase,
+    APIViewTestCases.UpdateObjectViewTestCase,
+):
+    model = Tag
+    brief_fields = ["color", "display", "id", "name", "slug", "url"]
+    api_version = "1.3"
+    create_data = [
+        {"name": "Tag 4", "slug": "tag-4", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
+    ]
+    bulk_update_data = {"content_types": [Site._meta.label_lower]}
+
+    @classmethod
+    def setUpTestData(cls):
+        Tag.objects.create(name="Tag 1", slug="tag-1")
+        Tag.objects.create(name="Tag 2", slug="tag-2")
+        Tag.objects.create(name="Tag 3", slug="tag-3")
+
+    def test_create_tags_without_content_types(self):
+        self.add_permissions("extras.add_tag")
+        data = {
+            "name": "Tag 8",
+            "slug": "tag-8",
+        }
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(str(response.data["errors"][0]), "content_types is required")
+
+
+class TagTestV3(APITestCase):
+
+    ...
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
