@@ -307,7 +307,7 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 
     # 2.0 TODO: Remove exception class and overloaded methods below
     # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
-    class NatOutsideIncompatibleLegacyBehavior(APIException):
+    class NATOutsideIncompatibleLegacyBehavior(APIException):
         status_code = 412
         default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
         default_code = "precondition_failed"
@@ -323,17 +323,18 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
             return serializers.IPAddressSerializerLegacy
         return super().get_serializer_class()
 
+
     def retrieve(self, request, pk=None):
         try:
             return super().retrieve(request, pk)
-        except IPAddress.NatOutsideMultipleObjectsReturned:
-            raise self.NatOutsideIncompatibleLegacyBehavior
+        except IPAddress.NATOutsideMultipleObjectsReturned:
+            raise self.NATOutsideIncompatibleLegacyBehavior
 
     def list(self, request):
         try:
             return super().list(request)
-        except IPAddress.NatOutsideMultipleObjectsReturned as e:
-            raise self.NatOutsideIncompatibleLegacyBehavior(
+        except IPAddress.NATOutsideMultipleObjectsReturned as e:
+            raise self.NATOutsideIncompatibleLegacyBehavior(
                 f"At least one object in the resulting list does not conform to pre-1.3 behavior. Please use API version 1.3. Item: {e.obj}, PK: {e.obj.pk}"
             )
 

@@ -960,7 +960,7 @@ class IPAddress(PrimaryModel, StatusModel):
         return None
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
-    class NatOutsideMultipleObjectsReturned(MultipleObjectsReturned):
+    class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
         """
         An exception class is used to expose in API the object that cannot safely support the legacy getter, setter methods.
         """
@@ -974,13 +974,13 @@ class IPAddress(PrimaryModel, StatusModel):
     @property
     def nat_outside(self):
         if self.nat_outside_list.count() > 1:
-            raise self.NatOutsideMultipleObjectsReturned(self)
+            raise self.NATOutsideMultipleObjectsReturned(self)
         return self.nat_outside_list.first()
 
     @nat_outside.setter
     def nat_outside(self, value):
         if self.nat_outside_list.count() > 1:
-            raise self.NatOutsideMultipleObjectsReturned(self)
+            raise self.NATOutsideMultipleObjectsReturned(self)
         return self.nat_outside_list.set([value])
 
     def _set_mask_length(self, value):
