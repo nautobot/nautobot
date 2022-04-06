@@ -1043,7 +1043,6 @@ class TagSerializer(CustomFieldModelSerializer):
             "color",
             "description",
             "tagged_items",
-            "content_types",
             "custom_fields",
             "created",
             "last_updated",

@@ -906,7 +906,8 @@ class TagViewSet(CustomFieldModelViewSet):
     filterset_class = filters.TagFilterSet
 
     def get_serializer_class(self):
-        if self.request.major_version > 1 or self.request.minor_version >= 3:
+        major_version, minor_version = self.request.version.split(".")
+        if int(major_version) > 1 or int(minor_version) >= 3:
             return serializers.TagSerializerVersion13
         return super().get_serializer_class()
 
