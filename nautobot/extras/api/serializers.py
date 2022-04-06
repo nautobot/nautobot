@@ -1032,11 +1032,6 @@ class StatusModelSerializerMixin(serializers.Serializer):
 class TagSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
-    content_types = ContentTypeField(
-        queryset=ModelSubclassesQuery().as_queryset,
-        many=True,
-        required=False,
-    )
 
     class Meta:
         model = Tag
@@ -1057,23 +1052,36 @@ class TagSerializer(CustomFieldModelSerializer):
     def validate(self, data):
         data = super().validate(data)
 
-        errors = {}
-
-        request = self.context["request"]
-
-        # If API Version is >= 1.3
-        if request.major_version > 1 or request.minor_version >= 3:
-            if not data.get("content_types"):
-                errors["errors"] = ["content_types is required"]
-        else:
-            # All relevant content_types should be assigned to tag without content_types for API Version <1.3
-            if not data.get("content_types"):
-                data["content_types"] = ModelSubclassesQuery().as_queryset
-
-        if errors:
-            raise serializers.ValidationError(errors)
+        # All relevant content_types should be assigned to tag for API Version <1.3
+        data["content_types"] = ModelSubclassesQuery().as_queryset
 
         return data
+
+
+class TagSerializerVersion13(CustomFieldModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
+    tagged_items = serializers.IntegerField(read_only=True)
+    content_types = ContentTypeField(
+        queryset=ModelSubclassesQuery().as_queryset,
+        many=True,
+        required=True,
+    )
+
+    class Meta:
+        model = Tag
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "color",
+            "description",
+            "tagged_items",
+            "content_types",
+            "custom_fields",
+            "created",
+            "last_updated",
+        ]
 
 
 #

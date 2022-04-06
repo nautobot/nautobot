@@ -2181,28 +2181,6 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
         Tag.objects.create(name="Tag 2", slug="tag-2")
         Tag.objects.create(name="Tag 3", slug="tag-3")
 
-    def test_create_tags_with_content_types(self):
-        self.add_permissions("extras.add_tag")
-
-        data = {**self.create_data[0], "content_types": [Site._meta.label_lower]}
-        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
-
-        tag = Tag.objects.filter(slug=data["slug"])
-        self.assertHttpStatus(response, 201)
-        self.assertTrue(tag.exists())
-        self.assertEquals(response.data["content_types"], [Site._meta.label_lower])
-
-    def test_create_tags_with_invalid_content_types(self):
-        self.add_permissions("extras.add_tag")
-
-        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
-        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
-
-        tag = Tag.objects.filter(slug=data["slug"])
-        self.assertHttpStatus(response, 400)
-        self.assertFalse(tag.exists())
-        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
-
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
 
@@ -2235,6 +2213,17 @@ class TagTestVersion13(
         Tag.objects.create(name="Tag 2", slug="tag-2")
         Tag.objects.create(name="Tag 3", slug="tag-3")
 
+    def test_create_tags_with_invalid_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+
+        tag = Tag.objects.filter(slug=data["slug"])
+        self.assertHttpStatus(response, 400)
+        self.assertFalse(tag.exists())
+        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+
     def test_create_tags_without_content_types(self):
         self.add_permissions("extras.add_tag")
         data = {
@@ -2244,7 +2233,7 @@ class TagTestVersion13(
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, 400)
-        self.assertEqual(str(response.data["errors"][0]), "content_types is required")
+        self.assertEqual(str(response.data["content_types"][0]), "This field is required.")
 
 
 class TagTestV3(APITestCase):
