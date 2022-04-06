@@ -534,10 +534,24 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(nat_inside),
             **self.header,
         )
+        self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+
+        # Fetch nat inside IP address with default (1.2) API
+        response = self.client.get(
+            self._get_detail_url(nat_inside),
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+
+        self.set_api_version(api_version="1.3")
+        # Fetch nat inside IP address with 1.3 API
+        response = self.client.get(
+            self._get_detail_url(nat_inside),
+            **self.header,
+        )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["nat_outside"]["address"], "192.0.2.1/24")
-        self.assertEqual(response.data["nat_outside_list"][0]["address"], "192.0.2.1/24")
-        self.assertEqual(response.data["nat_outside_list"][1]["address"], "192.0.2.2/24")
+        self.assertEqual(response.data["nat_outside"][0]["address"], "192.0.2.1/24")
+        self.assertEqual(response.data["nat_outside"][1]["address"], "192.0.2.2/24")
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):

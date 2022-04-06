@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
@@ -295,7 +296,6 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = IPAddress.objects.prefetch_related(
         "assigned_object",
         "nat_inside",
-        # TODO: Change back to nat_outside when breaking change is implemented, More details: #1420
         "nat_outside_list",
         "status",
         "tags",
@@ -304,6 +304,38 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     )
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
+
+    # 2.0 TODO: Remove exception class and overloaded methods below
+    # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
+    class NatOutsideIncompatibleLegacyBehavior(APIException):
+        status_code = 412
+        default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
+        default_code = "precondition_failed"
+
+    def get_serializer_class(self):
+        if (
+            not hasattr(self.request, "major_version")
+            or self.request.major_version > 1
+            or (self.request.major_version == 1 and self.request.minor_version < 3)
+        ):
+            # API version 1.2 or earlier - use the legacy serializer
+            # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
+            return serializers.IPAddressSerializerLegacy
+        return super().get_serializer_class()
+
+    def retrieve(self, request, pk=None):
+        try:
+            return super().retrieve(request, pk)
+        except IPAddress.NatOutsideMultipleObjectsReturned:
+            raise self.NatOutsideIncompatibleLegacyBehavior
+
+    def list(self, request):
+        try:
+            return super().list(request)
+        except IPAddress.NatOutsideMultipleObjectsReturned as e:
+            raise self.NatOutsideIncompatibleLegacyBehavior(
+                f"At least one object in the resulting list does not conform to pre-1.3 behavior. Please use API version 1.3. Item: {e.obj}, PK: {e.obj.pk}"
+            )
 
 
 #

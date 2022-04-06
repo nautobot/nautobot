@@ -2,7 +2,7 @@ import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
@@ -959,9 +959,29 @@ class IPAddress(PrimaryModel, StatusModel):
             return self.address.version
         return None
 
+    # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
+    class NatOutsideMultipleObjectsReturned(MultipleObjectsReturned):
+        """
+        An exception class is used to expose in API the object that cannot safely support the legacy getter, setter methods.
+        """
+
+        def __init__(self, obj):
+            self.obj = obj
+
+        def __str__(self):
+            return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
+
     @property
     def nat_outside(self):
+        if self.nat_outside_list.count() > 1:
+            raise self.NatOutsideMultipleObjectsReturned(self)
         return self.nat_outside_list.first()
+
+    @nat_outside.setter
+    def nat_outside(self, value):
+        if self.nat_outside_list.count() > 1:
+            raise self.NatOutsideMultipleObjectsReturned(self)
+        return self.nat_outside_list.set([value])
 
     def _set_mask_length(self, value):
         """

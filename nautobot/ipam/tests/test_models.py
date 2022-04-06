@@ -405,7 +405,9 @@ class TestIPAddress(TestCase):
         nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"), nat_inside=nat_inside)
 
         nat_inside.refresh_from_db()
-        self.assertEqual(nat_inside.nat_outside, nat_outside1)
+
+        with self.assertRaises(IPAddress.NatOutsideMultipleObjectsReturned):
+            nat_inside.nat_outside
         self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside1)
         self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside2)
 
