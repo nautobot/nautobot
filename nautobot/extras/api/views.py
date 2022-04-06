@@ -905,6 +905,10 @@ class TagViewSet(CustomFieldModelViewSet):
     serializer_class = serializers.TagSerializer
     filterset_class = filters.TagFilterSet
 
+    def create(self, request, *args, **kwargs):
+        """Create a tag. Note content_types is required with API version 1.3 or later."""
+        return super().create(request, *args, **kwargs)
+
 
 #
 # Webhooks
