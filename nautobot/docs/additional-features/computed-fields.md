@@ -2,7 +2,7 @@
 
 Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./custom-fields.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in its database and merging it into a Jinja2 template and associated filters.
 
-As an example, within your automation system, you may want to be able to have an automatically generated field on the Device model that combines the name of the device and the uppercased site name. To do that, you would define a Jinja2 template for this field that looks like such:
+As an example, within your automation system, you may want to be able to have an automatically generated field on the Device model that combines the name of the device and the site name in uppercase. To do that, you would define a Jinja2 template for this field that looks like such:
 
 ```jinja2
 {{ obj.name }}_{{ obj.site.name | upper }}
@@ -45,7 +45,6 @@ Computed field templates can also utilize built-in Jinja2 filters or custom ones
 ```
 
 See the documentation on [built-in filters](./template-filters.md) or [registering custom Jinja2 filters](../plugins/development.md#including-jinja2-filters) in plugins.
-
 
 ## Computed Fields and the REST API
 

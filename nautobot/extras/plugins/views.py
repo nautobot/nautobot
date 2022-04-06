@@ -7,6 +7,7 @@ from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
 from django.views.generic import View
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -90,8 +91,6 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [permissions.IsAdminUser]
     _ignore_model_permissions = True
-    exclude_from_schema = True
-    swagger_schema = None
 
     def get_view_name(self):
         return "Installed Plugins"
@@ -109,14 +108,13 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
             "version": plugin_app_config.version,
         }
 
+    @extend_schema(exclude=True)
     def get(self, request, format=None):
         return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
 
 
 class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
     _ignore_model_permissions = True
-    exclude_from_schema = True
-    swagger_schema = None
 
     def get_view_name(self):
         return "Plugins"
@@ -140,6 +138,7 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
 
         return entry
 
+    @extend_schema(exclude=True)
     def get(self, request, format=None):
 
         entries = []

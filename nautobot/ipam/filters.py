@@ -9,6 +9,7 @@ from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     MultiValueCharFilter,
+    MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     NumericArrayFilter,
     TagFilter,
@@ -227,9 +228,13 @@ class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetM
         label="VRF (RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF"
+        field_name="vrf",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        label="VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
+        field_name="vrf__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
@@ -348,10 +353,10 @@ class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetM
         except (AddrFormatError, ValueError):
             return queryset.none()
 
-    def filter_present_in_vrf(self, queryset, name, vrf):
-        if vrf is None:
+    def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
         return queryset.ip_family(value)
@@ -389,9 +394,13 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         label="VRF (RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF"
+        field_name="vrf",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        label="VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
+        field_name="vrf__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
@@ -402,7 +411,7 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         field_name="name",
         label="Device (name)",
     )
-    device_id = MultiValueCharFilter(
+    device_id = MultiValueUUIDFilter(
         method="filter_device",
         field_name="pk",
         label="Device (ID)",
@@ -412,7 +421,7 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         field_name="name",
         label="Virtual machine (name)",
     )
-    virtual_machine_id = MultiValueCharFilter(
+    virtual_machine_id = MultiValueUUIDFilter(
         method="filter_virtual_machine",
         field_name="pk",
         label="Virtual machine (ID)",
@@ -479,10 +488,10 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
             return queryset
         return queryset.filter(prefix_length=value)
 
-    def filter_present_in_vrf(self, queryset, name, vrf):
-        if vrf is None:
+    def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
         return queryset.ip_family(value)

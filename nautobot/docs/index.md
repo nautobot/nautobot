@@ -1,4 +1,6 @@
+<!-- markdownlint-disable MD041 -->
 ![Nautobot](nautobot_logo.svg "Nautobot logo")
+<!-- markdownlint-enable MD041 -->
 
 # What is Nautobot?
 
@@ -14,9 +16,9 @@ Nautobot enables three (3) key use cases.
 
 3. **Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some applications that are already launched include:
 
-      * [Golden Configuration](https://github.com/nautobot/nautobot-plugin-golden-config) 
+      * [Golden Configuration](https://github.com/nautobot/nautobot-plugin-golden-config)
       * [ChatOps](https://github.com/nautobot/nautobot-plugin-chatops)
-      * [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics) and 
+      * [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics) and
       * [Device Onboarding](https://github.com/nautobot/nautobot-plugin-device-onboarding)
 
 ## Design Philosophy

@@ -6,7 +6,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
 )
 from django.db.models import AutoField, ManyToManyField
-from drf_yasg.utils import swagger_serializer_method
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -80,7 +80,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
 
-    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
         """
         Return either the `display` property of the instance or `str(instance)`

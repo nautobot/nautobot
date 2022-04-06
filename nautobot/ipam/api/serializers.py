@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from django.contrib.contenttypes.models import ContentType
-from drf_yasg.utils import swagger_serializer_method
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -430,7 +430,7 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
         read_only_fields = ["family"]
         opt_in_fields = ["computed_fields"]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None

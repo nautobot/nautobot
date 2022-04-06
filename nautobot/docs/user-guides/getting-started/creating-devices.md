@@ -16,7 +16,7 @@ The following sections will guide you through how to create each object type.
 
 ## Creating a Device Role
 
-Devices can be organized by functional roles, which are fully customizable by the user. 
+Devices can be organized by functional roles, which are fully customizable by the user.
 
 More information on Device Roles can be found in the [Device Roles](../../core-functionality/devices.md#device-roles) section of the Nautobot documentation.
 
@@ -32,12 +32,12 @@ To create a new Device Role:
 3. Select `+`
 4. In the `Add a new device role` form, populate the `Name`
     * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
-5. Click on Create    
+5. Click on Create
 
 !!! note
     A `slug` is a short label for something, containing only letters, numbers, underscores or hyphens. They’re generally used within URLs. For example: `/dcim/device-roles/customer-edge/`
 
-![](../images/getting-started-nautobot-ui/3-create-role.png)
+![Create a device role](../images/getting-started-nautobot-ui/3-create-role.png)
 
 ## Creating a Manufacturer
 
@@ -56,11 +56,11 @@ To create a new Manufacturer:
      * The `Slug` will auto-populate based on the entered `Name`, but can be manually overwritten
 5. Click on `Create`
 
-![](../images/getting-started-nautobot-ui/2-create-manufacturer.png)
+![Create a manufacturer](../images/getting-started-nautobot-ui/2-create-manufacturer.png)
 
 ## Creating a Device Type
 
-A device type represents a particular make and model of hardware that exists in the real world. 
+A device type represents a particular make and model of hardware that exists in the real world.
 Device types define the physical attributes of a device (rack height and depth) and its individual components (console, power, network interfaces, and so on).
 
 More information on Device Types is in the [Device Types](../../core-functionality/device-types.md#device-types_1) section of the Nautobot documentation.
@@ -76,12 +76,12 @@ To create a new Device Type:
 5. Populate the `Model` (name)
 6. Click on `Create`
 
-![](../images/getting-started-nautobot-ui/4-create-device-type.png)
+![Create a device type](../images/getting-started-nautobot-ui/4-create-device-type.png)
 
 ## Creating a Site
 
-How you choose to employ sites when modeling your network may vary depending on the nature of your organization, but generally a site will equate to a building or campus. 
-For example, a chain of banks might create a site to represent each of its branches, a site for its corporate headquarters, and two additional sites for its presence in two colocation facilities.
+How you choose to employ sites when modeling your network may vary depending on the nature of your organization, but generally a site will equate to a building or campus.
+For example, a chain of banks might create a site to represent each of its branches, a site for its corporate headquarters, and two additional sites for its presence in two co-location facilities.
 
 More information on Sites is found in the [Sites](../../core-functionality/sites-and-racks.md#sites) section of the Nautobot documentation.
 
@@ -97,7 +97,7 @@ To create a new Site:
 5. Set the `Status` to `Active` in the drop-down selector
 6. Click on `Create` at the bottom of the form (not shown)
 
-![](../images/getting-started-nautobot-ui/1-create-site.png)
+![Create a site](../images/getting-started-nautobot-ui/1-create-site.png)
 
 ## Creating a Device
 
@@ -113,4 +113,4 @@ To create a new Device:
 8. Set the `Status` to the appropriate value in the drop-down selector
 9. Click on `Create` at the bottom of the form (not shown)
 
-![](../images/getting-started-nautobot-ui/5-create-device.png)
+![Create a device](../images/getting-started-nautobot-ui/5-create-device.png)
