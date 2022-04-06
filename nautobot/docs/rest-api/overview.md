@@ -166,7 +166,7 @@ As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-com
 
 ### APISelect with versioning capability
 
-`APISelect` constructor includes an optional `api_version` argument which if set overrides the default API version of the request.
+The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
 
 ## Serialization
 
