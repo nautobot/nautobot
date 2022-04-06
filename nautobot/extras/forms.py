@@ -71,7 +71,7 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .utils import FeatureQuery, ModelSubclassesQuery
+from .utils import FeatureQuery, TaggableClassesQuery
 
 
 #
@@ -1386,7 +1386,7 @@ class TagForm(NautobotModelForm):
     slug = SlugField()
     content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
-        queryset=ModelSubclassesQuery().as_queryset,
+        queryset=TaggableClassesQuery().as_queryset,
     )
 
     class Meta:
@@ -1421,7 +1421,7 @@ class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
         choices_as_strings=True,
         required=False,
         label="Content Type(s)",
-        queryset=ModelSubclassesQuery().as_queryset,
+        queryset=TaggableClassesQuery().as_queryset,
     )
 
 

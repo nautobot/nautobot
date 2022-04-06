@@ -82,7 +82,7 @@ class FeatureQuery:
 
 
 @deconstructible
-class ModelSubclassesQuery:
+class TaggableClassesQuery:
     """
     Helper class to get ContentType models that implements tags(TaggableManager)
     """

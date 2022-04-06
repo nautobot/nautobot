@@ -6,9 +6,7 @@ import nautobot.extras.utils
 
 def populate_existing_tags(app, schema):
     Tag = app.get_model("extras", "Tag")
-    content_types = nautobot.extras.utils.ModelSubclassesQuery(
-        "nautobot.core.models.generics.PrimaryModel"
-    ).get_choices()
+    content_types = nautobot.extras.utils.TaggableClassesQuery().get_choices()
 
     for tag in Tag.objects.filter(content_types__isnull=True):
         for _, id in content_types:

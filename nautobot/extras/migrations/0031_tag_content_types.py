@@ -17,9 +17,7 @@ class Migration(migrations.Migration):
             name="content_types",
             field=models.ManyToManyField(
                 blank=True,
-                limit_choices_to=nautobot.extras.utils.ModelSubclassesQuery(
-                    "nautobot.core.models.generics.PrimaryModel"
-                ),
+                limit_choices_to=nautobot.extras.utils.TaggableClassesQuery(),
                 related_name="tags",
                 to="contenttypes.ContentType",
             ),

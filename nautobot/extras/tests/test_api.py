@@ -46,7 +46,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ModelSubclassesQuery
+from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -2189,7 +2189,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
         tag = Tag.objects.get(slug=self.create_data[0]["slug"])
         self.assertEqual(
             tag.content_types.count(),
-            ModelSubclassesQuery().as_queryset.count(),
+            TaggableClassesQuery().as_queryset.count(),
         )
 
 

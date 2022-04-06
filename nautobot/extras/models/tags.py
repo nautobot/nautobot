@@ -6,7 +6,7 @@ from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.utils import extras_features, ModelSubclassesQuery
+from nautobot.extras.utils import extras_features, TaggableClassesQuery
 from nautobot.core.models import BaseModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.fields import ColorField
@@ -38,7 +38,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="tags",
-        limit_choices_to=ModelSubclassesQuery(),
+        limit_choices_to=TaggableClassesQuery(),
         blank=True,
     )
     color = ColorField(default=ColorChoices.COLOR_GREY)
