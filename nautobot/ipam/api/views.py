@@ -313,13 +313,11 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         default_code = "precondition_failed"
 
     def get_serializer_class(self):
-        if (
+        if not self.brief and (
             not hasattr(self.request, "major_version")
             or self.request.major_version > 1
             or (self.request.major_version == 1 and self.request.minor_version < 3)
         ):
-            if self.brief:
-                return serializers.NestedIPAddressSerializer
             # API version 1.2 or earlier - use the legacy serializer
             # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
             return serializers.IPAddressSerializerLegacy
