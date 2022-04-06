@@ -23,6 +23,11 @@ DATABASES = {
     }
 }
 
+# Explicity set MySQL client encoding to use 4-byte unicode glyphs.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+
+
 PLUGINS = [
     "dummy_plugin",
 ]
