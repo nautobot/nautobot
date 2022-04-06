@@ -1,10 +1,12 @@
 from unittest import skipIf
 
 import netaddr
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase, override_settings
 
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import IPAddressRoleChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
@@ -396,6 +398,43 @@ class TestIPAddress(TestCase):
             address=netaddr.IPNetwork("192.0.2.1/24"),
             role=IPAddressRoleChoices.ROLE_VIP,
         )
+
+    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
+    def test_not_null_assigned_object_type_and_null_assigned_object_id(self):
+        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type 1",
+            slug="test-device-type-1",
+        )
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        device = Device.objects.create(
+            device_type=devicetype,
+            device_role=devicerole,
+            name="TestDevice1",
+            site=site,
+            status=device_status,
+        )
+        interface = Interface.objects.create(device=device, name="eth0")
+        ipaddress_1 = IPAddress(
+            address=netaddr.IPNetwork("192.0.2.1/24"),
+            role=IPAddressRoleChoices.ROLE_VIP,
+            assigned_object_id=interface.id,
+        )
+
+        self.assertRaises(ValidationError, ipaddress_1.clean)
+
+        # Test IPAddress.clean() raises no exception if assigned_object_id and assigned_object_type
+        # are both provided
+        ipaddress_2 = IPAddress(
+            address=netaddr.IPNetwork("192.0.2.1/24"),
+            role=IPAddressRoleChoices.ROLE_VIP,
+            assigned_object_id=interface.id,
+            assigned_object_type=ContentType.objects.get_for_model(Interface),
+        )
+        self.assertIsNone(ipaddress_2.clean())
 
 
 class TestVLANGroup(TestCase):

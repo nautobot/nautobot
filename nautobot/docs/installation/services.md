@@ -6,7 +6,7 @@ Like most Django applications, Nautobot runs as a [WSGI application](https://en.
 
 Nautobot comes preinstalled with [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) to use as the WSGI server, however other WSGI servers are available and should work similarly well. [Gunicorn](http://gunicorn.org/) is a popular alternative.
 
-Additionally, certain Nautobot features (including Git repository synchronization, Webhooks, Jobs, etc.) depend on the presence of Nautobot's [Celery](https://docs.celeryproject.org/en/stable/) background worker process, which is not automatically started with Nautobot and is run as a separate service.
+Additionally, certain Nautobot features (including Git repository synchronization, Webhooks, Jobs, etc.) depend on the presence of Nautobot's [Celery](https://docs.celeryq.dev/en/stable/) background worker process, which is not automatically started with Nautobot and is run as a separate service.
 
 This document will guide you through setting up uWSGI and establishing Nautobot web and Celery worker services to run on system startup.
 
