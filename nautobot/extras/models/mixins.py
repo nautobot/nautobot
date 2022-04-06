@@ -40,7 +40,7 @@ class TaggableManagerMonkeyMixin:
 
         monkey_mix(TaggableManager, TaggableManagerMonkeyMixin)
 
-    See: `nautobot.extras.apps.ready()`
+    See: `nautobot.core.apps.ready()`
     """
 
     @once_per("cls")
@@ -52,6 +52,17 @@ class TaggableManagerMonkeyMixin:
 
     # This is probably still needed if models are created dynamically.
     def contribute_to_class(self, cls, name):
+        """
+        Overload default so that we can assert that this is called when
+        attached to any model that is using a `TaggableManager`.
+
+        Using `.contribute_to_class()` is how field objects get added to the model
+        at during the instance preparation. This is also where any custom model
+        methods are hooked in. So in short this method asserts that any time a`
+        `TaggableManager` is added to a model, that model also gets its methods
+        monkey-mixed without having to define them on the model yourself.
+        """
+
         self._no_monkey.contribute_to_class(self, cls, name)
         # Django migrations create lots of fake models, just skip them
         # NOTE: we make it here rather then inside _install_hotfix()

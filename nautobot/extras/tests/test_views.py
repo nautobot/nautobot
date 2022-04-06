@@ -1822,7 +1822,6 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Tag.objects.create(name="Tag 1", slug="tag-1")
         Tag.objects.create(name="Tag 2", slug="tag-2")
         Tag.objects.create(name="Tag 3", slug="tag-3")
@@ -1832,6 +1831,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
+            "content_types": [ContentType.objects.get_for_model(Site).id],
         }
 
         cls.csv_data = (
@@ -1882,21 +1882,6 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         tag = Tag.objects.filter(slug=self.form_data["slug"])
         self.assertFalse(tag.exists())
         self.assertIn("content_types: Select a valid choice", str(response.content))
-
-    def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
-        self.add_permissions("extras.add_tag")
-
-        request = {
-            "path": self._get_url("add"),
-            "data": post_data(self.form_data),
-        }
-
-        self.client.post(**request)
-        tag = Tag.objects.get(slug=self.form_data["slug"])
-        self.assertEqual(
-            tag.content_types.count(),
-            ModelSubclassesQuery().as_queryset.count(),
-        )
 
 
 class WebhookTestCase(
