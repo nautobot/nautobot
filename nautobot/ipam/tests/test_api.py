@@ -529,13 +529,6 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
 
-        # Fetch nat inside IP address
-        response = self.client.get(
-            self._get_detail_url(nat_inside),
-            **self.header,
-        )
-        self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
-
         # Fetch nat inside IP address with default (1.2) API
         response = self.client.get(
             self._get_detail_url(nat_inside),
