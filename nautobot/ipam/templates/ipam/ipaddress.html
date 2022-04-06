@@ -102,9 +102,11 @@
                     <td>NAT (outside)</td>
                     <td>
                         {% if object.nat_outside_list.exists %}
-                            {% for nat in object.nat_outside_list.all %}
-                                <a href="{% url 'ipam:ipaddress' pk=nat.pk %}">{{ nat }}</a>{% if not forloop.last %},{% endif %}
-                            {% endfor %}
+                            <ul class="list-unstyled">
+                                {% for nat in object.nat_outside_list.all %}
+                                    <li><a href="{% url 'ipam:ipaddress' pk=nat.pk %}">{{ nat }}</a></li>
+                                {% endfor %}
+                            </ul>
                         {% else %}
                             <span class="text-muted">None</span>
                         {% endif %}
