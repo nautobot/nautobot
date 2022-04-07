@@ -293,6 +293,8 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 
 
 @extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
     create=extend_schema(responses={"201": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
     list=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
     partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
