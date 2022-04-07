@@ -147,7 +147,7 @@ class GetFooForModelTest(TestCase):
     def test_get_filterset_for_model(self):
         self.assertEqual(get_filterset_for_model("dcim.device"), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
-        self.assertEqual(get_filterset_for_model("dcim.site"), DeviceFilterSet)
+        self.assertEqual(get_filterset_for_model("dcim.site"), SiteFilterSet)
         self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)
 
     def test_get_form_for_model(self):
