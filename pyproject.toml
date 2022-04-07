@@ -120,6 +120,7 @@ psycopg2-binary = "~2.9.3"
 # Cryptographic library
 pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
+# NOTE: docker/Dockerfile hard-codes a pyuwsgi version as well, keep them in sync!
 pyuwsgi = "~2.0.20"
 # YAML parsing and rendering
 PyYAML = "~6.0"
