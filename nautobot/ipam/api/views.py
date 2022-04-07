@@ -1,6 +1,6 @@
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -292,6 +292,13 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 #
 
 
+@extend_schema_view(
+    create=extend_schema(responses={"201": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+    list=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
+    partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+    retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+    update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+)
 class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = IPAddress.objects.prefetch_related(
         "assigned_object",
@@ -313,16 +320,19 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         default_code = "precondition_failed"
 
     def get_serializer_class(self):
-        if not self.brief and (
-            not hasattr(self.request, "major_version")
-            or self.request.major_version > 1
-            or (self.request.major_version == 1 and self.request.minor_version < 3)
+        if (
+            not self.brief
+            and not getattr(self, "swagger_fake_view", False)
+            and (
+                not hasattr(self.request, "major_version")
+                or self.request.major_version > 1
+                or (self.request.major_version == 1 and self.request.minor_version < 3)
+            )
         ):
             # API version 1.2 or earlier - use the legacy serializer
             # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
             return serializers.IPAddressSerializerLegacy
         return super().get_serializer_class()
-
 
     def retrieve(self, request, pk=None):
         try:
