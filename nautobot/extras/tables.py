@@ -1,8 +1,6 @@
-import inspect
-
 import django_tables2 as tables
-
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -22,7 +20,6 @@ from nautobot.utilities.tables import (
 )
 from nautobot.utilities.templatetags.helpers import render_markdown
 from .choices import LogLevelChoices
-from .jobs import Job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -429,10 +426,16 @@ def job_creator_link(value, record):
     """
     Get a link to the related object, if any, associated with the given JobResult record.
     """
+    # record.related_object is potentially slow if the related object is a Job class,
+    # as it needs to actually (re)load the Job class into memory. That's unnecessary
+    # computation as we don't actually need the class itself, just its class_path which is already
+    # available as record.name on the JobResult itself. So save some trouble:
+    if record.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+        return reverse("extras:job", kwargs={"class_path": record.name})
+
+    # If it's not a Job class, maybe it's something like a GitRepository, which we can look up cheaply:
     related_object = record.related_object
-    if inspect.isclass(related_object) and issubclass(related_object, Job):
-        return reverse("extras:job", kwargs={"class_path": related_object.class_path})
-    elif related_object:
+    if related_object:
         return related_object.get_absolute_url()
     return None
 
@@ -440,7 +443,7 @@ def job_creator_link(value, record):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
+    related_object = tables.Column(verbose_name="Related Object")
     name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
@@ -452,6 +455,13 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+
+    def render_related_object(self, record):
+        """Custom rendering to be sure to only load related_object once."""
+        url = job_creator_link(value=None, record=record)
+        if url is None:
+            return record
+        return format_html('<a href="{}">{}</a>', url, record.related_name)
 
     def render_summary(self, record):
         """
