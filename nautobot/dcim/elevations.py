@@ -192,18 +192,18 @@ class RackElevationSVG:
             x_offset = legend_width + RACK_ELEVATION_BORDER_WIDTH
             y_offset = unit_cursor * unit_height + RACK_ELEVATION_BORDER_WIDTH
             end_y = unit_height * height
-            start_cordinates = (x_offset, y_offset)
-            end_cordinates = (unit_width, end_y)
-            text_cordinates = (x_offset + (unit_width / 2), y_offset + end_y / 2)
+            start_coordinates = (x_offset, y_offset)
+            end_coordinates = (unit_width, end_y)
+            text_coordinates = (x_offset + (unit_width / 2), y_offset + end_y / 2)
 
             # Draw the device
             if device and device.face == face and device.pk in self.permitted_device_ids:
-                self._draw_device_front(drawing, device, start_cordinates, end_cordinates, text_cordinates)
+                self._draw_device_front(drawing, device, start_coordinates, end_coordinates, text_coordinates)
             elif device and device.device_type.is_full_depth and device.pk in self.permitted_device_ids:
-                self._draw_device_rear(drawing, device, start_cordinates, end_cordinates, text_cordinates)
+                self._draw_device_rear(drawing, device, start_coordinates, end_coordinates, text_coordinates)
             elif device:
                 # Devices which the user does not have permission to view are rendered only as unavailable space
-                drawing.add(drawing.rect(start_cordinates, end_cordinates, class_="blocked"))
+                drawing.add(drawing.rect(start_coordinates, end_coordinates, class_="blocked"))
             else:
                 # Draw shallow devices, reservations, or empty units
                 class_ = "slot"
@@ -215,9 +215,9 @@ class RackElevationSVG:
                 self._draw_empty(
                     drawing,
                     self.rack,
-                    start_cordinates,
-                    end_cordinates,
-                    text_cordinates,
+                    start_coordinates,
+                    end_coordinates,
+                    text_coordinates,
                     unit["id"],
                     face,
                     class_,

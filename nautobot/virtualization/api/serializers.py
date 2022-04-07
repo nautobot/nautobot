@@ -1,4 +1,4 @@
-from drf_yasg.utils import swagger_serializer_method
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from nautobot.core.api import (
@@ -199,7 +199,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_config_context(self, obj):
         return obj.get_config_context()
 

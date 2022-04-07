@@ -184,7 +184,7 @@ class DynamicGroup(OrganizationalModel):
 
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a
-            # `MultVarCharField` (dynamically generated from from `MultiValueCharFilter`) which is
+            # `MultiValueCharField` (dynamically generated from from `MultiValueCharFilter`) which is
             # not correct for char fields.
             if isinstance(modelform_field, forms.CharField):
                 # Get ready to replace the form field w/ correct widget.
