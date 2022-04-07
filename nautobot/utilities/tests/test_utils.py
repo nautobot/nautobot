@@ -145,22 +145,35 @@ class GetFooForModelTest(TestCase):
     """Tests for the various `get_foo_for_model()` functions."""
 
     def test_get_filterset_for_model(self):
+        self.assertEqual(get_filterset_for_model("dcim.device"), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
+        self.assertEqual(get_filterset_for_model("dcim.site"), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)
 
     def test_get_form_for_model(self):
+        self.assertEqual(get_form_for_model("dcim.device", "Filter"), DeviceFilterForm)
         self.assertEqual(get_form_for_model(Device, "Filter"), DeviceFilterForm)
+        self.assertEqual(get_form_for_model("dcim.site", "Filter"), SiteFilterForm)
         self.assertEqual(get_form_for_model(Site, "Filter"), SiteFilterForm)
+        self.assertEqual(get_form_for_model("dcim.device"), DeviceForm)
         self.assertEqual(get_form_for_model(Device), DeviceForm)
+        self.assertEqual(get_form_for_model("dcim.site"), SiteForm)
         self.assertEqual(get_form_for_model(Site), SiteForm)
 
     def test_get_route_for_model(self):
+        self.assertEqual(get_route_for_model("dcim.device", "list"), "dcim:device_list")
         self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
+        self.assertEqual(get_route_for_model("dcim.site", "list"), "dcim:site_list")
         self.assertEqual(get_route_for_model(Site, "list"), "dcim:site_list")
+        self.assertEqual(
+            get_route_for_model("example_plugin.examplemodel", "list"), "plugins:example_plugin:examplemodel_list"
+        )
         self.assertEqual(get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
 
     def test_get_table_for_model(self):
+        self.assertEqual(get_table_for_model("dcim.device"), DeviceTable)
         self.assertEqual(get_table_for_model(Device), DeviceTable)
+        self.assertEqual(get_table_for_model("dcim.site"), SiteTable)
         self.assertEqual(get_table_for_model(Site), SiteTable)
 
 

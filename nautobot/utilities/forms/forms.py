@@ -71,18 +71,15 @@ class BootstrapMixin(forms.BaseForm):
         except AttributeError:
             pass
 
-        if registry["plugin_filter_extensions"].get(content_type) and self.__class__ is form_class:
-            for filter_form in registry["plugin_filter_extensions"][content_type]:
-                if not filter_form().filter_form():
-                    continue
-                for filter_name, form in filter_form().filter_form().items():
-                    if self.declared_fields.get(filter_name):
+        if content_type in registry["plugin_filter_extensions"] and self.__class__ is form_class:
+            for filter_extension in registry["plugin_filter_extensions"][content_type]:
+                for filterform_field_name, filterform_field in filter_extension.filterform_fields.items():
+                    if filterform_field_name in self.declared_fields:
                         logger.error(
-                            "There was a conflict with filter form `%s`, the custom filter form was ignored."
-                            % filter_name
+                            f"There was a conflict with filter form `{filterform_field_name}`, the custom filter form was ignored."
                         )
                         continue
-                    self.declared_fields[filter_name] = form
+                    self.declared_fields[filterform_field_name] = filterform_field
 
         exempt_widgets = [
             forms.CheckboxInput,

@@ -178,24 +178,16 @@ class PluginConfig(NautobotConfig):
         filter_extensions = import_object(f"{self.__module__}.{self.filter_extensions}")
         if filter_extensions is not None:
             register_filter_extensions(filter_extensions, self.name)
-            self.features["filter_extensions"] = {"filterset": [], "filter_form": []}
-            for extension in filter_extensions:
-                if extension().filterset():
-                    for name in extension().filterset().keys():
-                        self.features["filter_extensions"]["filterset"].append(
-                            f"{extension.model} -> filterset -> {name}"
-                        )
-                if extension().filter_form():
-                    for name in extension().filter_form().keys():
-                        self.features["filter_extensions"]["filter_form"].append(
-                            f"{extension.model} -> filter_form -> {name}"
-                        )
-
-            # TODO: Determine if this bruteforce design is the best way forward
-            from nautobot.utilities.filters import FILTER_CLASS_STRINGS
-
-            for name in FILTER_CLASS_STRINGS:
-                name.get_filters()
+            self.features["filter_extensions"] = {"filterset_fields": [], "filterform_fields": []}
+            for filter_extension in filter_extensions:
+                for filterset_field_name in filter_extension.filterset_fields.keys():
+                    self.features["filter_extensions"]["filterset_fields"].append(
+                        f"{filter_extension.model} -> filterset_field -> {filterset_field_name}"
+                    )
+                for filterform_field_name in filter_extension.filterform_fields.keys():
+                    self.features["filter_extensions"]["filterset_fields"].append(
+                        f"{filter_extension.model} -> filterform_field -> {filterform_field_name}"
+                    )
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -388,30 +380,38 @@ class PluginFilterExtension:
 
     model = None
 
-    def filterset(self):
-        return None
+    filterset_fields = {}
 
-    def filter_form(self):
-        return None
+    filterform_fields = {}
 
 
-def register_filter_extensions(class_list, name):
+def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of PluginFilterExtension classes
     """
-    # Validation
-    for filter_extension in class_list:
-        if not inspect.isclass(filter_extension):
-            raise TypeError(f"PluginFilterExtension class {filter_extension} was passed as an instance!")
+    from nautobot.utilities.utils import get_filterset_for_model
+
+    for filter_extension in filter_extensions:
         if not issubclass(filter_extension, PluginFilterExtension):
             raise TypeError(f"{filter_extension} is not a subclass of extras.plugins.PluginFilterExtension!")
         if filter_extension.model is None:
             raise TypeError(f"PluginFilterExtension class {filter_extension} does not define a valid model!")
 
-        if filter_extension().filterset():
-            for key in filter_extension().filterset().keys():
-                if not key.startswith(f"{name}_"):
-                    raise ValueError(f"Attempted to create a custom filter `{key}` that did not start with `{name}`")
+        for new_filter_name, new_filter_field in filter_extension.filterset_fields.items():
+            if not new_filter_name.startswith(f"{plugin_name}_"):
+                raise ValueError(
+                    f"Attempted to create a custom filter `{new_filter_name}` that did not start with `{plugin_name}`"
+                )
+
+            get_filterset_for_model(filter_extension.model).add_filter(new_filter_name, new_filter_field)
+
+        for new_filter_name, new_filter_field in filter_extension.filterset_fields.items():
+            if not new_filter_name.startswith(f"{plugin_name}_"):
+                raise ValueError(
+                    f"Attempted to create a custom filter `{new_filter_name}` that did not start with `{plugin_name}`"
+                )
+
+            get_filterset_for_model(filter_extension.model).add_filter(new_filter_name, new_filter_field)
 
         registry["plugin_filter_extensions"][filter_extension.model].append(filter_extension)
 

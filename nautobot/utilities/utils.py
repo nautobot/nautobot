@@ -63,6 +63,9 @@ def get_route_for_model(model, action):
         >>> viewname(Device, "list")
         "dcim:device_list"
     """
+
+    if isinstance(model, str):
+        model = get_model_from_name(model)
     viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
     if model._meta.app_label in settings.PLUGINS:
         viewname = f"plugins:{viewname}"
@@ -422,6 +425,15 @@ def copy_safe_request(request):
     )
 
 
+def get_model_from_name(model_name):
+    from django.apps import apps
+
+    try:
+        return apps.get_model(model_name)
+    except (ValueError, LookupError) as exc:
+        raise TypeError(exc) from exc
+
+
 def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
@@ -434,6 +446,8 @@ def get_related_class_for_model(model, module_name, object_suffix):
     Returns:
         Either the matching object class or None
     """
+    if isinstance(model, str):
+        model = get_model_from_name(model)
     if not inspect.isclass(model):
         raise TypeError(f"{model!r} is not a Django Model class")
     if not issubclass(model, Model):
