@@ -444,7 +444,6 @@ class BaseFilterSet(django_filters.FilterSet):
         cls.base_filters.update(
             cls._generate_lookup_expression_filters(filter_name=new_filter_name, filter_field=new_filter_field)
         )
-        # print(list(cls.base_filters))
 
     @classmethod
     def get_filters(cls):
