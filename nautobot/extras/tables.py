@@ -422,7 +422,7 @@ class JobLogEntryTable(BaseTable):
         }
 
 
-def job_creator_link(value, record):
+def job_creator_link(record):
     """
     Get a link to the related object, if any, associated with the given JobResult record.
     """
@@ -443,7 +443,7 @@ def job_creator_link(value, record):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    related_object = tables.Column(verbose_name="Related Object")
+    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
     name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
@@ -455,13 +455,6 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
-
-    def render_related_object(self, record):
-        """Custom rendering to be sure to only load related_object once."""
-        url = job_creator_link(value=None, record=record)
-        if url is None:
-            return record
-        return format_html('<a href="{}">{}</a>', url, record.related_name)
 
     def render_summary(self, record):
         """
