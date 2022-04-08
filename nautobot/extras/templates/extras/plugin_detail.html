@@ -150,17 +150,17 @@
                                 <td>Filters</td>
                                 <td>
                                     {% if features.filter_extensions %}
+                                        <b>FilterSet Fields</b>
                                         <ul class="list-unstyled">
-                                            {% if features.filter_extensions.filterset %}
-                                                {% for filter in features.filter_extensions.filterset %}
-                                                    <li><code>{{ filter }}</code></li>
-                                                {% endfor %}
-                                            {% endif %}
-                                            {% if features.filter_extensions.filter_form %}
-                                                {% for formfield in features.filter_extensions.filter_form %}
-                                                    <li><code>{{ formfield }}</code></li>
-                                                {% endfor %}
-                                            {% endif %}
+                                            {% for filterset_field in features.filter_extensions.filterset_fields %}
+                                                <li><code>{{ filterset_field }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                        <b>FilterForm Fields</b>
+                                        <ul class="list-unstyled">
+                                            {% for filterform_field in features.filter_extensions.filterform_fields %}
+                                                <li><code>{{ filterform_field }}</code></li>
+                                            {% endfor %}
                                         </ul>
                                     {% else %}
                                         {% include 'utilities/render_boolean.html' with value=features.filter_extensions %}
