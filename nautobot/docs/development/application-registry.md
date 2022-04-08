@@ -174,7 +174,7 @@ Plugin [custom validator classes](../plugins/development.md#implementing-custom-
 
 ### `plugin_filter_extensions`
 
-Plugin [filter extensionclasses classes](../plugins/development.md#extending-filters) that extend the current FilterSet's and FilterForm's that are natively provided. Implemented as a dictionary mapping data model names to a list of `PluginFilterExtension` subclasses, for example:
+Plugin [filter extension classes](../plugins/development.md#extending-filters) that extend the current FilterSet's and FilterForm's that are natively provided. Implemented as a dictionary mapping data model names to a list of `PluginFilterExtension` subclasses, for example:
 
 ```python
 {
