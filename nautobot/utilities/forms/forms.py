@@ -76,7 +76,7 @@ class BootstrapMixin(forms.BaseForm):
                 for filterform_field_name, filterform_field in filter_extension.filterform_fields.items():
                     if filterform_field_name in self.fields:
                         logger.error(
-                            f"There was a conflict with filter form `{filterform_field_name}`, the custom filter form was ignored."
+                            f"There was a conflict with filter form field `{filterform_field_name}`, the custom filter form field was ignored."
                         )
                         continue
                     self.fields[filterform_field_name] = filterform_field
