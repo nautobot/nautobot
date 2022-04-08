@@ -13,10 +13,10 @@ class TenantFilterSetExtension(PluginFilterExtension):
 
     filterset_fields = {
         "example_plugin_description": MultiValueCharFilter(field_name="description", label="Description"),
-        "example_plugin_dtype": MultiValueCharFilter(
+        "example_plugin_sdescrip": MultiValueCharFilter(
             field_name="description", label="Description", method=suffix_search
         ),
-        "example_plugin_sdescrip": MultiValueCharFilter(
+        "example_plugin_dtype": MultiValueCharFilter(
             field_name="sites__devices__device_type__slug", label="Device Type"
         ),
     }
