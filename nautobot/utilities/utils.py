@@ -54,7 +54,7 @@ def get_route_for_model(model, action):
     Supports both core and plugin routes.
 
     Args:
-        model (models.Model): Class or Instance of a Django Model
+        model (models.Model, str): Class, Instance, or dotted string of a Django Model
         action (str): name of the action in the route
 
     Returns:
@@ -446,6 +446,8 @@ def get_model_from_name(model_name):
 def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
+
+    Inputted `model` can either be a model class or a dotted respresentation (ex: `dcim.device`).
 
     The object class is expected to be in the module within the application
     associated with the model and its name is expected to be `{ModelName}{object_suffix}`.
