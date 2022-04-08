@@ -35,9 +35,19 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
-#### JSON Type for Custom Fields
+#### JSON Type for Custom Fields ([#897](https://github.com/nautobot/nautobot/issues/897))
 
 Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
+
+### Overlapping/Multiple NAT Support ([#630](https://github.com/nautobot/nautobot/issues/630))
+
+IP addresses can now be associated with multiple outside NAT IP addresses. To do this, set more than one IP Address to have the same NAT inside IP address.
+
+A new version of the REST API `/api/ipam/ip-addresses/*` endpoints have been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
+
+!!! note
+    There are some guardrails on this feature to support backwards compatibility. If you consume the API without specifying the version header or query argument and start associating multiple IPs to have the same NAT inside IP address, an error will be thrown. Existing schema returns `nat_outside` as a single object, where as 1.3 and beyond will return this as a list.
+
 
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
@@ -109,6 +119,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#630](https://github.com/nautobot/nautobot/issues/630) - Added support for multiple NAT outside IP addresses.
 - [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
 - [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
