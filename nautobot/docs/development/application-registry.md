@@ -172,6 +172,17 @@ Plugin [custom validator classes](../plugins/development.md#implementing-custom-
 }
 ```
 
+### `plugin_filter_extensions`
+
+Plugin [filter extensionclasses classes](../plugins/development.md#extending-filters) that extend the current FilterSet's and FilterForm's that are natively provided. Implemented as a dictionary mapping data model names to a list of `PluginFilterExtension` subclasses, for example:
+
+```python
+{
+    'tenancy.tenant': [TenantFilterExtension],
+    'dcim.site': [SiteFilterExtension, OtherSiteFilterExtension],
+}
+```
+
 ### `plugin_graphql_types`
 
 List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL objects that are defined in a plugin will be automatically registered into this registry. An example:
