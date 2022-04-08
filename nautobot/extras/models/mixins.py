@@ -28,6 +28,9 @@ class DynamicGroupMixin:
 
 
 # 2.0 TODO: Remove after v2 since we will no longer care about backwards-incompatibility.
+# - Remove the `monkey_mix` from `nautobot.core.apps.CoreConfig.ready()`
+# - Convert this into a subclass instead of a mixin and move it to `nautobot.extras.models.managers.TaggableManager` (assuming this stays in `extras`)
+# - Replace all `from taggit.managers import TaggableManager` references to `from nautobot.extras.models.managers import TaggableManager`
 class TaggableManagerMonkeyMixin:
     """
     Dynamically-applied monkey-patch mixin that is used to replace any defined
@@ -67,6 +70,9 @@ class TaggableManagerMonkeyMixin:
         # Django migrations create lots of fake models, just skip them
         # NOTE: we make it here rather then inside _install_hotfix()
         #       because we don't want @once_per() to hold refs to all of them.
+        # family_has_profile is fork-lifted from cacheops which
+        # is used to identify "all proxy models, including subclasess, superclassses and siblings" for a model object.
+        # See: https://github.com/Suor/django-cacheops/blob/ad83e51b6d82ba2bf4820953925ff889e4c4b840/cacheops/utils.py#L16-L27
         if cls.__module__ != "__fake__" and family_has_profile(cls):
             self._install_hotfix(cls)
 

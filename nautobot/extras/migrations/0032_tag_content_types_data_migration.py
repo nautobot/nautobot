@@ -5,6 +5,8 @@ import nautobot.extras.utils
 
 
 def populate_existing_tags(app, schema):
+    """For backwards-compatibility, any pre-existing tags must be assumed to apply to all possible content-types."""
+
     Tag = app.get_model("extras", "Tag")
     content_types = nautobot.extras.utils.TaggableClassesQuery().get_choices()
 

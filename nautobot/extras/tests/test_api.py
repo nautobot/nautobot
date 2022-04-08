@@ -2177,9 +2177,14 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
 
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -2209,9 +2214,13 @@ class TagTestVersion13(
 
     @classmethod
     def setUpTestData(cls):
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -2234,11 +2243,6 @@ class TagTestVersion13(
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, 400)
         self.assertEqual(str(response.data["content_types"][0]), "This field is required.")
-
-
-class TagTestV3(APITestCase):
-
-    ...
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

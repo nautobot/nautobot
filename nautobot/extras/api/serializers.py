@@ -1057,9 +1057,7 @@ class TagSerializer(CustomFieldModelSerializer):
         return data
 
 
-class TagSerializerVersion13(CustomFieldModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
-    tagged_items = serializers.IntegerField(read_only=True)
+class TagSerializerVersion13(TagSerializer):
     content_types = ContentTypeField(
         queryset=TaggableClassesQuery().as_queryset,
         many=True,
