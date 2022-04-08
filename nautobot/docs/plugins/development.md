@@ -618,7 +618,7 @@ The basic requirements (additional requirements for each are described below) to
 
 * The file must be named `filter_extensions.py`
 * The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
-* The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name
+* The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted format
 
 Nautobot already dynamically creates many filters for each field type which allows the extension of related fields. Specfically, there are additional `lookup_expr` that are created when there is neither a `lookup_expr` nor `method` parameter set (in this context, `method` is a filterset parameter, not a class method), with the specific expressions based on the type of `django-filter` field used such as `CHAR` vs `NUMERIC` as hinted in the variable definitions seen below. Additionally, Nautobot will add the negation of any fields, meaning not only will `icontains` be added but so will `not icontains` using the `ic` and `nic` keys respectively.
 

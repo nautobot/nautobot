@@ -1,3 +1,4 @@
+from dataclasses import Field
 import re
 
 from django import forms
@@ -16,6 +17,7 @@ __all__ = (
     "restrict_form_fields",
     "parse_csv",
     "validate_csv",
+    "add_field_to_form_class",
 )
 
 
@@ -186,3 +188,18 @@ def validate_csv(headers, fields, required_fields):
     for f in required_fields:
         if f not in headers:
             raise forms.ValidationError(f'Required column header "{f}" not found.')
+
+
+def add_field_to_form_class(form_class, field_name, field_obj):
+    """
+    Attach a field to an existing form class.
+    """
+    if not isinstance(field_obj, forms.Field):
+        raise TypeError(
+            f"Custom form field `{field_name}`, is not a subclass of Django form field."
+        )
+    if field_name in form_class.base_fields:
+        raise AttributeError(
+            f"There was a conflict with filter form field `{field_name}`, the custom filter form field was ignored."
+        )
+    form_class.base_fields[field_name] = field_obj

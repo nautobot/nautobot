@@ -434,11 +434,11 @@ class BaseFilterSet(django_filters.FilterSet):
 
         Will provide `<field_name>__<lookup_expr>` generation automagically.
         """
-        if new_filter_name in cls.base_filters:
-            logger.error("There was a conflict with filter `%s`, the custom filter was ignored." % new_filter_name)
-
         if not isinstance(new_filter_field, django_filters.Filter):
             raise TypeError(f"Tried to add filter ({new_filter_name}) which is not an instance of Django Filter")
+
+        if new_filter_name in cls.base_filters:
+            raise AttributeError("There was a conflict with filter `%s`, the custom filter was ignored." % new_filter_name)
 
         cls.base_filters[new_filter_name] = new_filter_field
         cls.base_filters.update(

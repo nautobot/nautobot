@@ -426,6 +426,15 @@ def copy_safe_request(request):
 
 
 def get_model_from_name(model_name):
+    """Given a full model name in dotted format (example: `dcim.model`), a model class is returned if valid.
+
+    :param model_name: Full dotted name for a model as a string (ex: `dcim.model`)
+    :type model_name: str
+
+    :raises TypeError: If given model name is not found.
+
+    :return: Found model.
+    """
     from django.apps import apps
 
     try:
@@ -515,20 +524,6 @@ def get_table_for_model(model):
         Either the `Table` class or `None`
     """
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
-
-
-def get_content_type_string(model):
-    """Return the the content type string given model.
-
-    Returns:
-        The name of the model in "{app_label}.{model_name}" format
-    """
-    if not inspect.isclass(model):
-        model = model.__class__
-    if not issubclass(model, Model):
-        raise TypeError(f"{model} is not a subclass of Django Model class")
-
-    return f"{model._meta.app_label}.{model._meta.model_name}"
 
 
 # Setup UtilizationData named tuple for use by multiple methods

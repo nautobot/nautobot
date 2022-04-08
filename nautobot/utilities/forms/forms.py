@@ -1,14 +1,10 @@
 import json
 import re
-from logging import getLogger
 
 import yaml
 from django import forms
 
 from nautobot.ipam.formfields import IPNetworkFormField
-from nautobot.extras.registry import registry
-from nautobot.utilities.utils import get_form_for_model, get_content_type_string
-
 
 __all__ = (
     "AddressFieldMixin",
@@ -22,8 +18,6 @@ __all__ = (
     "ReturnURLForm",
     "TableConfigForm",
 )
-
-logger = getLogger(__name__)
 
 
 class AddressFieldMixin(forms.ModelForm):
@@ -62,24 +56,6 @@ class BootstrapMixin(forms.BaseForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        content_type = None
-        form_class = None
-        try:
-            content_type = get_content_type_string(self.model)
-            form_class = get_form_for_model(self.model, "Filter")
-        except AttributeError:
-            pass
-
-        if content_type in registry["plugin_filter_extensions"] and self.__class__ is form_class:
-            for filter_extension in registry["plugin_filter_extensions"][content_type]:
-                for filterform_field_name, filterform_field in filter_extension.filterform_fields.items():
-                    if filterform_field_name in self.fields:
-                        logger.error(
-                            f"There was a conflict with filter form field `{filterform_field_name}`, the custom filter form field was ignored."
-                        )
-                        continue
-                    self.fields[filterform_field_name] = filterform_field
 
         exempt_widgets = [
             forms.CheckboxInput,

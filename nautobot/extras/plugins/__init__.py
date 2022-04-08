@@ -1,6 +1,7 @@
 import collections
 import inspect
 from importlib import import_module
+from logging import getLogger
 
 from packaging import version
 
@@ -24,12 +25,12 @@ from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.secrets import register_secrets_provider
 from nautobot.utilities.choices import ButtonColorChoices
 
+logger = getLogger(__name__)
 
 # Initialize plugin registry stores
 # registry["datasource_content"], registry["secrets_providers"] are not plugin-exclusive; initialized in extras.registry
 registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
-registry["plugin_filter_extensions"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
@@ -389,7 +390,8 @@ def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of PluginFilterExtension classes
     """
-    from nautobot.utilities.utils import get_filterset_for_model
+    from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
+    from nautobot.utilities.forms.utils import add_field_to_form_class
 
     for filter_extension in filter_extensions:
         if not issubclass(filter_extension, PluginFilterExtension):
@@ -397,15 +399,33 @@ def register_filter_extensions(filter_extensions, plugin_name):
         if filter_extension.model is None:
             raise TypeError(f"PluginFilterExtension class {filter_extension} does not define a valid model!")
 
-        for new_filter_name, new_filter_field in filter_extension.filterset_fields.items():
-            if not new_filter_name.startswith(f"{plugin_name}_"):
+        model_filterset_class = get_filterset_for_model(filter_extension.model)
+        model_filterform_class = get_form_for_model(filter_extension.model, "Filter")
+
+        for new_filterset_field_name, new_filterset_field in filter_extension.filterset_fields.items():
+            if not new_filterset_field_name.startswith(f"{plugin_name}_"):
                 raise ValueError(
-                    f"Attempted to create a custom filter `{new_filter_name}` that did not start with `{plugin_name}`"
+                    f"Attempted to create a custom filter `{new_filterset_field_name}` that did not start with `{plugin_name}`"
                 )
 
-            get_filterset_for_model(filter_extension.model).add_filter(new_filter_name, new_filter_field)
+            try:
+                model_filterset_class.add_filter(new_filterset_field_name, new_filterset_field)
+            except AttributeError:
+                logger.error(
+                    f"There was a conflict with filter set field `{new_filterset_field_name}`, the custom filter set field was ignored."
+                )
 
-        registry["plugin_filter_extensions"][filter_extension.model].append(filter_extension)
+        for new_filterform_field_name, new_filterform_field in filter_extension.filterform_fields.items():
+            try:
+                add_field_to_form_class(
+                    form_class=model_filterform_class,
+                    field_name=new_filterform_field_name,
+                    field_obj=new_filterform_field,
+                )
+            except AttributeError:
+                logger.error(
+                    f"There was a conflict with filter form field `{new_filterform_field_name}`, the custom filter form field was ignored."
+                )
 
 
 #

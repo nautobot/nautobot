@@ -84,14 +84,6 @@ class PluginTest(TestCase):
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
         )
 
-    def test_filter_extension_registration(self):
-        """
-        Check that plugin custom filter extensions are registered correctly.
-        """
-        from example_plugin.filter_extensions import TenantFilterExtension
-
-        self.assertIn(TenantFilterExtension, registry["plugin_filter_extensions"]["tenancy.tenant"])
-
     def test_jinja_filter_registration(self):
         """
         Check that plugin custom jinja filters are registered correctly.
