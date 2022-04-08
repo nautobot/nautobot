@@ -659,9 +659,11 @@ However, that does not cover every possible use case, to list a few examples:
 There are several conditions that must be met in order to extend a filter:
 
 * The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
-* The `PluginFilterExtension.filterset()` method must return a valid dict, with each key being the filter name (which must start with the plugin's `name`, e.g. `example_plugin_description`, not merely `description`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
+* The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name`, e.g. `example_plugin_description`, not merely `description`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
 
-Similar to filtersets, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
+Nautobot will dynamically generate the additional relevant lookup expressions of a plugin's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
+
+Similar to FilterSet fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
 
 * The base filter form does not include a custom filter defined by the plugin as described above
 * The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
@@ -669,7 +671,9 @@ Similar to filtersets, Nautobot provides a default filter form for each model, h
 There are several conditions that must be met in order to extend a filter:
 
 * The original FilterForm must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
-* The `filter_form` method must return a valid dictionary of Django form fields
+* The `filterform_fields` attribute must be a valid dictionary of Django form fields
+
+Note: A plugin does not have to define both `filterset_fields` and `filterform_fields`.
 
 Example:
 ```python
@@ -684,38 +688,28 @@ def suffix_search(queryset, name, value):
     return queryset.filter(description=f"{value[0]}.nautobot.com")
 
 
-class TenantFilterSetExtension(PluginFilterExtension):
+class TenantFilterExtension(PluginFilterExtension):
     model = "tenancy.tenant"
 
-    def filterset(self):
-        description = MultiValueCharFilter(field_name="description", label="Description")  # Creation of a new filter
-        sdescrip = MultiValueCharFilter(
+    filterset_fields = {
+        "example_plugin_description": MultiValueCharFilter(field_name="description", label="Description"),
+        "example_plugin_sdescrip": MultiValueCharFilter(
             field_name="description", label="Description", method=suffix_search
-        )  # Creation of new filter with custom method
-        dtype = MultiValueCharFilter(
+        ),
+        "example_plugin_dtype": MultiValueCharFilter(
             field_name="sites__devices__device_type__slug", label="Device Type"
-        )  # Creation of a nested filter
-        return {
-            "example_plugin_description": description,
-            "example_plugin_dtype": dtype,
-            "example_plugin_sdescrip": sdescrip,
-        }
+        ),
+    }
 
-    def filter_form(self):
-        description = forms.CharField(required=False, label="Description")  # Leveraging a custom filter
-        dtype = forms.CharField(required=False, label="Device Type")  # Leveraging a custom and nested filter
-        slug__ic = forms.CharField(required=False, label="Slug Contains")  # Leveraging an existing filter
-        sdescrip = forms.CharField(
-            required=False, label="Suffix Description"
-        )  # Leveraging a custom method search filter
-        return {
-            "example_plugin_description": description,
-            "example_plugin_dtype": dtype,
-            "slug__ic": slug__ic,
-            "example_plugin_sdescrip": sdescrip,
-        }
+    filterform_fields = {
+        "example_plugin_description": forms.CharField(required=False, label="Description"),
+        "example_plugin_dtype": forms.CharField(required=False, label="Device Type"),
+        "slug__ic": forms.CharField(required=False, label="Slug Contains"),
+        "example_plugin_sdescrip": forms.CharField(required=False, label="Suffix Description"),
+    }
 
-filter_extensions = [TenantFilterSetExtension]
+
+filter_extensions = [TenantFilterExtension]
 ```
 
 !!! tip

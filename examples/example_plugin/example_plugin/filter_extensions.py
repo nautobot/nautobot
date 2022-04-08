@@ -8,7 +8,7 @@ def suffix_search(queryset, name, value):
     return queryset.filter(description=f"{value[0]}.nautobot.com")
 
 
-class TenantFilterSetExtension(PluginFilterExtension):
+class TenantFilterExtension(PluginFilterExtension):
     model = "tenancy.tenant"
 
     filterset_fields = {
@@ -30,8 +30,8 @@ class TenantFilterSetExtension(PluginFilterExtension):
 
 
 # created to test that filterset and filter_form being None is fine
-class DeviceFilterSetExtension(PluginFilterExtension):
+class DeviceFilterExtension(PluginFilterExtension):
     model = "dcim.device"
 
 
-filter_extensions = [TenantFilterSetExtension, DeviceFilterSetExtension]
+filter_extensions = [TenantFilterExtension, DeviceFilterExtension]

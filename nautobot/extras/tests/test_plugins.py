@@ -88,9 +88,9 @@ class PluginTest(TestCase):
         """
         Check that plugin custom filter extensions are registered correctly.
         """
-        from example_plugin.filter_extensions import TenantFilterSetExtension
+        from example_plugin.filter_extensions import TenantFilterExtension
 
-        self.assertIn(TenantFilterSetExtension, registry["plugin_filter_extensions"]["tenancy.tenant"])
+        self.assertIn(TenantFilterExtension, registry["plugin_filter_extensions"]["tenancy.tenant"])
 
     def test_jinja_filter_registration(self):
         """
@@ -591,7 +591,7 @@ class FilterExtensionTest(TestCase):
             }
         )
         self.assertTrue(form.is_valid())
-        self.assertIn("example_plugin_description", form.declared_fields.keys())
+        self.assertIn("example_plugin_description", form.fields.keys())
 
 
 class LoadPluginTest(TestCase):
