@@ -56,7 +56,11 @@ The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive reg
 
 Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
 
-- The REST API endpoint that are versioned in the 1.3.0 release are the `/api/extras/jobs/` listing endpoint and `/api/extras/tags/` create/put/patch endpoint, as described above. All others are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
+- The REST API endpoints that are versioned in the 1.3.0 release are
+  - `/api/extras/jobs/` listing endpoint
+  - `/api/extras/tags/` create/put/patch endpoint
+  - `/api/ipam/ip-addresses/` endpoints
+- All others endpoints are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
 - If a REST API client does not request a specific REST API version (in other words, requests `Accept: application/json` rather than `Accept: application/json; version=1.3`) the API behavior will be compatible with Nautobot 1.2, at a minimum for the remainder of the Nautobot 1.x release cycle.
 - The API behavior may change to a newer default version in a Nautobot major release (e.g. 2.0).
 - To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the new Jobs REST API, `Accept: application/json; version=1.3`).
