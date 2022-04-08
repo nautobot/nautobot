@@ -12,7 +12,6 @@ In your existing installation of Nautobot with PostgreSQL, run the following com
     --natural-primary \
     --exclude contenttypes \
     --exclude auth.permission \
-    --exclude extras.job \
     --format json \
     --indent 2 \
     --traceback \
@@ -29,7 +28,7 @@ In very rare cases, there may problems when importing your data from the case-se
 
 ### Confirming database encoding
 
-To confirm that your MySQL database has the correct encoding, you may start up a database shell using `nautobot-server dbshell` and run the `SELECT @@character_set_database, @@collation_database;` query:
+To confirm that your MySQL database has the correct encoding, you may start up a database shell using `nautobot-server dbshell` and run the following command:
 
 ```no-highlight
 (nautobot-mysql) $ nautobot-server dbshell

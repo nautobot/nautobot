@@ -36,7 +36,7 @@ The collation encoding is used to inform MySQL how characters are sorted in the 
 !!! danger
 	It is **strongly recommended** that you backup your database before exuecitng this query and that you perform this in a non-production environment to identify any potential issues prior to updating your production environment.
 
-If you have an existing MySQL database, you may update your database to use the recommended encoding by using `nautobot-server dbshell` to launch a database shell and executing the `ALTER DATABASE nautobot COLLATE utf8mb4_0900_ai_ci;`query:
+If you have an existing MySQL database, you may update your database to use the recommended encoding by using `nautobot-server dbshell` to launch a database shell and executing the following command:
 
 ```no-highlight
 $ nautobot-server dbshell
