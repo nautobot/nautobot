@@ -1326,7 +1326,7 @@ class JobTestVersion13(
     """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
 
     model = Job
-    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "source", "url"]
+    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
     choices_fields = None
     update_data = {
         # source, module_name, job_class_name, installed are NOT editable
