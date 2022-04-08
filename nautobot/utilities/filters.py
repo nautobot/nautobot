@@ -1,5 +1,4 @@
 from copy import deepcopy
-from logging import getLogger
 
 from django import forms
 from django.conf import settings
@@ -11,15 +10,12 @@ from django_filters.utils import get_model_field, resolve_field
 
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
-
 from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
-
-logger = getLogger(__name__)
 
 
 def multivalue_field_factory(field_class):
@@ -438,7 +434,9 @@ class BaseFilterSet(django_filters.FilterSet):
             raise TypeError(f"Tried to add filter ({new_filter_name}) which is not an instance of Django Filter")
 
         if new_filter_name in cls.base_filters:
-            raise AttributeError("There was a conflict with filter `%s`, the custom filter was ignored." % new_filter_name)
+            raise AttributeError(
+                "There was a conflict with filter `%s`, the custom filter was ignored." % new_filter_name
+            )
 
         cls.base_filters[new_filter_name] = new_filter_field
         cls.base_filters.update(

@@ -1,4 +1,3 @@
-from dataclasses import Field
 import re
 
 from django import forms
@@ -195,9 +194,7 @@ def add_field_to_form_class(form_class, field_name, field_obj):
     Attach a field to an existing form class.
     """
     if not isinstance(field_obj, forms.Field):
-        raise TypeError(
-            f"Custom form field `{field_name}`, is not a subclass of Django form field."
-        )
+        raise TypeError(f"Custom form field `{field_name}`, is not a subclass of Django form field.")
     if field_name in form_class.base_fields:
         raise AttributeError(
             f"There was a conflict with filter form field `{field_name}`, the custom filter form field was ignored."
