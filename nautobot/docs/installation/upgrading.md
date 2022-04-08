@@ -27,11 +27,11 @@ As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facil
 
 ## Update Prerequisites to Required Versions
 
-Nautobot v1.0.0 and later requires the following:
+Nautobot v1.3.0 and later requires the following:
 
 | Dependency | Minimum Version |
 |------------|-----------------|
-| Python     | 3.6             |
+| Python     | 3.7             |
 | PostgreSQL | 9.6             |
 | Redis      | 4.0             |
 
@@ -64,7 +64,7 @@ $ pip3 install --upgrade nautobot
 If you do not have any optional dependencies, you may skip this step.
 
 Once the new code is in place, verify that any optional Python packages required by your deployment (e.g. `napalm` or
-`django-auth-ldap`) are listed in `local_requirements.txt`. 
+`django-auth-ldap`) are listed in `local_requirements.txt`.
 
 Then, upgrade your dependencies using `pip3`:
 

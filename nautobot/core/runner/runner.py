@@ -256,7 +256,7 @@ def run_app(**kwargs):
     # process default path or environment variable.
     config_path = args.config
 
-    # Overlay our config w/ defautls
+    # Overlay our config w/ defaults
     try:
         configure_app(config_path=config_path, **kwargs)
     except ValueError as err:

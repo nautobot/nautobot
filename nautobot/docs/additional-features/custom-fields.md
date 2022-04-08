@@ -17,6 +17,7 @@ Nautobot supports these custom field types:
 * Boolean: True or false
 * Date: A date in ISO 8601 format (YYYY-MM-DD)
 * URL: This will be presented as a link in the web UI
+* JSON: Arbitrary JSON data
 * Selection: A selection of one of several pre-defined custom choices
 * Multiple selection: A selection field which supports the assignment of multiple values
 
@@ -31,14 +32,17 @@ The filter logic controls how values are matched when filtering objects by the c
 
 A custom field must be assigned to one or object types, or models, in Nautobot. Once created, custom fields will automatically appear as part of these models in the web UI and REST API.
 
+When creating a custom field, if "Move to Advanced tab" is checked, this custom field won't appear on the object's main detail tab in the UI, but will appear in the "Advanced" tab. This is useful when the requirement is to hide this field from the main detail tab when, for instance, it is only required for machine-to-machine communication and not user consumption.
+
 ### Custom Field Validation
 
 Nautobot supports limited custom validation for custom field values. Following are the types of validation enforced for each field type:
 
 * Text: Regular expression (optional)
 * Integer: Minimum and/or maximum value (optional)
+* JSON: If not empty, this field must contain valid JSON data
 * Selection: Must exactly match one of the prescribed choices
-  * Selection Fields: Regular expression (optional)
+    * Selection Fields: Regular expression (optional)
 
 ### Custom Selection Fields
 

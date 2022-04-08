@@ -13,13 +13,7 @@
                 </tr>
                 <tr>
                     <td>Private</td>
-                    <td>
-                        {% if object.is_private %}
-                            <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
-                        {% else %}
-                            <span class="text-danger"><i class="mdi mdi-close"></i></span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.is_private | render_boolean }}</td>
                 </tr>
                 <tr>
                     <td>Aggregates</td>

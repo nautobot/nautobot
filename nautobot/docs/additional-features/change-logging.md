@@ -9,7 +9,8 @@ When a request is made, a UUID is generated and attached to any change records r
 Change records are exposed in the API via the read-only endpoint `/api/extras/object-changes/`. They may also be exported via the web UI in CSV format.
 
 Change records can also be accessed via the read-only GraphQL endpoint `/api/graphql/`. An example query to fetch change logs by action:
-```gql
+
+```graphql
 { 
   query: object_changes(action: "created") {
     action
@@ -17,3 +18,4 @@ Change records can also be accessed via the read-only GraphQL endpoint `/api/gra
     object_repr
   }
 }
+```

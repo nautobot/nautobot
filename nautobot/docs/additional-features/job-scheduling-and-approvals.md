@@ -10,7 +10,7 @@ Jobs can be scheduled through the UI or the API.
 
 ### Scheduling via the UI
 
-The Job Scheduling views can be accessed via the navigation at `Extensibility > Jobs > Jobs`, selecting a Job as appropriate.
+The Job Scheduling views can be accessed via the navigation at `Jobs > Jobs`, selecting a Job as appropriate.
 
 The UI allows you to select a scheduling type. Further fields will be displayed as appropriate for that schedule type.
 
@@ -24,8 +24,8 @@ Jobs can also be scheduled via the REST API. The endpoint used for this is the r
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
-http://nautobot/api/extras/jobs/local/example/MyJobWithNoVars/run/ \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/jobs/$JOB_ID/run/ \
 --data '{"schedule": {"name": "test", "interval": "future", "start_time": "2030-01-01T01:00:00.000Z"}}'
 ```
 
@@ -33,14 +33,14 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithNoVars/run/ \
 
 Jobs that have `approval_required` set to `True` on their `Meta` object require another user to approve a scheduled job.
 
-Jobs can be approved via the UI and API by any user that has the rights to run a job.
+Scheduled jobs can be approved or denied via the UI and API by any user that has the `extras.approve_job` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions.
 
 !!! note
     Jobs that are past their scheduled run date can still be approved, but the approver will be asked to confirm the operation.
 
 ### Approval via the UI
 
-The queue of jobs that need approval can be found under `Extensibility > Job Approval Queue`. This view lists all currently requested jobs that need approval before they are run. To approve a job, select it and click the button to approve. Please note that you will be  asked for confirmation if a job is being approved that is past its scheduled date and time.
+The queue of jobs that need approval can be found under `Jobs > Job Approval Queue`. This view lists all currently requested jobs that need approval before they are run. To approve a job, select it and click the button to approve. Please note that you will be  asked for confirmation if a job is being approved that is past its scheduled date and time.
 
 If the approver is unsure what a job would do, a dry run can also be started via that same view.
 
@@ -52,7 +52,7 @@ Approvals can also be given via the REST API. The endpoints to approve, deny, an
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
+-H "Accept: application/json; version=1.3; indent=4" \
 http://nautobot/api/extras/scheduled-jobs/$JOB_ID/approve?force=true
 ```
 

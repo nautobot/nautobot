@@ -1,4 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.fields import CreateOnlyDefault, Field
 
@@ -36,6 +38,7 @@ class CustomFieldDefaultValues:
         return value
 
 
+@extend_schema_field(OpenApiTypes.OBJECT)
 class CustomFieldsDataField(Field):
     def _get_custom_fields(self):
         """
@@ -78,7 +81,7 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
             fields = CustomField.objects.filter(content_types=content_type)
 
             # Populate CustomFieldValues for each instance from database
-            if type(self.instance) in (list, tuple):
+            if isinstance(self.instance, (list, tuple)):
                 for obj in self.instance:
                     self._populate_custom_fields(obj, fields)
             else:
@@ -89,5 +92,6 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         for field in custom_fields:
             instance.custom_fields[field.name] = instance.cf.get(field.name)
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_computed_fields(self, obj):
         return obj.get_computed_fields()

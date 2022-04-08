@@ -271,7 +271,7 @@ class DeviceType(PrimaryModel):
         elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufactuer_id={self.manufacturer_id}&device_type_id={self.pk}"
+                url = f"{reverse('dcim:device_list')}?manufacturer_id={self.manufacturer_id}&device_type_id={self.pk}"
                 raise ValidationError(
                     {
                         "u_height": mark_safe(
@@ -438,6 +438,7 @@ class Platform(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -475,7 +476,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     )
     name = models.CharField(max_length=64, blank=True, null=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True)
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number")
     asset_tag = models.CharField(
         max_length=50,
         blank=True,

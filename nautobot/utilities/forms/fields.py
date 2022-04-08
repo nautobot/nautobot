@@ -188,19 +188,30 @@ class CSVModelChoiceField(forms.ModelChoiceField):
 
 class CSVContentTypeField(CSVModelChoiceField):
     """
-    Reference a ContentType in the form <app>.<model>
+    Reference a ContentType in the form `{app_label}.{model}`.
     """
 
     STATIC_CHOICES = True
 
     def prepare_value(self, value):
+        """
+        Allow this field to support `{app_label}.{model}` style, null values, or PK-based lookups
+        depending on how the field is used.
+        """
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, int):
+            value = self.queryset.get(pk=value)
+
         return f"{value.app_label}.{value.model}"
 
     def to_python(self, value):
         try:
             app_label, model = value.split(".")
         except ValueError:
-            raise forms.ValidationError('Object type must be specified as "<app>.<model>"')
+            raise forms.ValidationError('Object type must be specified as "<app_label>.<model>"')
         try:
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
@@ -212,7 +223,7 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
     Field for choosing any number of `ContentType` objects.
 
     Optionally can restrict the available ContentTypes to those supporting a particular feature only.
-    Optionally can pass the selection through as a list of "`{app_label}.{model}`" strings intead of PK values.
+    Optionally can pass the selection through as a list of `{app_label}.{model}` strings instead of PK values.
     """
 
     STATIC_CHOICES = True
@@ -241,7 +252,7 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
             self.choices = self._string_choices_from_queryset
 
     def _string_choices_from_queryset(self):
-        """Overload choices to return "<app>.<model>" instead of PKs."""
+        """Overload choices to return `{app_label}.{model}` instead of PKs."""
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
 
 

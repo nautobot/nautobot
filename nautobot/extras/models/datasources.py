@@ -120,6 +120,14 @@ class GitRepository(PrimaryModel):
     def filesystem_path(self):
         return os.path.join(settings.GIT_ROOT, self.slug)
 
+    def set_dryrun(self):
+        """
+        Add _dryrun flag.
+
+        The existence of this flag indicates that the next sync of this repo (on save()) should be a dry-run only.
+        """
+        self._dryrun = True
+
     def save(self, *args, trigger_resync=True, **kwargs):
         if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:
             # User edited the repo but did NOT specify a new token value. Make sure we keep the existing value.
@@ -141,13 +149,20 @@ class GitRepository(PrimaryModel):
                         self.filesystem_path,
                     )
 
-            if trigger_resync:
+            dry_run = hasattr(self, "_dryrun")
+            if trigger_resync or dry_run:
                 assert self.request is not None, "No HTTP request associated with this update!"
                 from nautobot.extras.datasources import (
                     enqueue_pull_git_repository_and_refresh_data,
+                    enqueue_git_repository_diff_origin_and_local,
                 )
 
-                enqueue_pull_git_repository_and_refresh_data(self, self.request)
+                # NOTE: if dry_run is True, there would be no need to trigger a resync
+                # regardless of the trigger_resync value (True/False)
+                if dry_run:
+                    enqueue_git_repository_diff_origin_and_local(self, self.request)
+                else:
+                    enqueue_pull_git_repository_and_refresh_data(self, self.request)
 
             # Update cached values
             self.__initial_token = self._token

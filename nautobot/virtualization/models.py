@@ -20,7 +20,7 @@ from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 __all__ = (
@@ -206,6 +206,7 @@ class Cluster(PrimaryModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -290,6 +291,15 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         "memory",
         "disk",
     ]
+    # 2.0 TODO: Make this go away when we assert filterset/filterform parity. FilterSet fields that
+    # are custom on FilterForm that we don't want in DynamicGroup UI edit form because they are
+    # already there.
+    #
+    # This mapping is in the form of:
+    #   {missing_form_field_name}: {filterset_field_name_that_duplicates_it}
+    dynamic_group_filter_fields = {
+        "cluster": "cluster_id",
+    }
 
     class Meta:
         ordering = ("name",)  # Name may be non-unique
@@ -460,13 +470,15 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             )
 
     def to_objectchange(self, action):
+
         # Annotate the parent VirtualMachine
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
-            related_object=self.virtual_machine,
             object_data=serialize_object(self),
+            object_data_v2=serialize_object_v2(self),
+            related_object=self.virtual_machine,
         )
 
     @property

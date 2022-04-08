@@ -42,7 +42,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.6",
+            "python_ver": "3.7",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_files": [
@@ -111,6 +111,7 @@ def docker_compose(context, command, **kwargs):
 def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
+        print(f'Running command "{command}"')
         context.run(command, pty=True, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
@@ -160,7 +161,7 @@ def buildx(
     cache=False,
     cache_dir="",
     platforms="linux/amd64",
-    tag="networktocode/nautobot-dev-py3.6:local",
+    tag="networktocode/nautobot-dev-py3.7:local",
     target="dev",
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
@@ -203,7 +204,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.6":
+    if context.nautobot.python_ver == "3.7":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
@@ -408,6 +409,26 @@ def check_migrations(context):
 
 @task(
     help={
+        "api_version": "Check a single specified API version only.",
+    },
+)
+def check_schema(context, api_version=None):
+    if api_version is not None:
+        api_versions = [api_version]
+    else:
+        nautobot_version = get_nautobot_version()
+        # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
+        current_major, current_minor = nautobot_version.split(".")[:2]
+        assert current_major == "1", f"check_schemas version calc must be updated to handle version {current_major}"
+        api_versions = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+
+    for api_version in api_versions:
+        command = f"nautobot-server spectacular --api-version {api_version} --validate --fail-on-warn --file /dev/null"
+        run_command(context, command)
+
+
+@task(
+    help={
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -517,5 +538,6 @@ def tests(context, lint_only=False, keepdb=False):
     flake8(context)
     hadolint(context)
     check_migrations(context)
+    check_schema(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)

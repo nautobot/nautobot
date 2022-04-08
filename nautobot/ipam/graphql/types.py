@@ -40,6 +40,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     family = graphene.Int()
     interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
     vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
+    nat_outside = graphene.Field(lambda: IPAddressType)
 
     class Meta:
         model = models.IPAddress

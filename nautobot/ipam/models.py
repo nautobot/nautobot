@@ -2,7 +2,7 @@ import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
@@ -10,11 +10,11 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import ObjectChange, Status, StatusModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
+from nautobot.utilities.utils import array_to_string, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import IPAddressRoleChoices, ServiceProtocolChoices
@@ -772,14 +772,14 @@ class IPAddress(PrimaryModel, StatusModel):
     )
     assigned_object_id = models.UUIDField(blank=True, null=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
-    nat_inside = models.OneToOneField(
+    nat_inside = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
-        related_name="nat_outside",
+        related_name="nat_outside_list",
         blank=True,
         null=True,
         verbose_name="NAT (Inside)",
-        help_text='The IP for which this address is the "outside" IP',
+        help_text='The IP Addresses for which this address is the "outside" IP',
     )
     dns_name = models.CharField(
         max_length=255,
@@ -915,13 +915,7 @@ class IPAddress(PrimaryModel, StatusModel):
 
     def to_objectchange(self, action):
         # Annotate the assigned object, if any
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            related_object=self.assigned_object,
-            object_data=serialize_object(self),
-        )
+        return super().to_objectchange(action, related_object=self.assigned_object)
 
     def to_csv(self):
 
@@ -964,6 +958,30 @@ class IPAddress(PrimaryModel, StatusModel):
         if self.address:
             return self.address.version
         return None
+
+    # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
+    class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
+        """
+        An exception class is used to expose in API the object that cannot safely support the legacy getter, setter methods.
+        """
+
+        def __init__(self, obj):
+            self.obj = obj
+
+        def __str__(self):
+            return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
+
+    @property
+    def nat_outside(self):
+        if self.nat_outside_list.count() > 1:
+            raise self.NATOutsideMultipleObjectsReturned(self)
+        return self.nat_outside_list.first()
+
+    @nat_outside.setter
+    def nat_outside(self, value):
+        if self.nat_outside_list.count() > 1:
+            raise self.NATOutsideMultipleObjectsReturned(self)
+        return self.nat_outside_list.set([value])
 
     def _set_mask_length(self, value):
         """
