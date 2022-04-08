@@ -142,6 +142,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
 - [#1311](https://github.com/nautobot/nautobot/issues/1311) - Fixed a where it was not possible to set the rack height to `0` when performing a bulk edit of device types.
 - [#1476](https://github.com/nautobot/nautobot/issues/1476) - Fixed a bug wherein a Job run via the REST API with a missing `schedule` would allow `approval_required` to be bypassed.
+- [#1516](https://github.com/nautobot/nautobot/issues/1516) - Fixed MySQL unit tests running in Docker environment and revised recommended MySQL encoding settings
 - [#1562](https://github.com/nautobot/nautobot/issues/1562) - Fixed JobResult filter form UI pointing to the wrong endpoint.
 - [#1563](https://github.com/nautobot/nautobot/issues/1563) - Fixed UI crash when trying to execute Jobs provided by disabled plugins. A friendly error message will now be displayed.
 
