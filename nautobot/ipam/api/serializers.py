@@ -401,7 +401,7 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
     )
     assigned_object = serializers.SerializerMethodField(read_only=True)
     nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
-    nat_outside = NestedIPAddressSerializer(read_only=True)
+    nat_outside = NestedIPAddressSerializer(read_only=True, many=True, source="nat_outside_list")
 
     class Meta:
         model = IPAddress
@@ -437,6 +437,11 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
         serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
         context = {"request": self.context["request"]}
         return serializer(obj.assigned_object, context=context).data
+
+
+# 2.0 TODO: Remove in 2.0. Used to serialize against pre-1.3 behavior (nat_inside was one-to-one)
+class IPAddressSerializerLegacy(IPAddressSerializer):
+    nat_outside = NestedIPAddressSerializer(read_only=True)
 
 
 class AvailableIPSerializer(serializers.Serializer):
