@@ -620,32 +620,9 @@ The basic requirements (additional requirements for each are described below) to
 * The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
 * The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted format
 
-Nautobot already dynamically creates many filters for each field type which allows the extension of related fields. Specfically, there are additional `lookup_expr` that are created when there is neither a `lookup_expr` nor `method` parameter set (in this context, `method` is a filterset parameter, not a class method), with the specific expressions based on the type of `django-filter` field used such as `CHAR` vs `NUMERIC` as hinted in the variable definitions seen below. Additionally, Nautobot will add the negation of any fields, meaning not only will `icontains` be added but so will `not icontains` using the `ic` and `nic` keys respectively.
+Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional `lookup_expr` that are created when there is neither a `lookup_expr` nor `method` parameter set on the filter already. Nautobot will also add the negation of any fields, meaning not only will `icontains` be added but so will `not icontains` using the `ic` and `nic` keys respectively.
 
-```python
-# nautobot/utilities/constants.py
-FILTER_CHAR_BASED_LOOKUP_MAP = dict(
-    n="exact",
-    ic="icontains",
-    nic="icontains",
-    iew="iendswith",
-    niew="iendswith",
-    isw="istartswith",
-    nisw="istartswith",
-    ie="iexact",
-    nie="iexact",
-    re="regex",
-    nre="regex",
-    ire="iregex",
-    nire="iregex",
-)
-
-FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")
-
-FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
-
-FILTER_TREENODE_NEGATION_LOOKUP_MAP = dict(n="in")
-```
+The additional lookup methods added can be found here in [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py), the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py).
 
 !!! tip
     For developers of plugins that define their own model filters, note that the above are dynamically added, as long as the class correctly inherits from `nautobot.utilities.filters.BaseFilterSet`.
