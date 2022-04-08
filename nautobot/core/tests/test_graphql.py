@@ -376,7 +376,7 @@ class GraphQLSearchParameters(TestCase):
 
     def test_search_parameters(self):
 
-        fields = SiteFilterSet.get_filters().keys()
+        fields = SiteFilterSet.base_filters.keys()
         params = generate_list_search_parameters(self.schema)
         exclude_filters = ["type"]
 

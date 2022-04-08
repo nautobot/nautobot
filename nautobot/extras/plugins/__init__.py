@@ -182,11 +182,11 @@ class PluginConfig(NautobotConfig):
             for filter_extension in filter_extensions:
                 for filterset_field_name in filter_extension.filterset_fields.keys():
                     self.features["filter_extensions"]["filterset_fields"].append(
-                        f"{filter_extension.model} -> filterset_field -> {filterset_field_name}"
+                        f"{filter_extension.model} -> {filterset_field_name}"
                     )
                 for filterform_field_name in filter_extension.filterform_fields.keys():
-                    self.features["filter_extensions"]["filterset_fields"].append(
-                        f"{filter_extension.model} -> filterform_field -> {filterform_field_name}"
+                    self.features["filter_extensions"]["filterform_fields"].append(
+                        f"{filter_extension.model} -> {filterform_field_name}"
                     )
 
     @classmethod
@@ -396,14 +396,6 @@ def register_filter_extensions(filter_extensions, plugin_name):
             raise TypeError(f"{filter_extension} is not a subclass of extras.plugins.PluginFilterExtension!")
         if filter_extension.model is None:
             raise TypeError(f"PluginFilterExtension class {filter_extension} does not define a valid model!")
-
-        for new_filter_name, new_filter_field in filter_extension.filterset_fields.items():
-            if not new_filter_name.startswith(f"{plugin_name}_"):
-                raise ValueError(
-                    f"Attempted to create a custom filter `{new_filter_name}` that did not start with `{plugin_name}`"
-                )
-
-            get_filterset_for_model(filter_extension.model).add_filter(new_filter_name, new_filter_field)
 
         for new_filter_name, new_filter_field in filter_extension.filterset_fields.items():
             if not new_filter_name.startswith(f"{plugin_name}_"):

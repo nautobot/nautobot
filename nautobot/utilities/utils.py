@@ -524,7 +524,7 @@ def get_content_type_string(model):
         The name of the model in "{app_label}.{model_name}" format
     """
     if not inspect.isclass(model):
-        raise TypeError(f"model class {model} was passes as an instance!")
+        model = model.__class__
     if not issubclass(model, Model):
         raise TypeError(f"{model} is not a subclass of Django Model class")
 
