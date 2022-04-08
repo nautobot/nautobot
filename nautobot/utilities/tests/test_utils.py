@@ -10,6 +10,7 @@ from nautobot.utilities.utils import (
     get_route_for_model,
     get_table_for_model,
     normalize_querydict,
+    get_model_from_name,
 )
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
@@ -175,6 +176,10 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(get_table_for_model(Device), DeviceTable)
         self.assertEqual(get_table_for_model("dcim.site"), SiteTable)
         self.assertEqual(get_table_for_model(Site), SiteTable)
+
+    def test_get_model_from_name(self):
+        self.assertEqual(get_model_from_name("dcim.device"), Device)
+        self.assertEqual(get_model_from_name("dcim.site"), Site)
 
 
 class IsTruthyTest(TestCase):

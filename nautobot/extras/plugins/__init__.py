@@ -391,7 +391,7 @@ def register_filter_extensions(filter_extensions, plugin_name):
     Register a list of PluginFilterExtension classes
     """
     from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
-    from nautobot.utilities.forms.utils import add_field_to_form_class
+    from nautobot.utilities.forms.utils import add_field_to_filter_form_class
 
     for filter_extension in filter_extensions:
         if not issubclass(filter_extension, PluginFilterExtension):
@@ -417,7 +417,7 @@ def register_filter_extensions(filter_extensions, plugin_name):
 
         for new_filterform_field_name, new_filterform_field in filter_extension.filterform_fields.items():
             try:
-                add_field_to_form_class(
+                add_field_to_filter_form_class(
                     form_class=model_filterform_class,
                     field_name=new_filterform_field_name,
                     field_obj=new_filterform_field,
