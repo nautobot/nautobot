@@ -39,7 +39,7 @@ For more details please refer to the [Jobs feature documentation](../additional-
 
 Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
 
-### Overlapping/Multiple NAT Support ([#630](https://github.com/nautobot/nautobot/issues/630))
+#### Overlapping/Multiple NAT Support ([#630](https://github.com/nautobot/nautobot/issues/630))
 
 IP addresses can now be associated with multiple outside NAT IP addresses. To do this, set more than one IP Address to have the same NAT inside IP address.
 
