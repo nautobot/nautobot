@@ -447,7 +447,7 @@ def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
 
-    Inputted `model` can either be a model class or a dotted respresentation (ex: `dcim.device`).
+    The given `model` can either be a model class or a dotted representation (ex: `dcim.device`).
 
     The object class is expected to be in the module within the application
     associated with the model and its name is expected to be `{ModelName}{object_suffix}`.
