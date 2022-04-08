@@ -615,6 +615,7 @@ After installing and enabling your plugin, you should now be able to navigate to
 Plugins can extend the current FilterSet's and FilterForm's that are natively provided.
 
 The basic requirements (additional requirements for each are described below) to extend a filter set or a filter form are:
+
 * The file must be named `filter_extensions.py`
 * The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
 * The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name
@@ -651,15 +652,14 @@ FILTER_TREENODE_NEGATION_LOOKUP_MAP = dict(n="in")
 
 However, that does not cover every possible use case, to list a few examples:
 
-* Usage of a custom "method", which would allow arbitrary filtering, this is how the "q" search logic is currently performed, but that opionion may or may not match your ideal use case.
+* Usage of a custom "method", which would allow arbitrary filtering. (This is how the "q" search logic is currently performed).
 * Creation of a filter on a field that does not currently have filtering support
 * Convenience methods for highly nested fields
-* Allow usage of a custom lookup, that you create such as adding math functions like floor and ceiling as lookups
 
 There are several conditions that must be met in order to extend a filter:
 
 * The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
-* The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name`, e.g. `example_plugin_description`, not merely `description`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
+* The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
 
 Nautobot will dynamically generate the additional relevant lookup expressions of a plugin's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
 
@@ -673,7 +673,8 @@ There are several conditions that must be met in order to extend a filter:
 * The original FilterForm must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
 * The `filterform_fields` attribute must be a valid dictionary of Django form fields
 
-Note: A plugin does not have to define both `filterset_fields` and `filterform_fields`.
+!!! note
+    A plugin is not required to define both `filterset_fields` and `filterform_fields`.
 
 Example:
 ```python
