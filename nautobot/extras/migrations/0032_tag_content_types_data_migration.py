@@ -15,6 +15,13 @@ def populate_existing_tags(app, schema):
             tag.content_types.add(id)
 
 
+def reverse_populate_tags(app, schema_editor):
+    Tag = app.get_model("extras", "Tag")
+
+    for tag in Tag.objects.filter(content_types__isnull=False):
+        tag.content_types.clear()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -22,5 +29,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_existing_tags),
+        migrations.RunPython(populate_existing_tags, reverse_populate_tags),
     ]

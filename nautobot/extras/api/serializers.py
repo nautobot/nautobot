@@ -1052,7 +1052,8 @@ class TagSerializer(CustomFieldModelSerializer):
         data = super().validate(data)
 
         # All relevant content_types should be assigned to tag for API Version <1.3
-        data["content_types"] = TaggableClassesQuery().as_queryset
+        if not data.get("content_types"):
+            data["content_types"] = TaggableClassesQuery().as_queryset
 
         return data
 
