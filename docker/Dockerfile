@@ -85,7 +85,9 @@ RUN apt-get update && \
 # if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/master/#installing-with-the-official-installer
 # This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
-RUN curl -sSL https://install.python-poetry.org | python -
+RUN curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
+    python /tmp/install-poetry.py && \
+    rm -f /tmp/install-poetry.py
 
 # Add poetry install location to the $PATH
 ENV PATH="${PATH}:/root/.local/bin"
