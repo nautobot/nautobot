@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from drf_yasg.utils import swagger_serializer_method
+from django.utils.functional import classproperty
+from drf_spectacular.utils import extend_schema_field
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.extras.models.secrets import SecretsGroupAssociation
 from rest_framework import serializers
@@ -15,6 +16,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceRoleSerializer,
+    NestedDeviceTypeSerializer,
     NestedPlatformSerializer,
     NestedRackSerializer,
     NestedRegionSerializer,
@@ -35,10 +37,12 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -75,10 +79,12 @@ from .nested_serializers import (  # noqa: F401
     NestedConfigContextSerializer,
     NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
+    NestedDynamicGroupSerializer,
     NestedExportTemplateSerializer,
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
+    NestedJobSerializer,
     NestedJobResultSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
@@ -189,7 +195,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
     )
     device_types = SerializedPKRelatedField(
         queryset=DeviceType.objects.all(),
-        serializer=NestedDeviceRoleSerializer,
+        serializer=NestedDeviceTypeSerializer,
         required=False,
         many=True,
     )
@@ -253,7 +259,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -293,7 +299,7 @@ class ConfigContextSchemaSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -315,7 +321,7 @@ class ContentTypeSerializer(serializers.ModelSerializer):
         model = ContentType
         fields = ["id", "url", "app_label", "model", "display"]
 
-    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
         return obj.app_labeled_name
 
@@ -391,6 +397,31 @@ class CustomLinkSerializer(ValidatedModelSerializer):
 
 
 #
+# Dynamic Groups
+#
+
+
+class DynamicGroupSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        model = DynamicGroup
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "description",
+            "content_type",
+            "filter",
+        ]
+        extra_kwargs = {"filter": {"read_only": False}}
+
+
+#
 # Export templates
 #
 
@@ -424,7 +455,7 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
             "file_extension",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -447,7 +478,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
 
     provided_contents = MultipleChoiceJSONField(
-        choices=get_datasource_content_choices("extras.gitrepository"),
+        choices=lambda: get_datasource_content_choices("extras.gitrepository"),
         allow_blank=True,
         required=False,
     )
@@ -550,7 +581,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
         return data
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_parent(self, obj):
 
         # Static mapping of models to their nested serializers
@@ -567,6 +598,77 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 #
+# Jobs
+#
+
+
+class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
+
+    class Meta:
+        model = Job
+        fields = [
+            "id",
+            "url",
+            "source",
+            "module_name",
+            "job_class_name",
+            "grouping",
+            "grouping_override",
+            "name",
+            "name_override",
+            "slug",
+            "description",
+            "description_override",
+            "installed",
+            "enabled",
+            "approval_required",
+            "approval_required_override",
+            "commit_default",
+            "commit_default_override",
+            "hidden",
+            "hidden_override",
+            "read_only",
+            "read_only_override",
+            "soft_time_limit",
+            "soft_time_limit_override",
+            "time_limit",
+            "time_limit_override",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+class JobVariableSerializer(serializers.Serializer):
+    """Serializer used for responses from the JobModelViewSet.variables() detail endpoint."""
+
+    name = serializers.CharField(read_only=True)
+    type = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True, required=False)
+    help_text = serializers.CharField(read_only=True, required=False)
+    default = serializers.JSONField(read_only=True, required=False)
+    required = serializers.BooleanField(read_only=True, required=False)
+
+    min_length = serializers.IntegerField(read_only=True, required=False)
+    max_length = serializers.IntegerField(read_only=True, required=False)
+    min_value = serializers.IntegerField(read_only=True, required=False)
+    max_value = serializers.IntegerField(read_only=True, required=False)
+    choices = serializers.JSONField(read_only=True, required=False)
+    model = serializers.CharField(read_only=True, required=False)
+
+
+class JobRunResponseSerializer(serializers.Serializer):
+    """Serializer representing responses from the JobModelViewSet.run() POST endpoint."""
+
+    schedule = NestedScheduledJobSerializer(read_only=True, required=False)
+    job_result = NestedJobResultSerializer(read_only=True, required=False)
+
+
+#
 # Job Results
 #
 
@@ -575,6 +677,7 @@ class JobResultSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+    job_model = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
     schedule = NestedScheduledJobSerializer(read_only=True)
 
@@ -586,6 +689,7 @@ class JobResultSerializer(serializers.ModelSerializer):
             "created",
             "completed",
             "name",
+            "job_model",
             "obj_type",
             "status",
             "user",
@@ -603,6 +707,7 @@ class JobResultSerializer(serializers.ModelSerializer):
 class ScheduledJobSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
     user = NestedUserSerializer(read_only=True)
+    job_model = NestedJobSerializer(read_only=True)
     approved_by_user = NestedUserSerializer(read_only=True)
 
     class Meta:
@@ -612,6 +717,7 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
             "url",
             "name",
             "user",
+            "job_model",
             "task",
             "interval",
             "queue",
@@ -628,28 +734,42 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
 
 
 #
-# Jobs (fka Custom Scripts, Reports)
+# Job classes (fka Custom Scripts, Reports)
+# 2.0 TODO: remove these if no longer needed
 #
 
 
-class JobSerializer(serializers.Serializer):
+class JobClassSerializer(serializers.Serializer):
     url = serializers.HyperlinkedIdentityField(
         view_name="extras-api:job-detail",
         lookup_field="class_path",
         lookup_url_kwarg="class_path",
     )
     id = serializers.CharField(read_only=True, source="class_path")
+    pk = serializers.SerializerMethodField(read_only=True)
     name = serializers.CharField(max_length=255, read_only=True)
     description = serializers.CharField(max_length=255, required=False, read_only=True)
     test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
     vars = serializers.SerializerMethodField(read_only=True)
-    result = NestedJobResultSerializer()
+    result = NestedJobResultSerializer(required=False)
 
+    @extend_schema_field(serializers.DictField)
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
 
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
+    def get_pk(self, instance):
+        try:
+            jobs = Job.objects
+            if "request" in self.context and self.context["request"].user is not None:
+                jobs = jobs.restrict(self.context["request"].user, "view")
+            job_model = jobs.get_for_class_path(instance.class_path)
+            return job_model.pk
+        except Job.DoesNotExist:
+            return None
 
-class JobDetailSerializer(JobSerializer):
+
+class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
 
 
@@ -705,7 +825,7 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
             "object_data",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_changed_object(self, obj):
         """
         Serialize a nested representation of the changed object.
@@ -894,6 +1014,16 @@ class StatusModelSerializerMixin(serializers.Serializer):
 
     status = StatusSerializerField(queryset=Status.objects.all())
 
+    @classproperty
+    def status_choices(cls):
+        """
+        Get the list of valid status values for this serializer.
+
+        May be necessary to use with settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] at some point if
+        we ever end up with multiple serializers whose default set of status choices are identical.
+        """
+        return list(cls().fields["status"].get_choices().keys())
+
 
 #
 # Tags
@@ -951,3 +1081,20 @@ class WebhookSerializer(ValidatedModelSerializer):
             "ssl_verification",
             "ca_file_path",
         ]
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        conflicts = Webhook.check_for_conflicts(
+            instance=self.instance,
+            content_types=data.get("content_types"),
+            payload_url=data.get("payload_url"),
+            type_create=data.get("type_create"),
+            type_update=data.get("type_update"),
+            type_delete=data.get("type_delete"),
+        )
+
+        if conflicts:
+            raise serializers.ValidationError(conflicts)
+
+        return validated_data

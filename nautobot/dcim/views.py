@@ -578,7 +578,7 @@ class ManufacturerView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
 
-        # Devcies
+        # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(device_type__manufacturer=instance)
@@ -1055,7 +1055,7 @@ class DeviceRoleView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
 
-        # Devcies
+        # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(device_role=instance)
@@ -1114,7 +1114,7 @@ class PlatformView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
 
-        # Devcies
+        # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(platform=instance)

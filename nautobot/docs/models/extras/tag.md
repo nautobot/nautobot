@@ -50,7 +50,7 @@ Tags can also be created in the ORM or REST API of Nautobot. The following HEX c
 
 Example of ORM creation:
 
-```
+```python
 Tag.objects.get_or_create(
     name="Cisco-3650CX",
     slug="cisco-3650cx",
@@ -58,6 +58,3 @@ Tag.objects.get_or_create(
     color="2196f3"
 )
 ```
-___
-!!! note
-    Tags were changed substantially in NetBox v2.9. They are no longer created on-demand when editing an object, and their representation in the REST API now includes a complete depiction of the tag rather than only its label.

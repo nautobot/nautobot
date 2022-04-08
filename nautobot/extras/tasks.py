@@ -98,7 +98,7 @@ def provision_field(field_id, content_type_pk_set):
 
 
 @nautobot_task
-def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id):
+def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id, snapshots):
     """
     Make a POST request to the defined Webhook
     """
@@ -113,6 +113,7 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
         "username": username,
         "request_id": request_id,
         "data": data,
+        "snapshots": snapshots,
     }
 
     # Build the headers for the HTTP request

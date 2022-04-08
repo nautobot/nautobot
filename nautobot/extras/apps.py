@@ -6,6 +6,7 @@ import graphene
 from health_check.plugins import plugin_dir
 
 from nautobot.core.apps import NautobotConfig
+from nautobot.core.signals import nautobot_database_ready
 
 
 logger = logging.getLogger("nautobot.extras.apps")
@@ -17,6 +18,9 @@ class ExtrasConfig(NautobotConfig):
     def ready(self):
         super().ready()
         import nautobot.extras.signals  # noqa
+        from nautobot.extras.signals import refresh_job_models
+
+        nautobot_database_ready.connect(refresh_job_models, sender=self)
 
         from graphene_django.converter import convert_django_field
         from taggit.managers import TaggableManager
@@ -41,9 +45,10 @@ class ExtrasConfig(NautobotConfig):
             )
 
         # Register the DatabaseBackend health check
-        from nautobot.extras.health_checks import DatabaseBackend
+        from nautobot.extras.health_checks import DatabaseBackend, RedisBackend
 
         plugin_dir.register(DatabaseBackend)
+        plugin_dir.register(RedisBackend)
 
         # Register built-in SecretsProvider classes
         from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider
