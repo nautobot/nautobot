@@ -4,38 +4,42 @@ ARG PYUWSGI_VER
 ################################ Overview
 # This builds the following hierarchy of images:
 #
-# python:${PYTHON_VER}-slim --> (base) --> (install) --> (install-dev) -->  dev
-#                                 |            .              |
-#                                 V            .              V
-#                               final <.........          final-dev
+# python:${PYTHON_VER}-slim --> (base) --> (dependencies) --> (dependencies-dev) -->  dev
+#                                 |              .                    |
+#                                 V              .                    V
+#                               final <...........                final-dev
 #
 # base (intermediate build target; basis for all other images herein)
-#   adds OS-level packaging dependencies for *running* Nautobot
+#   adds OS-level dependencies for *running* Nautobot
 #   installs Pip and wheel
+#   creates required directories and adds Docker healthcheck and entrypoint script
 #
-# install (intermediate build target)
-#   adds OS-level packaging dependencies for *installing* Nautobot, its dependencies, and its development dependencies
+# dependencies (intermediate build target)
+#   adds OS-level dependencies for *installing* Nautobot, its dependencies, and its development dependencies
 #   installs Poetry
-#   uses Pip and Poetry to install Nautobot's Python dependencies (but *not* development dependencies)
-#   uses Poetry to build a Nautobot wheel
+#   copies Nautobot sourcee files and packaging definition into the image
+#   uses Pip/Poetry to install Nautobot's Python dependencies (but *not* development dependencies or Nautobot itself)
+#   uses Poetry to build a Nautobot wheel (but not yet install it)
 #
-# install-dev (intermediate build target)
+# dependencies-dev (intermediate build target)
+#   installs hadolint for validating Dockerfiles
 #   uses Poetry to additionally install Nautobot's *development* dependencies
-#   adds files for Nautobot development server to run
-#
-# final-dev (development environment for Nautobot plugins)
-#   uses Pip to install Nautobot as a wheel
+#   adds files and configuration for Nautobot development server to run
 #
 # dev (development environment for Nautobot core)
 #   uses Poetry to install Nautobot as editable
 #     (at runtime the requirement is to mount the live Nautobot source code to /source/; it won't run without that)
 #
-# final (production-ready environment):
-#   adds "nautobot" system user
-#   copies all installed Python packages, including Nautobot itself, from "install-nautobot"
-#   creates a self-signed SSL certificate
-#   sets up the system to run Nautobot in production with uwsgi
+# final-dev (development environment for Nautobot plugins)
+#   uses Pip to install Nautobot as a wheel
 #
+# final (production-ready environment):
+#   removes Poetry
+#   copies all installed Python dependencies from "dependencies"
+#   copies Nautobot wheel from "dependencies" and installs it
+#   creates a self-signed SSL certificate
+#   adds "nautobot" system user
+#   sets up the system to run Nautobot in production with uwsgi
 
 ################################ Stage: base (intermediate build target; basis for all other images herein)
 
@@ -64,13 +68,10 @@ RUN mkdir /opt/nautobot /prom_cache
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-################################ Stage: install (intermediate build target)
+################################ Stage: dependencies (intermediate build target)
 
-FROM base as install
+FROM base as dependencies
 ARG PYUWSGI_VER
-
-# Modify the PATH here because otherwise poetry fails 100% of the time. WAT??
-ENV PATH="${PATH}:/root/.local/bin"
 
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
@@ -80,12 +81,14 @@ RUN apt-get update && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Poetry manually from GitHub because otherwise it installs its own
-# dependencies globally which may conflict with ours.
-# https://python-poetry.org/docs/#osx-linux-bashonwindows-install-instructions
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -o /tmp/install-poetry.py && \
-    python /tmp/install-poetry.py && \
-    rm -f /tmp/install-poetry.py
+# Install Poetry manually via its installer script;
+# if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
+# https://python-poetry.org/docs/master/#installing-with-the-official-installer
+# This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
+RUN curl -sSL https://install.python-poetry.org | python -
+
+# Add poetry install location to the $PATH
+ENV PATH="${PATH}:/root/.local/bin"
 
 # Poetry shouldn't create a venv as we want global install
 # Poetry 1.1.0 added parallel installation as an option;
@@ -95,11 +98,15 @@ RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/inst
 RUN poetry config virtualenvs.create false && \
     poetry config installer.parallel false
 
-# Install (non-development) Python dependencies of Nautobot
 COPY pyproject.toml poetry.lock README.md /source/
+
+# The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY examples /source/examples
+
 WORKDIR /source
-# pyuwsgi doesn't support ssl so we build it from source
+
+# Install (non-development) Python dependencies of Nautobot
+# pyuwsgi wheel doesn't support ssl so we build it from source
 # https://github.com/nautobot/nautobot/issues/193
 RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
     poetry install --no-root --no-dev --no-ansi --extras all
@@ -110,9 +117,9 @@ COPY nautobot /source/nautobot
 # Build the wheel
 RUN poetry build
 
-################################ Stage: install-dev (intermediate build target)
+################################ Stage: dependencies-dev (intermediate build target)
 
-FROM install as install-dev
+FROM dependencies as dependencies-dev
 
 # Install hadolint for linting Dockerfiles
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && \
@@ -124,19 +131,19 @@ RUN poetry install --no-root --no-ansi --extras all
 # TODO Use nautobot init to generate the same config for all use cases
 COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
-# Common docker entrypoint for migrations, superuser creations, etc.
+# Run Nautobot development server by default
 CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
 
 ################################ Stage: dev (development environment for Nautobot core)
 
-FROM install-dev as dev
+FROM dependencies-dev as dev
 
 RUN poetry install --no-ansi && \
     rm -rf /source
 
 ################################ Stage: final-dev (development environment for Nautobot plugins)
 
-FROM install-dev as final-dev
+FROM dependencies-dev as final-dev
 
 RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
     rm -rf /source
@@ -146,16 +153,14 @@ RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
 FROM base as final
 ARG PYTHON_VER
 
-# Remove files added by Poetry installer
-RUN rm -rf /root/.local
-
-# Copy from install the required python libraries and binaries
-COPY --from=install /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
-COPY --from=install /usr/local/bin /usr/local/bin
-COPY --from=install /source/dist/*.whl /tmp
+# Copy from "dependencies" the required python libraries and binaries
+COPY --from=dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+COPY --from=dependencies /source/dist/*.whl /tmp
 
 # Install the Nautobot wheel
-RUN pip install --no-deps --no-cache-dir /tmp/*.whl
+RUN pip install --no-deps --no-cache-dir /tmp/*.whl && \
+    rm -rf /tmp/*.whl
 
 # Generate self-signed SSL certs
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
@@ -181,4 +186,5 @@ RUN nautobot-server init && \
     cat /opt/nautobot/nautobot_config.append.py >> /opt/nautobot/nautobot_config.py && \
     rm -f /opt/nautobot/nautobot_config.append.py
 
+# Run Nautobot server under uwsgi by default
 CMD ["nautobot-server", "start", "--ini", "/opt/nautobot/uwsgi.ini"]
