@@ -381,6 +381,7 @@ class GraphQLSearchParameters(TestCase):
         exclude_filters = ["type"]
 
         for field in fields:
+            field = str_to_var_name(field)
             if field not in exclude_filters:
                 self.assertIn(field, params.keys())
             else:
