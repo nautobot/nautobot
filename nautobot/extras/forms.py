@@ -1044,7 +1044,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         queryset=Job.objects.all(),
         required=False,
         to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/job-models/"),
+        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
     )
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
@@ -1085,8 +1085,8 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     model = ObjectChange
     q = forms.CharField(required=False, label="Search")
-    time_after = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
-    time_before = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
+    time__gte = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
+    time__lte = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
     action = forms.ChoiceField(
         choices=add_blank_choice(ObjectChangeActionChoices),
         required=False,

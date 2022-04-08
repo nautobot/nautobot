@@ -145,6 +145,7 @@ REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API ver
 current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
 # We support all major.minor API versions from 1.2 to the present latest version.
 # This will need to be elaborated upon when we move to version 2.0
+# Similar logic exists in tasks.py, please keep them in sync!
 assert current_major == "1", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
 REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
 
@@ -162,10 +163,11 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
+    "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
     "DEFAULT_VERSION": "1.2",
-    "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAcceptHeaderVersioning",
+    "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings
@@ -179,46 +181,33 @@ REST_FRAMEWORK = {
 
 
 #
-# drf_yasg (OpenAPI/Swagger)
+# drf_spectacular (OpenAPI/Swagger)
 #
 
-SWAGGER_SETTINGS = {
-    "DEFAULT_AUTO_SCHEMA_CLASS": "nautobot.utilities.custom_inspectors.NautobotSwaggerAutoSchema",
-    "DEFAULT_FIELD_INSPECTORS": [
-        "nautobot.utilities.custom_inspectors.StatusFieldInspector",
-        "nautobot.utilities.custom_inspectors.CustomFieldsDataFieldInspector",
-        "nautobot.utilities.custom_inspectors.JSONFieldInspector",
-        "nautobot.utilities.custom_inspectors.NullableBooleanFieldInspector",
-        "nautobot.utilities.custom_inspectors.ChoiceFieldInspector",
-        "nautobot.utilities.custom_inspectors.SerializedPKRelatedFieldInspector",
-        "drf_yasg.inspectors.CamelCaseJSONFilter",
-        "drf_yasg.inspectors.ReferencingSerializerInspector",
-        "drf_yasg.inspectors.RelatedFieldInspector",
-        "drf_yasg.inspectors.ChoiceFieldInspector",
-        "drf_yasg.inspectors.FileFieldInspector",
-        "drf_yasg.inspectors.DictFieldInspector",
-        "drf_yasg.inspectors.SerializerMethodFieldInspector",
-        "drf_yasg.inspectors.SimpleFieldInspector",
-        "drf_yasg.inspectors.StringDefaultFieldInspector",
-    ],
-    "DEFAULT_FILTER_INSPECTORS": [
-        "drf_yasg.inspectors.CoreAPICompatInspector",
-    ],
-    "DEFAULT_INFO": "nautobot.core.api.urls.openapi_info",
-    "DEFAULT_MODEL_DEPTH": 1,
-    "DEFAULT_PAGINATOR_INSPECTORS": [
-        "nautobot.utilities.custom_inspectors.NullablePaginatorInspector",
-        "drf_yasg.inspectors.DjangoRestResponsePagination",
-        "drf_yasg.inspectors.CoreAPICompatInspector",
-    ],
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-        }
+SPECTACULAR_SETTINGS = {
+    "TITLE": "API Documentation",
+    "DESCRIPTION": "Source of truth and network automation platform",
+    "LICENSE": {"name": "Apache v2 License"},
+    "VERSION": VERSION,
+    # use sidecar - locally packaged UI files, not CDN
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "ENUM_NAME_OVERRIDES": {
+        # These choice enums need to be overridden because they get assigned to the `type` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "type".
+        "CableTypeChoices": "nautobot.dcim.choices.CableTypeChoices",
+        "ConsolePortTypeChoices": "nautobot.dcim.choices.ConsolePortTypeChoices",
+        "CustomFieldTypeChoices": "nautobot.extras.choices.CustomFieldTypeChoices",
+        "InterfaceTypeChoices": "nautobot.dcim.choices.InterfaceTypeChoices",
+        "PortTypeChoices": "nautobot.dcim.choices.PortTypeChoices",
+        "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
+        "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
+        "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
+        "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
+        "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
     },
-    "VALIDATOR_URL": None,
 }
 
 
@@ -295,7 +284,8 @@ INSTALLED_APPS = [
     "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
-    "drf_yasg",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "graphene_django",
     "health_check",
     "health_check.storage",

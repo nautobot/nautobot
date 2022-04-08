@@ -427,39 +427,39 @@ class CableTestCase(TestCase):
         self.cable.save()
 
         self.power_port1 = PowerPort.objects.create(device=self.device2, name="psu1")
-        self.patch_pannel = Device.objects.create(
+        self.patch_panel = Device.objects.create(
             device_type=devicetype,
             device_role=devicerole,
-            name="TestPatchPannel",
+            name="TestPatchPanel",
             site=site,
         )
-        self.rear_port1 = RearPort.objects.create(device=self.patch_pannel, name="RP1", type="8p8c")
+        self.rear_port1 = RearPort.objects.create(device=self.patch_panel, name="RP1", type="8p8c")
         self.front_port1 = FrontPort.objects.create(
-            device=self.patch_pannel,
+            device=self.patch_panel,
             name="FP1",
             type="8p8c",
             rear_port=self.rear_port1,
             rear_port_position=1,
         )
-        self.rear_port2 = RearPort.objects.create(device=self.patch_pannel, name="RP2", type="8p8c", positions=2)
+        self.rear_port2 = RearPort.objects.create(device=self.patch_panel, name="RP2", type="8p8c", positions=2)
         self.front_port2 = FrontPort.objects.create(
-            device=self.patch_pannel,
+            device=self.patch_panel,
             name="FP2",
             type="8p8c",
             rear_port=self.rear_port2,
             rear_port_position=1,
         )
-        self.rear_port3 = RearPort.objects.create(device=self.patch_pannel, name="RP3", type="8p8c", positions=3)
+        self.rear_port3 = RearPort.objects.create(device=self.patch_panel, name="RP3", type="8p8c", positions=3)
         self.front_port3 = FrontPort.objects.create(
-            device=self.patch_pannel,
+            device=self.patch_panel,
             name="FP3",
             type="8p8c",
             rear_port=self.rear_port3,
             rear_port_position=1,
         )
-        self.rear_port4 = RearPort.objects.create(device=self.patch_pannel, name="RP4", type="8p8c", positions=3)
+        self.rear_port4 = RearPort.objects.create(device=self.patch_panel, name="RP4", type="8p8c", positions=3)
         self.front_port4 = FrontPort.objects.create(
-            device=self.patch_pannel,
+            device=self.patch_panel,
             name="FP4",
             type="8p8c",
             rear_port=self.rear_port4,
