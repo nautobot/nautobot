@@ -8,6 +8,7 @@ from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP
 
 __all__ = (
     "add_blank_choice",
+    "add_field_to_filter_form_class",
     "expand_alphanumeric_pattern",
     "expand_ipaddress_pattern",
     "form_from_model",
@@ -16,7 +17,6 @@ __all__ = (
     "restrict_form_fields",
     "parse_csv",
     "validate_csv",
-    "add_field_to_filter_form_class",
 )
 
 

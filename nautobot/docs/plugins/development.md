@@ -614,22 +614,22 @@ After installing and enabling your plugin, you should now be able to navigate to
 
 Plugins can extend the current FilterSet's and FilterForm's that are natively provided.
 
-The basic requirements (additional requirements for each are described below) to extend a filter set or a filter form are:
+The basic requirements that extend to both the extension filter set and a filter form are:
 
 * The file must be named `filter_extensions.py`
 * The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
-* The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted format
+* The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted pair format (`{app_label}.{model}`, e.g. `tenant.tenant` or `dcim.device`)
 
-Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional `lookup_expr` that are created when there is neither a `lookup_expr` nor `method` parameter set on the filter already. Nautobot will also add the negation of any fields, meaning not only will `icontains` be added but so will `not icontains` using the `ic` and `nic` keys respectively.
+Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with *not* `icontains` using the `ic` and `nic` expressions respectively.
 
-The additional lookup methods added can be found here in [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py), the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py).
+The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../../rest-api/filtering.md#lookup-expressions) for more information.
 
 !!! tip
-    For developers of plugins that define their own model filters, note that the above are dynamically added, as long as the class correctly inherits from `nautobot.utilities.filters.BaseFilterSet`.
+    For developers of plugins that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.utilities.filters.BaseFilterSet`.
 
 However, that does not cover every possible use case, to list a few examples:
 
-* Usage of a custom "method", which would allow arbitrary filtering. (This is how the "q" search logic is currently performed).
+* Usage of a custom `method` argument on a filter that points to a `FilterSet` method, which would allow arbitrary filtering using custom logic. This is how the `q` field search logic is currently performed.
 * Creation of a filter on a field that does not currently have filtering support
 * Convenience methods for highly nested fields
 
@@ -640,14 +640,14 @@ There are several conditions that must be met in order to extend a filter:
 
 Nautobot will dynamically generate the additional relevant lookup expressions of a plugin's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
 
-Similar to FilterSet fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
+Similar to `FilterSet` fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
 
 * The base filter form does not include a custom filter defined by the plugin as described above
 * The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
 
 There are several conditions that must be met in order to extend a filter:
 
-* The original FilterForm must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
+* The original `FilterForm` must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
 * The `filterform_fields` attribute must be a valid dictionary of Django form fields
 
 !!! note
@@ -691,7 +691,7 @@ filter_extensions = [TenantFilterExtension]
 ```
 
 !!! tip
-    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [dynamic groups](../additional-features/dynamic-groups.md).
+    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../additional-features/dynamic-groups.md).
 
 ## Adding Database Models
 

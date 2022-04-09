@@ -333,6 +333,9 @@ class ExpandAlphanumeric(TestCase):
 
 class AddFieldToFormClassTest(TestCase):
     def test_field_added(self):
+        """
+        Test adding of a new field to an existing form.
+        """
         new_form_field = forms.CharField(required=False, label="Added Field Description")
         new_form_field_name = "added_form_field_name"
         self.assertNotIn(new_form_field_name, ServiceFilterForm().fields.keys())
@@ -340,6 +343,9 @@ class AddFieldToFormClassTest(TestCase):
         self.assertIn(new_form_field_name, ServiceFilterForm().fields.keys())
 
     def test_field_validation(self):
+        """
+        Test that the form enforces validation, when extending the field.
+        """
         with self.assertRaises(TypeError):
             add_field_to_filter_form_class(ServiceFilterForm, "my_custom_field_name", IPAddress)
         with self.assertRaises(AttributeError):

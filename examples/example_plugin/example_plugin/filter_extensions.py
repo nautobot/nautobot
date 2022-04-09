@@ -9,6 +9,8 @@ def suffix_search(queryset, name, value):
 
 
 class TenantFilterExtension(PluginFilterExtension):
+    """Test instance showing both filterset_fields and filterform_fields in action."""
+
     model = "tenancy.tenant"
 
     filterset_fields = {
@@ -29,8 +31,9 @@ class TenantFilterExtension(PluginFilterExtension):
     }
 
 
-# created to test that filterset and filter_form being None is fine
 class DeviceFilterExtension(PluginFilterExtension):
+    """Created to test that filterset_fields and filterform_fields being empty dicts is fine."""
+
     model = "dcim.device"
 
 

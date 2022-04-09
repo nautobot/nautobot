@@ -555,24 +555,39 @@ class FilterExtensionTest(TestCase):
         )
 
     def test_basic_custom_filter(self):
+        """
+        Test that adding a custom filter, filters correctly.
+        """
         params = {"example_plugin_description": ["tenant-1.nautobot.com"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_added_lookup(self):
+        """
+        Test that the dynamically created filters work on plugin created filters as well.
+        """
         params = {"example_plugin_description__ic": ["tenant-1.nautobot"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_nested_lookup(self):
+        """
+        Test that filters work against nested filters.
+        """
         params = {"example_plugin_dtype": ["model-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"example_plugin_dtype": ["model-2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_filter_method_param(self):
+        """
+        Test that a custom filter works if a valid callable `method` is provided.
+        """
         params = {"example_plugin_sdescrip": ["tenant-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_filter_form(self):
+        """
+        Test that filter forms work when added via a plugin.
+        """
         form = TenantFilterForm(
             data={
                 "example_plugin_description": "tenant-1.nautobot.com",
