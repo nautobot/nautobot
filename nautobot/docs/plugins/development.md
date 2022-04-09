@@ -636,7 +636,7 @@ However, that does not cover every possible use case, to list a few examples:
 There are several conditions that must be met in order to extend a filter:
 
 * The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
-* The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
+* The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name` + `_`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
 
 Nautobot will dynamically generate the additional relevant lookup expressions of a plugin's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
 
@@ -691,7 +691,7 @@ filter_extensions = [TenantFilterExtension]
 ```
 
 !!! tip
-    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. This may especially be an important factor if using [dynamic groups](../additional-features/dynamic-groups.md) and defining a group(s) based around one or more `method` filters.
+    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [dynamic groups](../additional-features/dynamic-groups.md).
 
 ## Adding Database Models
 
