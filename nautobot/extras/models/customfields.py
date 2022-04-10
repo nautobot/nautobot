@@ -163,7 +163,8 @@ class CustomFieldModel(models.Model):
         # Validate all field values
         for field_name, value in self._custom_field_data.items():
             if field_name not in custom_fields:
-                raise ValidationError(f"Unknown field name '{field_name}' in custom field data.")
+                logger.warning(f"Unknown field name '{field_name}' in custom field data for {self} ({self.pk}).")
+                continue
             try:
                 custom_fields[field_name].validate(value)
             except ValidationError as e:
