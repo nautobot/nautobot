@@ -1000,7 +1000,7 @@ class CustomFieldModelTest(TestCase):
 
     def test_invalid_data(self):
         """
-        Setting custom field data for a non-applicable (or non-existent) CustomField should raise a ValidationError.
+        Setting custom field data for a non-applicable (or non-existent) CustomField should log a warning.
         """
         site = Site(name="Test Site", slug="test-site")
 
