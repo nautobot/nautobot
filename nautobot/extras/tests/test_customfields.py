@@ -1007,7 +1007,7 @@ class CustomFieldModelTest(TestCase):
         # Set custom field data
         site.cf["foo"] = "abc"
         site.cf["bar"] = "def"
-        with self.assertRaises(ValidationError):
+        with self.assertLogs("nautobot", "WARNING"):
             site.clean()
 
         del site.cf["bar"]
