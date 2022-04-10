@@ -232,7 +232,6 @@ class CustomFieldTestCase(SeleniumTestCase):
         This test creates a custom field with a type of "json"
         It then edits the value of the custom field by adding valid json
         """
-        device = self.device
         custom_field = CustomField(
             type="json",
             label="Device Valid JSON Field",
@@ -243,7 +242,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": self.device.pk})}')
         self.browser.find_by_id("id_cf_test_valid_json_field").first.type("test")
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
@@ -258,7 +257,6 @@ class CustomFieldTestCase(SeleniumTestCase):
         This test creates a custom field with a type of "json"
         It then edits the value of the custom field by adding invalid json
         """
-        device = self.device
         self._create_custom_field()
         custom_field = CustomField(
             type="json",
