@@ -257,7 +257,6 @@ class CustomFieldTestCase(SeleniumTestCase):
         This test creates a custom field with a type of "json"
         It then edits the value of the custom field by adding invalid json
         """
-        self._create_custom_field()
         custom_field = CustomField(
             type="json",
             label="Device Invalid JSON Field",
