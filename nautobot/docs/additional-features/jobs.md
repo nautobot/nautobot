@@ -565,15 +565,15 @@ Because of the way `run_job_for_testing` and more specifically `run_job()` works
 
 If your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x, you need to handle a couple more things manually:
 
-- Set up the `"job_logs"` database correctly for testability
-  ```
+- Set up the `"job_logs"` database correctly for testing:
+  ```python
   from django.conf import settings
 
   if "job_logs" in settings.DATABASES:
       settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
       settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
   ```
-- Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test and set up the `databases` field on the test class correctly
+- Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test:
   ```python
   import uuid
 
@@ -599,7 +599,7 @@ If your test case needs to be backwards-compatible with test execution against N
           run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
       return job_result
   ```
-- Re-create the default Statuses on `setUp` in your test classes, because `django.test.TransactionTestCase` truncates them on every `tearDown`
+- Setup the `databases` field on the test class correctly, and re-create the default Statuses on `setUp` in your test classes, because `django.test.TransactionTestCase` truncates them on every `tearDown`:
   ```python
   from django.apps import apps
   from django.conf import settings
@@ -619,25 +619,15 @@ If your test case needs to be backwards-compatible with test execution against N
 
 ---
 
-A simple example of a Job test case that's implemented to be backwards-compatible with Nautobot 1.2.x might look like the following:
+A simple example of a Job test case for 1.3.x and forward might look like the following:
 
 ```python
-import uuid
-
 from django.apps import apps
-from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.test import TransactionTestCase
 
-from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.jobs import run_job 
 from nautobot.extras.management import populate_status_choices
-from nautobot.extras.models import Job, JobResult, JobLogEntry
-
-if "job_logs" in settings.DATABASES:
-    settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
-    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+from nautobot.extras.models import Job, JobLogEntry
+from nautobot.utilities.testing import run_job_for_testing
 
 
 class MyJobTestCase(TransactionTestCase):
@@ -650,16 +640,7 @@ class MyJobTestCase(TransactionTestCase):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
         job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
-        user_model = get_user_model()
-        user, _ = user_model.objects.get_or_create(username="test-user", is_superuser=True, password="password")
-        job_result = JobResult.objects.create(
-            name=job.class_path,
-            obj_type=ContentType.objects.get(app_label="extras", model="job"),
-            user=user,
-            job_id=uuid.uuid4(),
-        )
-        with web_request_context(user=user) as request:
-            run_job(data={"my_variable": "my_value"}, request=request, commit=False, job_result_pk=job_result.pk)
+        job_result = run_job_for_testing(job, data={}, commit=False)
 
         # Since we ran with commit=False, any database changes made by the job won't persist,
         # but we can still inspect the logs created by running the job
