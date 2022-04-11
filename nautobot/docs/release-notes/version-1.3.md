@@ -39,7 +39,7 @@ For more details please refer to the [Jobs feature documentation](../additional-
 
 Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
 
-### Overlapping/Multiple NAT Support ([#630](https://github.com/nautobot/nautobot/issues/630))
+#### Overlapping/Multiple NAT Support ([#630](https://github.com/nautobot/nautobot/issues/630))
 
 IP addresses can now be associated with multiple outside NAT IP addresses. To do this, set more than one IP Address to have the same NAT inside IP address.
 
@@ -79,7 +79,11 @@ This endpoint specifically supports Basic Authentication in addition to the othe
 
 Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
 
-- The REST API endpoint that are versioned in the 1.3.0 release are the `/api/extras/jobs/` listing endpoint and `/api/extras/tags/` create/put/patch endpoint, as described above. All others are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
+- The REST API endpoints that are versioned in the 1.3.0 release are
+    - `/api/extras/jobs/` listing endpoint
+    - `/api/extras/tags/` create/put/patch endpoint
+    - `/api/ipam/ip-addresses/` endpoints
+- All others endpoints are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
 - If a REST API client does not request a specific REST API version (in other words, requests `Accept: application/json` rather than `Accept: application/json; version=1.3`) the API behavior will be compatible with Nautobot 1.2, at a minimum for the remainder of the Nautobot 1.x release cycle.
 - The API behavior may change to a newer default version in a Nautobot major release (e.g. 2.0).
 - To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the new Jobs REST API, `Accept: application/json; version=1.3`).
@@ -108,6 +112,15 @@ Similar to the existing `extras.run_job` permission, a new `extras.approve_job` 
 #### OpenAPI 3.0 REST API documentation ([#595](https://github.com/nautobot/nautobot/issues/595))
 
 The online REST API Swagger documentation (`/api/docs/`) has been updated from OpenAPI 2.0 format to OpenAPI 3.0 format and now supports Nautobot's [REST API versioning](#rest-api-versioning-1465) as described above. Try `/api/docs/?api_version=1.3` as an example.
+
+#### Tag restriction by content-type ([#872](https://github.com/nautobot/nautobot/issues/872))
+
+When created, a `Tag` can be associated to one or more model content-types using a many-to-many relationship. The tag will then apply only to models belonging to those associated content-types.
+
+For users migrating from an earlier Nautobot release, any existing tags will default to being enabled for all content-types for compatibility purposes. Individual tags may subsequently edited to remove any content-types that they do not need to apply to.
+
+Note that a Tag created programmatically via the ORM without assigning any `content_types` will not be applicable to any model until content-types are assigned to it.
+
 
 ### Removed
 
@@ -142,6 +155,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
 - [#1311](https://github.com/nautobot/nautobot/issues/1311) - Fixed a where it was not possible to set the rack height to `0` when performing a bulk edit of device types.
 - [#1476](https://github.com/nautobot/nautobot/issues/1476) - Fixed a bug wherein a Job run via the REST API with a missing `schedule` would allow `approval_required` to be bypassed.
+- [#1516](https://github.com/nautobot/nautobot/issues/1516) - Fixed MySQL unit tests running in Docker environment and revised recommended MySQL encoding settings
 - [#1562](https://github.com/nautobot/nautobot/issues/1562) - Fixed JobResult filter form UI pointing to the wrong endpoint.
 - [#1563](https://github.com/nautobot/nautobot/issues/1563) - Fixed UI crash when trying to execute Jobs provided by disabled plugins. A friendly error message will now be displayed.
 
