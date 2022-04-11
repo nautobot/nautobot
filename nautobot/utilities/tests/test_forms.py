@@ -344,7 +344,9 @@ class AddFieldToFormClassTest(TestCase):
 
     def test_field_validation(self):
         """
-        Test that the form enforces validation, when extending the field.
+        Test that the helper function performs validation on field to be added:
+            - Name collission not permitted
+            - Field must be inheriting from django.forms.Field
         """
         with self.assertRaises(TypeError):
             add_field_to_filter_form_class(ServiceFilterForm, "my_custom_field_name", IPAddress)

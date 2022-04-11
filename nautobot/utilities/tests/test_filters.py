@@ -151,6 +151,11 @@ class BaseFilterSetTest(TestCase):
         cls.filters = cls.TestFilterSet().filters
 
     def test_generated_lookup_expression_filters(self):
+        """
+        Tests to ensure the internal helper method expands a CharFilter out to all natural lookup expressions.
+
+        Used by declared filters expansion and adding new filters.
+        """
         magic_lookups = self.TestFilterSet._generate_lookup_expression_filters(
             "magic_charfield", django_filters.CharFilter(field_name="charfield")
         )
@@ -183,6 +188,9 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(magic_lookups["magic_charfield__nire"].exclude, True)
 
     def test_add_filter_field(self):
+        """
+        Testing to ensure add_filter method adds provided filter to resulting list as well as automagic expanded lookup expressions.
+        """
         new_filter_set_field_name = "tacos"
         new_filter_set_field = django_filters.CharFilter(field_name="charfield")
 

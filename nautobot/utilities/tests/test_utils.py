@@ -147,7 +147,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_filterset_for_model(self):
         """
-        Test the util function `get_filterset_for_model` returns the appropriate FilterSet, if string or model provided.
+        Test the util function `get_filterset_for_model` returns the appropriate FilterSet, if model (as dotted string or class) provided.
         """
         self.assertEqual(get_filterset_for_model("dcim.device"), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
@@ -156,7 +156,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_form_for_model(self):
         """
-        Test the util function `get_form_for_model` returns the appropriate FilterForm, if string or model provided.
+        Test the util function `get_form_for_model` returns the appropriate Form, if form type and model (as dotted string or class) provided.
         """
         self.assertEqual(get_form_for_model("dcim.device", "Filter"), DeviceFilterForm)
         self.assertEqual(get_form_for_model(Device, "Filter"), DeviceFilterForm)
@@ -169,7 +169,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_route_for_model(self):
         """
-        Test the util function `get_route_for_model` returns the appropriate URL route name, if string or model provided.
+        Test the util function `get_route_for_model` returns the appropriate URL route name, if model (as dotted string or class) provided.
         """
         self.assertEqual(get_route_for_model("dcim.device", "list"), "dcim:device_list")
         self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
@@ -182,7 +182,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_table_for_model(self):
         """
-        Test the util function `get_table_for_model` returns the appropriate Table, if string or model provided.
+        Test the util function `get_table_for_model` returns the appropriate Table, if model (as dotted string or class) provided.
         """
         self.assertEqual(get_table_for_model("dcim.device"), DeviceTable)
         self.assertEqual(get_table_for_model(Device), DeviceTable)
@@ -191,8 +191,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_model_from_name(self):
         """
-        Test the util function `get_model_from_name` returns the appropriate full dotted name for a model as a string,
-        if string or model provided.
+        Test the util function `get_model_from_name` returns the appropriate Model, if the dotted name provided.
         """
         self.assertEqual(get_model_from_name("dcim.device"), Device)
         self.assertEqual(get_model_from_name("dcim.site"), Site)
