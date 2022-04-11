@@ -15,6 +15,12 @@ A new data model for representing [dynamic groups](../models/extras/dynamicgroup
 
 For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported.
 
+#### Extend FilterSets and Filter Forms via Plugins ([#1470](https://github.com/nautobot/nautobot/issues/1470))
+
+Plugins can now extend existing FilterSets and Filter Forms. This allows plugins to provide alternative lookup methods or custom queries in the UI or API that may not already exist today.
+
+You can refer to the [development guide](../development/#extending-filters) on how to create new filters and fields.
+
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
 GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [user guide](../user-guides/graphql.md#filtering-queries) for examples.
@@ -168,6 +174,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1350](https://github.com/nautobot/nautobot/issues/1350) - Added missing methods on Circuit Termination detail view.
 - [#1411](https://github.com/nautobot/nautobot/pull/1411) - Added concrete Job database model; added database signals to populate Job records in the database; added detail, edit, and delete views for Job records.
 - [#1457](https://github.com/nautobot/nautobot/pull/1457) - Added new Jobs REST API, added control logic to use JobModel rather than JobClass where appropriate; improved permissions enforcement for Jobs.
+- [#1470](https://github.com/nautobot/nautobot/issues/1470) - Added plugin framework for extending FilterSets and Filter Forms.
 
 ### Changed
 
