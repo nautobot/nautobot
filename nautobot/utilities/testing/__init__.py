@@ -42,7 +42,7 @@ __all__ = (
     "ModelTestCase",
     "ModelViewTestCase",
     "ViewTestCases",
-    "run_job_for_testing"
+    "run_job_for_testing",
 )
 
 
