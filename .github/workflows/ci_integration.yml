@@ -1,19 +1,24 @@
 ---
+# Full CI for commits to the integration branches (main, develop, next)
 name: "CI"
 on:  # yamllint disable
+  pull_request:  # TODO: remove this once verified
   push:
-  pull_request:
+    branches:
+      - "main"
+      - "develop"
+      - "next"
     paths-ignore:
-      - "nautobot/docs/**"
-      - "examples/**"
-      # The example plugin should probably trigger CI
-      - "!examples/example_plugin"
-      - "**.md"
-      - "development/**"
-      - ".github/**"
-      # If the ci.yaml is updated run CI for the PR
-      - "!.github/workflows/ci.yml"
       - ".devcontainer/**"
+      - ".github/**"
+      - "development/**"
+      - "examples/**"
+      - "nautobot/docs/**"
+      - "**.md"
+      # The example plugin should trigger CI
+      - "!examples/example_plugin"
+      # Changes to this workflow should trigger CI
+      - "!.github/workflows/ci_integration.yml"
   workflow_call:
 
 jobs:
@@ -213,7 +218,7 @@ jobs:
         ports:
           - "6379:6379"
       selenium:
-        image: "selenium/standalone-firefox:3.141"
+        image: "selenium/standalone-firefox:4.1.2"
         ports:
           - "4444:4444"
     steps:
