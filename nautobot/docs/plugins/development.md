@@ -612,7 +612,7 @@ After installing and enabling your plugin, you should now be able to navigate to
 
 ### Extending Filters
 
-Plugins can extend the current FilterSet's and FilterForm's that are natively provided.
+Plugins can extend any model-based `FilterSet` and `FilterForm` classes that are provided by the Nautobot core.
 
 The basic requirements that extend to both the extension filter set and a filter form are:
 
