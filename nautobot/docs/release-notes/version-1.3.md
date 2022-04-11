@@ -86,6 +86,10 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 
 Similar to the existing `extras.run_job` permission, a new `extras.approve_job` permission is now enforced by the UI and the REST API when approving scheduled jobs. Only users with this permission can approve or deny approval requests; additionally such users also now require the `extras.view_scheduledjob`, `extras.change_scheduledjob`, and `extras.delete_scheduledjob` permissions as well.
 
+#### Tags without content_types ([#1505](https://github.com/nautobot/nautobot/pull/1505))
+
+Note that Tags created programmatically via the ORM without assigning a content_types will not be applicable to any model until content-types are assigned to it.
+
 ### Removed
 
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
