@@ -376,11 +376,12 @@ class GraphQLSearchParameters(TestCase):
 
     def test_search_parameters(self):
 
-        fields = SiteFilterSet.get_filters().keys()
+        fields = SiteFilterSet().filters.keys()
         params = generate_list_search_parameters(self.schema)
         exclude_filters = ["type"]
 
         for field in fields:
+            field = str_to_var_name(field)
             if field not in exclude_filters:
                 self.assertIn(field, params.keys())
             else:

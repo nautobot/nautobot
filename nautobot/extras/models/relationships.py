@@ -447,7 +447,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
                 for key in filterset.errors:
                     error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
 
-            filterset_params = set(filterset.get_filters().keys())
+            filterset_params = set(filterset.filters.keys())
             for key in filter.keys():
                 if key not in filterset_params:
                     error_messages.append(f"'{key}' is not a valid filter parameter for {model_name} object")
