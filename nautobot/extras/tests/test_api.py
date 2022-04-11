@@ -2236,6 +2236,7 @@ class TagTestVersion13(
         )
         for tag in tags:
             tag.content_types.add(ContentType.objects.get_for_model(Site))
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -2258,6 +2259,23 @@ class TagTestVersion13(
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, 400)
         self.assertEqual(str(response.data["content_types"][0]), "This field is required.")
+
+    def test_update_tags_remove_content_type(self):
+        """Test removing a tag content_type that is been tagged to a model"""
+        self.add_permissions("extras.change_tag")
+
+        tag_1 = Tag.objects.get(slug="tag-1")
+        site = Site.objects.create(name="site 1", slug="site-1")
+        site.tags.add(tag_1)
+
+        url = self._get_detail_url(tag_1)
+        data = {"content_types": [Device._meta.label_lower]}
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            str(response.data["content_types"][0]), "Unable to remove dcim.site. Dependent objects were found."
+        )
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

@@ -1067,6 +1067,14 @@ class TagSerializer(CustomFieldModelSerializer):
         if not data.get("content_types"):
             data["content_types"] = TaggableClassesQuery().as_queryset
 
+        # check if tag is assigned to any of the removed content_types
+        if self.instance.present_in_database:
+            content_types_id = [content_type.id for content_type in data.get("content_types")]
+            errors = self.instance.validate_content_types_removal(content_types_id)
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
         return data
 
 

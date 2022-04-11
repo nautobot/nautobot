@@ -66,6 +66,22 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     def to_csv(self):
         return (self.name, self.slug, self.color, self.description)
 
+    def validate_content_types_removal(self, content_types_id):
+        """Validate content_types to be removed are not tagged to a model"""
+        errors = {}
+
+        removed_content_types = self.content_types.exclude(id__in=content_types_id)
+
+        # check if tag is assigned to any of the removed content_types
+        for content_type in removed_content_types:
+            model = content_type.model_class()
+            if model.objects.filter(tags=self).exists():
+                errors.setdefault("content_types", []).append(
+                    f"Unable to remove {model._meta.label_lower}. Dependent objects were found."
+                )
+
+        return errors
+
 
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)

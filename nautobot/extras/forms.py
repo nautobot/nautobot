@@ -1393,6 +1393,19 @@ class TagForm(NautobotModelForm):
         model = Tag
         fields = ["name", "slug", "color", "description", "content_types"]
 
+    def clean(self):
+        data = super().clean()
+
+        if self.instance.present_in_database:
+            # check if tag is assigned to any of the removed content_types
+            content_types_id = [content_type.id for content_type in self.cleaned_data["content_types"]]
+            errors = self.instance.validate_content_types_removal(content_types_id)
+
+            if errors:
+                raise ValidationError(errors)
+
+        return data
+
 
 class TagCSVForm(CustomFieldModelCSVForm):
     slug = SlugField()

@@ -1821,9 +1821,14 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
 
         cls.form_data = {
             "name": "Tag X",
@@ -1881,6 +1886,31 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         tag = Tag.objects.filter(slug=self.form_data["slug"])
         self.assertFalse(tag.exists())
         self.assertIn("content_types: Select a valid choice", str(response.content))
+
+    def test_update_tags_remove_content_type(self):
+        """Test removing a tag content_type that is been tagged to a model"""
+        self.add_permissions("extras.change_tag")
+
+        tag_1 = Tag.objects.get(slug="tag-1")
+        site = Site.objects.create(name="site 1", slug="site-1")
+        site.tags.add(tag_1)
+
+        form_data = {
+            "name": tag_1.name,
+            "slug": tag_1.slug,
+            "color": "c0c0c0",
+            "content_types": [ContentType.objects.get_for_model(Device).id],
+        }
+
+        request = {
+            "path": self._get_url("edit", tag_1),
+            "data": post_data(form_data),
+        }
+
+        response = self.client.post(**request)
+        self.assertHttpStatus(
+            response, 200, ["content_types: Unable to remove dcim.site. Dependent objects were found."]
+        )
 
 
 class WebhookTestCase(
