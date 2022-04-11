@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -1007,7 +1009,7 @@ class CustomFieldModelTest(TestCase):
         # Set custom field data
         site.cf["foo"] = "abc"
         site.cf["bar"] = "def"
-        with self.assertLogs("nautobot", "WARNING"):
+        with self.assertLogs(level=logging.WARNING):
             site.clean()
 
         del site.cf["bar"]
