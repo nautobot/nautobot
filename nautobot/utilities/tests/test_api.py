@@ -1,5 +1,3 @@
-import urllib.parse
-
 from django.contrib.contenttypes.models import ContentType
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -136,11 +134,13 @@ class APIDocsTestCase(TestCase):
         self.cf_text.save()
 
     def test_api_docs(self):
-
         url = reverse("api_docs")
-        params = {
-            "format": "openapi",
-        }
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
 
-        response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
+        headers = {
+            "HTTP_ACCEPT": "application/vnd.oai.openapi",
+        }
+        url = reverse("schema")
+        response = self.client.get(url, **headers)
         self.assertEqual(response.status_code, 200)

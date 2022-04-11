@@ -6,7 +6,7 @@ Both core applications and plugins can contribute items to the navigation menu b
 
 By defining an object with the same identifier, a developer can modify existing objects. The example below shows modifying an existing tab to have a new group.
 
-A tab object is being created with the same identifer as an existing object using the `name` attribute. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
+A tab object is being created with the same identifier as an existing object using the `name` attribute. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
 
 !!! tip
     Weights for already existing items can be found in the nautobot source code (in `navigation.py`) or with a web session open to your nautobot instance, you can inspect an element of the navbar using the developer tools. Each type of element will have an attribute `data-{type}-weight`. The type can be `tab`, `group`, `item` or `button`.
@@ -137,7 +137,6 @@ A `NavMenuButton` has the following attributes:
 * `icon_class` - Button icon CSS classes (Nautobot currently supports [Material Design Icons](https://materialdesignicons.com) or one of the choices provided by `ButtonActionIconChoices`)
 * `button_class` - One of the choices provided by `ButtonActionColorChoices` (optional)
 * `permissions` - A list of permissions required to display this button (optional)
-
 
 !!! note
     `NavMenuAddButton` and `NavMenuImportButton` are subclasses of `NavMenuButton` that can be used to provide the commonly used "Add" and "Import" buttons.

@@ -507,6 +507,45 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertIn("address", response.data)
 
+    def test_create_multiple_outside_nat_success(self):
+        """Validate NAT inside address can tie to multiple NAT outside addresses."""
+        # Create the two outside NAT IP Addresses tied back to the single inside NAT address
+        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions("ipam.view_ipaddress")
+        nat_inside = IPAddress.objects.get(address="192.168.0.1/24")
+        # Create NAT outside with 192.168.0.1/24 IP as inside NAT
+        ip1 = self.client.post(
+            self._get_list_url(),
+            {"address": "192.0.2.1/24", "nat_inside": nat_inside.pk, "status": "active"},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(ip1, status.HTTP_201_CREATED)
+        ip2 = self.client.post(
+            self._get_list_url(),
+            {"address": "192.0.2.2/24", "nat_inside": nat_inside.pk, "status": "active"},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
+
+        # Fetch nat inside IP address with default (1.2) API
+        response = self.client.get(
+            self._get_detail_url(nat_inside),
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+
+        self.set_api_version(api_version="1.3")
+        # Fetch nat inside IP address with 1.3 API
+        response = self.client.get(
+            self._get_detail_url(nat_inside),
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["nat_outside"][0]["address"], "192.0.2.1/24")
+        self.assertEqual(response.data["nat_outside"][1]["address"], "192.0.2.2/24")
+
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     model = VLANGroup

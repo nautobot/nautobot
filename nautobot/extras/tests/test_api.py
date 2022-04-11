@@ -752,6 +752,21 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_create_with_plugin_provided_contents(self):
+        """Test that `provided_contents` published by a plugin works."""
+        self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
+        url = self._get_list_url()
+        data = {
+            "name": "plugin_test",
+            "slug": "plugin-test",
+            "remote_url": "https://localhost/plugin-test",
+            "provided_contents": ["example_plugin.textfile"],
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(list(response.data["provided_contents"]), data["provided_contents"])
+
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
@@ -1313,7 +1328,7 @@ class JobTestVersion13(
     """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
 
     model = Job
-    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "source", "url"]
+    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
     choices_fields = None
     update_data = {
         # source, module_name, job_class_name, installed are NOT editable

@@ -163,7 +163,7 @@ config_contexts/
 
 The implicit config contexts will be defined using dictionaries for both `_metadata` and any context data for the config context.
 
-**JSON**
+##### JSON
 
 ```json
 {
@@ -185,7 +185,7 @@ The implicit config contexts will be defined using dictionaries for both `_metad
 }
 ```
 
-**YAML**
+##### YAML
 
 ```yaml
 _metadata":

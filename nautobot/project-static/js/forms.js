@@ -124,6 +124,7 @@ $(document).ready(function() {
     // API backed selection
     // Includes live search and chained fields
     // The `multiple` setting may be controlled via a data-* attribute
+
     $('.nautobot-select2-api').select2({
         allowClear: true,
         placeholder: "---------",
@@ -153,6 +154,12 @@ $(document).ready(function() {
                     limit: 50,
                     offset: offset,
                 };
+                
+                // Set api_version
+                api_version = $(element).attr("data-api-version")
+                if(api_version)
+                    parameters["api_version"] = api_version
+
 
                 // Allow for controlling the brief setting from within APISelect
                 parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
