@@ -520,7 +520,7 @@ class JobLogEntryTable(BaseTable):
         }
 
 
-def related_object_link(value, record):
+def related_object_link(record):
     """
     Get a link to the related object, if any, associated with the given JobResult record.
     """
