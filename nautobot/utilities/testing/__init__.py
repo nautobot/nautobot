@@ -1,5 +1,6 @@
 import time
 import uuid
+from contextlib import contextmanager
 
 from celery.contrib.testing.worker import start_worker
 from django.apps import apps
@@ -45,19 +46,27 @@ __all__ = (
 )
 
 
-def run_job_for_testing(job, data=None, commit=True, username="test-user"):
+def run_job_for_testing(job, data=None, commit=True, username="test-user", request=None):
     """Provide a common interface to run Nautobot jobs as part of unit tests."""
     if data is None:
         data = {}
     user_model = get_user_model()
-    user, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
+    user_instance, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
     job_result = JobResult.objects.create(
         name=job.class_path,
         obj_type=ContentType.objects.get_for_model(Job),
-        user=user,
+        user=user_instance,
         job_id=uuid.uuid4(),
     )
-    with web_request_context(user=user) as request:
+
+    @contextmanager
+    def _web_request_context(user):
+        if request:
+            yield request
+        else:
+            yield web_request_context(user=user)
+
+    with _web_request_context(user=user_instance) as request:
         run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
     return job_result
 

@@ -15,8 +15,7 @@ from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, Job, JobResult, Status, CustomField
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase
-
+from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -37,15 +36,7 @@ def create_job_result_and_run_job(module, name, *, data=None, commit=True, reque
     if data is None:
         data = {}
     job_class, job_model = get_job_class_and_model(module, name)
-    job_content_type = ContentType.objects.get(app_label="extras", model="job")
-    job_result = JobResult.objects.create(
-        name=job_model.class_path,
-        obj_type=job_content_type,
-        job_model=job_model,
-        user=None,
-        job_id=uuid.uuid4(),
-    )
-    run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
+    job_result = run_job_for_testing(job=job_class, data=data, commit=commit, request=request)
     job_result.refresh_from_db()
     return job_result
 
