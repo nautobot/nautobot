@@ -109,13 +109,17 @@ As Python 3.6 has reached end-of-life, the default Docker images published for t
 
 Similar to the existing `extras.run_job` permission, a new `extras.approve_job` permission is now enforced by the UI and the REST API when approving scheduled jobs. Only users with this permission can approve or deny approval requests; additionally such users also now require the `extras.view_scheduledjob`, `extras.change_scheduledjob`, and `extras.delete_scheduledjob` permissions as well.
 
-#### Tags without content_types ([#1505](https://github.com/nautobot/nautobot/pull/1505))
-
-Note that Tags created programmatically via the ORM without assigning a content_types will not be applicable to any model until content-types are assigned to it.
-
 #### OpenAPI 3.0 REST API documentation ([#595](https://github.com/nautobot/nautobot/issues/595))
 
 The online REST API Swagger documentation (`/api/docs/`) has been updated from OpenAPI 2.0 format to OpenAPI 3.0 format and now supports Nautobot's [REST API versioning](#rest-api-versioning-1465) as described above. Try `/api/docs/?api_version=1.3` as an example.
+
+#### Tag restriction by content-type ([#872](https://github.com/nautobot/nautobot/issues/872))
+
+When created, a `Tag` can be associated to one or more model content-types using a many-to-many relationship. The tag will then apply only to models belonging to those associated content-types.
+
+For users migrating from an earlier Nautobot release, any existing tags will default to being enabled for all content-types for compatibility purposes. Individual tags may subsequently edited to remove any content-types that they do not need to apply to.
+
+Note that a Tag created programmatically via the ORM without assigning any `content_types` will not be applicable to any model until content-types are assigned to it.
 
 
 ### Removed
