@@ -614,7 +614,7 @@ After installing and enabling your plugin, you should now be able to navigate to
 
 Plugins can extend any model-based `FilterSet` and `FilterForm` classes that are provided by the Nautobot core.
 
-The basic requirements that extend to both the extension filter set and a filter form are:
+The requirements to extend a filter set or a filter form (or both) are:
 
 * The file must be named `filter_extensions.py`
 * The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
