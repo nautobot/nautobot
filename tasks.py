@@ -402,7 +402,7 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot"
+    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md"
     run_command(context, command)
 
 
