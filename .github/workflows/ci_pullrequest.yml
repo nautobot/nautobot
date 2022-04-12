@@ -1,7 +1,7 @@
 ---
 # A lighter-weight version of CI specifically for pull requests
 name: "CI - Pull Request"
-concurrency:  # Cancel any previous runs of this workflow for this same PR
+concurrency:  # Cancel any existing runs of this workflow for this same PR
   group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 on:  # yamllint disable
