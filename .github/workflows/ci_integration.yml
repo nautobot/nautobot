@@ -2,7 +2,6 @@
 # Full CI for commits to the integration branches (main, develop, next)
 name: "CI - Integration Branch"
 on:  # yamllint disable
-  pull_request:  # TODO: remove this once verified
   push:
     branches:
       - "main"
