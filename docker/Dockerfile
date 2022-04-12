@@ -17,7 +17,7 @@ ARG PYUWSGI_VER
 # dependencies (intermediate build target)
 #   adds OS-level dependencies for *installing* Nautobot, its dependencies, and its development dependencies
 #   installs Poetry
-#   copies Nautobot sourcee files and packaging definition into the image
+#   copies Nautobot source files and packaging definition into the image
 #   uses Pip/Poetry to install Nautobot's Python dependencies (but *not* development dependencies or Nautobot itself)
 #   uses Poetry to build a Nautobot wheel (but not yet install it)
 #
@@ -134,6 +134,7 @@ RUN poetry install --no-root --no-ansi --extras all
 COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Run Nautobot development server by default
+EXPOSE 8080
 CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
 
 ################################ Stage: dev (development environment for Nautobot core)
@@ -189,4 +190,5 @@ RUN nautobot-server init && \
     rm -f /opt/nautobot/nautobot_config.append.py
 
 # Run Nautobot server under uwsgi by default
+EXPOSE 8080 8443
 CMD ["nautobot-server", "start", "--ini", "/opt/nautobot/uwsgi.ini"]
