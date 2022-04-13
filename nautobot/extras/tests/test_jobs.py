@@ -35,7 +35,7 @@ def create_job_result_and_run_job(module, name, *, data=None, commit=True, reque
     if data is None:
         data = {}
     job_class, job_model = get_job_class_and_model(module, name)
-    job_result = run_job_for_testing(job=job_class, data=data, commit=commit, request=request)
+    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, request=request)
     job_result.refresh_from_db()
     return job_result
 
