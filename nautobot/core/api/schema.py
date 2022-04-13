@@ -21,6 +21,20 @@ class NautobotAutoSchema(AutoSchema):
 
     custom_actions = ["bulk_update", "bulk_partial_update", "bulk_destroy"]
 
+    # Primarily, method_mapping is used to map HTTP method verbs to viewset method names,
+    # which doesn't account for the fact that with our custom actions there are multiple viewset methods per verb,
+    # hence why we have to override get_operation_id() below.
+    # Secondarily, drf-spectacular uses method_mapping.values() to identify which methods are view methods,
+    # so need to make sure these methods are represented as values in the mapping even if not under the actual verbs.
+    method_mapping = AutoSchema.method_mapping.copy()
+    method_mapping.update(
+        {
+            "_put": "bulk_update",
+            "_patch": "bulk_partial_update",
+            "_delete": "bulk_destroy",
+        }
+    )
+
     def get_operation_id(self):
         """Extend the base method to handle Nautobot's REST API bulk operations.
 
