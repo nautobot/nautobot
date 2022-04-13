@@ -47,15 +47,33 @@ __all__ = (
 
 
 def run_job_for_testing(job, data=None, commit=True, username="test-user", request=None):
-    """Provide a common interface to run Nautobot jobs as part of unit tests."""
+    """Provide a common interface to run Nautobot jobs as part of unit tests.
+
+    Args:
+      job (Job): Job model instance (not Job class) to run
+      data (dict): Input data values for any Job variables.
+      commit (bool): Whether to commit changes to the database or rollback when done.
+      username (str): Username of existing or to-be-created User account to own the JobResult. Ignored if `request.user`
+        exists.
+      request (HttpRequest): Existing request (if any) to own the JobResult.
+
+    Returns:
+      JobResult: representing the executed job
+    """
     if data is None:
         data = {}
-    user_model = get_user_model()
-    user_instance, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
+
+    # If the request has a user, ignore the username argument and use that user.
+    if request and request.user:
+        user_instance = request.user
+    else:
+        user_model = get_user_model()
+        user_instance, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
     job_result = JobResult.objects.create(
         name=job.class_path,
         obj_type=ContentType.objects.get_for_model(Job),
         user=user_instance,
+        job_model=job,
         job_id=uuid.uuid4(),
     )
 
