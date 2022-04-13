@@ -2,8 +2,11 @@ from collections import OrderedDict
 from django.db import migrations
 
 from nautobot.extras.choices import LogLevelChoices
-from nautobot.extras.constants import JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, JOB_LOG_MAX_LOG_OBJECT_LENGTH, \
-    JOB_LOG_MAX_GROUPING_LENGTH
+from nautobot.extras.constants import (
+    JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_LOG_MAX_GROUPING_LENGTH,
+)
 
 """
 This is the loose structure that we are trying to extract logs from (or restore to in case of reverse):
