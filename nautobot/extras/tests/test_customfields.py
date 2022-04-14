@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -1000,14 +1002,14 @@ class CustomFieldModelTest(TestCase):
 
     def test_invalid_data(self):
         """
-        Setting custom field data for a non-applicable (or non-existent) CustomField should raise a ValidationError.
+        Setting custom field data for a non-applicable (or non-existent) CustomField should log a warning.
         """
         site = Site(name="Test Site", slug="test-site")
 
         # Set custom field data
         site.cf["foo"] = "abc"
         site.cf["bar"] = "def"
-        with self.assertRaises(ValidationError):
+        with self.assertLogs(level=logging.WARNING):
             site.clean()
 
         del site.cf["bar"]

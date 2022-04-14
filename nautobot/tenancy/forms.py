@@ -7,7 +7,6 @@ from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     NautobotModelForm,
 )
-from nautobot.extras.models import Tag
 from nautobot.utilities.forms import (
     BootstrapMixin,
     CommentField,
@@ -61,7 +60,6 @@ class TenantForm(NautobotModelForm):
     slug = SlugField()
     group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Tenant

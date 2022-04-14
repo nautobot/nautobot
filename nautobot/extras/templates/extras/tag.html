@@ -32,6 +32,16 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Content Type(s)</td>
+                        <td>
+                            <ul class="list-unstyled">
+                                {% for ct in content_types %}
+                                    <li>{{ ct }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Description</td>
                         <td>
                             {{ object.description|placeholder }}

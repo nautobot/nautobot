@@ -1,8 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from selenium.webdriver.common.keys import Keys
 
 from nautobot.dcim.models import Device
-from nautobot.extras.models import CustomField
+from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
@@ -231,7 +232,6 @@ class CustomFieldTestCase(SeleniumTestCase):
         This test creates a custom field with a type of "json"
         It then edits the value of the custom field by adding valid json
         """
-        device = self.device
         custom_field = CustomField(
             type="json",
             label="Device Valid JSON Field",
@@ -242,7 +242,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": self.device.pk})}')
         self.browser.find_by_id("id_cf_test_valid_json_field").first.type("test")
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
@@ -257,7 +257,6 @@ class CustomFieldTestCase(SeleniumTestCase):
         This test creates a custom field with a type of "json"
         It then edits the value of the custom field by adding invalid json
         """
-        device = self.device
         custom_field = CustomField(
             type="json",
             label="Device Invalid JSON Field",
@@ -268,10 +267,61 @@ class CustomFieldTestCase(SeleniumTestCase):
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": self.device.pk})}')
         self.browser.find_by_id("id_cf_test_invalid_json_field").first.type("test")
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
         active_web_element.send_keys('{test_json_key: "Test Invalid JSON Value"}')
         self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
         self.assertTrue(self.browser.is_text_present("Enter a valid JSON"))
+
+    def test_saving_object_after_its_custom_field_deleted(self):
+        """
+        This test creates a custom field with type Selection for the Device content type.
+        It then adds a value for the new custom field to self.device
+        It then deletes the custom field.
+        It then visits self.object's edit page and clicks the Update button.
+        It then checks that page is now on the self.device object's page (without any validation error after updating).
+        """
+        device = self.device
+        custom_field = CustomField(
+            type="select",
+            label="Device Selection Field",
+            name="test_selection_field",
+            required=False,
+        )
+        custom_field.save()
+        # Add a choice for the custom field selection
+        custom_field_choice = CustomFieldChoice(field=custom_field, value="SelectionChoice")
+        custom_field_choice.save()
+        # Set content type of custom field
+        device_content_type = ContentType.objects.get_for_model(Device)
+        custom_field.content_types.set([device_content_type])
+        # Visit the device edit page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        # Get the first item selected on the custom field
+        self.browser.find_by_xpath(".//label[contains(text(), 'Device Selection Field')]").click()
+        active_web_element = self.browser.driver.switch_to.active_element
+        active_web_element.send_keys(Keys.ENTER)
+        active_web_element.send_keys(Keys.ENTER)
+        # Click update button
+        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        # Check successful redirect to device object page
+        self.assertTrue(self.browser.is_text_present("Modified device"))
+        self.assertTrue(self.browser.is_text_present("SelectionChoice"))
+
+        # Delete the custom field
+        self.browser.links.find_by_partial_text("Extensibility").click()
+        self.browser.links.find_by_partial_text("Custom Fields").click()
+        self.browser.links.find_by_partial_text("test_selection_field").click()
+        self.browser.links.find_by_partial_text("Delete").click()
+        self.browser.find_by_xpath(".//button[contains(text(), 'Confirm')]").click()
+
+        # Visit the device edit page
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        # Click update button
+        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        # Check successful redirect to device object page
+        self.assertTrue(self.browser.is_text_present("Modified device"))
+        # Check custom field is no longer present
+        self.assertFalse(self.browser.is_text_present("SelectionChoice"))

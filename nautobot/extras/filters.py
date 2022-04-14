@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -964,15 +964,20 @@ class TagFilterSet(NautobotFilterSet):
         method="search",
         label="Search",
     )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=TaggableClassesQuery().get_choices,
+    )
 
     class Meta:
         model = Tag
-        fields = ["id", "name", "slug", "color"]
+        fields = ["id", "name", "slug", "color", "content_types"]
 
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+        return queryset.filter(
+            Q(name__icontains=value) | Q(slug__icontains=value) | Q(content_types__model__icontains=value)
+        )
 
 
 #

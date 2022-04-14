@@ -402,10 +402,10 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         """
 
         request = self.get_serializer_context()["request"]
-        if request.query_params.get("brief", False):
+        if request is not None and request.query_params.get("brief", False):
             return serializers.NestedDeviceSerializer
 
-        elif "config_context" in request.query_params.get("exclude", []):
+        elif request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.DeviceSerializer
 
         return serializers.DeviceWithConfigContextSerializer

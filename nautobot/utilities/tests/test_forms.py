@@ -3,12 +3,13 @@ from django.test import TestCase
 from unittest import mock
 from netaddr import IPNetwork
 
-from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm
+from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
+    add_field_to_filter_form_class,
 )
 from nautobot.utilities.forms.forms import AddressFieldMixin, PrefixFieldMixin
 
@@ -328,6 +329,31 @@ class ExpandAlphanumeric(TestCase):
 
         with self.assertRaises(ValueError):
             sorted(expand_alphanumeric_pattern("r[a,,b]a"))
+
+
+class AddFieldToFormClassTest(TestCase):
+    def test_field_added(self):
+        """
+        Test adding of a new field to an existing form.
+        """
+        new_form_field = forms.CharField(required=False, label="Added Field Description")
+        new_form_field_name = "added_form_field_name"
+        self.assertNotIn(new_form_field_name, ServiceFilterForm().fields.keys())
+        add_field_to_filter_form_class(ServiceFilterForm, new_form_field_name, new_form_field)
+        self.assertIn(new_form_field_name, ServiceFilterForm().fields.keys())
+
+    def test_field_validation(self):
+        """
+        Test that the helper function performs validation on field to be added:
+            - Name collission not permitted
+            - Field must be inheriting from django.forms.Field
+        """
+        with self.assertRaises(TypeError):
+            add_field_to_filter_form_class(ServiceFilterForm, "my_custom_field_name", IPAddress)
+        with self.assertRaises(AttributeError):
+            add_field_to_filter_form_class(
+                ServiceFilterForm, "port", forms.CharField(required=False, label="Added Field Description")
+            )
 
 
 class CSVDataFieldTest(TestCase):

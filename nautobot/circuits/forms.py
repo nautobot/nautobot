@@ -12,7 +12,6 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
@@ -37,7 +36,6 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 class ProviderForm(NautobotModelForm):
     slug = SlugField()
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Provider
@@ -114,7 +112,6 @@ class ProviderNetworkForm(BootstrapMixin, CustomFieldModelForm):
     slug = SlugField()
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
     comments = CommentField(label="Comments")
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = ProviderNetwork
@@ -199,7 +196,6 @@ class CircuitForm(NautobotModelForm, TenancyForm):
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
     type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Circuit
@@ -321,7 +317,6 @@ class CircuitTerminationForm(NautobotModelForm):
     provider_network = DynamicModelChoiceField(
         queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = CircuitTermination
