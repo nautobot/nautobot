@@ -44,6 +44,7 @@ jobs:
         with:
           config_file: ".markdownlint.yml"
           files: "nautobot examples *.md"
+          ignore_files: "nautobot/project-static"
   hadolint:
     runs-on: "ubuntu-20.04"
     env:
