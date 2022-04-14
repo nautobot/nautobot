@@ -5,7 +5,7 @@
 Nautobot uses 2 template engines internally, Django Template and Jinja2. Django Template is used to render the UI pages and Jinja2 is used for features such as computed fields, custom links, export templates, etc.
 
 !!! note
-	Jinja2 and Django Template are very similar, the main difference between them is the syntax of the template. Historically, Django Template has been the go-to solution to generate webpage in Django and Jinja2 is the industry standard outside of Django.
+    Jinja2 and Django Template are very similar, the main difference between them is the syntax of the template. Historically, Django Template has been the go-to solution to generate webpage in Django and Jinja2 is the industry standard outside of Django.
 
 Both Django Template and Jinja2 can be extended with a library of functions, called `filters`, that apply formatting or transformations to a provided input. Nautobot provides many built-in `filters`, including network specific `filters` from the [netutils library](https://netutils.readthedocs.io/en/latest/index.html).
 
@@ -34,7 +34,7 @@ Given a list of *n* items, return a corresponding range of *n* integers.
 
 ### bettertitle
 
-Alternative to the built-in `title` filter; uppercases words without replacing letters that are already uppercase.
+Alternative to the built-in `title` filter; capitalizes words without replacing letters that are already uppercase.
 
 For example, `title("IP address") == "Ip Address"`, while `bettertitle("IP address") == "IP Address"`.
 
@@ -70,10 +70,9 @@ Render and return documentation for the specified model.
 {{ obj | get_docs }}
 ```
 
-
 ### get_item
 
-Access a specific item/key in a dictionary. 
+Access a specific item/key in a dictionary.
 
 ```django
 # Django Template
@@ -120,7 +119,7 @@ Humanize speeds given in Kbps.
 
 ### meta
 
-Return the specified Meta attribute of a model. 
+Return the specified Meta attribute of a model.
 
 ```django
 {{ obj | meta('app_label') }}
@@ -133,7 +132,6 @@ Convert a length from meters to feet.
 ```django
 {{ meter_value | meters_to_feet }}
 ```
-
 
 ### percentage
 
@@ -157,7 +155,7 @@ Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value 
 
 ### render_boolean
 
-Render HTML from a computed boolean value. 
+Render HTML from a computed boolean value.
 
 If value is (for example) a non-empty string or True or a non-zero number, this renders `<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>`
 
@@ -246,7 +244,3 @@ Return the view name for the given model and action. Does not perform any valida
 # Jinja
 {{ obj | viewname('list') }}
 ```
-
-
-
-

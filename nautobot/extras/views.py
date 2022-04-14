@@ -950,7 +950,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
 
-        job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+        try:
+            job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+        except RuntimeError as err:
+            messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
+            return redirect("extras:job_list")
+
         schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
 
         return render(
@@ -1330,6 +1335,26 @@ class ObjectChangeListView(generic.ObjectListView):
     table = tables.ObjectChangeTable
     template_name = "extras/objectchange_list.html"
     action_buttons = ("export",)
+
+    # TODO: Remove this remapping in 2.0 as it is addressing a potentially breaking change
+    def get(self, request, **kwargs):
+
+        # Remappings below allow previous queries of time_before and time_after to use
+        # newer methods specifying the lookup method.
+
+        # They will only use the previous arguments if the newer ones are undefined
+
+        if request.GET.get("time_after") and request.GET.get("time__gte") is None:
+            request.GET._mutable = True
+            request.GET.update({"time__gte": request.GET.get("time_after")})
+            request.GET._mutable = False
+
+        if request.GET.get("time_before") and request.GET.get("time__lte") is None:
+            request.GET._mutable = True
+            request.GET.update({"time__lte": request.GET.get("time_before")})
+            request.GET._mutable = False
+
+        return super().get(request=request, **kwargs)
 
 
 class ObjectChangeView(generic.ObjectView):
@@ -1765,6 +1790,7 @@ class TagView(generic.ObjectView):
         return {
             "items_count": tagged_items.count(),
             "items_table": items_table,
+            "content_types": instance.content_types.order_by("app_label", "model"),
         }
 
 

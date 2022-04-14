@@ -50,7 +50,8 @@ CentOS/RHEL configures PostgreSQL to use [`ident`](https://www.postgresql.org/do
 
 As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
 
-Before: 
+Before:
+
 ```no-highlight
 # IPv4 local connections:
 host    all             all             127.0.0.1/32            ident
@@ -59,6 +60,7 @@ host    all             all             ::1/128                 ident
 ```
 
 After:
+
 ```no-highlight
 # IPv4 local connections:
 host    all             all             127.0.0.1/32            md5
@@ -74,7 +76,7 @@ Start the service and enable it to run at system startup:
 $ sudo systemctl enable --now postgresql
 ```
 
-#### Create a Database
+#### Create a PostgreSQL Database
 
 At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
 is done with the following commands.
@@ -97,7 +99,7 @@ GRANT
 postgres=# \q
 ```
 
-### Verify Service Status
+### Verify PostgreSQL Service Status
 
 You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
 
@@ -132,7 +134,7 @@ Start the service and enable it to run at system startup:
 $ sudo systemctl enable --now mysql
 ```
 
-#### Create a Database
+#### Create a MySQL Database
 
 At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
@@ -156,7 +158,7 @@ owners.
 
 Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-mysql> CREATE DATABASE nautobot CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+mysql> CREATE DATABASE nautobot;
 Query OK, 1 row affected (0.00 sec)
 
 mysql> CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
@@ -169,7 +171,7 @@ mysql> \q
 Bye
 ```
 
-#### Verify Service Status
+#### Verify MySQL Service Status
 
 You can verify that authentication works issuing the following command and providing the configured password.
 
@@ -197,23 +199,23 @@ mysql> status
 --------------
 mysql  Ver 8.0.21 for Linux on x86_64 (Source distribution)
 
-Connection id:		10
-Current database:	nautobot
-Current user:		nautobot@localhost
-SSL:			Not in use
-Current pager:		stdout
-Using outfile:		''
-Using delimiter:	;
-Server version:		8.0.21 Source distribution
-Protocol version:	10
-Connection:		Localhost via UNIX socket
-Server characterset:	utf8mb4
-Db     characterset:	utf8mb4
-Client characterset:	utf8mb4
-Conn.  characterset:	utf8mb4
-UNIX socket:		/var/lib/mysql/mysql.sock
-Binary data as:		Hexadecimal
-Uptime:			4 min 12 sec
+Connection id:          10
+Current database:       nautobot
+Current user:           nautobot@localhost
+SSL:                    Not in use
+Current pager:          stdout
+Using outfile:          ''
+Using delimiter:        ;
+Server version:         8.0.21 Source distribution
+Protocol version:       10
+Connection:             Localhost via UNIX socket
+Server characterset:    utf8mb4
+Db     characterset:    utf8mb4
+Client characterset:    utf8mb4
+Conn.  characterset:    utf8mb4
+UNIX socket:            /var/lib/mysql/mysql.sock
+Binary data as:         Hexadecimal
+Uptime:                 4 min 12 sec
 
 Threads: 2  Questions: 12  Slow queries: 0  Opens: 151  Flush tables: 3  Open tables: 69  Queries per second avg: 0.047
 --------------
@@ -232,7 +234,7 @@ Start the service and enable it to run at system startup:
 $ sudo systemctl enable --now redis
 ```
 
-### Verify Service Status
+### Verify Redis Service Status
 
 Use the `redis-cli` utility to ensure the Redis service is functional:
 

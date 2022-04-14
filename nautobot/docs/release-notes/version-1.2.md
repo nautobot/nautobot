@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.2
 
 This document describes all new features and changes in Nautobot 1.2.
@@ -51,8 +52,8 @@ query {
 
 #### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
 
-Complex GraphQL queries have been greatly optimized thanks to integration of 
-[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+Complex GraphQL queries have been greatly optimized thanks to integration of
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot!
 
 In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
 
@@ -81,7 +82,7 @@ Jobs can now be optionally defined as `approval_required = True`, in which case 
 Jobs can now be scheduled for execution at a future date and time (such as during a planned maintenance window), and can also be scheduled for repeated execution on an hourly, daily, or weekly recurring cadence.
 
 !!! note
-    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
+    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
 Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
 
@@ -139,6 +140,49 @@ Job log messages are now stored in a separate database table as a separate `JobL
 All models that have `slug` fields now use `AutoSlugField` from the `django-extensions` package. This means that when creating a record via the REST API, CSV import, or direct ORM Python calls, the `slug` field is now fully optional; if unspecified, it will be automatically assigned a unique value, just as how a `slug` is auto-populated in the UI when creating a new record.
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
+
+## v1.2.11 (2022-04-04)
+
+### Added
+
+- [#1123](https://github.com/nautobot/nautobot/issues/1123) - Add validation for IPAddress assigned_object_type and assigned_object_id.
+- [#1146](https://github.com/nautobot/nautobot/issues/1146) - Added change date filtering lookup expressions to GraphQL.
+- [#1495](https://github.com/nautobot/nautobot/issues/1495) - Added full coverage of cable termination types to Graphene.
+- [#1501](https://github.com/nautobot/nautobot/issues/1501) - Add IP field to CSV export of device.
+- [#1529](https://github.com/nautobot/nautobot/pull/1529) - Added list of standard hex colors to the Tags documentation.
+
+### Changed
+
+- [#1536](https://github.com/nautobot/nautobot/pull/1536) - Removed the ServiceUnavailable exception when no `primary_ip` is available for a device, but other connection options are available.
+- [#1581](https://github.com/nautobot/nautobot/issues/1581) - Changed MultipleChoiceJSONField to accept choices as a callable, fixing Datasource Contents provided by plugins are not accepted as valid choice by REST API.
+- [#1584](https://github.com/nautobot/nautobot/issues/1584) - Replaced links in docs to celeryproject.org with celeryq.dev
+
+### Fixed
+
+- [#1313](https://github.com/nautobot/nautobot/issues/1313) - Fixed GraphQL query error on OneToOneFields such as `IPAddress.primary_ip4_for`
+- [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
+- [#1467](https://github.com/nautobot/nautobot/issues/1467) - Fixed an issue where at certain browser widths the nav bar would cover the top of the page content.
+- [#1523](https://github.com/nautobot/nautobot/issues/1523) - Fixed primary IP being unset after creating/updating different interface
+- [#1548](https://github.com/nautobot/nautobot/issues/1548) - Pin Jinja2 version for mkdocs requirements to fix RTD docs builds related to API deprecation in Jinja2 >= 3.1.0
+- [#1583](https://github.com/nautobot/nautobot/issues/1583) - Fixed Nautobot service definition in PostgreSQL-backed development environment.
+- [#1599](https://github.com/nautobot/nautobot/pull/1599) - Bump mkdocs version for Snyk report.
+
+## v1.2.10 (2022-03-21)
+
+### Added
+
+- [#1492](https://github.com/nautobot/nautobot/pull/1492) - Added note in the Jobs documentation about the use of `AbortTransaction` to end the job and force rollback.
+- [#1517](https://github.com/nautobot/nautobot/pull/1517) - Added password filtering example to advanced logging section in docs.
+
+### Changed
+
+- [#1514](https://github.com/nautobot/nautobot/pull/1514) - Simplified switching between PostgreSQL and MySQL database backends in the developer environment.
+- [#1518](https://github.com/nautobot/nautobot/pull/1518) - Updated GitHub Pull Request template to include detail section, todo list.
+
+### Fixed
+
+- [#1511](https://github.com/nautobot/nautobot/issues/1511) - Fixed left column of Read The Docs being cut off.
+- [#1522](https://github.com/nautobot/nautobot/pull/1522) - Fixed link name attribute name in developer docs.
 
 ## v1.2.9 (2022-03-14)
 

@@ -18,14 +18,14 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 
 Jobs may be installed in one of three ways:
 
-- Manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
-    - The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
-    - Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
-- Imported from an external [Git repository](../models/extras/gitrepository.md#jobs).
-    - The repository's `jobs/` directory *must* contain a file named `__init__.py`.
-    - Each Job file in the repository is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
-- Packaged as part of a [plugin](../plugins/development.md#including-jobs).
-    - Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
+* Manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
+    * The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
+    * Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
+* Imported from an external [Git repository](../models/extras/gitrepository.md#jobs).
+    * The repository's `jobs/` directory *must* contain a file named `__init__.py`.
+    * Each Job file in the repository is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
+* Packaged as part of a [plugin](../plugins/development.md#including-jobs).
+    * Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
 
 In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
@@ -60,11 +60,11 @@ You can implement the entire job within the `run()` function, but for more compl
 It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database by updating [`JobResult`](../models/extras/jobresult.md) records and creating [`JobLogEntry`](../models/extras/joblogentry.md) records.
 
 !!! note
-    When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the (Celery `worker`) process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code.
+    When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the Celery `worker` process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code or else it will continue to run the version of the Job code that was present when it first started.
 
-    Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed.
+    Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module metadata attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed.
 
-### Module Attributes
+### Module Metadata Attributes
 
 #### `name` (Grouping)
 
@@ -73,7 +73,7 @@ You can define a global constant called `name` within a job module (the Python f
 !!! note
     In some UI elements and API endpoints, the module file name is displayed in addition to or in place of this attribute, so even if defining this attribute, you should still choose an appropriately explanatory file name as well.
 
-### Class Attributes
+### Class Metadata Attributes
 
 Job-specific attributes may be defined under a class named `Meta` within each job class you implement. All of these are optional, but encouraged.
 
@@ -135,13 +135,13 @@ A Boolean that if set to `True` prevents the job from being displayed by default
 
 Since the jobs execution framework is designed to be generic, there may be several technical jobs defined by users which interact with or are invoked by external systems. In such cases, these jobs are not meant to be executed by a human and likely do not make sense to expose to end users for execution, and thus having them exposed in the UI at all is extraneous.
 
-Important notes about hidden jobs: 
+Important notes about hidden jobs:
 
-- This is merely hiding them by default from the web interface. It is NOT a security feature.
-- In the Jobs list view it is possible to filter to "Hidden: (no selection)" or even "Hidden: Yes" to list the hidden jobs.
-- All Job UI and REST API endpoints still exist for hidden jobs and can be accessed by any user who is aware of their existence.
-- Hidden jobs can still be executed through the UI or the REST API given the appropriate URL.
-- Results for hidden jobs will still appear in the Job Results list after they are run.
+* This is merely hiding them by default from the web interface. It is NOT a security feature.
+* In the Jobs list view it is possible to filter to "Hidden: (no selection)" or even "Hidden: Yes" to list the hidden jobs.
+* All Job UI and REST API endpoints still exist for hidden jobs and can be accessed by any user who is aware of their existence.
+* Hidden jobs can still be executed through the UI or the REST API given the appropriate URL.
+* Results for hidden jobs will still appear in the Job Results list after they are run.
 
 #### `read_only`
 
@@ -151,7 +151,7 @@ A boolean that designates whether the job is able to make changes to data in the
 
 #### `soft_time_limit`
 
-An int or float value, in seconds, which can be used to override the default [soft time limit](../configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete. 
+An int or float value, in seconds, which can be used to override the default [soft time limit](../configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete.
 
 The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) is reached:
 
@@ -365,7 +365,7 @@ Again, defining user variables is totally optional; you may create a job with ju
 !!! note
     The `test_*()` and `post_run()` methods do not accept any arguments; if you need to access user `data` or the `commit` flag, your `run()` method is responsible for storing these values in the job instance, such as:
 
-    ```python
+    ```
     def run(self, data, commit):
         self.data = data
         self.commit = commit
@@ -382,7 +382,6 @@ Again, defining user variables is totally optional; you may create a job with ju
 If your job class defines any number of methods whose names begin with `test_`, these will be automatically invoked after the `run()` method (if any) completes. These methods must take no arguments (other than `self`).
 
 Log messages generated by any of these methods will be automatically grouped together by the test method they were invoked from, which can be helpful for readability.
-
 
 ### The `post_run()` Method
 
@@ -406,7 +405,7 @@ It is advised to log a message for each object that is evaluated so that the res
 Markdown rendering is supported for log messages.
 
 !!! note
-    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job. To end a job early, you can use a Python `raise` or `return` as appropriate.
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising `nautobot.utilities.exceptions.AbortTransaction` will ensure that any database changes are rolled back as part of the process of ending the job.
 
 ### Accessing Request Data
 
@@ -430,26 +429,64 @@ The `Job` class provides two convenience methods for reading data from files:
 
 These two methods will load data in YAML or JSON format, respectively, from files within the local path (i.e. `JOBS_ROOT/`).
 
+## Managing Jobs
+
+As of Nautobot 1.3, each Job class installed in Nautobot is represented by a corresponding Job data record in the Nautobot database. These data records are refreshed when the `nautobot-server migrate` or `nautobot-server post_upgrade` command is run, or (for Jobs from a Git repository) when a Git repository is enabled or re-synced in Nautobot. These data records make it possible for an administrative user (or other user with appropriate access privileges) to exert a level of administrative control over the Jobs created and updated by Job authors.
+
+### Enabling Jobs for Running
+
+When a new Job record is created for a newly discovered Job class, it defaults to `enabled = False`, which prevents the Job from being run by any user. This is intended to provide a level of security and oversight regarding the installation of new Jobs into Nautobot.
+
+!!! important
+    One exception to this default is when upgrading from a Nautobot release before 1.3 to Nautobot 1.3.0 or later. In this case, at the time of the upgrade, any Job class that shows evidence of having been run or scheduled under the older Nautobot version (that is, there is at least one JobResult and/or ScheduledJob record that references this Job class) will result in the creation of a Job database record with `enabled = True`. The reasoning for this feature is the assertion that because the Job has been run or scheduled previously, it has presumably already undergone appropriate review at that time, and so it should remain possible to run it as it was possible before the upgrade.
+
+An administrator or user with `extras.change_job` permission can edit the Job to change it to `enabled = True`, permitting running of the Job, when they have completed any appropriate review of the new Job to ensure that it meets their standards. Similarly, an obsolete or no-longer-used Job can be prevented from inadvertent execution by changing it back to `enabled = False`.
+
+### Overriding Metadata
+
+An administrator or user with `extras.change_job` permission can also edit a Job database record to optionally override any or all of the following metadata attributes defined by the Job module or class:
+
+* `grouping`
+* `name`
+* `description`
+* `approval_required`
+* `commit_default`
+* `hidden`
+* `read_only`
+* `soft_time_limit`
+* `time_limit`
+
+This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
+
+### Deleting Jobs
+
+When a previously installed Job class is removed, after running `nautobot-server <migrate|post_upgrade>` or refreshing the providing Git repository, the Job database record will *not* be automatically deleted, but *will* be flagged as `installed = False` and can no longer be run or scheduled.
+
+An administrator or user with `extras.delete_job` permissions *may* delete such a Job database record if desired, but be aware that doing so will result in any existing JobResult or ScheduledJob records that originated from this Job losing their association to the Job; this association will not be automatically restored even if the Job is later reinstalled or reintroduced.
+
 ## Running Jobs
 
 !!! note
     To run any job, a user must be assigned the `extras.run_job` permission. This is achieved by assigning the user (or group) a permission on the `extras > job` object and specifying the `run` action in the admin UI as shown below.
 
-    ![Adding the run action to a permission](../media/admin_ui_run_permission.png)
-
     Similarly, to [approve a job request by another user](./job-scheduling-and-approvals.md), a user must be assigned the `extras.approve_job` permission via the same process. Job approvers also need the `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions as job approvals are implemented via the `ScheduledJob` data model.
+
+    ![Adding the run action to a permission](../media/admin_ui_run_permission.png)
 
 ### Jobs and `class_path`
 
 It is a key concept to understand the 3 `class_path` elements:
 
-- `grouping_name`: which can be one of `local`, `git`, or `plugins` - depending on where the `Job` has been defined.
-- `module_name`: which is the Python path to the job definition file, for a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename` or `nautobot_golden_config.jobs` and is the importable Python path name (which would not include the `.py` extension, as per Python syntax standards).
-- `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+* `grouping_name`: which can be one of `local`, `git`, or `plugins` - depending on where the `Job` has been defined.
+* `module_name`: which is the Python path to the job definition file, for a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename` or `nautobot_golden_config.jobs` and is the importable Python path name (which would not include the `.py` extension, as per Python syntax standards).
+* `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
 
 The `class_path` is often represented as a string in the format of `<grouping_name>/<module_name>/<JobClassName>`, such as
 `local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the definitions of these
 elements will be important in running jobs programmatically.
+
+!!! note
+    In Nautobot 1.3 and later, with the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
 
 ### Via the Web UI
 
@@ -459,10 +496,7 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<class_path>/run`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
-
-!!! note
-    [See above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
 For example, to run a job with no user inputs and without committing any anything to the database:
 
@@ -470,8 +504,8 @@ For example, to run a job with no user inputs and without committing any anythin
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
-http://nautobot/api/extras/jobs/local/example/MyJobWithNoVars/run/
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/jobs/$JOB_ID/run/
 ```
 
 Or to run a job that expects user inputs, and commit changes to the database:
@@ -480,8 +514,8 @@ Or to run a job that expects user inputs, and commit changes to the database:
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
-http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/jobs/$JOB_ID/run/ \
 --data '{"data": {"string_variable": "somevalue", "integer_variable": 123}, "commit": true}'
 ```
 
@@ -546,8 +580,8 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.test import TransactionTestCase
 
-from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import JobResult, JobLogEntry
+from nautobot.extras.jobs import run_job
+from nautobot.extras.models import Job, JobResult, JobLogEntry
 
 
 if "job_logs" in settings.DATABASES:
@@ -561,10 +595,12 @@ class MyJobTestCase(TransactionTestCase):
 
     def test_my_job(self):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
-        job_class = get_job("local/my_job_file/MyJob")
+        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
+        # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
         job_result = JobResult.objects.create(
-            name=job_class.class_path,
+            name=job.class_path,
             obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            job_model=job,
             job_id=uuid.uuid4(),
         )
         run_job(data={"my_variable": "my_value"}, request=None, commit=False, job_result_pk=job_result.pk)

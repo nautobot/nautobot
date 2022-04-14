@@ -108,11 +108,11 @@ class NestedImageAttachmentSerializer(WritableNestedSerializer):
 
 
 class NestedJobSerializer(serializers.ModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
         model = models.Job
-        fields = ["id", "url", "source", "module_name", "job_class_name", "grouping", "name"]
+        fields = ["id", "url", "source", "module_name", "job_class_name", "grouping", "name", "slug"]
 
 
 class NestedJobLogEntrySerializer(serializers.ModelSerializer):

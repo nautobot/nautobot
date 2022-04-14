@@ -46,7 +46,6 @@ In the `docker` directory you will find the following files:
 
 If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
 
-
 ```yaml
 ---
 nautobot:
@@ -96,37 +95,16 @@ After these two files are created, you can use the `invoke` tasks to manage the 
 
 By default the Docker development environment is configured to use a PostgreSQL container as the database backend. For development or testing purposes, you might optionally choose to use MySQL instead. In order to do so, you need to make the following changes to your environment:
 
-- Set up `development/override.env` as described above and use it to set the following environment variables:
+- Set up `invoke.yml` as described above and use it to override the postgres docker-compose file:
 
-        NAUTOBOT_DB_HOST=mysql
-        NAUTOBOT_DB_ENGINE=django.db.backends.mysql
-
-- Set up `development/docker-compose.override.yml` to apply your `override.env` to all of the nautobot core containers:
-
-        ---
-        services:
-          nautobot:
-            env_file:
-              - "override.env"
-          worker:
-            env_file:
-              - "override.env"
-          celery_worker:
-            env_file:
-              - "override.env"
-          celery_beat:
-            env_file:
-              - "override.env"
-
-- Set up an `invoke.yml` that overrides the docker-compose files used so that `docker-compose.mysql.yml` is used instead of `docker-compose.postgres.yml` and your `docker-compose.override.yml` is also used:
-
-        ---
-        nautobot:
-          compose_files:
-            - "docker-compose.yml"
-            - "docker-compose.mysql.yml"
-            - "docker-compose.dev.yml"
-            - "docker-compose.override.yml"
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.mysql.yml"
+    - "docker-compose.dev.yml"
+```
 
 Then `invoke stop` (if you previously had the docker environment running with Postgres) and `invoke start` and you should now be running with MySQL.
 

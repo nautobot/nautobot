@@ -189,7 +189,7 @@ def validated_viewname(model, action):
 @register.filter()
 def bettertitle(value):
     """
-    Alternative to the builtin title(); uppercases words without replacing letters that are already uppercase.
+    Alternative to the builtin title(); capitalizes words without replacing letters that are already uppercase.
 
     Args:
         value (str): string to convert to Title Case

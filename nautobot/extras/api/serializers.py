@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from drf_yasg.utils import swagger_serializer_method
+from django.utils.functional import classproperty
+from drf_spectacular.utils import extend_schema_field
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.extras.models.secrets import SecretsGroupAssociation
 from rest_framework import serializers
@@ -55,7 +56,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.api.fields import StatusSerializerField
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -101,8 +102,19 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
+class TagSerializerField(NestedTagSerializer):
+    """NestedSerializer field for `Tag` object fields."""
+
+    def get_queryset(self):
+        """Only emit status options for this model/field combination."""
+        queryset = super().get_queryset()
+        # Get objects model e.g Site, Device... etc.
+        model = self.parent.parent.Meta.model
+        return queryset.get_for_model(model)
+
+
 class TaggedObjectSerializer(serializers.Serializer):
-    tags = NestedTagSerializer(many=True, required=False)
+    tags = TagSerializerField(many=True, required=False)
 
     def create(self, validated_data):
         tags = validated_data.pop("tags", None)
@@ -258,7 +270,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -298,7 +310,7 @@ class ConfigContextSchemaSerializer(ValidatedModelSerializer):
             "last_updated",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -320,7 +332,7 @@ class ContentTypeSerializer(serializers.ModelSerializer):
         model = ContentType
         fields = ["id", "url", "app_label", "model", "display"]
 
-    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
         return obj.app_labeled_name
 
@@ -454,7 +466,7 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
             "file_extension",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -477,7 +489,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
 
     provided_contents = MultipleChoiceJSONField(
-        choices=get_datasource_content_choices("extras.gitrepository"),
+        choices=lambda: get_datasource_content_choices("extras.gitrepository"),
         allow_blank=True,
         required=False,
     )
@@ -580,7 +592,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
         return data
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_parent(self, obj):
 
         # Static mapping of models to their nested serializers
@@ -602,7 +614,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobmodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
         model = Job
@@ -745,14 +757,27 @@ class JobClassSerializer(serializers.Serializer):
         lookup_url_kwarg="class_path",
     )
     id = serializers.CharField(read_only=True, source="class_path")
+    pk = serializers.SerializerMethodField(read_only=True)
     name = serializers.CharField(max_length=255, read_only=True)
     description = serializers.CharField(max_length=255, required=False, read_only=True)
     test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
     vars = serializers.SerializerMethodField(read_only=True)
-    result = NestedJobResultSerializer()
+    result = NestedJobResultSerializer(required=False)
 
+    @extend_schema_field(serializers.DictField)
     def get_vars(self, instance):
         return {k: v.__class__.__name__ for k, v in instance._get_vars().items()}
+
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
+    def get_pk(self, instance):
+        try:
+            jobs = Job.objects
+            if "request" in self.context and self.context["request"].user is not None:
+                jobs = jobs.restrict(self.context["request"].user, "view")
+            job_model = jobs.get_for_class_path(instance.class_path)
+            return job_model.pk
+        except Job.DoesNotExist:
+            return None
 
 
 class JobClassDetailSerializer(JobClassSerializer):
@@ -811,7 +836,7 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
             "object_data",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_changed_object(self, obj):
         """
         Serialize a nested representation of the changed object.
@@ -1000,6 +1025,16 @@ class StatusModelSerializerMixin(serializers.Serializer):
 
     status = StatusSerializerField(queryset=Status.objects.all())
 
+    @classproperty
+    def status_choices(cls):
+        """
+        Get the list of valid status values for this serializer.
+
+        May be necessary to use with settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] at some point if
+        we ever end up with multiple serializers whose default set of status choices are identical.
+        """
+        return list(cls().fields["status"].get_choices().keys())
+
 
 #
 # Tags
@@ -1020,6 +1055,47 @@ class TagSerializer(CustomFieldModelSerializer):
             "color",
             "description",
             "tagged_items",
+            "custom_fields",
+            "created",
+            "last_updated",
+        ]
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        # All relevant content_types should be assigned to tag for API Version <1.3
+        if not data.get("content_types"):
+            data["content_types"] = TaggableClassesQuery().as_queryset
+
+        # check if tag is assigned to any of the removed content_types
+        if self.instance is not None and self.instance.present_in_database:
+            content_types_id = [content_type.id for content_type in data.get("content_types")]
+            errors = self.instance.validate_content_types_removal(content_types_id)
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
+        return data
+
+
+class TagSerializerVersion13(TagSerializer):
+    content_types = ContentTypeField(
+        queryset=TaggableClassesQuery().as_queryset,
+        many=True,
+        required=True,
+    )
+
+    class Meta:
+        model = Tag
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "color",
+            "description",
+            "tagged_items",
+            "content_types",
             "custom_fields",
             "created",
             "last_updated",

@@ -210,7 +210,6 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 !!! warning
     Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
 
-
 ## Multiple LDAP Server Support
 
 Multiple servers can be supported in `django-auth-ldap` by the use of additional LDAP backends, as described in the library's [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).

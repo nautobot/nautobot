@@ -160,9 +160,13 @@ class ChangeLogAPITest(APITestCase):
         CustomFieldChoice.objects.create(field=cf_select, value="Foo")
 
         # Create some tags
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
 
         self.statuses = Status.objects.get_for_model(Site)
 
@@ -312,4 +316,44 @@ class ChangeLogAPITest(APITestCase):
         gql_payload = '{query: object_changes(q: "") { object_repr } }'
         resp = execute_query(gql_payload, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
+        self.assertEqual(first=site_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_graphql_object_lte_filter(self):
+        site_payload = {
+            "name": "Test Site 2",
+            "slug": "test-site-2",
+            "status": "active",
+        }
+        self.add_permissions("dcim.add_site")
+
+        time = "2021-03-14 00:00:00"
+        sites_url = reverse("dcim-api:site-list")
+        new_site_response = self.client.post(sites_url, site_payload, format="json", **self.header)
+        self.assertHttpStatus(new_site_response, status.HTTP_201_CREATED)
+
+        gql_payload = f'{{query: object_changes(time__lte: "{time}") {{ object_repr }} }}'
+        resp = execute_query(gql_payload, user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+        self.assertIsInstance(resp["data"].get("query"), list)
+        self.assertEqual(len(resp["data"].get("query")), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_graphql_object_gte_filter(self):
+        site_payload = {
+            "name": "Test Site 1",
+            "slug": "test-site-1",
+            "status": "active",
+        }
+        self.add_permissions("dcim.add_site")
+
+        time = "2021-03-14 00:00:00"
+        sites_url = reverse("dcim-api:site-list")
+        new_site_response = self.client.post(sites_url, site_payload, format="json", **self.header)
+        self.assertHttpStatus(new_site_response, status.HTTP_201_CREATED)
+
+        gql_payload = f'{{query: object_changes(time__gte: "{time}") {{ object_repr }} }}'
+        resp = execute_query(gql_payload, user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+        self.assertIsInstance(resp["data"].get("query"), list)
         self.assertEqual(first=site_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))

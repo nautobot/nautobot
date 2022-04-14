@@ -40,9 +40,7 @@ router.register("graphql-queries", views.GraphQLQueryViewSet)
 router.register("image-attachments", views.ImageAttachmentViewSet)
 
 # Jobs
-router.register("job-models", views.JobModelViewSet, basename="jobmodel")
-# 2.0 TODO: remove JobViewSet, rename JobModelViewSet
-router.register("jobs", views.JobViewSet, basename="job")
+router.register("jobs", views.JobViewSet)
 
 # Job Log Entries
 router.register("job-logs", views.JobLogEntryViewSet)
