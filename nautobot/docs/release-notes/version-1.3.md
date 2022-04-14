@@ -127,7 +127,6 @@ For users migrating from an earlier Nautobot release, any existing tags will def
 
 Note that a Tag created programmatically via the ORM without assigning any `content_types` will not be applicable to any model until content-types are assigned to it.
 
-
 ### Removed
 
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))

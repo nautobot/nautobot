@@ -654,6 +654,7 @@ There are several conditions that must be met in order to extend a filter:
     A plugin is not required to define both `filterset_fields` and `filterform_fields`.
 
 Example:
+
 ```python
 # filter_extensions.py
 from django import forms
