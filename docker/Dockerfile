@@ -120,8 +120,7 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
 COPY nautobot /source/nautobot
 
 # Build the rendered docs, this ensures that the docs are in the final image.
-RUN pip install --no-cache-dir -r docs/requirements.txt
-RUN mkdocs build --no-directory-urls
+RUN pip install --no-cache-dir -r docs/requirements.txt && mkdocs build --no-directory-urls
 
 # Build the wheel
 RUN poetry build
