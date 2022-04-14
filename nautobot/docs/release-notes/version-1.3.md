@@ -139,6 +139,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#630](https://github.com/nautobot/nautobot/issues/630) - Added support for multiple NAT outside IP addresses.
+- [#872](https://github.com/nautobot/nautobot/issues/872) - Added ability to scope tags to content types.
 - [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects.
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
 - [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
