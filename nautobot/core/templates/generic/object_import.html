@@ -15,7 +15,7 @@
                 </div>
             </div>
         {% endif %}
-		<form action="" method="post" class="form form-horizontal">
+		<form action="" method="post" class="form form-horizontal object-import-form">
 		    {% csrf_token %}
 		    {% render_form form %}
             <div class="form-group">
@@ -30,4 +30,12 @@
 		</form>
 	</div>
 </div>
+{% endblock %}
+
+{% block javascript %}
+    <script>
+        // Reduce the large blank space at start of label
+        $(".object-import-form .form-group>label").switchClass("col-md-3", "col-md-2")
+        $(".object-import-form .form-group>div").switchClass("col-md-9", "col-md-10")
+    </script>
 {% endblock %}
