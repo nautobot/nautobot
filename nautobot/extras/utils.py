@@ -6,6 +6,7 @@ import logging
 import pkgutil
 import sys
 
+from django.apps import apps
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -78,6 +79,40 @@ class FeatureQuery:
             [('dcim.device', 13), ('dcim.rack', 34)]
         """
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+
+
+@deconstructible
+class TaggableClassesQuery:
+    """
+    Helper class to get ContentType models that implements tags(TaggableManager)
+    """
+
+    def list_subclasses(self):
+        """
+        Return a list of classes that has implements tags e.g tags = TaggableManager(...)
+        """
+        return [
+            _class
+            for _class in apps.get_models()
+            if hasattr(_class, "tags") and isinstance(_class.tags, _TaggableManager)
+        ]
+
+    def __call__(self):
+        """
+        Given an extras feature, return a Q object for content type lookup
+        """
+        query = Q()
+        for model in self.list_subclasses():
+            query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
+
+        return query
+
+    @property
+    def as_queryset(self):
+        return ContentType.objects.filter(self()).order_by("app_label", "model")
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
 
 
 def extras_features(*features):

@@ -5,7 +5,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -904,10 +904,32 @@ class StatusViewSetMixin(ModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    create=extend_schema(responses={"201": serializers.TagSerializer}, versions=["1.2"]),
+    partial_update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+)
 class TagViewSet(CustomFieldModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
-    serializer_class = serializers.TagSerializer
+    serializer_class = serializers.TagSerializerVersion13
     filterset_class = filters.TagFilterSet
+
+    def get_serializer_class(self):
+        if (
+            not self.brief
+            and not getattr(self, "swagger_fake_view", False)
+            and (
+                not hasattr(self.request, "major_version")
+                or self.request.major_version > 1
+                or (self.request.major_version == 1 and self.request.minor_version < 3)
+            )
+        ):
+            return serializers.TagSerializer
+        return super().get_serializer_class()
 
 
 #

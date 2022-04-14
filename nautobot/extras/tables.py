@@ -764,11 +764,12 @@ class TagTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
     color = ColorColumn()
+    content_types = ContentTypesColumn(truncate_words=15)
     actions = ButtonsColumn(Tag, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = Tag
-        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
+        fields = ("pk", "name", "items", "slug", "color", "content_types", "description", "actions")
 
 
 class TaggedItemTable(BaseTable):

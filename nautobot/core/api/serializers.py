@@ -140,6 +140,9 @@ class WritableNestedSerializer(BaseModelSerializer):
     primary key value on write operations.
     """
 
+    def get_queryset(self):
+        return self.Meta.model.objects
+
     def to_internal_value(self, data):
 
         if data is None:
@@ -148,7 +151,7 @@ class WritableNestedSerializer(BaseModelSerializer):
         # Dictionary of related object attributes
         if isinstance(data, dict):
             params = dict_to_filter_params(data)
-            queryset = self.Meta.model.objects
+            queryset = self.get_queryset()
             try:
                 return queryset.get(**params)
             except ObjectDoesNotExist:
@@ -158,7 +161,7 @@ class WritableNestedSerializer(BaseModelSerializer):
             except FieldError as e:
                 raise ValidationError(e)
 
-        queryset = self.Meta.model.objects
+        queryset = self.get_queryset()
         pk = None
 
         if isinstance(self.Meta.model._meta.pk, AutoField):

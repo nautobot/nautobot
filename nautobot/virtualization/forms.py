@@ -20,7 +20,6 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -107,7 +106,6 @@ class ClusterForm(NautobotModelForm, TenancyForm):
         query_params={"region_id": "$region"},
     )
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Cluster
@@ -270,7 +268,6 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         query_params={"vm_role": "True"},
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VirtualMachine
@@ -490,7 +487,6 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "site_id": "null",
         },
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VMInterface
@@ -561,7 +557,6 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             "site_id": "null",
         },
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -680,7 +675,6 @@ class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
 class VirtualMachineBulkAddComponentForm(CustomFieldBulkCreateForm, BootstrapMixin, forms.Form):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     name_pattern = ExpandableNameField(label="Name")
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         nullable_fields = []

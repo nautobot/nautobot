@@ -658,3 +658,10 @@ BRANDING_URLS = {
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
 BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
+
+#
+# Django extensions settings
+#
+
+# Dont load the 'taggit' app, since we have our own custom `Tag` and `TaggedItem` models
+SHELL_PLUS_DONT_LOAD = ["taggit"]

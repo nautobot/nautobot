@@ -203,6 +203,7 @@ class ContentTypeFilterMixin:
             app_label, model = value.lower().split(".")
         except ValueError:
             return qs.none()
+
         return qs.filter(
             **{
                 f"{self.field_name}__app_label": app_label,

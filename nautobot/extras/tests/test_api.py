@@ -46,6 +46,8 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.utils import TaggableClassesQuery
+from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
@@ -2167,7 +2169,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
         """
 
 
-class TagTest(APIViewTestCases.APIViewTestCase):
+class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag
     brief_fields = ["color", "display", "id", "name", "slug", "url"]
     create_data = [
@@ -2190,9 +2192,90 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+
+    def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
+
+        tag = Tag.objects.get(slug=self.create_data[0]["slug"])
+        self.assertEqual(
+            tag.content_types.count(),
+            TaggableClassesQuery().as_queryset.count(),
+        )
+
+
+class TagTestVersion13(
+    APIViewTestCases.CreateObjectViewTestCase,
+    APIViewTestCases.UpdateObjectViewTestCase,
+):
+    model = Tag
+    brief_fields = ["color", "display", "id", "name", "slug", "url"]
+    api_version = "1.3"
+    create_data = [
+        {"name": "Tag 4", "slug": "tag-4", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
+    ]
+    bulk_update_data = {"content_types": [Site._meta.label_lower]}
+
+    @classmethod
+    def setUpTestData(cls):
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
+
+    def test_create_tags_with_invalid_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+
+        tag = Tag.objects.filter(slug=data["slug"])
+        self.assertHttpStatus(response, 400)
+        self.assertFalse(tag.exists())
+        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+
+    def test_create_tags_without_content_types(self):
+        self.add_permissions("extras.add_tag")
+        data = {
+            "name": "Tag 8",
+            "slug": "tag-8",
+        }
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(str(response.data["content_types"][0]), "This field is required.")
+
+    def test_update_tags_remove_content_type(self):
+        """Test removing a tag content_type that is been tagged to a model"""
+        self.add_permissions("extras.change_tag")
+
+        tag_1 = Tag.objects.get(slug="tag-1")
+        site = Site.objects.create(name="site 1", slug="site-1")
+        site.tags.add(tag_1)
+
+        url = self._get_detail_url(tag_1)
+        data = {"content_types": [Device._meta.label_lower]}
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            str(response.data["content_types"][0]), "Unable to remove dcim.site. Dependent objects were found."
+        )
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

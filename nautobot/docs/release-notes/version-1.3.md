@@ -85,7 +85,11 @@ This endpoint specifically supports Basic Authentication in addition to the othe
 
 Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
 
-- The only REST API endpoint that is versioned in the 1.3.0 release is the `/api/extras/jobs/` listing endpoint, as described above. All others are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
+- The REST API endpoints that are versioned in the 1.3.0 release are
+    - `/api/extras/jobs/` listing endpoint
+    - `/api/extras/tags/` create/put/patch endpoint
+    - `/api/ipam/ip-addresses/` endpoints
+- All others endpoints are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
 - If a REST API client does not request a specific REST API version (in other words, requests `Accept: application/json` rather than `Accept: application/json; version=1.3`) the API behavior will be compatible with Nautobot 1.2, at a minimum for the remainder of the Nautobot 1.x release cycle.
 - The API behavior may change to a newer default version in a Nautobot major release (e.g. 2.0).
 - To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the new Jobs REST API, `Accept: application/json; version=1.3`).
@@ -114,6 +118,15 @@ Similar to the existing `extras.run_job` permission, a new `extras.approve_job` 
 #### OpenAPI 3.0 REST API documentation ([#595](https://github.com/nautobot/nautobot/issues/595))
 
 The online REST API Swagger documentation (`/api/docs/`) has been updated from OpenAPI 2.0 format to OpenAPI 3.0 format and now supports Nautobot's [REST API versioning](#rest-api-versioning-1465) as described above. Try `/api/docs/?api_version=1.3` as an example.
+
+#### Tag restriction by content-type ([#872](https://github.com/nautobot/nautobot/issues/872))
+
+When created, a `Tag` can be associated to one or more model content-types using a many-to-many relationship. The tag will then apply only to models belonging to those associated content-types.
+
+For users migrating from an earlier Nautobot release, any existing tags will default to being enabled for all content-types for compatibility purposes. Individual tags may subsequently edited to remove any content-types that they do not need to apply to.
+
+Note that a Tag created programmatically via the ORM without assigning any `content_types` will not be applicable to any model until content-types are assigned to it.
+
 
 ### Removed
 
