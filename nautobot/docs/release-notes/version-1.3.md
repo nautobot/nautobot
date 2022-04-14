@@ -155,6 +155,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1562](https://github.com/nautobot/nautobot/issues/1562) - Fixed JobResult filter form UI pointing to the wrong endpoint.
 - [#1563](https://github.com/nautobot/nautobot/issues/1563) - Fixed UI crash when trying to execute Jobs provided by disabled plugins. A friendly error message will now be displayed.
 - [#1582](https://github.com/nautobot/nautobot/issues/1582) - Fixed a timing issue with editing a record while its custom field(s) are in the process of being cleaned up by a background task.
+- [#1632](https://github.com/nautobot/nautobot/pull/1632) - Fixed issue accessing request attributes when request may be None.
 - [#1637](https://github.com/nautobot/nautobot/pull/1637) - Fixed warnings logged during REST API schema generation.
 
 ## v1.3.0b1 (2022-03-11)
