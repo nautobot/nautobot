@@ -135,6 +135,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#595](https://github.com/nautobot/nautobot/issues/595) - Migrated from `drf-yasg` (OpenAPI 2.0) to `drf-spectacular` (OpenAPI 3.0) for REST API interactive Swagger documentation.
+- [#792](https://github.com/nautobot/nautobot/issues/792) - Poetry-installed dependencies are now identical between `dev` and `final` images.
 - [#814](https://github.com/nautobot/nautobot/issues/814) - Extended documentation for configuring Celery for use Redis Sentinel clustering.
 - [#1225](https://github.com/nautobot/nautobot/issues/1225) - Relaxed uniqueness constraint on Webhook creation, allowing multiple webhooks to send to the same target address so long as their content-type(s) and action(s) do not overlap.
 - [#1478](https://github.com/nautobot/nautobot/issues/1478) - ScheduledJob REST API endpoints now enforce `extras.approve_job` permissions as appropriate.
