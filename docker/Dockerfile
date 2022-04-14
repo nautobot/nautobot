@@ -100,10 +100,13 @@ ENV PATH="${PATH}:/root/.local/bin"
 RUN poetry config virtualenvs.create false && \
     poetry config installer.parallel false
 
-COPY pyproject.toml poetry.lock README.md /source/
+COPY pyproject.toml poetry.lock README.md mkdocs.yml /source/
 
 # The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY examples /source/examples
+
+# Copy Docs over to build the rendered docs
+COPY docs /source/docs
 
 WORKDIR /source
 
@@ -115,6 +118,10 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
 
 # Copy in the Nautobot source code to build the wheel from
 COPY nautobot /source/nautobot
+
+# Build the rendered docs, this ensures that the docs are in the final image.
+RUN pip install --no-cache-dir -r docs/requirements.txt
+RUN mkdocs build --no-directory-urls
 
 # Build the wheel
 RUN poetry build

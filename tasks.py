@@ -386,6 +386,13 @@ def loaddata(context, file_name):
     run_command(context, command)
 
 
+@task()
+def build_docs(context):
+    """Build docs for use within Nautobot."""
+    command = "mkdocs build --no-directory-urls"
+    run_command(context, command)
+
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
@@ -473,6 +480,8 @@ def unittest(
     append=False,
 ):
     """Run Nautobot unit tests."""
+    # First build the docs so they are available.
+    build_docs(context)
 
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
