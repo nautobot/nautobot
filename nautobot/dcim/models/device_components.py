@@ -8,7 +8,6 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from taggit.managers import TaggableManager
 
-
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,

@@ -194,6 +194,7 @@ class TestCase(_TestCase):
         """
         Create and return a Tag instance for each name given.
         """
+
         return [Tag.objects.create(name=name, slug=slugify(name)) for name in names]
 
 

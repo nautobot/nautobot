@@ -56,7 +56,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.api.fields import StatusSerializerField
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -102,8 +102,19 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
+class TagSerializerField(NestedTagSerializer):
+    """NestedSerializer field for `Tag` object fields."""
+
+    def get_queryset(self):
+        """Only emit status options for this model/field combination."""
+        queryset = super().get_queryset()
+        # Get objects model e.g Site, Device... etc.
+        model = self.parent.parent.Meta.model
+        return queryset.get_for_model(model)
+
+
 class TaggedObjectSerializer(serializers.Serializer):
-    tags = NestedTagSerializer(many=True, required=False)
+    tags = TagSerializerField(many=True, required=False)
 
     def create(self, validated_data):
         tags = validated_data.pop("tags", None)
@@ -1044,6 +1055,47 @@ class TagSerializer(CustomFieldModelSerializer):
             "color",
             "description",
             "tagged_items",
+            "custom_fields",
+            "created",
+            "last_updated",
+        ]
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        # All relevant content_types should be assigned to tag for API Version <1.3
+        if not data.get("content_types"):
+            data["content_types"] = TaggableClassesQuery().as_queryset
+
+        # check if tag is assigned to any of the removed content_types
+        if self.instance is not None and self.instance.present_in_database:
+            content_types_id = [content_type.id for content_type in data.get("content_types")]
+            errors = self.instance.validate_content_types_removal(content_types_id)
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
+        return data
+
+
+class TagSerializerVersion13(TagSerializer):
+    content_types = ContentTypeField(
+        queryset=TaggableClassesQuery().as_queryset,
+        many=True,
+        required=True,
+    )
+
+    class Meta:
+        model = Tag
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "color",
+            "description",
+            "tagged_items",
+            "content_types",
             "custom_fields",
             "created",
             "last_updated",

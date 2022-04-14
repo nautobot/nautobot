@@ -1790,6 +1790,7 @@ class TagView(generic.ObjectView):
         return {
             "items_count": tagged_items.count(),
             "items_table": items_table,
+            "content_types": instance.content_types.order_by("app_label", "model"),
         }
 
 

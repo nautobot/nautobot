@@ -15,6 +15,12 @@ A new data model for representing [dynamic groups](../models/extras/dynamicgroup
 
 For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported.
 
+#### Extend FilterSets and Filter Forms via Plugins ([#1470](https://github.com/nautobot/nautobot/issues/1470))
+
+Plugins can now extend existing FilterSets and Filter Forms. This allows plugins to provide alternative lookup methods or custom queries in the UI or API that may not already exist today.
+
+You can refer to the [development guide](../development/#extending-filters) on how to create new filters and fields.
+
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
 GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [user guide](../user-guides/graphql.md#filtering-queries) for examples.
@@ -79,7 +85,11 @@ This endpoint specifically supports Basic Authentication in addition to the othe
 
 Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
 
-- The only REST API endpoint that is versioned in the 1.3.0 release is the `/api/extras/jobs/` listing endpoint, as described above. All others are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
+- The REST API endpoints that are versioned in the 1.3.0 release are
+    - `/api/extras/jobs/` listing endpoint
+    - `/api/extras/tags/` create/put/patch endpoint
+    - `/api/ipam/ip-addresses/` endpoints
+- All others endpoints are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
 - If a REST API client does not request a specific REST API version (in other words, requests `Accept: application/json` rather than `Accept: application/json; version=1.3`) the API behavior will be compatible with Nautobot 1.2, at a minimum for the remainder of the Nautobot 1.x release cycle.
 - The API behavior may change to a newer default version in a Nautobot major release (e.g. 2.0).
 - To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the new Jobs REST API, `Accept: application/json; version=1.3`).
@@ -109,6 +119,15 @@ Similar to the existing `extras.run_job` permission, a new `extras.approve_job` 
 
 The online REST API Swagger documentation (`/api/docs/`) has been updated from OpenAPI 2.0 format to OpenAPI 3.0 format and now supports Nautobot's [REST API versioning](#rest-api-versioning-1465) as described above. Try `/api/docs/?api_version=1.3` as an example.
 
+#### Tag restriction by content-type ([#872](https://github.com/nautobot/nautobot/issues/872))
+
+When created, a `Tag` can be associated to one or more model content-types using a many-to-many relationship. The tag will then apply only to models belonging to those associated content-types.
+
+For users migrating from an earlier Nautobot release, any existing tags will default to being enabled for all content-types for compatibility purposes. Individual tags may subsequently edited to remove any content-types that they do not need to apply to.
+
+Note that a Tag created programmatically via the ORM without assigning any `content_types` will not be applicable to any model until content-types are assigned to it.
+
+
 ### Removed
 
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
@@ -120,6 +139,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#630](https://github.com/nautobot/nautobot/issues/630) - Added support for multiple NAT outside IP addresses.
+- [#872](https://github.com/nautobot/nautobot/issues/872) - Added ability to scope tags to content types.
 - [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects.
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
 - [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
@@ -129,6 +149,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#595](https://github.com/nautobot/nautobot/issues/595) - Migrated from `drf-yasg` (OpenAPI 2.0) to `drf-spectacular` (OpenAPI 3.0) for REST API interactive Swagger documentation.
+- [#792](https://github.com/nautobot/nautobot/issues/792) - Poetry-installed dependencies are now identical between `dev` and `final` images.
 - [#814](https://github.com/nautobot/nautobot/issues/814) - Extended documentation for configuring Celery for use Redis Sentinel clustering.
 - [#1225](https://github.com/nautobot/nautobot/issues/1225) - Relaxed uniqueness constraint on Webhook creation, allowing multiple webhooks to send to the same target address so long as their content-type(s) and action(s) do not overlap.
 - [#1478](https://github.com/nautobot/nautobot/issues/1478) - ScheduledJob REST API endpoints now enforce `extras.approve_job` permissions as appropriate.
@@ -142,10 +163,14 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
 - [#1311](https://github.com/nautobot/nautobot/issues/1311) - Fixed a where it was not possible to set the rack height to `0` when performing a bulk edit of device types.
 - [#1476](https://github.com/nautobot/nautobot/issues/1476) - Fixed a bug wherein a Job run via the REST API with a missing `schedule` would allow `approval_required` to be bypassed.
+- [#1504](https://github.com/nautobot/nautobot/issues/1504) - Fixed an error that could be encountered when migrating from Nautobot 1.1 or earlier with JobResults with very long log entries.
+- [#1515](https://github.com/nautobot/nautobot/issues/1515) - Fix Job Result rendering performance issue causing Bad Gateway errors.
 - [#1516](https://github.com/nautobot/nautobot/issues/1516) - Fixed MySQL unit tests running in Docker environment and revised recommended MySQL encoding settings
 - [#1562](https://github.com/nautobot/nautobot/issues/1562) - Fixed JobResult filter form UI pointing to the wrong endpoint.
 - [#1563](https://github.com/nautobot/nautobot/issues/1563) - Fixed UI crash when trying to execute Jobs provided by disabled plugins. A friendly error message will now be displayed.
-
+- [#1582](https://github.com/nautobot/nautobot/issues/1582) - Fixed a timing issue with editing a record while its custom field(s) are in the process of being cleaned up by a background task.
+- [#1632](https://github.com/nautobot/nautobot/pull/1632) - Fixed issue accessing request attributes when request may be None.
+- [#1637](https://github.com/nautobot/nautobot/pull/1637) - Fixed warnings logged during REST API schema generation.
 
 ## v1.3.0b1 (2022-03-11)
 
@@ -168,6 +193,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1350](https://github.com/nautobot/nautobot/issues/1350) - Added missing methods on Circuit Termination detail view.
 - [#1411](https://github.com/nautobot/nautobot/pull/1411) - Added concrete Job database model; added database signals to populate Job records in the database; added detail, edit, and delete views for Job records.
 - [#1457](https://github.com/nautobot/nautobot/pull/1457) - Added new Jobs REST API, added control logic to use JobModel rather than JobClass where appropriate; improved permissions enforcement for Jobs.
+- [#1470](https://github.com/nautobot/nautobot/issues/1470) - Added plugin framework for extending FilterSets and Filter Forms.
 
 ### Changed
 
