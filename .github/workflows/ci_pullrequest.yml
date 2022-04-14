@@ -1,19 +1,11 @@
 ---
-name: "CI"
+# A lighter-weight version of CI specifically for pull requests
+name: "CI - Pull Request"
+concurrency:  # Cancel any existing runs of this workflow for this same PR
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
 on:  # yamllint disable
-  push:
   pull_request:
-    paths-ignore:
-      - "nautobot/docs/**"
-      - "examples/**"
-      # The example plugin should probably trigger CI
-      - "!examples/example_plugin"
-      - "**.md"
-      - "development/**"
-      - ".github/**"
-      # If the ci.yaml is updated run CI for the PR
-      - "!.github/workflows/ci.yml"
-      - ".devcontainer/**"
   workflow_call:
 
 jobs:
@@ -112,7 +104,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        python-version: [ "3.7", "3.10" ]
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -151,7 +143,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        python-version: [ "3.8", "3.9" ]
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "root"
@@ -213,7 +205,7 @@ jobs:
         ports:
           - "6379:6379"
       selenium:
-        image: "selenium/standalone-firefox:3.141"
+        image: "selenium/standalone-firefox:4.1.2"
         ports:
           - "4444:4444"
     steps:
@@ -229,90 +221,3 @@ jobs:
     needs:
       - "tests-postgres"
       - "tests-mysql"
-
-  container-build:
-    runs-on: "ubuntu-20.04"
-    if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
-    needs:
-      - "integration-test"
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
-    env:
-      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v2"
-      - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: "gitbranch"
-      - run: echo "##[set-output name=version;]$(egrep -m1 'file.*pyuwsgi-' poetry.lock | cut -f2 -d-)"
-        id: "pyuwsgi"
-      - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v1"
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Docker Metadata"
-        id: "dockermeta"
-        uses: "docker/metadata-action@v3"
-        with:
-          images: "ghcr.io/nautobot/nautobot"
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.7 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build"
-        uses: "docker/build-push-action@v2"
-        with:
-          push: true
-          target: final
-          file: "docker/Dockerfile"
-          tags: "${{ steps.dockermeta.outputs.tags }}"
-          labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
-      - name: "Docker Dev Metadata"
-        id: "dockerdevmeta"
-        uses: "docker/metadata-action@v3"
-        with:
-          images: "ghcr.io/nautobot/nautobot-dev"
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.7 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build Dev Containers"
-        uses: "docker/build-push-action@v2"
-        with:
-          push: true
-          target: final-dev
-          file: "docker/Dockerfile"
-          tags: "${{ steps.dockerdevmeta.outputs.tags }}"
-          labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
