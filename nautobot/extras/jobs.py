@@ -10,7 +10,7 @@ import traceback
 import warnings
 
 
-from cacheops import cached
+from cacheops import file_cache
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -897,6 +897,7 @@ def get_jobs():
     return jobs
 
 
+@file_cache.cached(timeout=60)
 def _get_job_source_paths():
     """
     Helper function to get_jobs().
@@ -955,7 +956,7 @@ def _get_job_source_paths():
     return paths
 
 
-@cached(timeout=60)
+@file_cache.cached(timeout=60)
 def get_job_classpaths():
     """
     Get a list of all known Job class_path strings.
