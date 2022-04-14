@@ -321,7 +321,9 @@ class JobLogEntry(BaseModel):
     """Stores each log entry for the JobResult."""
 
     job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="logs")
-    log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT)
+    log_level = models.CharField(
+        max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT, db_index=True
+    )
     grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
     created = models.DateTimeField(default=timezone.now)
@@ -361,7 +363,7 @@ class JobResult(BaseModel, CustomFieldModel):
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
     )
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, db_index=True)
     obj_type = models.ForeignKey(
         to=ContentType,
         related_name="job_results",
