@@ -6,17 +6,6 @@ concurrency:  # Cancel any existing runs of this workflow for this same PR
   cancel-in-progress: true
 on:  # yamllint disable
   pull_request:
-    paths-ignore:
-      - ".devcontainer/**"
-      - ".github/**"
-      - "development/**"
-      - "examples/**"
-      - "nautobot/docs/**"
-      - "**.md"
-      # The example plugin should trigger CI
-      - "!examples/example_plugin"
-      # Changes to this workflow should trigger CI
-      - "!.github/workflows/ci_pullrequest.yml"
   workflow_call:
 
 jobs:
