@@ -1031,11 +1031,10 @@ If you are using the `generic.ObjectEditView` from Nautobot for your object, the
 
 ```no-highlight
 plugin_name/
-  - plugin_name/
-    - static/
-      - plugin_name/
-        - docs/
-          - index.html
-          - models/
-            - object_model.html
+  - static/
+    - plugin_name/
+      - docs/
+        - index.html
+        - models/
+          - object_model.html
 ```
