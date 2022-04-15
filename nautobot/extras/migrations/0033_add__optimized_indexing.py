@@ -60,4 +60,49 @@ class Migration(migrations.Migration):
             name="source_id",
             field=models.UUIDField(db_index=True),
         ),
+        migrations.AlterField(
+            model_name="configcontext",
+            name="name",
+            field=models.CharField(db_index=True, max_length=100),
+        ),
+        migrations.AlterField(
+            model_name="imageattachment",
+            name="name",
+            field=models.CharField(blank=True, db_index=True, max_length=50),
+        ),
+        migrations.AlterField(
+            model_name="imageattachment",
+            name="object_id",
+            field=models.UUIDField(db_index=True),
+        ),
+        migrations.AlterField(
+            model_name="job",
+            name="grouping",
+            field=models.CharField(db_index=True, max_length=255),
+        ),
+        migrations.AlterField(
+            model_name="job",
+            name="name",
+            field=models.CharField(db_index=True, max_length=100),
+        ),
+        migrations.AlterField(
+            model_name="scheduledjob",
+            name="job_class",
+            field=models.CharField(db_index=True, max_length=255),
+        ),
+        migrations.AlterField(
+            model_name="scheduledjob",
+            name="name",
+            field=models.CharField(db_index=True, max_length=200),
+        ),
+        migrations.AlterField(
+            model_name="scheduledjob",
+            name="queue",
+            field=models.CharField(blank=True, db_index=True, default=None, max_length=200, null=True),
+        ),
+        migrations.AlterField(
+            model_name="scheduledjob",
+            name="task",
+            field=models.CharField(db_index=True, max_length=200),
+        ),
     ]
