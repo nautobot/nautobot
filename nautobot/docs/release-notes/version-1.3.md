@@ -45,6 +45,13 @@ For more details please refer to the [Jobs feature documentation](../additional-
 
 Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
 
+#### Natural Indexing for Common Lookups ([#1638](https://github.com/nautobot/nautobot/issues/1638))
+
+Many fields have had indexing added to them as well as index togethers on `ObjectChange` fields. This should provide a noticeable performance improvement when filtering and doing lookups.
+
+!!! note
+    This is going to perform several migrations to add all of the indexes. On MySQL databases and tables with 1M+ records this can take a few minutes. Every environment is different but it should be expected for this upgrade to take some time.
+
 #### Overlapping/Multiple NAT Support ([#630](https://github.com/nautobot/nautobot/issues/630))
 
 IP addresses can now be associated with multiple outside NAT IP addresses. To do this, set more than one IP Address to have the same NAT inside IP address.
@@ -145,6 +152,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1385](https://github.com/nautobot/nautobot/issues/1385) - Added MarkdownLint validation and enforcement to CI.
 - [#1465](https://github.com/nautobot/nautobot/issues/1465) - Implemented REST API versioning.
 - [#1525](https://github.com/nautobot/nautobot/issues/1525) - Implemented support for regex lookup expressions for `BaseFilterSet` filter fields in the API.
+- [#1638](https://github.com/nautobot/nautobot/issues/1638) - Implemented numerous indexes on models natural lookup fields as well as some index togethers for `ObjectChange`.
 
 ### Changed
 
