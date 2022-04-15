@@ -166,7 +166,7 @@ class Rack(PrimaryModel, StatusModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     facility_id = models.CharField(
         max_length=50,
         blank=True,
