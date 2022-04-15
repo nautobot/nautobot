@@ -51,5 +51,5 @@ urlpatterns = [
         "docs/",
         RedirectView.as_view(url=f"{settings.STATIC_URL}example_plugin/docs/index.html"),
         name="docs",
-    )
+    ),
 ]
