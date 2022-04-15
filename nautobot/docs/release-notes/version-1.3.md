@@ -142,6 +142,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#896](https://github.com/nautobot/nautobot/issues/896) - Implemented support for Dynamic Groups objects.
 - [#897](https://github.com/nautobot/nautobot/issues/897) - Added JSON type for custom fields.
 - [#1374](https://github.com/nautobot/nautobot/issues/1374) - Added REST API Token Provisioning. (Port of [NetBox #6592](https://github.com/netbox-community/netbox/pull/6592) and subsequent fixes)
+- [#1385](https://github.com/nautobot/nautobot/issues/1385) - Added MarkdownLint validation and enforcement to CI.
 - [#1465](https://github.com/nautobot/nautobot/issues/1465) - Implemented REST API versioning.
 - [#1525](https://github.com/nautobot/nautobot/issues/1525) - Implemented support for regex lookup expressions for `BaseFilterSet` filter fields in the API.
 
