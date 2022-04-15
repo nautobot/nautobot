@@ -44,7 +44,7 @@ Ideally, each user should provision his or her own REST API token(s) via the web
 
 To provision a token via the REST API, make a `POST` request to the `/api/users/tokens/` endpoint:
 
-```
+```bash
 $ curl -X POST \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \

@@ -421,6 +421,13 @@ def hadolint(context):
 
 
 @task
+def markdownlint(context):
+    """Lint Markdown files."""
+    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
@@ -558,6 +565,7 @@ def tests(context, lint_only=False, keepdb=False):
     black(context)
     flake8(context)
     hadolint(context)
+    markdownlint(context)
     check_migrations(context)
     check_schema(context)
     if not lint_only:

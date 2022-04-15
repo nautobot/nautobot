@@ -127,6 +127,17 @@ FROM dependencies as dependencies-dev
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && \
     chmod +x /usr/bin/hadolint
 
+# Install NodeJS and use it to install markdownlint-cli
+
+RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
+    mkdir -p /usr/local/lib/nodejs && \
+    tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
+    rm -rf /tmp/node.tar.xz
+
+ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-x64/bin"
+
+RUN npm install --global markdownlint-cli@0.31.1
+
 # Install development-specific dependencies of Nautobot
 RUN poetry install --no-root --no-ansi --extras all
 

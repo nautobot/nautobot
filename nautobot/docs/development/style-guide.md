@@ -1,6 +1,6 @@
 # Style Guide
 
-Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile. See `scripts/cibuild.sh` and `tasks.py`.
+Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile. [MarkdownLint-cli](https://github.com/igorshubovych/markdownlint-cli) is used to lint and validate Markdown files. See `tasks.py`.
 
 ## Flake8 Exceptions
 
@@ -27,6 +27,7 @@ You can also invoke these utilities manually against the development Docker cont
 invoke flake8
 invoke black
 invoke hadolint
+invoke markdownlint
 ```
 
 ## Introducing New Dependencies

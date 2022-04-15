@@ -54,7 +54,6 @@ A new version of the REST API `/api/ipam/ip-addresses/*` endpoints have been imp
 !!! note
     There are some guardrails on this feature to support backwards compatibility. If you consume the API without specifying the version header or query argument and start associating multiple IPs to have the same NAT inside IP address, an error will be thrown. Existing schema returns `nat_outside` as a single object, where as 1.3 and beyond will return this as a list.
 
-
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
 A [data model](../models/circuits/providernetwork.md) has been added to support representing the termination of a circuit to an external provider's network.
@@ -70,9 +69,10 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
 
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
+
 Introduce the `/api/users/tokens/` REST API endpoint, which includes a child endpoint that can be employed by a user to provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
 
-```
+```bash
 $ curl -X POST \
 -H "Accept: application/json; indent=4" \
 -u "hankhill:I<3C3H8" \
@@ -126,7 +126,6 @@ When created, a `Tag` can be associated to one or more model content-types using
 For users migrating from an earlier Nautobot release, any existing tags will default to being enabled for all content-types for compatibility purposes. Individual tags may subsequently edited to remove any content-types that they do not need to apply to.
 
 Note that a Tag created programmatically via the ORM without assigning any `content_types` will not be applicable to any model until content-types are assigned to it.
-
 
 ### Removed
 

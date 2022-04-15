@@ -171,7 +171,6 @@ As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-com
 | `/api/dcim/racks/`  | `1.2`                 | 1.2-compatible REST API (unchanged)          |
 | `/api/dcim/racks/`  | `1.3`                 | 1.3-compatible REST API (unchanged from 1.2) |
 
-
 ### APISelect with versioning capability
 
 The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
