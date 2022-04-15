@@ -4,7 +4,7 @@ from rest_framework.exceptions import APIException
 
 class AbortTransaction(Exception):
     """
-    A dummy exception used to trigger a database transaction rollback.
+    An exception used to trigger a database transaction rollback.
     """
 
     pass

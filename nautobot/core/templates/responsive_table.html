@@ -1,5 +1,5 @@
 {% load render_table from django_tables2 %}
 
 <div class="table-responsive">
-    {% render_table table 'inc/table.html' %}
+    {% render_table table table_inc_template|default:'inc/table.html' %}
 </div>

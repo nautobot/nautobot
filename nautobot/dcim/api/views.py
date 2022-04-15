@@ -7,9 +7,8 @@ from django.db.models import F
 from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from drf_yasg import openapi
-from drf_yasg.openapi import Parameter
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -196,9 +195,9 @@ class RackViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     serializer_class = serializers.RackSerializer
     filterset_class = filters.RackFilterSet
 
-    @swagger_auto_schema(
+    @extend_schema(
         responses={200: serializers.RackUnitSerializer(many=True)},
-        query_serializer=serializers.RackElevationDetailFilterSerializer,
+        parameters=[serializers.RackElevationDetailFilterSerializer],
     )
     @action(detail=True)
     @xframe_options_sameorigin
@@ -403,16 +402,16 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         """
 
         request = self.get_serializer_context()["request"]
-        if request.query_params.get("brief", False):
+        if request is not None and request.query_params.get("brief", False):
             return serializers.NestedDeviceSerializer
 
-        elif "config_context" in request.query_params.get("exclude", []):
+        elif request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.DeviceSerializer
 
         return serializers.DeviceWithConfigContextSerializer
 
-    @swagger_auto_schema(
-        manual_parameters=[Parameter(name="method", in_="query", required=True, type=openapi.TYPE_STRING)],
+    @extend_schema(
+        parameters=[OpenApiParameter(name="method", location="query", required=True, type=OpenApiTypes.STR)],
         responses={"200": serializers.DeviceNAPALMSerializer},
     )
     @action(detail=True, url_path="napalm")
@@ -731,26 +730,26 @@ class ConnectedDeviceViewSet(ViewSet):
     """
 
     permission_classes = [IsAuthenticated]
-    _device_param = Parameter(
+    _device_param = OpenApiParameter(
         name="peer_device",
-        in_="query",
+        location="query",
         description="The name of the peer device",
         required=True,
-        type=openapi.TYPE_STRING,
+        type=OpenApiTypes.STR,
     )
-    _interface_param = Parameter(
+    _interface_param = OpenApiParameter(
         name="peer_interface",
-        in_="query",
+        location="query",
         description="The name of the peer interface",
         required=True,
-        type=openapi.TYPE_STRING,
+        type=OpenApiTypes.STR,
     )
 
     def get_view_name(self):
         return "Connected Device Locator"
 
-    @swagger_auto_schema(
-        manual_parameters=[_device_param, _interface_param],
+    @extend_schema(
+        parameters=[_device_param, _interface_param],
         responses={"200": serializers.DeviceSerializer},
     )
     def list(self, request):

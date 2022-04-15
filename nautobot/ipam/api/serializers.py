@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from django.contrib.contenttypes.models import ContentType
-from drf_yasg.utils import swagger_serializer_method
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -401,7 +401,7 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
     )
     assigned_object = serializers.SerializerMethodField(read_only=True)
     nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
-    nat_outside = NestedIPAddressSerializer(read_only=True)
+    nat_outside = NestedIPAddressSerializer(read_only=True, many=True, source="nat_outside_list")
 
     class Meta:
         model = IPAddress
@@ -430,13 +430,18 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
         read_only_fields = ["family"]
         opt_in_fields = ["computed_fields"]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None
         serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
         context = {"request": self.context["request"]}
         return serializer(obj.assigned_object, context=context).data
+
+
+# 2.0 TODO: Remove in 2.0. Used to serialize against pre-1.3 behavior (nat_inside was one-to-one)
+class IPAddressSerializerLegacy(IPAddressSerializer):
+    nat_outside = NestedIPAddressSerializer(read_only=True)
 
 
 class AvailableIPSerializer(serializers.Serializer):

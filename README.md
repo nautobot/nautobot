@@ -1,24 +1,26 @@
+# Nautobot
+
 ![Nautobot](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/nautobot_logo.svg "Nautobot logo")
 
-Nautobot is a Network Source of Truth and Network Automation Platform.  
+Nautobot is a Network Source of Truth and Network Automation Platform.
 
 > Nautobot was initially developed as a fork of NetBox (v2.10.4).  NetBox was originally developed by Jeremy Stretch at DigitalOcean and the NetBox Community.
 
 Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
-[PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database. 
+[PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
 The complete documentation for Nautobot can be found at [Read the Docs](https://nautobot.readthedocs.io/en/stable/).
 
 Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join us in the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com)!
 
-### Build Status
+## Build Status
 
 | Branch      | Status |
 |-------------|------------|
 | **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
 | **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
 
-### Screenshots
+## Screenshots
 
 ![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot1.png "Main page")
 

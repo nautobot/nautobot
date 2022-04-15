@@ -17,6 +17,7 @@ from nautobot.extras.filters import (
     ExportTemplateFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
+    JobFilterSet,
     JobLogEntryFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
@@ -28,7 +29,6 @@ from nautobot.extras.filters import (
     TagFilterSet,
     WebhookFilterSet,
 )
-
 from nautobot.extras.models import (
     ConfigContext,
     CustomLink,
@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -510,6 +511,53 @@ class ImageAttachmentTestCase(TestCase):
             "object_id": [Site.objects.first().pk],
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class JobFilterSetTestCase(TestCase):
+    queryset = Job.objects.all()
+    filterset = JobFilterSet
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["File Upload Success", "File Upload Failure"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_grouping(self):
+        params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_installed(self):
+        params = {"installed": True}
+        # 30 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 33)
+
+    def test_enabled(self):
+        params = {"enabled": False}
+        # 30 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 33)
+
+    def test_commit_default(self):
+        params = {"commit_default": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_hidden(self):
+        params = {"hidden": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_read_only(self):
+        params = {"read_only": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_approval_required(self):
+        params = {"approval_required": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_search(self):
+        params = {"q": "file"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
 class JobLogEntryTestCase(TestCase):
@@ -998,10 +1046,16 @@ class TagTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000"),
+            Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00"),
+            Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff"),
+        )
+        cls.site_content_type = ContentType.objects.get_for_model(Site)
+        cls.tags[0].content_types.add(cls.site_content_type)
 
-        Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000")
-        Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00")
-        Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff")
+        for tag in cls.tags[1:]:
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -1018,6 +1072,12 @@ class TagTestCase(TestCase):
     def test_color(self):
         params = {"color": ["ff0000", "00ff00"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_types(self):
+        params = {"content_types": [f"{self.site_content_type.app_label}.{self.site_content_type.model}"]}
+        filtered_data = self.filterset(params, self.queryset).qs
+        self.assertEqual(filtered_data.count(), 1)
+        self.assertEqual(filtered_data[0], self.tags[0])
 
 
 class WebhookTestCase(TestCase):

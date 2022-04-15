@@ -1,6 +1,5 @@
 # Configuration Contexts & Schemas
 
-
 {%
     include-markdown "../models/extras/configcontext.md"
     heading-offset=1

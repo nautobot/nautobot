@@ -19,8 +19,9 @@ from nautobot.dcim.models import (
     Site,
     Region,
 )
+from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
-from nautobot.extras.jobs import get_job, Job
+from nautobot.extras.jobs import get_job, Job as JobClass
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -29,6 +30,7 @@ from nautobot.extras.models import (
     FileAttachment,
     FileProxy,
     GitRepository,
+    Job as JobModel,
     JobLogEntry,
     JobResult,
     Secret,
@@ -579,21 +581,21 @@ class ExportTemplateTest(TestCase):
 
 class FileProxyTest(TestCase):
     def setUp(self):
-        self.dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
+        self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
         # Now refresh it and make sure it was saved and retrieved correctly.
         fp.refresh_from_db()
-        self.dummy_file.seek(0)  # Reset cursor since it was previously read
-        self.assertEqual(fp.name, self.dummy_file.name)
-        self.assertEqual(fp.file.read(), self.dummy_file.read())
+        self.test_file.seek(0)  # Reset cursor since it was previously read
+        self.assertEqual(fp.name, self.test_file.name)
+        self.assertEqual(fp.file.read(), self.test_file.read())
 
     def test_delete_file_proxy(self):
         """Test deletion of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
         # Assert counts before delete
         self.assertEqual(FileProxy.objects.count(), 1)
@@ -666,6 +668,121 @@ class GitRepositoryTest(TransactionTestCase):
                 self.assertTrue(os.path.isdir(new_path))
 
 
+class JobModelTest(TestCase):
+    """
+    Tests for the `Job` model class.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        # JobModel instances are automatically instantiated at startup, so we just need to look them up.
+        cls.local_job = JobModel.objects.get(job_class_name="TestPass")
+        cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
+
+    def test_job_class(self):
+        self.assertEqual(self.local_job.job_class.description, "Validate job import")
+
+        from example_plugin.jobs import ExampleJob
+
+        self.assertEqual(self.plugin_job.job_class, ExampleJob)
+
+    def test_class_path(self):
+        self.assertEqual(self.local_job.class_path, "local/test_pass/TestPass")
+        self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
+
+        self.assertEqual(self.plugin_job.class_path, "plugins/example_plugin.jobs/ExampleJob")
+        self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
+
+    def test_latest_result(self):
+        self.assertEqual(self.local_job.latest_result, None)
+        self.assertEqual(self.plugin_job.latest_result, None)
+        # TODO: create some JobResults and test that this works correctly for them as well.
+
+    def test_defaults(self):
+        """Verify that defaults for discovered JobModel instances are as expected."""
+        for job_model in JobModel.objects.all():
+            self.assertTrue(job_model.installed)
+            self.assertFalse(job_model.enabled)
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                self.assertFalse(getattr(job_model, f"{field_name}_override"))
+                self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+
+    def test_clean_overrides(self):
+        """Verify that cleaning resets non-overridden fields to their appropriate default values."""
+        overridden_attrs = {
+            "grouping": "Overridden Grouping",
+            "name": "Overridden Name",
+            "description": "Overridden Description",
+            "commit_default": not self.local_job.commit_default,
+            "hidden": not self.local_job.hidden,
+            "read_only": not self.local_job.read_only,
+            "approval_required": not self.local_job.approval_required,
+            "soft_time_limit": 350,
+            "time_limit": 650,
+        }
+
+        # Override values to non-defaults and ensure they are preserved
+        for field_name, value in overridden_attrs.items():
+            setattr(self.local_job, field_name, value)
+            setattr(self.local_job, f"{field_name}_override", True)
+        self.local_job.validated_save()
+        self.local_job.refresh_from_db()
+        for field_name, value in overridden_attrs.items():
+            self.assertEqual(getattr(self.local_job, field_name), value)
+            self.assertTrue(getattr(self.local_job, f"{field_name}_override"))
+
+        # Clear the "*_override" flags and ensure that cleaning resets the corresponding fields to non-overriden values
+        for field_name in overridden_attrs:
+            setattr(self.local_job, f"{field_name}_override", False)
+        self.local_job.validated_save()
+        self.local_job.refresh_from_db()
+        for field_name in overridden_attrs:
+            self.assertEqual(getattr(self.local_job, field_name), getattr(self.local_job.job_class, field_name))
+            self.assertFalse(getattr(self.local_job, f"{field_name}_override"))
+
+    def test_clean_input_validation(self):
+        """Verify that cleaning enforces validation of potentially unsanitized user input."""
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name",
+                job_class_name="JobClass",
+                grouping="grouping",
+                name="name",
+            ).clean()
+        self.assertIn("Module name", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="ThisIsARidiculouslyLongJobClassNameWhoWouldEverDoSuchAnUtterlyRidiculousThingButBetterSafeThanSorrySinceWeAreDealingWithUserInputHere",
+                grouping="grouping",
+                name="name",
+            ).clean()
+        self.assertIn("Job class name", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="JobClassName",
+                grouping="OK now this is just ridiculous. Why would you ever want to deal with typing in 255+ characters of grouping information and have to copy-paste it to the other jobs in the same grouping or risk dealing with typos when typing out such a ridiculously long grouping string? Still, once again, better safe than sorry!",
+                name="name",
+            ).clean()
+        self.assertIn("Grouping", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="JobClassName",
+                grouping="grouping",
+                name="Similarly, let us hope that no one really wants to specify a job name that is over 100 characters long, it would be a pain to type at the very least and it won't look good in the UI either",
+            ).clean()
+        self.assertIn("Name", str(handler.exception))
+
+
 class JobResultTest(TestCase):
     """
     Tests for the `JobResult` model class.
@@ -674,24 +791,23 @@ class JobResultTest(TestCase):
     def test_related_object(self):
         """Test that the `related_object` property is computed properly."""
         # Case 1: Job, identified by class_path.
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
-            job_class = get_job("local/test_pass/TestPass")
-            job_result = JobResult(
-                name=job_class.class_path,
-                obj_type=ContentType.objects.get(app_label="extras", model="job"),
-                job_id=uuid.uuid4(),
-            )
+        job_class = get_job("local/test_pass/TestPass")
+        job_result = JobResult(
+            name=job_class.class_path,
+            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            job_id=uuid.uuid4(),
+        )
 
-            # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
-            self.assertEqual(type(job_result.related_object), type)
-            self.assertTrue(issubclass(job_result.related_object, Job))
-            self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
+        # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
+        self.assertEqual(type(job_result.related_object), type)
+        self.assertTrue(issubclass(job_result.related_object, JobClass))
+        self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
 
-            job_result.name = "local/no_such_job/NoSuchJob"
-            self.assertIsNone(job_result.related_object)
+        job_result.name = "local/no_such_job/NoSuchJob"
+        self.assertIsNone(job_result.related_object)
 
-            job_result.name = "not-a-class-path"
-            self.assertIsNone(job_result.related_object)
+        job_result.name = "not-a-class-path"
+        self.assertIsNone(job_result.related_object)
 
         # Case 2: GitRepository, identified by name.
         repo = GitRepository(
@@ -1036,7 +1152,7 @@ class StatusTest(TestCase):
             self.status.name = test
             self.status.clean()
             self.status.save()
-            self.assertEquals(str(self.status), test)
+            self.assertEqual(str(self.status), test)
 
 
 class TagTest(TestCase):
@@ -1053,29 +1169,27 @@ class JobLogEntryTest(TestCase):
     """
 
     def test_log_entry_creation(self):
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+        module = "test_pass"
+        name = "TestPass"
+        job_class = get_job(f"local/{module}/{name}")
 
-            module = "test_pass"
-            name = "TestPass"
-            job_class = get_job(f"local/{module}/{name}")
+        job_result = JobResult.objects.create(
+            name=job_class.class_path,
+            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            user=None,
+            job_id=uuid.uuid4(),
+        )
 
-            job_result = JobResult.objects.create(
-                name=job_class.class_path,
-                obj_type=ContentType.objects.get(app_label="extras", model="job"),
-                user=None,
-                job_id=uuid.uuid4(),
-            )
+        log = JobLogEntry(
+            log_level=LogLevelChoices.LOG_SUCCESS,
+            job_result=job_result,
+            grouping="run",
+            message="This is a test",
+        )
+        log.save()
 
-            log = JobLogEntry(
-                log_level=LogLevelChoices.LOG_SUCCESS,
-                job_result=job_result,
-                grouping="run",
-                message="This is a test",
-            )
-            log.save()
-
-            self.assertEqual(JobLogEntry.objects.all().count(), 1)
-            log_object = JobLogEntry.objects.first()
-            self.assertEqual(log_object.message, log.message)
-            self.assertEqual(log_object.log_level, log.log_level)
-            self.assertEqual(log_object.grouping, log.grouping)
+        self.assertEqual(JobLogEntry.objects.all().count(), 1)
+        log_object = JobLogEntry.objects.first()
+        self.assertEqual(log_object.message, log.message)
+        self.assertEqual(log_object.log_level, log.log_level)
+        self.assertEqual(log_object.grouping, log.grouping)

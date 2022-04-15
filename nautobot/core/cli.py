@@ -128,13 +128,16 @@ def _configure_settings(config):
     #
 
     # If metrics are enabled and postgres is the backend, set the driver to the
-    # one provided by django-prometheous.
+    # one provided by django-prometheus.
     if settings.METRICS_ENABLED and "postgres" in settings.DATABASES["default"]["ENGINE"]:
         settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
 
-    # Create fake db for job logs. This uses the default db, but allows us to save logs within
-    # transaction.atomic().
-    settings.DATABASES["job_logs"] = settings.DATABASES["default"]
+    # Create secondary db connection for job logging. This still writes to the default db, but because it's a separate
+    # connection, it allows allows us to "escape" from transaction.atomic() and ensure that job log entries are saved
+    # to the database even when the rest of the job transaction is rolled back.
+    settings.DATABASES["job_logs"] = settings.DATABASES["default"].copy()
+    # When running unit tests, treat it as a mirror of the default test DB, not a separate test DB of its own
+    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
 
     #
     # Media storage

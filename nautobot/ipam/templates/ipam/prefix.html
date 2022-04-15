@@ -127,13 +127,7 @@
                     </tr>
                     <tr>
                         <td>Is a pool</td>
-                        <td>
-                            {% if object.is_pool %}
-                                <i class="mdi mdi-check-bold text-success" title="Yes"></i>
-                            {% else %}
-                                <i class="mdi mdi-close-thick text-danger" title="No"></i>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.is_pool | render_boolean }}</td>
                     </tr>
                     <tr>
                         <td>Utilization</td>

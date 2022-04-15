@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.2.11"
+version = "1.3.0-beta.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -15,10 +15,10 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
 ]
 packages = [
     {include = "nautobot"}
@@ -31,26 +31,23 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 # Background task processing
-celery = [
-    {version = "~5.2.2", python = "^3.7"},
-    {version = "~5.1.2", python = "<3.7"},
-]
+celery = "~5.2.3"
 # Fundamental web framework for Nautobot
-Django = "~3.1.12"
+Django = "~3.2"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~3.0.0", optional = true}
+django-auth-ldap = {version = "~4.0.0", optional = true}
 # Caching with Redis
-django-cacheops = "~5.1"
+django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
-django-celery-beat = "^2.2.0"
+django-celery-beat = "~2.2.1"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.8.0", extras = ["database"]}
 # Permit cross-domain API requests
-django-cors-headers = "~3.7.0"
+django-cors-headers = "~3.10.1"
 # Support for encrypted database fields
 django-cryptography = "~1.0"
 # Store files in the database for background tasks
@@ -58,74 +55,78 @@ django-db-file-storage = "~0.5.5"
 # AutoSlugField and shell_plus
 django-extensions = "~3.1.5"
 # Advanced query filters
-django-filter = "~2.4.0"
+django-filter = "~21.1"
 # Health check endpoint
-django-health-check = "^3.16.4"
+django-health-check = "~3.16.5"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
-django-jinja = "<2.8.0"
-# Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
-django-mptt = "~0.11.0"
+django-jinja = "~2.10.0"
+# Modified Pre-order Tree Traversal - tree structure for Region, RackGroup, etc.
+django-mptt = "~0.13.4"
 # Prometheus metrics for Django
-django-prometheus = "~2.1.0"
+django-prometheus = "~2.2.0"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
-# RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
-django-rq = "~2.4.1"
+# RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
+django-rq = "~2.5.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
-django-tables2 = "~2.3.4"
+django-tables2 = "~2.4.1"
 # Tags
-django-taggit = "~1.3.0"
+# NOTE: django-taggit 2.x is available but has breaking API changes
+django-taggit = "~1.5.1"
 # Represent time zones in Django
+# NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~4.1.2"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.12.4"
-# Swagger schema generation for the REST API
-drf-yasg = {extras = ["validation"], version = "~1.20.0"}
+djangorestframework = "~3.13.1"
+# OpenAPI 3.0 schema generation for the REST API
+# TODO: fix for #688 is in master, not yet released
+drf-spectacular = {git = "https://github.com/tfranzel/drf-spectacular.git", rev = "6f5bd1688182829204bb61db6a9d7903fdaf0bbe", extras = ["sidecar"]}
+# 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
+drf-yasg = {version = "~1.20.0", extras = ["validation"]}
 # Git integrations for Python
-GitPython = "3.1.18"
+GitPython = "~3.1.27"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
+# NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~4.4", python = "<3.10"}
 # Template rendering engine
-Jinja2 = "~2.11.3"
+Jinja2 = "~3.0.3"
 # Optional data validation of config contexts
-jsonschema = "~3.2.0"
+jsonschema = "~4.4.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.6"
-# Escape text to use HTML and XML. NOTE: later versions are not compatible with Jinja2 2.x
-MarkupSafe = "2.0.1"
+# Escape text to use HTML and XML
+MarkupSafe = "~2.1.0"
 # MySQL database adapter
-mysqlclient = {version = "~2.0.3", optional = true}
+mysqlclient = {version = "~2.1.0", optional = true}
 # NAPALM automation library
-napalm = {version = "^3.3.1", optional = true}
+napalm = {version = "~3.3.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.0.0"
 # Image processing library
-Pillow = [
-    {version = "~9.0.1", python = "^3.7"},
-    {version = "~8.3.2", python = "<3.7"},
-]
+Pillow = "~9.0.1"
 # PostgreSQL database adapter
-psycopg2-binary = "~2.8.6"
+# NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
+psycopg2-binary = "~2.9.3"
 # Cryptographic library
-pycryptodome = "~3.10.1"
+pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.19.1.post0"
+pyuwsgi = "~2.0.20"
 # YAML parsing and rendering
-PyYAML = "~5.4.1"
+PyYAML = "~6.0"
 # Social authentication core
-social-auth-core = {extras = ["openidconnect", "saml"], version = "~4.1.0", optional = true}
+social-auth-core = {version = "~4.2.0", optional = true, extras = ["openidconnect", "saml"]}
 # Social authentication/registration with support for many auth providers
-social-auth-app-django = "^4.0.0"
+social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
 
@@ -144,27 +145,28 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = {version="^21.10b0", python="^3.6.2"}
+black = "~22.3.0"
 # Test code coverage measurement
-coverage = "~5.4"
+coverage = "~6.3.2"
 # Tool for debugging Django
-django-debug-toolbar = "~3.2.1"
-# Nautobot dummy plugin used for testing
-dummy-plugin = {path = "examples/dummy_plugin", develop = true}
+django-debug-toolbar = "~3.2.4"
+# Nautobot example plugin used for testing
+example-plugin = {path = "examples/example_plugin", develop = true}
 # Code style checking and limited static analysis
+# NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~1.5.0"
+invoke = "~1.6.0"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.0.1"
+mkdocs-include-markdown-plugin = "~3.2.3"
 # Rendering docs to HTML
 mkdocs = "~1.3.0"
 # Integration Tests
-requests = "~2.25.1"
+requests = "~2.27.1"
 # Selenium web drivers for live integration testing
-selenium = "~3.141.0"
+selenium = "~4.1.2"
 # Abstraction layer for working with Selenium
-splinter = "~0.14.0"
+splinter = "~0.17.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -175,7 +177,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version = ['py36']
+target-version = ['py37', 'py38', 'py39', 'py310']
 include = '\.pyi?$'
 exclude = '''
 (

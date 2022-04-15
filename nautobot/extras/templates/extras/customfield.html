@@ -43,13 +43,7 @@
                     </tr>
                     <tr>
                         <td>Required</td>
-                        <td>
-                            {% if object.required %}
-                                <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
-                            {% else %}
-                                <span class="text-danger"><i class="mdi mdi-close"></i></span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.required | render_boolean }}</td>
                     </tr>
                     <tr>
                         <td>Default</td>
@@ -58,6 +52,10 @@
                     <tr>
                         <td>Filter Logic</td>
                         <td><span>{{ object.filter_logic | capfirst }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Move to Advanced Tab</td>
+                        <td><span>{{ object.advanced_ui | render_boolean }}</span></td>
                     </tr>
                 </table>
             </div>

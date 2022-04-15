@@ -80,7 +80,7 @@ Fill out the details for the Git repository. More information on the inputs can 
 
 ![Example Details Export-Templates](./images/git-as-data-source/03-git-data-source.png)
 
-As soon as you click on **Create**, Nautobot will clone and sync the repository and provide status of the job.
+As soon as you click on **Create & Sync**, Nautobot will clone and sync the repository and provide status of the job.
 
 !!! note
     If you are using a self-signed Git repository, the Server Administrator will need to ensure the [`GIT_SSL_NO_VERIFY`](../configuration/optional-settings.md#git_ssl_no_verify) environment variable is set to permit this.
@@ -185,13 +185,16 @@ jobs
 1 directory, 2 files
 ```
 
+!!! note
+    As shown in the above example, the `/jobs/` directory must contain a file called `__init__.py`. This may be an empty file, but it must exist.
+
 Once the repository is created in Nautobot.
 ![Example Details Jobs](./images/git-as-data-source/10-git-data-source.png)
 
 !!! tip
     The same repository and branch can be used for the different `provides` methods.  Nautobot Git as a data source will look for specific root directory names.
 
-Once the scripts have been pushed into the repository, a sync needs to be executed, after which navigating to Jobs via **Extensibility -> Jobs** will show the new jobs loaded from the Git repository.
+Once the scripts have been pushed into the repository, a sync needs to be executed, after which navigating to Jobs via **Jobs -> Jobs** will show the new jobs loaded from the Git repository.
 
 ![Default Repository Menu](./images/git-as-data-source/11-git-data-source.png)
 
@@ -222,7 +225,7 @@ Similar to the other data sources, the repository can be added by navigating to 
 
 Once the repository syncs the details can be found in the **Synchronization Status** tab.  For example, the platform specifics were synced:
 
-![Syncronization Menu With Loaded Contexts](./images/git-as-data-source/14-git-data-source.png)
+![Synchronization Menu With Loaded Contexts](./images/git-as-data-source/14-git-data-source.png)
 
 The repository structure is:
 
