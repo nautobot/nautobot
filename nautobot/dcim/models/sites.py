@@ -100,7 +100,7 @@ class Site(PrimaryModel, StatusModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     slug = AutoSlugField(populate_from="name")
     region = models.ForeignKey(
         to="dcim.Region",

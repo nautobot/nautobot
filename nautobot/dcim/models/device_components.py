@@ -63,8 +63,8 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
     """
 
     device = models.ForeignKey(to="dcim.Device", on_delete=models.CASCADE, related_name="%(class)ss")
-    name = models.CharField(max_length=64)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
+    name = models.CharField(max_length=64, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
     description = models.CharField(max_length=200, blank=True)
     tags = TaggableManager(through=TaggedItem)
@@ -527,10 +527,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
-        target_field="name",
-        naturalize_function=naturalize_interface,
-        max_length=100,
-        blank=True,
+        target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
     )
     lag = models.ForeignKey(
         to="self",
@@ -896,7 +893,7 @@ class InventoryItem(MPTTModel, ComponentModel):
         blank=True,
         help_text="Manufacturer-assigned part identifier",
     )
-    serial = models.CharField(max_length=255, verbose_name="Serial number", blank=True)
+    serial = models.CharField(max_length=255, verbose_name="Serial number", blank=True, db_index=True)
     asset_tag = models.CharField(
         max_length=50,
         unique=True,

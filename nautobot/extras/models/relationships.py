@@ -508,11 +508,11 @@ class RelationshipAssociation(BaseModel):
     relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
 
     source_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
-    source_id = models.UUIDField()
+    source_id = models.UUIDField(db_index=True)
     source = GenericForeignKey(ct_field="source_type", fk_field="source_id")
 
     destination_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
-    destination_id = models.UUIDField()
+    destination_id = models.UUIDField(db_index=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
 
     class Meta:
