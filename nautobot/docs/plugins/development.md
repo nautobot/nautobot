@@ -150,7 +150,7 @@ Nautobot looks for the `config` variable within a plugin's `__init__.py` to load
 | `config_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "configuration" view defined by this plugin |
 | `default_settings` | `{}` | A dictionary of configuration parameters and their default values |
 | `home_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "home" or "dashboard" view defined by this plugin |
-| `docs_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a docs view defined by this plugin |
+| `docs_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "documentation" view defined by this plugin |
 | `installed_apps` | `[]` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
 | `max_version` | `None` | Maximum version of Nautobot with which the plugin is compatible |
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
