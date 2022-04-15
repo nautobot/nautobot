@@ -11,7 +11,7 @@
         <div class="row">
             <div class="col-md-6 col-md-offset-3">
                 <h3>
-                    {% if settings.DOCS_ROOT %}
+                    {% if obj and settings.DOCS_ROOT %}
                         <div class="pull-right">
                             <button type="button" class="btn btn-link btn-xs" data-toggle="modal" data-target="#docs_modal" title="Help">
                               <i class="mdi mdi-help-circle"></i>
