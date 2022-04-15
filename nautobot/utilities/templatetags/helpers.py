@@ -307,17 +307,24 @@ def percentage(x, y):
 def get_docs_url(model):
     """Return the documentation URL for the specified model.
 
+    Nautobot Core models have a path like docs/models/{app_label}/{model_name}
+    while plugins will have {app_label}/docs/models/{model_name}.
+
     Args:
         model (models.Model): Instance of a Django model
 
     Returns:
-        str: documentation for the specified model in Markdown format
+        str: Url for the documentation of the object.
 
     Example:
-        >>> get_docs(obj)
-        "some text"
+        >>> get_docs_url(obj)
+        "static/docs/models/dcim/site.html"
     """
-    return f"{settings.STATIC_URL}{f'{model._meta.app_label}/' if model._meta.app_label in settings.PLUGINS else ''}docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
+    return (
+        f"{settings.STATIC_URL}{f'{model._meta.app_label}/' if model._meta.app_label in settings.PLUGINS else ''}"
+        f"docs/models/{f'{model._meta.app_label}/' if model._meta.app_label not in settings.PLUGINS else ''}"
+        f"{model._meta.model_name}.html"
+    )
 
 
 @library.filter()

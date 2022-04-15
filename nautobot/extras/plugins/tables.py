@@ -34,9 +34,8 @@ class InstalledPluginsTable(tables.Table):
             {% endif %}
                 <i class="mdi mdi-cog"></i>
             </a>
-            {% load static %}
             {% if record.actions.docs %}
-            <a href="{% static record.package_name|add:'/docs/index.html' %}" class="btn btn-info btn-xs" title="docs">
+            <a href="{% url record.actions.docs %}" class="btn btn-info btn-xs" title="Docs">
             {% else %}
             <a href="" class="btn btn-info btn-xs disabled" title="No docs provided">
             {% endif %}

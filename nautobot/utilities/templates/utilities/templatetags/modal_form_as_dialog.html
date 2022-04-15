@@ -12,11 +12,13 @@
                 <form class="form-horizontal userconfigform" data-config-root="forms.{{ form_as_dialog.form_name }}" action="{{ form_action_url }}" method="post">
                     {% csrf_token %}
                     <h3>
-                        <div class="pull-right">
-                            <a href="{{ obj|get_docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
-                                <i class="mdi mdi-help-circle"></i>
-                            </a>
-                        </div>
+                        {% if obj %}
+                            <div class="pull-right">
+                                <a href="{{ obj|get_docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
+                                    <i class="mdi mdi-help-circle"></i>
+                                </a>
+                            </div>
+                        {% endif %}
                         {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new:{% endif %}{% endblock %}
                     </h3>
                     {% block form %}

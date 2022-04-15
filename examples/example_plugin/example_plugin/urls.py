@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.urls import path
+from django.views.generic import RedirectView
 
 from nautobot.extras.views import ObjectChangeLogView
 
@@ -45,4 +47,9 @@ urlpatterns = [
         name="examplemodel_changelog",
         kwargs={"model": ExampleModel},
     ),
+    path(
+        "docs/",
+        RedirectView.as_view(url=f"{settings.STATIC_URL}example_plugin/docs/index.html"),
+        name="docs",
+    )
 ]
