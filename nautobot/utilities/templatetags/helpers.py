@@ -314,7 +314,7 @@ def get_docs_url(model):
         model (models.Model): Instance of a Django model
 
     Returns:
-        str: Url for the documentation of the object.
+        str: URL for the documentation of the object.
 
     Example:
         >>> get_docs_url(obj)
