@@ -101,8 +101,10 @@ class Job(PrimaryModel):
 
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    grouping = models.CharField(max_length=255, help_text="Human-readable grouping that this job belongs to")
-    name = models.CharField(max_length=100, help_text="Human-readable name of this job")
+    grouping = models.CharField(
+        max_length=255, help_text="Human-readable grouping that this job belongs to", db_index=True
+    )
+    name = models.CharField(max_length=100, help_text="Human-readable name of this job", db_index=True)
     description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
     # Control flags
@@ -623,14 +625,13 @@ class ScheduledJob(BaseModel):
     """Model representing a periodic task."""
 
     name = models.CharField(
-        max_length=200,
-        verbose_name="Name",
-        help_text="Short Description For This Task",
+        max_length=200, verbose_name="Name", help_text="Short Description For This Task", db_index=True
     )
     task = models.CharField(
         max_length=200,
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
+        db_index=True,
     )
     # Note that we allow job_model to be null and use models.SET_NULL here.
     # This is because we want to be able to keep ScheduledJob records for tracking and auditing purposes even after
@@ -639,7 +640,10 @@ class ScheduledJob(BaseModel):
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
     )
     job_class = models.CharField(
-        max_length=255, verbose_name="Job Class", help_text="Name of the fully qualified Nautobot Job class path"
+        max_length=255,
+        verbose_name="Job Class",
+        help_text="Name of the fully qualified Nautobot Job class path",
+        db_index=True,
     )
     interval = models.CharField(choices=JobExecutionType, max_length=255)
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
@@ -651,6 +655,7 @@ class ScheduledJob(BaseModel):
         default=None,
         verbose_name="Queue Override",
         help_text="Queue defined in CELERY_TASK_QUEUES. Leave None for default queuing.",
+        db_index=True,
     )
     one_off = models.BooleanField(
         default=False,
