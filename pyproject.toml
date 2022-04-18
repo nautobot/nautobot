@@ -84,7 +84,8 @@ django-webserver = "~1.2.0"
 djangorestframework = "~3.13.1"
 # OpenAPI 3.0 schema generation for the REST API
 # TODO: fix for #688 is in master, not yet released
-drf-spectacular = {git = "https://github.com/tfranzel/drf-spectacular.git", rev = "6f5bd1688182829204bb61db6a9d7903fdaf0bbe", extras = ["sidecar"]}
+# TODO: Remove "vendored" drf-spectacular
+drf-spectacular-sidecar = "2022.4.1"
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "~1.20.0", extras = ["validation"]}
 # Git integrations for Python
@@ -192,6 +193,7 @@ exclude = '''
     | buck-out
     | build
     | dist
+    | nautobot/third_party
   )/
 )
 '''
