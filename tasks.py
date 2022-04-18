@@ -410,6 +410,7 @@ def build_example_plugin_docs(context):
         docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
