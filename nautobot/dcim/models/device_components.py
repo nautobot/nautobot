@@ -95,7 +95,7 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
         )
 
     @property
-    def parent(self):
+    def parent_object(self):
         return getattr(self, "device", None)
 
 
@@ -143,6 +143,10 @@ class CableTermination(models.Model):
 
     def get_cable_peer(self):
         return self._cable_peer
+
+    @property
+    def parent_object(self):
+        raise NotImplementedError("CableTermination models must implement parent_object()")
 
 
 class PathEndpoint(models.Model):
@@ -203,7 +207,7 @@ class PathEndpoint(models.Model):
     "relationships",
     "webhooks",
 )
-class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
+class ConsolePort(ComponentModel, CableTermination, PathEndpoint):
     """
     A physical console port within a Device. ConsolePorts connect to ConsoleServerPorts.
     """
@@ -240,7 +244,7 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
+class ConsoleServerPort(ComponentModel, CableTermination, PathEndpoint):
     """
     A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
     """
@@ -284,7 +288,7 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     "relationships",
     "webhooks",
 )
-class PowerPort(CableTermination, PathEndpoint, ComponentModel):
+class PowerPort(ComponentModel, CableTermination, PathEndpoint):
     """
     A physical power supply (intake) port within a Device. PowerPorts connect to PowerOutlets.
     """
@@ -415,7 +419,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
+class PowerOutlet(ComponentModel, CableTermination, PathEndpoint):
     """
     A physical power outlet (output) within a Device which provides power to a PowerPort.
     """
@@ -520,7 +524,7 @@ class BaseInterface(RelationshipModel):
     "relationships",
     "webhooks",
 )
-class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
+class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
     """
     A network interface within a Device. A physical Interface can connect to exactly one other Interface.
     """
@@ -528,6 +532,14 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
         target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
+    )
+    parent = models.ForeignKey(
+        to='self',
+        on_delete=models.SET_NULL,
+        related_name='child_interfaces',
+        null=True,
+        blank=True,
+        verbose_name='Parent interface'
     )
     lag = models.ForeignKey(
         to="self",
@@ -568,6 +580,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         "device",
         "name",
         "label",
+        "parent",
         "lag",
         "type",
         "enabled",
@@ -590,6 +603,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.device.identifier if self.device else None,
             self.name,
             self.label,
+            self.parent.name if self.parent else None,
             self.lag.name if self.lag else None,
             self.get_type_display(),
             self.enabled,
@@ -611,6 +625,27 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                     "Disconnect the interface or choose a suitable type."
                 }
             )
+
+        # An interface's parent must belong to the same device or virtual chassis
+        if self.parent and self.parent.device != self.device:
+            if self.device.virtual_chassis is None:
+                raise ValidationError({
+                    'parent': f"The selected parent interface ({self.parent}) belongs to a different device "
+                              f"({self.parent.device})."
+                })
+            elif self.parent.device.virtual_chassis != self.parent.virtual_chassis:
+                raise ValidationError({
+                    'parent': f"The selected parent interface ({self.parent}) belongs to {self.parent.device}, which "
+                              f"is not part of virtual chassis {self.device.virtual_chassis}."
+                })
+
+        # A physical interface cannot have a parent interface
+        if self.type != InterfaceTypeChoices.TYPE_VIRTUAL and self.parent is not None:
+            raise ValidationError({'parent': "Only virtual interfaces may be assigned to a parent interface."})
+
+        # A virtual interface cannot be a parent interface
+        if self.parent is not None and self.parent.type == InterfaceTypeChoices.TYPE_VIRTUAL:
+            raise ValidationError({'parent': "Virtual interfaces may not be parents of other interfaces."})
 
         # An interface's LAG must belong to the same device or virtual chassis
         if self.lag and self.lag.device != self.device:
@@ -649,10 +684,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             )
 
     @property
-    def parent(self):
-        return self.device
-
-    @property
     def is_connectable(self):
         return self.type not in NONCONNECTABLE_IFACE_TYPES
 
@@ -679,7 +710,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class FrontPort(CableTermination, ComponentModel):
+class FrontPort(ComponentModel, CableTermination):
     """
     A pass-through port on the front of a Device.
     """
@@ -743,7 +774,7 @@ class FrontPort(CableTermination, ComponentModel):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class RearPort(CableTermination, ComponentModel):
+class RearPort(ComponentModel, CableTermination):
     """
     A pass-through port on the rear of a Device.
     """
