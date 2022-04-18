@@ -495,7 +495,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         )
 
     @property
-    def parent(self):
+    def parent_object(self):
         return self.virtual_machine
 
     @property
