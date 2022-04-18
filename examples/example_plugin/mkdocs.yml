@@ -10,8 +10,6 @@ theme:
     hljs_languages:
         - django
         - yaml
-extra_css:
-    - extra.css
 markdown_extensions:
     - admonition:
     - toc:

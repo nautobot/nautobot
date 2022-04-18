@@ -389,9 +389,26 @@ def loaddata(context, file_name):
 @task()
 def build_docs(context):
     """Build docs for use within Nautobot."""
+    build_nautobot_docs(context)
+    build_example_plugin_docs(context)
+
+
+def build_nautobot_docs(context):
+    "Build Nautobot docs."
     command = "mkdocs build --no-directory-urls"
     run_command(context, command)
 
+
+def build_example_plugin_docs(context):
+    """Build Example Plugin docs."""
+    command = "mkdocs build --no-directory-urls"
+    if is_truthy(context.nautobot.local):
+        local_command = f"cd examples/example_plugin && {command}"
+        print(f'Running command "{local_command}"')
+        context.run(local_command, pty=True)
+    else:
+        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_compose(context, docker_command, pty=True)
 
 # ------------------------------------------------------------------------------
 # TESTS
