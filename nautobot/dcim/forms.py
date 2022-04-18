@@ -2517,6 +2517,11 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             'kind': 'physical',
         }
     )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label='Bridged interface'
+    )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
@@ -2554,6 +2559,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "type",
             "enabled",
             "parent",
+            "bridge",
             "lag",
             "mac_address",
             "mtu",
@@ -2584,9 +2590,15 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         else:
             device = self.instance.device
 
-        # Restrict parent/LAG interface assignment by device
+        # Restrict parent/bridge/LAG interface assignment by device
         self.fields['parent'].widget.add_query_param('device_id', device.pk)
+        self.fields['bridge'].widget.add_query_param('device_id', device.pk)
         self.fields['lag'].widget.add_query_param('device_id', device.pk)
+
+        if device.virtual_chassis and device.virtual_chassis.master:
+            self.fields['parent'].widget.add_query_param('device_id', device.virtual_chassis.master.pk)
+            self.fields['bridge'].widget.add_query_param('device_id', device.virtual_chassis.master.pk)
+            self.fields['lag'].widget.add_query_param('device_id', device.virtual_chassis.master.pk)
 
         # Add current site to VLANs query params
         self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
@@ -2606,6 +2618,13 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         query_params={
             'device_id': '$device',
             'kind': 'physical',
+        }
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            'device_id': '$device',
         }
     )
     lag = DynamicModelChoiceField(
@@ -2657,6 +2676,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "type",
         "enabled",
         "parent",
+        "bridge",
         "lag",
         "mtu",
         "mac_address",
@@ -2696,7 +2716,7 @@ class InterfaceBulkCreateForm(
 
 
 class InterfaceBulkEditForm(
-    form_from_model(Interface, ["label", "type", "parent", "lag", "mac_address", "mtu", "description", "mode"]),
+    form_from_model(Interface, ["label", "type", "parent", "bridge", "lag", "mac_address", "mtu", "description", "mode"]),
     BootstrapMixin,
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
@@ -2716,6 +2736,10 @@ class InterfaceBulkEditForm(
         query_params={
             'kind': 'physical',
         }
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False
     )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2747,6 +2771,7 @@ class InterfaceBulkEditForm(
         nullable_fields = [
             "label",
             "parent",
+            "bridge",
             "lag",
             "mac_address",
             "mtu",
@@ -2763,8 +2788,9 @@ class InterfaceBulkEditForm(
         if "device" in self.initial:
             device = Device.objects.filter(pk=self.initial["device"]).first()
 
-            # Restrict parent/LAG interface assignment by device
+            # Restrict parent/bridge/LAG interface assignment by device
             self.fields['parent'].widget.add_query_param('device_id', device.pk)
+            self.fields['bridge'].widget.add_query_param('device_id', device.pk)
             self.fields['lag'].widget.add_query_param('device_id', device.pk)
 
             # Add current site to VLANs query params
@@ -2791,6 +2817,8 @@ class InterfaceBulkEditForm(
 
             self.fields['parent'].choices = ()
             self.fields['parent'].widget.attrs['disabled'] = True
+            self.fields['bridge'].choices = ()
+            self.fields['bridge'].widget.attrs['disabled'] = True
             self.fields["lag"].choices = ()
             self.fields["lag"].widget.attrs["disabled"] = True
 
@@ -2814,6 +2842,12 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
         to_field_name='name',
         help_text='Parent interface'
     )
+    bridge = CSVModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        to_field_name='name',
+        help_text='Bridged interface'
+    )
     lag = CSVModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
@@ -2830,26 +2864,6 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = Interface
         fields = Interface.csv_headers
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit LAG choices to interfaces belonging to this device (or virtual chassis)
-        device = None
-        if self.is_bound and "device" in self.data:
-            try:
-                device = self.fields["device"].to_python(self.data["device"])
-            except forms.ValidationError:
-                pass
-        if device and device.virtual_chassis:
-            self.fields["lag"].queryset = Interface.objects.filter(
-                Q(device=device) | Q(device__virtual_chassis=device.virtual_chassis),
-                type=InterfaceTypeChoices.TYPE_LAG,
-            )
-        elif device:
-            self.fields["lag"].queryset = Interface.objects.filter(device=device, type=InterfaceTypeChoices.TYPE_LAG)
-        else:
-            self.fields["lag"].queryset = Interface.objects.none()
 
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data

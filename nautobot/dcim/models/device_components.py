@@ -499,6 +499,22 @@ class BaseInterface(RelationshipModel):
         verbose_name="MTU",
     )
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
+    parent = models.ForeignKey(
+        to='self',
+        on_delete=models.SET_NULL,
+        related_name='child_interfaces',
+        null=True,
+        blank=True,
+        verbose_name='Parent interface'
+    )
+    bridge = models.ForeignKey(
+        to='self',
+        on_delete=models.SET_NULL,
+        related_name='bridge_interfaces',
+        null=True,
+        blank=True,
+        verbose_name='Bridge interface'
+    )
 
     class Meta:
         abstract = True
@@ -532,14 +548,6 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
         target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
-    )
-    parent = models.ForeignKey(
-        to='self',
-        on_delete=models.SET_NULL,
-        related_name='child_interfaces',
-        null=True,
-        blank=True,
-        verbose_name='Parent interface'
     )
     lag = models.ForeignKey(
         to="self",
@@ -581,6 +589,7 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
         "name",
         "label",
         "parent",
+        "bridge",
         "lag",
         "type",
         "enabled",
@@ -682,6 +691,29 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
                     "device, or it must be global".format(self.untagged_vlan)
                 }
             )
+
+        # Parent validation
+
+        # An interface cannot be its own parent
+        if self.pk and self.parent_id == self.pk:
+            raise ValidationError({'parent': "An interface cannot be its own parent."})
+
+        # An interface cannot be bridged to itself
+        if self.pk and self.bridge_id == self.pk:
+            raise ValidationError({'bridge': "An interface cannot be bridged to itself."})
+
+        # A bridged interface belong to the same device or virtual chassis
+        if self.bridge and self.bridge.device != self.device:
+            if self.device.virtual_chassis is None:
+                raise ValidationError({
+                    'bridge': f"The selected bridge interface ({self.bridge}) belongs to a different device "
+                              f"({self.bridge.device})."
+                })
+            elif self.bridge.device.virtual_chassis != self.device.virtual_chassis:
+                raise ValidationError({
+                    'bridge': f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
+                              f"is not part of virtual chassis {self.device.virtual_chassis}."
+                })
 
     @property
     def is_connectable(self):

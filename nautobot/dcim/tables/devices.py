@@ -612,6 +612,7 @@ class DeviceInterfaceTable(InterfaceTable):
         attrs={"td": {"class": "text-nowrap"}},
     )
     parent = tables.Column(linkify=True, verbose_name="Parent")
+    bridge = tables.Column(linkify=True)
     lag = tables.Column(linkify=True, verbose_name="LAG")
     actions = ButtonsColumn(model=Interface, buttons=("edit", "delete"), prepend_template=INTERFACE_BUTTONS)
 
@@ -624,6 +625,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "enabled",
             "type",
             "parent",
+            "bridge",
             "lag",
             "mgmt_only",
             "mtu",
