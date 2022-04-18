@@ -256,6 +256,7 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
 
 class VMInterfaceSerializerVersion3(VMInterfaceSerializer):
     parent = NestedVMInterfaceSerializer(required=False, allow_null=True)
+    bridge = NestedVMInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VMInterface
@@ -266,6 +267,7 @@ class VMInterfaceSerializerVersion3(VMInterfaceSerializer):
             "name",
             "enabled",
             "parent",
+            "bridge",
             "mtu",
             "mac_address",
             "description",

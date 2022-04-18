@@ -1085,6 +1085,7 @@ class InterfaceSerializer(
 
 class InterfaceSerializerVersion13(InterfaceSerializer):
     parent = NestedInterfaceSerializer(required=False, allow_null=True)
+    bridge = NestedInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Interface
@@ -1097,6 +1098,7 @@ class InterfaceSerializerVersion13(InterfaceSerializer):
             "type",
             "enabled",
             "parent",
+            "bridge",
             "lag",
             "mtu",
             "mac_address",
