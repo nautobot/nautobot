@@ -653,43 +653,7 @@ There are several conditions that must be met in order to extend a filter:
 !!! note
     A plugin is not required to define both `filterset_fields` and `filterform_fields`.
 
-Example:
-
-```python
-# filter_extensions.py
-from django import forms
-
-from nautobot.extras.plugins import PluginFilterExtension
-from nautobot.utilities.filters import MultiValueCharFilter
-
-
-def suffix_search(queryset, name, value):
-    return queryset.filter(description=f"{value[0]}.nautobot.com")
-
-
-class TenantFilterExtension(PluginFilterExtension):
-    model = "tenancy.tenant"
-
-    filterset_fields = {
-        "example_plugin_description": MultiValueCharFilter(field_name="description", label="Description"),
-        "example_plugin_sdescrip": MultiValueCharFilter(
-            field_name="description", label="Description", method=suffix_search
-        ),
-        "example_plugin_dtype": MultiValueCharFilter(
-            field_name="sites__devices__device_type__slug", label="Device Type"
-        ),
-    }
-
-    filterform_fields = {
-        "example_plugin_description": forms.CharField(required=False, label="Description"),
-        "example_plugin_dtype": forms.CharField(required=False, label="Device Type"),
-        "slug__ic": forms.CharField(required=False, label="Slug Contains"),
-        "example_plugin_sdescrip": forms.CharField(required=False, label="Suffix Description"),
-    }
-
-
-filter_extensions = [TenantFilterExtension]
-```
+You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_plugin/example_plugin/filter_extensions.py) with the Example Plugin.
 
 !!! tip
     The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../additional-features/dynamic-groups.md).

@@ -108,7 +108,7 @@ class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class ProviderNetworkForm(BootstrapMixin, CustomFieldModelForm):
+class ProviderNetworkForm(NautobotModelForm):
     slug = SlugField()
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
     comments = CommentField(label="Comments")

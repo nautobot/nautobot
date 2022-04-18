@@ -359,6 +359,8 @@ class CircuitSwapTerminations(generic.ObjectEditView):
 #
 # Circuit terminations
 #
+
+
 class CircuitTerminationView(generic.ObjectView):
     queryset = CircuitTermination.objects.all()
 

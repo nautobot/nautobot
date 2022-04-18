@@ -446,12 +446,12 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter and page styling.
     """
 
-    class DummyOpenAPIRenderer(OpenApiJsonRenderer):
+    class FakeOpenAPIRenderer(OpenApiJsonRenderer):
         """For backwards-compatibility with drf-yasg, allow `?format=openapi` as a way to request the schema JSON."""
 
         format = "openapi"
 
-    renderer_classes = SpectacularSwaggerView.renderer_classes + [DummyOpenAPIRenderer]
+    renderer_classes = SpectacularSwaggerView.renderer_classes + [FakeOpenAPIRenderer]
 
     template_name = "swagger_ui.html"
 
