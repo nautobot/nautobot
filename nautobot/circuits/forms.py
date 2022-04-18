@@ -5,7 +5,6 @@ from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
-    CustomFieldModelForm,
     CustomFieldModelCSVForm,
     NautobotModelForm,
     StatusBulkEditFormMixin,
