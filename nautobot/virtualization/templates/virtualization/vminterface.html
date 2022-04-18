@@ -22,6 +22,16 @@
                     <td>{{ object.enabled | render_boolean }}</td>
                 </tr>
                 <tr>
+                     <td>Parent</td>
+                     <td>
+                         {% if object.parent %}
+                             <a href="{{ object.parent.get_absolute_url }}">{{ object.parent }}</a>
+                         {% else %}
+                             <span class="text-muted">None</span>
+                         {% endif %}
+                     </td>
+                </tr>
+                <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }} </td>
                 </tr>

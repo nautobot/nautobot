@@ -397,6 +397,14 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
     )
     description = models.CharField(max_length=200, blank=True)
+    parent = models.ForeignKey(
+        to='self',
+        on_delete=models.SET_NULL,
+        related_name='child_interfaces',
+        null=True,
+        blank=True,
+        verbose_name='Parent interface'
+    )
     untagged_vlan = models.ForeignKey(
         to="ipam.VLAN",
         on_delete=models.SET_NULL,
@@ -445,6 +453,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.virtual_machine.name,
             self.name,
             self.enabled,
+            self.parent.name if self.parent else None,
             self.mac_address,
             self.mtu,
             self.description,
@@ -453,6 +462,13 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
 
     def clean(self):
         super().clean()
+
+        # An interface's parent must belong to the same virtual machine
+        if self.parent and self.parent.virtual_machine != self.virtual_machine:
+            raise ValidationError({
+                'parent': f"The selected parent interface ({self.parent}) belongs to a different virtual machine "
+                          f"({self.parent.virtual_machine})."
+            })
 
         # Validate untagged VLAN
         if self.untagged_vlan and self.untagged_vlan.site not in [
