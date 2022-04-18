@@ -500,20 +500,20 @@ class BaseInterface(RelationshipModel):
     )
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
     parent = models.ForeignKey(
-        to='self',
+        to="self",
         on_delete=models.SET_NULL,
-        related_name='child_interfaces',
+        related_name="child_interfaces",
         null=True,
         blank=True,
-        verbose_name='Parent interface'
+        verbose_name="Parent interface",
     )
     bridge = models.ForeignKey(
-        to='self',
+        to="self",
         on_delete=models.SET_NULL,
-        related_name='bridge_interfaces',
+        related_name="bridge_interfaces",
         null=True,
         blank=True,
-        verbose_name='Bridge interface'
+        verbose_name="Bridge interface",
     )
 
     class Meta:
@@ -638,23 +638,27 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
         # An interface's parent must belong to the same device or virtual chassis
         if self.parent and self.parent.device != self.device:
             if self.device.virtual_chassis is None:
-                raise ValidationError({
-                    'parent': f"The selected parent interface ({self.parent}) belongs to a different device "
-                              f"({self.parent.device})."
-                })
+                raise ValidationError(
+                    {
+                        "parent": f"The selected parent interface ({self.parent}) belongs to a different device "
+                        f"({self.parent.device})."
+                    }
+                )
             elif self.parent.device.virtual_chassis != self.parent.virtual_chassis:
-                raise ValidationError({
-                    'parent': f"The selected parent interface ({self.parent}) belongs to {self.parent.device}, which "
-                              f"is not part of virtual chassis {self.device.virtual_chassis}."
-                })
+                raise ValidationError(
+                    {
+                        "parent": f"The selected parent interface ({self.parent}) belongs to {self.parent.device}, which "
+                        f"is not part of virtual chassis {self.device.virtual_chassis}."
+                    }
+                )
 
         # A physical interface cannot have a parent interface
         if self.type != InterfaceTypeChoices.TYPE_VIRTUAL and self.parent is not None:
-            raise ValidationError({'parent': "Only virtual interfaces may be assigned to a parent interface."})
+            raise ValidationError({"parent": "Only virtual interfaces may be assigned to a parent interface."})
 
         # A virtual interface cannot be a parent interface
         if self.parent is not None and self.parent.type == InterfaceTypeChoices.TYPE_VIRTUAL:
-            raise ValidationError({'parent': "Virtual interfaces may not be parents of other interfaces."})
+            raise ValidationError({"parent": "Virtual interfaces may not be parents of other interfaces."})
 
         # An interface's LAG must belong to the same device or virtual chassis
         if self.lag and self.lag.device != self.device:
@@ -696,24 +700,28 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
 
         # An interface cannot be its own parent
         if self.pk and self.parent_id == self.pk:
-            raise ValidationError({'parent': "An interface cannot be its own parent."})
+            raise ValidationError({"parent": "An interface cannot be its own parent."})
 
         # An interface cannot be bridged to itself
         if self.pk and self.bridge_id == self.pk:
-            raise ValidationError({'bridge': "An interface cannot be bridged to itself."})
+            raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
 
         # A bridged interface belong to the same device or virtual chassis
         if self.bridge and self.bridge.device != self.device:
             if self.device.virtual_chassis is None:
-                raise ValidationError({
-                    'bridge': f"The selected bridge interface ({self.bridge}) belongs to a different device "
-                              f"({self.bridge.device})."
-                })
+                raise ValidationError(
+                    {
+                        "bridge": f"The selected bridge interface ({self.bridge}) belongs to a different device "
+                        f"({self.bridge.device})."
+                    }
+                )
             elif self.bridge.device.virtual_chassis != self.device.virtual_chassis:
-                raise ValidationError({
-                    'bridge': f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
-                              f"is not part of virtual chassis {self.device.virtual_chassis}."
-                })
+                raise ValidationError(
+                    {
+                        "bridge": f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
+                        f"is not part of virtual chassis {self.device.virtual_chassis}."
+                    }
+                )
 
     @property
     def is_connectable(self):

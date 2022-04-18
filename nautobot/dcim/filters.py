@@ -883,14 +883,14 @@ class InterfaceFilterSet(
         label="Kind of interface",
     )
     parent_id = django_filters.ModelMultipleChoiceFilter(
-        field_name='parent',
+        field_name="parent",
         queryset=Interface.objects.all(),
-        label='Parent interface (ID)',
+        label="Parent interface (ID)",
     )
     bridge_id = django_filters.ModelMultipleChoiceFilter(
-        field_name='bridge',
+        field_name="bridge",
         queryset=Interface.objects.all(),
-        label='Bridged interface (ID)',
+        label="Bridged interface (ID)",
     )
     lag_id = django_filters.ModelMultipleChoiceFilter(
         field_name="lag",

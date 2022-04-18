@@ -7,13 +7,19 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('virtualization', '0006_vminterface_parent'),
+        ("virtualization", "0006_vminterface_parent"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='vminterface',
-            name='bridge',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='bridge_interfaces', to='virtualization.vminterface'),
+            model_name="vminterface",
+            name="bridge",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="bridge_interfaces",
+                to="virtualization.vminterface",
+            ),
         ),
     ]

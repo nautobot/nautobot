@@ -211,12 +211,8 @@ class VMInterfaceTable(BaseInterfaceTable):
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):
-    parent = tables.Column(
-        linkify=True
-    )
-    bridge = tables.Column(
-        linkify=True
-    )
+    parent = tables.Column(linkify=True)
+    bridge = tables.Column(linkify=True)
     actions = ButtonsColumn(
         model=VMInterface,
         buttons=("edit", "delete"),

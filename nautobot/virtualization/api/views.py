@@ -93,9 +93,12 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
 
         return serializers.VirtualMachineWithConfigContextSerializer
 
+
 @extend_schema_view(
     bulk_update=extend_schema(responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]
+    ),
     create=extend_schema(responses={"201": serializers.VMInterfaceSerializer}, versions=["1.2"]),
     partial_update=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
     update=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
