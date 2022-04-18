@@ -232,6 +232,11 @@ class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         queryset=VMInterface.objects.all(),
         label='Parent interface (ID)',
     )
+    bridge_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='bridge',
+        queryset=VMInterface.objects.all(),
+        label='Bridged interface (ID)',
+    )
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
     )
