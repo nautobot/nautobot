@@ -1434,9 +1434,11 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t")
+        interfaces = (
+            Interface.objects.create(device=device, name="Interface 1", type="1000base-t"),
+            Interface.objects.create(device=device, name="Interface 2", type="1000base-t"),
+            Interface.objects.create(device=device, name="Interface 3", type="1000base-t"),
+        )
 
         vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
@@ -1458,6 +1460,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
                 "name": "Interface 5",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                'bridge': interfaces[0].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
@@ -1466,6 +1469,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
                 "name": "Interface 6",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                'parent': interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
