@@ -320,11 +320,10 @@ def get_docs_url(model):
         >>> get_docs_url(obj)
         "static/docs/models/dcim/site.html"
     """
-    return (
-        f"{settings.STATIC_URL}{f'{model._meta.app_label}/' if model._meta.app_label in settings.PLUGINS else ''}"
-        f"docs/models/{f'{model._meta.app_label}/' if model._meta.app_label not in settings.PLUGINS else ''}"
-        f"{model._meta.model_name}.html"
-    )
+    if model._meta.app_label in settings.PLUGINS:
+        return f"{settings.STATIC_URL}{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
+
+    return f"{settings.STATIC_URL}docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
 
 
 @library.filter()
