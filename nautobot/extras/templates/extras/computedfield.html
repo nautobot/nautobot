@@ -32,6 +32,10 @@
                         <td>Weight</td>
                         <td><span>{{ object.weight }}</span></td>
                     </tr>
+                    <tr>
+                        <td>Move to Advanced Tab</td>
+                        <td><span>{{ object.advanced_ui | render_boolean }}</span></td>
+                    </tr>
                 </table>
             </div>
 {% endblock content_left_page %}

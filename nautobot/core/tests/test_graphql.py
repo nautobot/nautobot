@@ -95,14 +95,14 @@ class GraphQLTestCase(TestCase):
         query = "{ query: sites {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEquals(len(resp["data"]["query"]), 3)
+        self.assertEqual(len(resp["data"]["query"]), 3)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: [String!]) { sites(name:$name) {name} }"
         resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
         self.assertFalse(resp.get("error"))
-        self.assertEquals(len(resp["data"]["sites"]), 1)
+        self.assertEqual(len(resp["data"]["sites"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"
@@ -376,11 +376,12 @@ class GraphQLSearchParameters(TestCase):
 
     def test_search_parameters(self):
 
-        fields = SiteFilterSet.get_filters().keys()
+        fields = SiteFilterSet().filters.keys()
         params = generate_list_search_parameters(self.schema)
         exclude_filters = ["type"]
 
         for field in fields:
+            field = str_to_var_name(field)
             if field not in exclude_filters:
                 self.assertIn(field, params.keys())
             else:
@@ -1732,6 +1733,43 @@ query {
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device_types"], list, result)
         self.assertEqual(result.data["device_types"][0]["model"], self.devicetype.model, result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interface_pagination(self):
+
+        query_pagination = """\
+query {
+    interfaces(limit: 2, offset: 3) {
+        id
+        name
+        device {
+          name
+        }
+    }
+}"""
+        query_all = """\
+query {
+    interfaces {
+        id
+        name
+        device {
+          name
+        }
+    }
+}"""
+
+        result_1 = self.execute_query(query_pagination)
+        self.assertEqual(len(result_1.data.get("interfaces", [])), 2)
+
+        # With the limit and skip implemented in the GQL query, this should return Device 2 (Int1) and
+        # Device 3 (Int2). This test will validate that the correct device/interface combinations are returned.
+        device_names = [item["device"]["name"] for item in result_1.data.get("interfaces", [])]
+        self.assertEqual(sorted(device_names), ["Device 2", "Device 3"])
+        interface_names = [item["name"] for item in result_1.data.get("interfaces", [])]
+        self.assertEqual(interface_names, ["Int2", "Int1"])
+
+        result_2 = self.execute_query(query_all)
+        self.assertEqual(len(result_2.data.get("interfaces", [])), 6)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_power_feeds_cable_peer(self):

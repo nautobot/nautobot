@@ -1,4 +1,6 @@
-This example sends logging to files in `/var/log/nautobot`, please note this directory should exist and 
+# Logging to a File
+
+This example sends logging to files in `/var/log/nautobot`, please note this directory should exist and
 be writeable by the nautobot user.  Files are rotated daily for 5 days at midnight UTC.
 
 ```python

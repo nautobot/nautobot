@@ -38,7 +38,7 @@
 </div>
 {% plugin_left_page result %}
 <div class="col-md-6">
-{% include 'inc/custom_fields_panel.html' %}
+{% include 'inc/custom_fields_panel.html' with custom_fields=object.get_custom_fields %}
 {% plugin_right_page result %}
 </div>
 

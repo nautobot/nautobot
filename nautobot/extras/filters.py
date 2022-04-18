@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -28,16 +28,18 @@ from .models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    ScheduledJob,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -55,13 +57,16 @@ __all__ = (
     "CustomFieldFilter",
     "CustomFieldModelFilterSet",
     "CustomLinkFilterSet",
+    "DynamicGroupFilterSet",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
+    "JobFilterSet",
     "JobLogEntryFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
+    "NautobotFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
@@ -326,6 +331,13 @@ class CustomFieldFilter(django_filters.Filter):
             # Contains handles lists within the JSON data for multi select fields
             self.lookup_expr = "contains"
 
+    def filter(self, qs, value):
+        if value == "null":
+            return self.get_method(qs)(
+                Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
+            )
+        return super().filter(qs, value)
+
 
 class CustomFieldModelFilterSet(django_filters.FilterSet):
     """
@@ -389,6 +401,19 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 
 
 #
+# Nautobot base filterset to use for most custom filterset classes.
+#
+
+
+class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+    """
+    This class exists to combine common functionality and is used as a base class throughout the
+    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet
+    are needed.
+    """
+
+
+#
 # Custom Links
 #
 
@@ -420,6 +445,31 @@ class CustomLinkFilterSet(BaseFilterSet):
             Q(name__icontains=value)
             | Q(target_url__icontains=value)
             | Q(text__icontains=value)
+            | Q(content_type__app_label__icontains=value)
+            | Q(content_type__model__icontains=value)
+        )
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupFilterSet(NautobotFilterSet):
+    q = django_filters.CharFilter(method="search", label="Search")
+    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
+
+    class Meta:
+        model = DynamicGroup
+        fields = ("id", "name", "slug", "description")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(description__icontains=value)
             | Q(content_type__app_label__icontains=value)
             | Q(content_type__model__icontains=value)
         )
@@ -459,7 +509,7 @@ class ExportTemplateFilterSet(BaseFilterSet):
 #
 
 
-class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class GitRepositoryFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -534,10 +584,67 @@ class ImageAttachmentFilterSet(BaseFilterSet):
 #
 
 
+class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    tag = TagFilter()
+
+    class Meta:
+        model = Job
+        fields = [
+            "id",
+            "source",
+            "module_name",
+            "job_class_name",
+            "slug",
+            "name",
+            "grouping",
+            "installed",
+            "enabled",
+            "approval_required",
+            "commit_default",
+            "hidden",
+            "read_only",
+            "soft_time_limit",
+            "time_limit",
+            "grouping_override",
+            "name_override",
+            "approval_required_override",
+            "description_override",
+            "commit_default_override",
+            "hidden_override",
+            "read_only_override",
+            "soft_time_limit_override",
+            "time_limit_override",
+        ]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(grouping__icontains=value)
+            | Q(description__icontains=value)
+        )
+
+
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
+    )
+    job_model = django_filters.ModelMultipleChoiceFilter(
+        field_name="job_model__slug",
+        queryset=Job.objects.all(),
+        to_field_name="slug",
+        label="Job (slug)",
+    )
+    job_model_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (ID)",
     )
     obj_type = ContentTypeFilter()
     created = django_filters.DateTimeFilter()
@@ -551,7 +658,9 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(user__username__icontains=value))
+        return queryset.filter(
+            Q(job_model__name__icontains=value) | Q(name__icontains=value) | Q(user__username__icontains=value)
+        )
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -577,12 +686,23 @@ class ScheduledJobFilterSet(BaseFilterSet):
         method="search",
         label="Search",
     )
+    job_model = django_filters.ModelMultipleChoiceFilter(
+        field_name="job_model__slug",
+        queryset=Job.objects.all(),
+        to_field_name="slug",
+        label="Job (slug)",
+    )
+    job_model_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (ID)",
+    )
+
     first_run = django_filters.DateTimeFilter()
     last_run = django_filters.DateTimeFilter()
 
     class Meta:
         model = ScheduledJob
-        fields = ["id", "first_run", "last_run", "total_run_count"]
+        fields = ["id", "name", "total_run_count"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -795,7 +915,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         return {name: getattr(value, to_field_name)}
 
 
-class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class StatusFilterSet(NautobotFilterSet):
     """API filter for filtering custom status object fields."""
 
     q = django_filters.CharFilter(
@@ -839,20 +959,25 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 #
 
 
-class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class TagFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
     )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=TaggableClassesQuery().get_choices,
+    )
 
     class Meta:
         model = Tag
-        fields = ["id", "name", "slug", "color"]
+        fields = ["id", "name", "slug", "color", "content_types"]
 
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+        return queryset.filter(
+            Q(name__icontains=value) | Q(slug__icontains=value) | Q(content_types__model__icontains=value)
+        )
 
 
 #

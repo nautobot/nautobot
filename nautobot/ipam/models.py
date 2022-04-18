@@ -2,7 +2,7 @@ import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
@@ -10,11 +10,11 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import ObjectChange, Status, StatusModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
+from nautobot.utilities.utils import array_to_string, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import IPAddressRoleChoices, ServiceProtocolChoices
@@ -60,7 +60,7 @@ class VRF(PrimaryModel):
     are said to exist in the "global" table.)
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     rd = models.CharField(
         max_length=VRF_RD_MAX_LENGTH,
         unique=True,
@@ -761,6 +761,7 @@ class IPAddress(PrimaryModel, StatusModel):
         choices=IPAddressRoleChoices,
         blank=True,
         help_text="The functional role of this IP",
+        db_index=True,
     )
     assigned_object_type = models.ForeignKey(
         to=ContentType,
@@ -770,16 +771,16 @@ class IPAddress(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    assigned_object_id = models.UUIDField(blank=True, null=True)
+    assigned_object_id = models.UUIDField(blank=True, null=True, db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
-    nat_inside = models.OneToOneField(
+    nat_inside = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
-        related_name="nat_outside",
+        related_name="nat_outside_list",
         blank=True,
         null=True,
         verbose_name="NAT (Inside)",
-        help_text='The IP for which this address is the "outside" IP',
+        help_text='The IP Addresses for which this address is the "outside" IP',
     )
     dns_name = models.CharField(
         max_length=255,
@@ -787,6 +788,7 @@ class IPAddress(PrimaryModel, StatusModel):
         validators=[DNSValidator],
         verbose_name="DNS Name",
         help_text="Hostname or FQDN (not case-sensitive)",
+        db_index=True,
     )
     description = models.CharField(max_length=200, blank=True)
 
@@ -915,13 +917,7 @@ class IPAddress(PrimaryModel, StatusModel):
 
     def to_objectchange(self, action):
         # Annotate the assigned object, if any
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            related_object=self.assigned_object,
-            object_data=serialize_object(self),
-        )
+        return super().to_objectchange(action, related_object=self.assigned_object)
 
     def to_csv(self):
 
@@ -965,6 +961,30 @@ class IPAddress(PrimaryModel, StatusModel):
             return self.address.version
         return None
 
+    # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
+    class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
+        """
+        An exception class is used to expose in API the object that cannot safely support the legacy getter, setter methods.
+        """
+
+        def __init__(self, obj):
+            self.obj = obj
+
+        def __str__(self):
+            return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
+
+    @property
+    def nat_outside(self):
+        if self.nat_outside_list.count() > 1:
+            raise self.NATOutsideMultipleObjectsReturned(self)
+        return self.nat_outside_list.first()
+
+    @nat_outside.setter
+    def nat_outside(self, value):
+        if self.nat_outside_list.count() > 1:
+            raise self.NATOutsideMultipleObjectsReturned(self)
+        return self.nat_outside_list.set([value])
+
     def _set_mask_length(self, value):
         """
         Expose the IPNetwork object's prefixlen attribute on the parent model so that it can be manipulated directly,
@@ -990,9 +1010,9 @@ class VLANGroup(OrganizationalModel):
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None)
+    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -1079,7 +1099,7 @@ class VLAN(PrimaryModel, StatusModel):
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, db_index=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1196,7 +1216,7 @@ class Service(PrimaryModel):
         null=True,
         blank=True,
     )
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     protocol = models.CharField(max_length=50, choices=ServiceProtocolChoices)
     ports = JSONArrayField(
         base_field=models.PositiveIntegerField(

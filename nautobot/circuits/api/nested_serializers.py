@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.api import WritableNestedSerializer
 
 __all__ = [
@@ -8,7 +8,20 @@ __all__ = [
     "NestedCircuitTerminationSerializer",
     "NestedCircuitTypeSerializer",
     "NestedProviderSerializer",
+    "NestedProviderNetworkSerializer",
 ]
+
+#
+# Provider Networks
+#
+
+
+class NestedProviderNetworkSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="circuits-api:providernetwork-detail")
+
+    class Meta:
+        model = ProviderNetwork
+        fields = ["id", "url", "name", "slug"]
 
 
 #

@@ -4,13 +4,13 @@ from collections import OrderedDict
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import ValidationError
 from django.db import models
 from django.db.models import Q
 
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
@@ -53,7 +53,7 @@ class RelationshipModel(models.Model):
         related_query_name="destination_%(app_label)s_%(class)s",  # e.g. 'destination_dcim_rack'
     )
 
-    def get_relationships(self, include_hidden=False):
+    def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
         Return a dictionary of queryset for all custom relationships
 
@@ -74,6 +74,9 @@ class RelationshipModel(models.Model):
             }
         """
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
+        if advanced_ui is not None:
+            src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
+            dst_relationships = dst_relationships.filter(advanced_ui=advanced_ui)
         content_type = ContentType.objects.get_for_model(self)
 
         sides = {
@@ -122,7 +125,7 @@ class RelationshipModel(models.Model):
 
         return resp
 
-    def get_relationships_data(self):
+    def get_relationships_data(self, advanced_ui=None):
         """
         Return a dictionary of relationships with the label and the value or the queryset for each.
 
@@ -153,7 +156,7 @@ class RelationshipModel(models.Model):
             }
         """
 
-        relationships_by_side = self.get_relationships()
+        relationships_by_side = self.get_relationships(advanced_ui=advanced_ui)
 
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
@@ -190,6 +193,20 @@ class RelationshipModel(models.Model):
                     resp[side][relationship]["url"] = peer.get_absolute_url()
 
         return resp
+
+    def get_relationships_data_basic_fields(self):
+        """
+        Same docstring as get_relationships_data() above except this only returns relationships
+        where advanced_ui==False for displaying in the main object detail tab on the object's page
+        """
+        return self.get_relationships_data(advanced_ui=False)
+
+    def get_relationships_data_advanced_fields(self):
+        """
+        Same docstring as get_relationships_data() above except this only returns relationships
+        where advanced_ui==True for displaying in the 'Advanced' tab on the object's page
+        """
+        return self.get_relationships_data(advanced_ui=True)
 
 
 class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
@@ -274,6 +291,12 @@ class Relationship(BaseModel, ChangeLoggedModel):
         blank=True,
         null=True,
         help_text="Queryset filter matching the applicable destination objects of the selected type",
+    )
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. "
+        'It will appear in the "Advanced" tab instead.',
     )
 
     objects = RelationshipManager()
@@ -424,7 +447,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
                 for key in filterset.errors:
                     error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
 
-            filterset_params = set(filterset.get_filters().keys())
+            filterset_params = set(filterset.filters.keys())
             for key in filter.keys():
                 if key not in filterset_params:
                     error_messages.append(f"'{key}' is not a valid filter parameter for {model_name} object")
@@ -480,15 +503,16 @@ class Relationship(BaseModel, ChangeLoggedModel):
                 )
 
 
+@extras_features("custom_validators")
 class RelationshipAssociation(BaseModel):
     relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
 
     source_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
-    source_id = models.UUIDField()
+    source_id = models.UUIDField(db_index=True)
     source = GenericForeignKey(ct_field="source_type", fk_field="source_id")
 
     destination_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
-    destination_id = models.UUIDField()
+    destination_id = models.UUIDField(db_index=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
 
     class Meta:

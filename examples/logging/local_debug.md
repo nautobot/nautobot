@@ -1,4 +1,6 @@
-This logging configuration is great for running Nautobot locally in Docker with `DEBUG=True`.  It is 
+# Local Logging with `DEBUG=True`
+
+This logging configuration is great for running Nautobot locally in Docker with `DEBUG=True`.  It is
 impractical to use in production due to the multi-line output:
 
 ```python

@@ -29,7 +29,7 @@ class RestrictedQuerySet(QuerySet):
         else:
             attrs = Q()
             for perm_attrs in user._object_perm_cache[permission_required]:
-                if type(perm_attrs) is list:
+                if isinstance(perm_attrs, list):
                     for p in perm_attrs:
                         attrs |= Q(**p)
                 elif perm_attrs:
@@ -41,3 +41,29 @@ class RestrictedQuerySet(QuerySet):
             qs = self.filter(attrs)
 
         return qs
+
+    def check_perms(self, user, *, instance=None, pk=None, action="view"):
+        """
+        Check whether the given user can perform the given action with regard to the given instance of this model.
+
+        Either instance or pk must be specified, but not both.
+
+        Args:
+          user (User): User instance
+          instance (self.model): Instance of this queryset's model to check, if pk is not provided
+          pk (uuid): Primary key of the desired instance to check for, if instance is not provided
+          action (str): The action which must be permitted (e.g. "view" for "dcim.view_site"); default is 'view'
+
+        Returns:
+          bool: Whether the action is permitted or not
+        """
+        if instance is not None and pk is not None and instance.pk != pk:
+            raise RuntimeError("Should not be called with both instance and pk specified!")
+        if instance is None and pk is None:
+            raise ValueError("Either instance or pk must be specified!")
+        if instance is not None and not isinstance(instance, self.model):
+            raise TypeError(f"{instance} is not a {self.model}")
+        if pk is None:
+            pk = instance.pk
+
+        return self.restrict(user, action).filter(pk=pk).exists()

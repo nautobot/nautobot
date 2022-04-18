@@ -1,12 +1,9 @@
 from datetime import datetime, timedelta
-import os.path
 import uuid
-from unittest import mock, skipIf
+from unittest import mock
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
@@ -22,18 +19,21 @@ from nautobot.dcim.models import (
     RackRole,
     Site,
 )
-from nautobot.extras.api.views import JobViewSet
+from nautobot.extras.api.nested_serializers import NestedJobResultSerializer, NestedScheduledJobSerializer
 from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobLogEntry,
     JobResult,
     Relationship,
@@ -46,15 +46,14 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
+from nautobot.extras.utils import TaggableClassesQuery
+from nautobot.ipam.models import VLANGroup
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
 
 User = get_user_model()
-
-
-THIS_DIRECTORY = os.path.dirname(__file__)
 
 
 class AppTest(APITestCase):
@@ -508,6 +507,102 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
+    model = DynamicGroup
+    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "API DynamicGroup 4",
+            "slug": "api-dynamicgroup-4",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-1"]},
+        },
+        {
+            "name": "API DynamicGroup 5",
+            "slug": "api-dynamicgroup-5",
+            "content_type": "dcim.device",
+            "filter": {"has_interfaces": False},
+        },
+        {
+            "name": "API DynamicGroup 6",
+            "slug": "api-dynamicgroup-6",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-2"]},
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create the objects required for devices.
+        sites = [
+            Site.objects.create(name="Site 1", slug="site-1"),
+            Site.objects.create(name="Site 2", slug="site-2"),
+            Site.objects.create(name="Site 3", slug="site-3"),
+        ]
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="device Type 1",
+            slug="device-type-1",
+        )
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        status_active = Status.objects.get(slug="active")
+        status_planned = Status.objects.get(slug="planned")
+        Device.objects.create(
+            name="device-site-1",
+            status=status_active,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[0],
+        )
+        Device.objects.create(
+            name="device-site-2",
+            status=status_active,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[1],
+        )
+        Device.objects.create(
+            name="device-site-3",
+            status=status_planned,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[2],
+        )
+
+        # Then the DynamicGroups.
+        content_type = ContentType.objects.get_for_model(Device)
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 1",
+            slug="api-dynamicgroup-1",
+            content_type=content_type,
+            filter={"status": ["active"]},
+        )
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 2",
+            slug="api-dynamicgroup-2",
+            content_type=content_type,
+            filter={"status": ["planned"]},
+        )
+        DynamicGroup.objects.create(
+            name="API DynamicGroup 3",
+            slug="api-dynamicgroup-3",
+            content_type=content_type,
+            filter={"site": ["site-3"]},
+        )
+
+    def test_get_members(self):
+        """Test that the `/members/` API endpoint returns what is expected."""
+        self.add_permissions("extras.view_dynamicgroup")
+        instance = DynamicGroup.objects.first()
+        member_count = instance.members.count()
+        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(member_count, len(response.json()["results"]))
+
+
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ExportTemplate
     brief_fields = ["display", "id", "name", "url"]
@@ -554,10 +649,6 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-# Override the JOB_LOGS to None so that the Log Objects are created in the default database.
-# This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
-# database cleanup will fail and cause tests to fail as this is not a real database.
-@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
     brief_fields = ["display", "id", "name", "url"]
@@ -670,7 +761,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
             "name": "plugin_test",
             "slug": "plugin-test",
             "remote_url": "https://localhost/plugin-test",
-            "provided_contents": ["dummy_plugin.textfile"],
+            "provided_contents": ["example_plugin.textfile"],
         }
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -870,107 +961,110 @@ class ImageAttachmentTest(
         )
 
 
-class JobTest(APITestCase):
-    class TestJob(Job):
-        class Meta:
-            name = "Test job"
-
-        var1 = StringVar()
-        var2 = IntegerVar(required=True)  # explicitly stated, though required=True is the default in any case
-        var3 = BooleanVar()
-        var4 = ObjectVar(model=DeviceRole)
-
-        def run(self, data, commit=True):
-            self.log_debug(message=data["var1"])
-            self.log_info(message=data["var2"])
-            self.log_success(message=data["var3"])
-            self.log_warning(message=data["var4"])
-
-            return "Job complete"
-
-    def get_test_job_class(self, class_path):
-        if class_path == "local/test_api/TestJob":
-            return self.TestJob
-        raise Http404
+class JobAPIRunTestMixin:
+    """
+    Mixin providing test cases for the "run" API endpoint, shared between the different versions of Job API testing.
+    """
 
     def setUp(self):
         super().setUp()
+        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        self.job_model.enabled = True
+        self.job_model.validated_save()
 
-        # Monkey-patch the API viewset's _get_job_class method to return our test class above
-        JobViewSet._get_job_class = self.get_test_job_class
+    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+        """To be implemented by classes using this mixin."""
+        raise NotImplementedError
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
-    def test_list_jobs_anonymous(self):
-        url = reverse("extras-api:job-list")
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+    # Status code for successful submission of a job or schedule - to be set by subclasses
+    run_success_response_status = None
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
-    def test_list_jobs_without_permission(self):
-        url = reverse("extras-api:job-list")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_anonymous_not_permitted(self):
+        """The run_job endpoint should NOT allow anonymous users to submit jobs."""
+        url = self.get_run_url()
         with disable_warnings("django.request"):
-            response = self.client.get(url, **self.header)
+            response = self.client.post(url)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
-    @skipIf(
-        "dummy_plugin" not in settings.PLUGINS,
-        "dummy_plugin not in settings.PLUGINS",
-    )
-    def test_list_jobs_with_permission(self):
-        self.add_permissions("extras.view_job")
-        url = reverse("extras-api:job-list")
-        response = self.client.get(url, **self.header)
-
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        # At a minimum, the job provided by the dummy plugin should be present
-        self.assertNotEqual(response.data, [])
-        self.assertIn(
-            "plugins/dummy_plugin.jobs/DummyJob",
-            [job["id"] for job in response.data],
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
-    def test_get_job_anonymous(self):
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/test_api/TestJob"})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
-    def test_get_job_without_permission(self):
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/test_api/TestJob"})
-        with disable_warnings("django.request"):
-            response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
-    def test_get_job_with_permission(self):
-        self.add_permissions("extras.view_job")
-        # Try GET to permitted object
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/test_api/TestJob"})
-        response = self.client.get(url, **self.header)
-
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], self.TestJob.name)
-        self.assertEqual(response.data["vars"]["var1"], "StringVar")
-        self.assertEqual(response.data["vars"]["var2"], "IntegerVar")
-        self.assertEqual(response.data["vars"]["var3"], "BooleanVar")
-
-        # Try GET to non-existent object
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/test_api/NoSuchJob"})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_without_permission(self, mock_get_worker_count):
         """Job run request enforces user permissions."""
         mock_get_worker_count.return_value = 1
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         with disable_warnings("django.request"):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_permissions(self, mock_get_worker_count):
+        """The run_job endpoint should enforce object-level permissions."""
+        mock_get_worker_count.return_value = 1
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"module_name__in": ["test_pass", "test_fail"]},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        # Try post to unpermitted job
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+        # Try post to permitted job
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_not_enabled(self, mock_get_worker_count):
+        """Job run request enforces the Job.enabled flag."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.enabled = False
+        job_model.save()
+
+        url = self.get_run_url()
+        with disable_warnings("django.request"):
+            response = self.client.post(url, {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_not_installed(self, mock_get_worker_count):
+        """Job run request enforces the Job.installed flag."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job(
+            source="local",
+            module_name="uninstalled_module",
+            job_class_name="NoSuchJob",
+            grouping="Uninstalled Module",
+            name="No such job",
+            installed=False,
+            enabled=True,
+        )
+        job_model.validated_save()
+
+        url = self.get_run_url("local/uninstalled_module/NoSuchJob")
+        with disable_warnings("django.request"):
+            response = self.client.post(url, {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_no_worker(self, mock_get_worker_count):
         """Job run cannot be requested if Celery is not running."""
@@ -989,12 +1083,12 @@ class JobTest(APITestCase):
             "commit": True,
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_object_var(self, mock_get_worker_count):
         """Job run requests can reference objects by their primary keys."""
@@ -1018,14 +1112,61 @@ class JobTest(APITestCase):
             },
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
-        job = ScheduledJob.objects.last()
-        self.assertEqual(job.kwargs["data"]["var4"], str(device_role.pk))
+        schedule = ScheduledJob.objects.last()
+        self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_var_no_schedule(self, mock_get_worker_count):
+        """
+        Run a job with `approval_required` without providing a schedule.
+
+        Assert an immediate schedule that enforces it.
+        """
+        # Set approval_required=True
+        self.job_model.approval_required = True
+        self.job_model.save()
+
+        # Do the stuff.
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": device_role.pk,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+            # schedule is omitted
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        # Assert that a JobResult was NOT created.
+        self.assertFalse(JobResult.objects.exists())
+
+        # Assert that we have an immediate ScheduledJob and that it matches the job_model.
+        schedule = ScheduledJob.objects.last()
+        self.assertIsNotNone(schedule)
+        self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
+        self.assertEqual(schedule.approval_required, self.job_model.approval_required)
+        self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_object_var_lookup(self, mock_get_worker_count):
         """Job run requests can reference objects by their attributes."""
@@ -1040,15 +1181,19 @@ class JobTest(APITestCase):
         }
 
         self.assertEqual(
-            self.TestJob.deserialize_data(job_data),
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_data),
             {"var1": "FooBar", "var2": 123, "var3": False, "var4": device_role},
         )
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+        job_result = JobResult.objects.last()
+
+        return (response, job_result)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_future(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
@@ -1064,11 +1209,15 @@ class JobTest(APITestCase):
             },
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+        schedule = ScheduledJob.objects.last()
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_future_past(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
@@ -1084,11 +1233,11 @@ class JobTest(APITestCase):
             },
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_interval(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
@@ -1104,11 +1253,15 @@ class JobTest(APITestCase):
             },
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+        schedule = ScheduledJob.objects.last()
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_invalid_data(self):
         self.add_permissions("extras.run_job")
 
@@ -1117,12 +1270,12 @@ class JobTest(APITestCase):
             "commit": True,
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {"errors": ["Job data needs to be a dict"]})
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_wrong_data(self):
         self.add_permissions("extras.run_job")
         job_data = {
@@ -1137,12 +1290,12 @@ class JobTest(APITestCase):
             "commit": True,
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {"errors": {"var5": ["Job data contained an unknown property"]}})
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_missing_data(self):
         self.add_permissions("extras.run_job")
 
@@ -1156,12 +1309,207 @@ class JobTest(APITestCase):
             "commit": True,
         }
 
-        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
         )
+
+
+class JobTestVersion13(
+    JobAPIRunTestMixin,
+    # note no CreateObjectViewTestCase - we do not support user creation of Job records
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+    APIViewTestCases.UpdateObjectViewTestCase,
+    APIViewTestCases.DeleteObjectViewTestCase,
+):
+    """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
+
+    model = Job
+    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
+    choices_fields = None
+    update_data = {
+        # source, module_name, job_class_name, installed are NOT editable
+        "grouping_override": True,
+        "grouping": "Overridden grouping",
+        "name_override": True,
+        "name": "Overridden name",
+        "slug": "overridden-slug",
+        "description_override": True,
+        "description": "This is an overridden description.",
+        "enabled": True,
+        "approval_required_override": True,
+        "approval_required": True,
+        "commit_default_override": True,
+        "commit_default": False,
+        "hidden_override": True,
+        "hidden": True,
+        "read_only_override": True,
+        "read_only": True,
+        "soft_time_limit_override": True,
+        "soft_time_limit": 350.1,
+        "time_limit_override": True,
+        "time_limit": 650,
+    }
+    bulk_update_data = {
+        "enabled": True,
+        "approval_required_override": True,
+        "approval_required": True,
+    }
+    validation_excluded_fields = []
+
+    run_success_response_status = status.HTTP_201_CREATED
+    api_version = "1.3"
+
+    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+        job_model = Job.objects.get_for_class_path(class_path)
+        return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+
+    def test_get_job_variables(self):
+        """Test the job/<pk>/variables API endpoint."""
+        self.add_permissions("extras.view_job")
+        response = self.client.get(
+            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
+            **self.header,
+        )
+        self.assertEqual(4, len(response.data))  # 4 variables, in order
+        self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
+        self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
+        self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
+        self.assertEqual(
+            response.data[3],
+            {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.devicerole"},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_object_var(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
+        response, schedule = super().test_run_job_object_var()
+
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertIsNone(response.data["job_result"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_object_var_lookup(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
+        response, job_result = super().test_run_job_object_var_lookup()
+
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertIsNone(response.data["schedule"])
+        # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
+        data_job_result = response.data["job_result"]
+        del data_job_result["url"]
+        del data_job_result["user"]["url"]
+        expected_data_job_result = NestedJobResultSerializer(job_result, context={"request": None}).data
+        del expected_data_job_result["url"]
+        del expected_data_job_result["user"]["url"]
+        self.assertEqual(data_job_result, expected_data_job_result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_future(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
+        response, schedule = super().test_run_job_future()
+
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertIsNone(response.data["job_result"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_interval(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
+        response, schedule = super().test_run_job_interval()
+
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertIsNone(response.data["job_result"])
+
+
+class JobTestVersion12(
+    JobAPIRunTestMixin,
+    APITestCase,
+):
+    """Test cases for the Jobs REST API under API version 1.2 - deprecated JobClass-based API pattern."""
+
+    run_success_response_status = status.HTTP_200_OK
+    api_version = "1.2"
+
+    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+        return reverse("extras-api:job-run", kwargs={"class_path": class_path})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_jobs_anonymous(self):
+        url = reverse("extras-api:job-list")
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_jobs_without_permission(self):
+        url = reverse("extras-api:job-list")
+        with disable_warnings("django.request"):
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_jobs_with_permission(self):
+        self.add_permissions("extras.view_job")
+        url = reverse("extras-api:job-list")
+        response = self.client.get(url, **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        # At a minimum, the job provided by the example plugin should be present
+        self.assertNotEqual(response.data, [])
+        self.assertIn(
+            "plugins/example_plugin.jobs/ExampleJob",
+            [job["id"] for job in response.data],
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_job_anonymous(self):
+        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/APITestJob"})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_job_without_permission(self):
+        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/APITestJob"})
+        with disable_warnings("django.request"):
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_job_with_permission(self):
+        self.add_permissions("extras.view_job")
+        # Try GET to permitted object
+        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/APITestJob"})
+        response = self.client.get(url, **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], "Job for API Tests")
+        self.assertEqual(response.data["vars"]["var1"], "StringVar")
+        self.assertEqual(response.data["vars"]["var2"], "IntegerVar")
+        self.assertEqual(response.data["vars"]["var3"], "BooleanVar")
+
+        # Try GET to non-existent object
+        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/NoSuchJob"})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+
+class JobTestVersionDefault(JobTestVersion12):
+    """
+    Test cases for the Jobs REST API when not explicitly requesting a specific API version.
+
+    Currently we default to version 1.2, but this may change in a future major release.
+    """
+
+    api_version = None
 
 
 class JobResultTest(APITestCase):
@@ -1250,10 +1598,12 @@ class ScheduledJobTest(
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
         ScheduledJob.objects.create(
             name="test1",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job_model.class_path,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -1261,8 +1611,9 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job_model.class_path,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -1270,8 +1621,9 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job_model.class_path,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -1288,38 +1640,56 @@ class ScheduledJobTest(
 class JobApprovalTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
-        user = User.objects.create(username="user1", is_active=True)
+        cls.additional_user = User.objects.create(username="user1", is_active=True)
+        cls.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        cls.job_model.enabled = True
+        cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=cls.job_model.class_path,
+            job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
+            user=cls.additional_user,
             approval_required=True,
             start_time=now(),
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_anonymous(self):
-        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": 1})
-        response = self.client.post(url, **self.header)
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_without_permission(self):
-        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": 1})
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
         with disable_warnings("django.request"):
             response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_without_approve_job_permission(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_without_change_scheduledjob_permission(self):
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_same_user(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=self.job_model.class_path,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -1331,24 +1701,22 @@ class JobApprovalTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_in_past(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
-        user = User.objects.get(username="user1")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=self.job_model.class_path,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
-            user=user,
+            user=self.additional_user,
             approval_required=True,
             start_time=now(),
         )
@@ -1358,16 +1726,15 @@ class JobApprovalTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_job_in_past_force(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
-        user = User.objects.get(username="user1")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="-",
-            job_class="-",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=self.job_model.class_path,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
-            user=user,
+            user=self.additional_user,
             approval_required=True,
             start_time=now(),
         )
@@ -1377,32 +1744,51 @@ class JobApprovalTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_job_without_permission(self):
-        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": 1})
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
         with disable_warnings("django.request"):
             response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_job_without_approve_job_permission(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.delete_scheduledjob")
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_job_without_delete_scheduledjob_permission(self):
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_job(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
+        self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.delete_scheduledjob")
         url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsNone(ScheduledJob.objects.filter(pk=self.scheduled_job.pk).first())
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_dry_run_job_without_permission(self):
-        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": 1})
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
         with disable_warnings("django.request"):
             response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_dry_run_job_without_run_job_permission(self):
+        self.add_permissions("extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_dry_run_job(self):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.add_scheduledjob")
-        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        self.add_permissions("extras.run_job", "extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
@@ -1783,7 +2169,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
         """
 
 
-class TagTest(APIViewTestCases.APIViewTestCase):
+class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag
     brief_fields = ["color", "display", "id", "name", "slug", "url"]
     create_data = [
@@ -1806,9 +2192,90 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+
+    def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
+
+        tag = Tag.objects.get(slug=self.create_data[0]["slug"])
+        self.assertEqual(
+            tag.content_types.count(),
+            TaggableClassesQuery().as_queryset.count(),
+        )
+
+
+class TagTestVersion13(
+    APIViewTestCases.CreateObjectViewTestCase,
+    APIViewTestCases.UpdateObjectViewTestCase,
+):
+    model = Tag
+    brief_fields = ["color", "display", "id", "name", "slug", "url"]
+    api_version = "1.3"
+    create_data = [
+        {"name": "Tag 4", "slug": "tag-4", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
+    ]
+    bulk_update_data = {"content_types": [Site._meta.label_lower]}
+
+    @classmethod
+    def setUpTestData(cls):
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
+
+    def test_create_tags_with_invalid_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+
+        tag = Tag.objects.filter(slug=data["slug"])
+        self.assertHttpStatus(response, 400)
+        self.assertFalse(tag.exists())
+        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+
+    def test_create_tags_without_content_types(self):
+        self.add_permissions("extras.add_tag")
+        data = {
+            "name": "Tag 8",
+            "slug": "tag-8",
+        }
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(str(response.data["content_types"][0]), "This field is required.")
+
+    def test_update_tags_remove_content_type(self):
+        """Test removing a tag content_type that is been tagged to a model"""
+        self.add_permissions("extras.change_tag")
+
+        tag_1 = Tag.objects.get(slug="tag-1")
+        site = Site.objects.create(name="site 1", slug="site-1")
+        site.tags.add(tag_1)
+
+        url = self._get_detail_url(tag_1)
+        data = {"content_types": [Device._meta.label_lower]}
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            str(response.data["content_types"][0]), "Unable to remove dcim.site. Dependent objects were found."
+        )
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
@@ -1819,7 +2286,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.consoleport"],
             "name": "api-test-4",
             "type_create": True,
-            "payload_url": "http://api-test-4.com/test4",
+            "payload_url": "http://example.com/test4",
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
@@ -1828,7 +2295,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.consoleport"],
             "name": "api-test-5",
             "type_update": True,
-            "payload_url": "http://api-test-5.com/test5",
+            "payload_url": "http://example.com/test5",
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
@@ -1837,7 +2304,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.consoleport"],
             "name": "api-test-6",
             "type_delete": True,
-            "payload_url": "http://api-test-6.com/test6",
+            "payload_url": "http://example.com/test6",
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
@@ -1847,11 +2314,11 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = (
+        cls.webhooks = (
             Webhook(
                 name="api-test-1",
                 type_create=True,
-                payload_url="http://api-test-1.com/test1",
+                payload_url="http://example.com/test1",
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
@@ -1859,7 +2326,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             Webhook(
                 name="api-test-2",
                 type_update=True,
-                payload_url="http://api-test-2.com/test2",
+                payload_url="http://example.com/test2",
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
@@ -1867,7 +2334,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             Webhook(
                 name="api-test-3",
                 type_delete=True,
-                payload_url="http://api-test-3.com/test3",
+                payload_url="http://example.com/test3",
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
@@ -1876,6 +2343,86 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         obj_type = ContentType.objects.get_for_model(DeviceType)
 
-        for webhook in webhooks:
+        for webhook in cls.webhooks:
             webhook.save()
             webhook.content_types.set([obj_type])
+
+    def test_create_webhooks_with_diff_content_type_same_url_same_action(self):
+        """
+        Create a new webhook with diffrent content_types, same url and same action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | device type, create, http://localhost
+            Webhook 2: dcim | console port, create, http://localhost
+        """
+        self.add_permissions("extras.add_webhook")
+
+        data = (
+            {
+                "content_types": ["dcim.consoleport"],
+                "name": "api-test-7",
+                "type_create": self.webhooks[0].type_create,
+                "payload_url": self.webhooks[0].payload_url,
+                "http_method": self.webhooks[0].http_method,
+                "http_content_type": self.webhooks[0].http_content_type,
+                "ssl_verification": self.webhooks[0].ssl_verification,
+            },
+        )
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_create_webhooks_with_same_content_type_same_url_diff_action(self):
+        """
+        Create a new webhook with same content_types, same url and diff action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | device type, create, http://localhost
+            Webhook 2: dcim | device type, delete, http://localhost
+        """
+        self.add_permissions("extras.add_webhook")
+
+        data = (
+            {
+                "content_types": ["dcim.devicetype"],
+                "name": "api-test-7",
+                "type_update": True,
+                "payload_url": self.webhooks[0].payload_url,
+                "http_method": self.webhooks[0].http_method,
+                "http_content_type": self.webhooks[0].http_content_type,
+                "ssl_verification": self.webhooks[0].ssl_verification,
+            },
+        )
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_create_webhooks_with_same_content_type_same_url_common_action(self):
+        """
+        Create a new webhook with same content_types, same url and common action with a webhook that exists
+
+        Example:
+            Webhook 1: dcim | device type, create, http://localhost
+            Webhook 2: dcim | device type, create, update, http://localhost
+        """
+        self.add_permissions("extras.add_webhook")
+
+        data = (
+            {
+                "content_types": ["dcim.devicetype"],
+                "name": "api-test-7",
+                "type_create": self.webhooks[0].type_create,
+                "type_update": True,
+                "payload_url": self.webhooks[0].payload_url,
+                "http_method": self.webhooks[0].http_method,
+                "http_content_type": self.webhooks[0].http_content_type,
+                "ssl_verification": self.webhooks[0].ssl_verification,
+            },
+        )
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEquals(
+            response.data[0]["type_create"][0],
+            "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
+        )
