@@ -64,7 +64,7 @@ color: {{ object.status.color|fgcolor }}
 
 ### get_docs_url
 
-Return the url of the documentation for the specified model.
+Return the static URL of the documentation for the specified model.
 
 ```django
 {{ obj | get_docs_url }}
