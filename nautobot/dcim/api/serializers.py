@@ -1083,6 +1083,42 @@ class InterfaceSerializer(
         return super().validate(data)
 
 
+class InterfaceSerializerVersion13(InterfaceSerializer):
+    parent = NestedInterfaceSerializer(required=False, allow_null=True)
+
+    class Meta:
+        model = Interface
+        fields = [
+            "id",
+            "url",
+            "device",
+            "name",
+            "label",
+            "type",
+            "enabled",
+            "parent",
+            "lag",
+            "mtu",
+            "mac_address",
+            "mgmt_only",
+            "description",
+            "mode",
+            "untagged_vlan",
+            "tagged_vlans",
+            "cable",
+            "cable_peer",
+            "cable_peer_type",
+            "connected_endpoint",
+            "connected_endpoint_type",
+            "connected_endpoint_reachable",
+            "tags",
+            "count_ipaddresses",
+            "custom_fields",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
 class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearport-detail")
     device = NestedDeviceSerializer()
