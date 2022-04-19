@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.4
 
 This document describes all new features and changes in Nautobot 1.4.
