@@ -441,6 +441,7 @@ def check_migrations(context):
     },
 )
 def check_schema(context, api_version=None):
+    """Render the REST API schema and check for problems."""
     if api_version is not None:
         api_versions = [api_version]
     else:
