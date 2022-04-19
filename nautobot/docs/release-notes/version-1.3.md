@@ -142,8 +142,6 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ## v1.3.1 (2022-04-19)
 
-### Added
-
 ### Changed
 
 - [#1647](https://github.com/nautobot/nautobot/pull/1647) - Changed class inheritance of JobViewSet to be simpler and more self-consistent.
