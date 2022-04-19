@@ -153,7 +153,7 @@ Now that there is a tagged release, the final step is to upload the package to t
 First, you'll need to render the documentation.
 
 ```no-highlight
-poetry run mkdocs build --no-directory-urls
+poetry run mkdocs build --no-directory-urls --strict
 ```
 
 Second, you'll need to build the Python package distributions:

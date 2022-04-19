@@ -27,7 +27,7 @@ jobs:
       - name: "Install Docs Requirements"
         run: "pip install -r docs/requirements.txt"
       - name: "Build Documentation"
-        run: "mkdocs build --no-directory-urls"
+        run: "mkdocs build --no-directory-urls --strict"
       - name: "Run Poetry Build"
         run: "poetry build"
       - name: "Upload binaries to release"
