@@ -5,7 +5,7 @@ import re
 import yaml
 from django import template
 from django.conf import settings
-from django.templatetags.static import StaticNode
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
@@ -321,9 +321,9 @@ def get_docs_url(model):
         "static/docs/models/dcim/site.html"
     """
     if model._meta.app_label in settings.PLUGINS:
-        return f"{settings.STATIC_URL}{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
+        return static(f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html")
 
-    return f"{settings.STATIC_URL}docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
+    return static(f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html")
 
 
 @library.filter()

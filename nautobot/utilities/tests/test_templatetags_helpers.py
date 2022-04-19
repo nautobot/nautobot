@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.templatetags.static import static
 from django.conf import settings
 from unittest import skipIf
 
@@ -114,11 +115,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertTrue(callable(get_docs_url))
         status = Status.objects.get_for_model(Site).first()
         site = Site.objects.create(name="test", slug="test", status=status)
-        self.assertEqual(get_docs_url(site), f"{settings.STATIC_URL}docs/models/dcim/site.html")
+        self.assertEqual(get_docs_url(site), static("docs/models/dcim/site.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
-        self.assertEqual(
-            get_docs_url(example_model), f"{settings.STATIC_URL}example_plugin/docs/models/examplemodel.html"
-        )
+        self.assertEqual(get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))
 
     def test_has_perms(self):
         self.assertTrue(callable(has_perms))

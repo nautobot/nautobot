@@ -1,4 +1,4 @@
-from django.conf import settings
+from django.templatetags.static import static
 from django.urls import path
 from django.views.generic import RedirectView
 
@@ -49,7 +49,7 @@ urlpatterns = [
     ),
     path(
         "docs/",
-        RedirectView.as_view(url=f"{settings.STATIC_URL}example_plugin/docs/index.html"),
+        RedirectView.as_view(url=static("example_plugin/docs/index.html")),
         name="docs",
     ),
 ]
