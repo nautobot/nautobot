@@ -1,5 +1,4 @@
 import logging
-from collections import OrderedDict
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
@@ -85,9 +84,9 @@ class RelationshipModel(models.Model):
         }
 
         resp = {
-            RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
-            RelationshipSideChoices.SIDE_DESTINATION: OrderedDict(),
-            RelationshipSideChoices.SIDE_PEER: OrderedDict(),
+            RelationshipSideChoices.SIDE_SOURCE: {},
+            RelationshipSideChoices.SIDE_DESTINATION: {},
+            RelationshipSideChoices.SIDE_PEER: {},
         }
         for side, relationships in sides.items():
             for relationship in relationships:
@@ -132,26 +131,26 @@ class RelationshipModel(models.Model):
         Returns:
             response {
                 "source": {
-                    <relationship #1>: {
+                    <relationship #1>: {   # one-to-one relationship that self is the source of
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": False,
-                        "value": <model>,
+                        "value": <model>,     # single destination for this relationship
                         "url": "...",
                     },
-                    <relationship #2>: {
+                    <relationship #2>: {   # one-to-many or many-to-many relationship that self is a source for
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": True,
                         "value": None,
-                        "queryset": <queryset #2>
+                        "queryset": <queryset #2>   # set of destinations for the relationship
                     },
                 },
                 "destination": {
-                    (same format as source)
+                    (same format as source - relationships that self is the destination of)
                 },
                 "peer": {
-                    (same format as source)
+                    (same format as source - symmetric relationships that self is involved in)
                 },
             }
         """
@@ -159,9 +158,9 @@ class RelationshipModel(models.Model):
         relationships_by_side = self.get_relationships(advanced_ui=advanced_ui)
 
         resp = {
-            RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
-            RelationshipSideChoices.SIDE_DESTINATION: OrderedDict(),
-            RelationshipSideChoices.SIDE_PEER: OrderedDict(),
+            RelationshipSideChoices.SIDE_SOURCE: {},
+            RelationshipSideChoices.SIDE_DESTINATION: {},
+            RelationshipSideChoices.SIDE_PEER: {},
         }
         for side, relationships in relationships_by_side.items():
             for relationship, queryset in relationships.items():
@@ -183,6 +182,7 @@ class RelationshipModel(models.Model):
                 if resp[side][relationship]["has_many"]:
                     resp[side][relationship]["queryset"] = queryset
                 else:
+                    resp[side][relationship]["url"] = None
                     association = queryset.first()
                     if not association:
                         continue
@@ -190,7 +190,10 @@ class RelationshipModel(models.Model):
                     peer = association.get_peer(self)
 
                     resp[side][relationship]["value"] = peer
-                    resp[side][relationship]["url"] = peer.get_absolute_url()
+                    if hasattr(peer, "get_absolute_url"):
+                        resp[side][relationship]["url"] = peer.get_absolute_url()
+                    else:
+                        logger.warning("Peer object %s has no get_absolute_url() method", peer)
 
         return resp
 
@@ -525,18 +528,53 @@ class RelationshipAssociation(BaseModel):
         )
 
     def __str__(self):
-        if self.relationship.symmetric:
-            return "{} <-> {} - {}".format(self.source, self.destination, self.relationship)
-        else:
-            return "{} -> {} - {}".format(self.source, self.destination, self.relationship)
+        arrow = "<->" if self.relationship.symmetric else "->"
+        return f"{self.get_source() or 'unknown'} {arrow} {self.get_destination() or 'unknown'} - {self.relationship}"
+
+    def _get_genericforeignkey(self, name):
+        """
+        Backend for get_source and get_destination methods.
+
+        In the case where we have a RelationshipAssociation to a plugin-provided model, but the plugin is
+        not presently installed/enabled, dereferencing the peer GenericForeignKey will throw an AttributeError:
+            AttributeError: 'NoneType' object has no attribute '_base_manager'
+        because ContentType.model_class() returned None unexpectedly.
+
+        This method handles that exception and returns None in such a case.
+        """
+        if name not in ["source", "destination"]:
+            raise RuntimeError(f"Called for unexpected attribute {name}")
+        try:
+            return getattr(self, name)
+        except AttributeError:
+            logger.error(
+                "Unable to locate RelationshipAssociation %s (of type %s). Perhaps a plugin is missing?",
+                name,
+                getattr(self, f"{name}_type"),
+            )
+
+        return None
+
+    def get_source(self):
+        """Accessor for self.source - returns None if the object cannot be located."""
+        return self._get_genericforeignkey("source")
+
+    def get_destination(self):
+        """Accessor for self.destination - returns None if the object cannot be located."""
+        return self._get_genericforeignkey("destination")
 
     def get_peer(self, obj):
+        """
+        Get the object on the opposite side of this RelationshipAssociation from the provided `obj`.
 
-        if obj == self.source:
-            return self.destination
+        If obj is not involved in this RelationshipAssociation, or if the peer object is not locatable, returns None.
+        """
+        if obj == self.get_source():
+            return self.get_destination()
+        elif obj == self.get_destination():
+            return self.get_source()
 
-        elif obj == self.destination:
-            return self.source
+        return None
 
     def clean(self):
 
@@ -562,7 +600,11 @@ class RelationshipAssociation(BaseModel):
             ).exists():
                 raise ValidationError(
                     {
-                        "__all__": f"A {self.relationship} association already exists between {self.source} and {self.destination}"
+                        "__all__": (
+                            f"A {self.relationship} association already exists between "
+                            f"{self.get_source() or self.source_id} and "
+                            f"{self.get_destination() or self.destination_id}"
+                        )
                     }
                 )
 
@@ -579,7 +621,10 @@ class RelationshipAssociation(BaseModel):
             ).exists():
                 raise ValidationError(
                     {
-                        "destination": f"Unable to create more than one {self.relationship} association to {self.destination} (destination)"
+                        "destination": (
+                            f"Unable to create more than one {self.relationship} association to "
+                            f"{self.get_destination() or self.destination_id} (destination)"
+                        )
                     }
                 )
 
@@ -595,7 +640,10 @@ class RelationshipAssociation(BaseModel):
                 ).exists():
                     raise ValidationError(
                         {
-                            "source": f"Unable to create more than one {self.relationship} association to {self.source} (source)"
+                            "source": (
+                                f"Unable to create more than one {self.relationship} association from "
+                                f"{self.get_source() or self.source_id} (source)"
+                            )
                         }
                     )
 
@@ -608,7 +656,10 @@ class RelationshipAssociation(BaseModel):
                 ).exists():
                     raise ValidationError(
                         {
-                            "source": f"Unable to create more than one {self.relationship} association involving {self.source} (peer)"
+                            "source": (
+                                f"Unable to create more than one {self.relationship} association involving "
+                                f"{self.get_source() or self.source_id} (peer)"
+                            )
                         }
                     )
                 if RelationshipAssociation.objects.filter(
@@ -617,6 +668,9 @@ class RelationshipAssociation(BaseModel):
                 ).exists():
                     raise ValidationError(
                         {
-                            "destination": f"Unable to create more than one {self.relationship} association involving {self.destination} (peer)"
+                            "destination": (
+                                f"Unable to create more than one {self.relationship} association involving "
+                                f"{self.get_destination() or self.destination_id} (peer)"
+                            )
                         }
                     )
