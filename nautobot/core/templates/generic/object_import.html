@@ -16,7 +16,7 @@
             </div>
         {% endif %}
         <div class="panel panel-default">
-            <div class="panel-heading"><strong>Device Type</strong></div>
+            <div class="panel-heading"><strong>{{ obj_type|bettertitle }}</strong></div>
             <div class="panel-body">
 		        <form action="" method="post" class="form form-horizontal object-import-form">
                     {% csrf_token %}
