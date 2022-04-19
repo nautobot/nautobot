@@ -146,6 +146,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#1647](https://github.com/nautobot/nautobot/pull/1647) - Changed class inheritance of JobViewSet to be simpler and more self-consistent.
+
 ### Fixed
 
 - [#1278](https://github.com/nautobot/nautobot/issues/1278) - Fixed several different errors that could be raised when working with RelationshipAssociations.
