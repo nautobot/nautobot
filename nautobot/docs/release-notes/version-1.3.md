@@ -140,6 +140,19 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.1 (2022-04-19)
+
+### Added
+
+### Changed
+
+- [#1647](https://github.com/nautobot/nautobot/pull/1647) - Changed class inheritance of JobViewSet to be simpler and more self-consistent.
+
+### Fixed
+
+- [#1278](https://github.com/nautobot/nautobot/issues/1278) - Fixed several different errors that could be raised when working with RelationshipAssociations.
+- [#1662](https://github.com/nautobot/nautobot/issues/1662) - Fixed nat_outside prefetch on Device API view, and displaying multiple nat_outside entries on VM detail view.
+
 ## v1.3.0 (2022-04-18)
 
 ### Added

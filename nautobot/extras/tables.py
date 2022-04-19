@@ -671,10 +671,10 @@ class RelationshipAssociationTable(BaseTable):
     actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
 
     source_type = tables.Column()
-    source = tables.Column(linkify=True, orderable=False)
+    source = tables.Column(linkify=True, orderable=False, accessor="get_source")
 
     destination_type = tables.Column()
-    destination = tables.Column(linkify=True, orderable=False)
+    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination")
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation

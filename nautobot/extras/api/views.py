@@ -20,7 +20,6 @@ from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
-    ModelViewSetMixin,
     ModelViewSet,
     ReadOnlyModelViewSet,
 )
@@ -454,16 +453,13 @@ def _run_job(request, job_model, legacy_response=False):
 class JobViewSet(
     # DRF mixins:
     # note no CreateModelMixin
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     # Nautobot mixins:
     BulkUpdateModelMixin,
     BulkDestroyModelMixin,
-    ModelViewSetMixin,
     # Base class
-    viewsets.GenericViewSet,
+    ReadOnlyModelViewSet,
 ):
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
