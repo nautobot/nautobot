@@ -382,9 +382,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         "site",
         "rack",
         "parent_bay",
+        "primary_ip4__nat_outside_list",
+        "primary_ip6__nat_outside_list",
         "virtual_chassis__master",
-        "primary_ip4__nat_outside",
-        "primary_ip6__nat_outside",
         "tags",
         "status",
     )

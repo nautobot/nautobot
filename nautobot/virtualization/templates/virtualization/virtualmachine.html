@@ -76,8 +76,8 @@
                             <a href="{% url 'ipam:ipaddress' pk=object.primary_ip4.pk %}">{{ object.primary_ip4.address.ip }}</a>
                             {% if object.primary_ip4.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
-                            {% elif object.primary_ip4.nat_outside %}
-                                <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
+                            {% elif object.primary_ip4.nat_outside_list.exists %}
+                                <span>(NAT: {% for nat in object.primary_ip4.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
                             {% endif %}
                         {% else %}
                             <span class="text-muted">&mdash;</span>
@@ -91,8 +91,8 @@
                             <a href="{% url 'ipam:ipaddress' pk=object.primary_ip6.pk %}">{{ object.primary_ip6.address.ip }}</a>
                             {% if object.primary_ip6.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                            {% elif object.primary_ip6.nat_outside %}
-                                <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
+                            {% elif object.primary_ip6.nat_outside_list.exists %}
+                                <span>(NAT: {% for nat in object.primary_ip6.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
                             {% endif %}
                         {% else %}
                             <span class="text-muted">&mdash;</span>
