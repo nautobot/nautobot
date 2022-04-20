@@ -107,7 +107,7 @@ class DeviceType(PrimaryModel):
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
     model = models.CharField(max_length=100)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="model", unique=None)
+    slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     is_full_depth = models.BooleanField(
@@ -149,11 +149,11 @@ class DeviceType(PrimaryModel):
         super().__init__(*args, **kwargs)
 
         # Save a copy of u_height for validation in clean()
-        self._original_u_height = self.u_height
+        self._original_u_height = self.u_height if self.present_in_database else 1
 
         # Save references to the original front/rear images
-        self._original_front_image = self.front_image
-        self._original_rear_image = self.rear_image
+        self._original_front_image = self.front_image if self.present_in_database else None
+        self._original_rear_image = self.rear_image if self.present_in_database else None
 
     def get_absolute_url(self):
         return reverse("dcim:devicetype", args=[self.pk])
@@ -271,7 +271,7 @@ class DeviceType(PrimaryModel):
         elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufactuer_id={self.manufacturer_id}&device_type_id={self.pk}"
+                url = f"{reverse('dcim:device_list')}?manufacturer_id={self.manufacturer_id}&device_type_id={self.pk}"
                 raise ValidationError(
                     {
                         "u_height": mark_safe(
@@ -296,9 +296,9 @@ class DeviceType(PrimaryModel):
         ret = super().save(*args, **kwargs)
 
         # Delete any previously uploaded image files that are no longer in use
-        if self.front_image != self._original_front_image:
+        if self._original_front_image and self.front_image != self._original_front_image:
             self._original_front_image.delete(save=False)
-        if self.rear_image != self._original_rear_image:
+        if self._original_rear_image and self.rear_image != self._original_rear_image:
             self._original_rear_image.delete(save=False)
 
         return ret
@@ -438,6 +438,7 @@ class Platform(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -473,9 +474,9 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, blank=True, null=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True)
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    name = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
         max_length=50,
         blank=True,
@@ -561,6 +562,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "position",
         "face",
         "secrets_group",
+        "primary_ip",
         "comments",
     ]
     clone_fields = [
@@ -728,6 +730,18 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                 {"vc_position": "A device assigned to a virtual chassis must have its position defined."}
             )
 
+        # Validate device isn't being removed from a virtual chassis when it is the master
+        if not self.virtual_chassis and self.present_in_database:
+            existing_virtual_chassis = Device.objects.get(id=self.id).virtual_chassis
+            if existing_virtual_chassis and existing_virtual_chassis.master == self:
+                raise ValidationError(
+                    {
+                        "virtual_chassis": "The master device for the virtual chassis ({}) may not be removed".format(
+                            existing_virtual_chassis
+                        )
+                    }
+                )
+
     def save(self, *args, **kwargs):
 
         is_new = not self.present_in_database
@@ -770,6 +784,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.rack.name if self.rack else None,
             self.position,
             self.get_face_display(),
+            self.secrets_group.name if self.secrets_group else None,
+            self.primary_ip if self.primary_ip else None,
             self.comments,
         )
 
@@ -877,7 +893,7 @@ class VirtualChassis(PrimaryModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, db_index=True)
     domain = models.CharField(max_length=30, blank=True)
 
     csv_headers = ["name", "domain", "master"]

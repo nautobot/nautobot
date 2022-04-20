@@ -13,7 +13,7 @@ Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs
 
 Example:
 
-```
+```python
 ALLOWED_HOSTS = ['nautobot.example.com', '192.0.2.123']
 ```
 
@@ -22,7 +22,7 @@ ALLOWED_HOSTS = ['nautobot.example.com', '192.0.2.123']
 
 If you are not yet sure what the domain name and/or IP address of the Nautobot installation will be, and are comfortable accepting the risks in doing so, you can set this to a wildcard (asterisk) to allow all host values:
 
-```
+```python
 ALLOWED_HOSTS = ['*']
 ```
 
@@ -82,7 +82,7 @@ DATABASES = {
 
 When using MySQL as a database backend, and you want to enable support for Unicode characters like the beloved poop emoji, you'll need to update your settings.
 
-If you try to use emojis without this setting, you will encounter a server error along the lines of `Incorrect string value`, because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. The `utf8` encoding in MySQL is limited to 3-bytes per character. Newer Unicode emoji require 4-bytes. 
+If you try to use emojis without this setting, you will encounter a server error along the lines of `Incorrect string value`, because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. The `utf8` encoding in MySQL is limited to 3-bytes per character. Newer Unicode emoji require 4-bytes.
 
 To properly support using such characters, you will need to create an entry in `DATABASES` -> `default` -> `OPTIONS` with the value `{"charset": "utf8mb4"}` in your `nautobot_config.py` and restart all Nautobot services. This will tell MySQL to always use `utf8mb4` character set for database client connections.
 
@@ -91,14 +91,14 @@ For example:
 ```python
 DATABASES = {
     "default": {
-        # Other setttings...
+        # Other settings...
         "OPTIONS": {"charset": "utf8mb4"},  # Add this line
     }
 }
 ```
 
 !!! tip
-    Starting in v1.1.0, if you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it! 
+    Starting in v1.1.0, if you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
 
 ---
 
@@ -113,7 +113,6 @@ to different Redis instances/databases per feature.
 
 !!! tip
     The default Redis settings in your `nautobot_config.py` should be suitable for most deployments and should only require customization for more advanced configurations.
-
 
 ### Caching
 
@@ -144,39 +143,13 @@ This setting may also be a dictionary style, but that is not covered here. Pleas
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning
     [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
-Example:
-
-```python
-# Set CACHEOPS_REDIS to an empty value
-CACHEOPS_REDIS = False
-
-# If you want to use Sentinel, specify this variable
-CACHEOPS_SENTINEL = {
-    "locations": [("localhost", 26379)], # Sentinel locations, required
-    "service_name": "nautobot",          # Sentinel service name, required
-    "socket_timeout": 10,                # Connection timeout in seconds, optional
-    "db": 0                              # Redis database, default: 0
-    # ...                                # Everything else is passed to `Sentinel()`
-}
-```
-
-For more details on how to configure Cacheops to use Redis Sentinel see the official guide on [Cacheops
-setup](https://github.com/Suor/django-cacheops#setup).
-
----
-
 ### Task Queuing
-
-Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting. 
-
-Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
-
-In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined. 
 
 #### CACHES
 
@@ -200,11 +173,25 @@ CACHES = {
 }
 ```
 
+### Task Queuing with RQ
+
+!!! warning
+    As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
+
+Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
+
+Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
+
+In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined.
+
 #### RQ_QUEUES
 
 The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
 
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
+
+!!! note
+    The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
 
 Default:
 
@@ -285,55 +272,23 @@ The following environment variables may also be set for some of the above values
 
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
-#### Using Redis Sentinel
+### Task Queuing with Celery
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must be using dictionary-style settings, and modify the connection settings. This requires the removal of the `HOST`, `PORT`, and `DEFAULT_TIMEOUT` keys from the example above and the addition of three new keys.
+Out of the box you do not need to make any changes to utilize task queueing with Celery. All of the default settings are sufficient for most installations.
 
-* `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
-of the Redis server and port for each sentinel instance to connect to
-* `MASTER_NAME`: Name of the master / service to connect to
-* `SOCKET_TIMEOUT`: Timeout in seconds for a connection to timeout
-* `CONNECTION_KWARGS`: Connection timeout, in seconds
+In the event you do need to make customizations to how Celery interacts with the message broker such as for more advanced clustered deployments, the following settings are required.
 
-Example:
+#### CELERY_BROKER_URL
 
-```python
-RQ_QUEUES = {
-    "default": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    },
-    "check_releases": {
-        "SENTINELS": [
-            ("mysentinel.redis.example.com", 6379)
-            ("othersentinel.redis.example.com", 6379)
-        ],
-        "MASTER_NAME": "nautobot",
-        "DB": 0,
-        "PASSWORD": "",
-        "SOCKET_TIMEOUT": None,
-        "CONNECTION_KWARGS": {
-            "socket_connect_timeout": 10,
-        },
-        "SSL": False,
-    }
-}
-```
+This setting tells Celery and its workers how and where to communicate with the message broker. The default value for this points to `redis://localhost:6379/0`. Please see the [optional settings documentation for `CELERY_BROKER_URL`](../optional-settings#celery_broker_url) for more information on customizing this setting.
 
-!!! note
-    It is permissible to use Sentinel for only one database and not the other.
+#### CELERY_RESULT_BACKEND
 
-For more details on configuring RQ with Redis Sentinel, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
+This setting tells Celery and its workers how and where to store message results. This defaults to the same value as `CELERY_BROKER_URL`. In some more advanced setups it may be required for these to be separate locations, however in our configuration guides these are always the same. Please see the [optional settings documentation for `CELERY_RESULT_BACKEND`](../optional-settings#celery_result_backend) for more information on customizing this setting.
+
+#### Configuring Celery for High Availability
+
+High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration) for more information.
 
 ---
 
@@ -357,7 +312,7 @@ $ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
-Alternatively use the following command to generate a secret even before `nautobot-server` is runable:
+Alternatively use the following command to generate a secret even before `nautobot-server` is runnable:
 
 ```no-highlight
 $ LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1

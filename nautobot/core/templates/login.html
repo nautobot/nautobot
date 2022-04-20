@@ -3,7 +3,7 @@
 {% load form_helpers %}
 
 {% block content %}
-<div class="row" style="margin-top: {% if settings.BANNER_LOGIN %}100{% else %}150{% endif %}px;">
+<div class="row" style="margin-top: {% if 'BANNER_LOGIN'|settings_or_config %}100{% else %}150{% endif %}px;">
     <div class="col-sm-4 col-sm-offset-4">
         {% if "BANNER_LOGIN"|settings_or_config %}
             <div style="margin-bottom: 25px">

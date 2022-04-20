@@ -1,4 +1,5 @@
 {% extends 'dcim/device/base.html' %}
+{% load helpers %}
 
 {% block title %}{{ device }} - Status{% endblock %}
 
@@ -112,18 +113,18 @@ $(document).ready(function() {
                 $.each(json['get_environment']['fans'], function(name, obj) {
                     var row;
                     if (obj['status']) {
-                        row="<tr class=\"success\"><td>" + name + "</td><td><i class=\"mdi mdi-check-bold text-success\"></i></td></tr>";
+                        row = `<tr class="success"><td>${name}</td><td>{{ true | render_boolean }}</td></tr>`;
                     } else {
-                        row="<tr class=\"error\"><td>" + name + "</td><td><i class=\"mdi mdi-close text-error\"></i></td></tr>";
+                        row = `<tr class="error"><td>${name}</td><td>{{ false | render_boolean }}</td></tr>`;
                     }
                     $("#fans").after(row)
                 });
                 $.each(json['get_environment']['power'], function(name, obj) {
                     var row;
                     if (obj['status']) {
-                        row="<tr class=\"success\"><td>" + name + "</td><td><i class=\"mdi mdi-check-bold text-success\"></i></td></tr>";
+                        row = `<tr class="success"><td>${name}</td><td>{{ true | render_boolean }}</td></tr>`;
                     } else {
-                        row="<tr class=\"danger\"><td>" + name + "</td><td><i class=\"mdi mdi-close text-danger\"></i></td></tr>";
+                        row = `<tr class="danger"><td>${name}</td><td>{{ false | render_boolean }}</td></tr>`;
                     }
                     $("#power").after(row)
                 });

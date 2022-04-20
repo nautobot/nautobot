@@ -82,13 +82,7 @@
                     </tr>
                     <tr>
                         <td>Full Depth</td>
-                        <td>
-                            {% if object.is_full_depth %}
-                                <i class="mdi mdi-check-bold text-success" title="Yes"></i>
-                            {% else %}
-                                <i class="mdi mdi-close-thick text-danger" title="No"></i>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.is_full_depth | render_boolean }}</td>
                     </tr>
                     <tr>
                         <td>Parent/Child</td>
@@ -199,6 +193,7 @@
 {% endblock content_full_width_page %}
 
 {% block javascript %}
+{{ block.super }}
 <script type="text/javascript">
     // Redirect user to appropriate components tab if specified
     var hash = document.location.hash;

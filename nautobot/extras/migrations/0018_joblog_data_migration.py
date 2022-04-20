@@ -2,7 +2,11 @@ from collections import OrderedDict
 from django.db import migrations
 
 from nautobot.extras.choices import LogLevelChoices
-
+from nautobot.extras.constants import (
+    JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_LOG_MAX_GROUPING_LENGTH,
+)
 
 """
 This is the loose structure that we are trying to extract logs from (or restore to in case of reverse):
@@ -64,15 +68,26 @@ def migrate_params(apps, schema_editor):
                 if isinstance(value, dict) and value.get("log") and value.get("success"):
                     keys_to_remove.append(key)
                     for log in value["log"]:
-                        entry = JobLogEntry(
-                            grouping=key,
-                            job_result=job_result,
-                            created=log[0],
-                            log_level=log[1],
-                            log_object=log[2],
-                            absolute_url=log[3],
-                            message=log[4],
-                        )
+                        if log[4] is None and log[3] is None:
+                            # Due to Netbox Report API, the log_object sometimes stores the message.
+                            # If both the log message and log url are missing, we assume this is a message.
+                            entry = JobLogEntry(
+                                grouping=key[:JOB_LOG_MAX_GROUPING_LENGTH],
+                                job_result=job_result,
+                                created=log[0],
+                                log_level=log[1],
+                                message=log[2],
+                            )
+                        else:
+                            entry = JobLogEntry(
+                                grouping=key[:JOB_LOG_MAX_GROUPING_LENGTH],
+                                job_result=job_result,
+                                created=log[0],
+                                log_level=log[1],
+                                log_object=log[2][:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if log[2] else None,
+                                absolute_url=log[3][:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH] if log[3] else None,
+                                message=log[4],
+                            )
                         entry.save()
                 if key == "total":
                     keys_to_remove.append(key)
@@ -102,7 +117,7 @@ def reverse_migrate_params(apps, schema_editor):
                 [
                     entry.created,
                     entry.log_level,
-                    entry.log_object,
+                    entry.log_object or None,
                     entry.absolute_url or None,
                     entry.message,
                 ]

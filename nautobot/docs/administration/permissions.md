@@ -7,7 +7,7 @@ Nautobot provides an object-based permissions framework, which replace's Django'
     heading-offset=1
 %}
 
-### Example Constraint Definitions
+## Example Constraint Definitions
 
 | Constraints | Description |
 | ----------- | ----------- |

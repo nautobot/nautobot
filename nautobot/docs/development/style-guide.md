@@ -1,6 +1,6 @@
 # Style Guide
 
-Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile. See `scripts/cibuild.sh` and `tasks.py`.
+Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile. [MarkdownLint-cli](https://github.com/igorshubovych/markdownlint-cli) is used to lint and validate Markdown files. See `tasks.py`.
 
 ## Flake8 Exceptions
 
@@ -16,17 +16,18 @@ enable this check after changing the above import pattern.
 
 The `flake8`, `black` and `hadolint` utilities are used by the CI process to enforce code style. It is strongly recommended to include these as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `flake8` and `black --check` prior to every commit attempt and abort if the validation fails.
 
-```
+```bash
 $ cd .git/hooks/
 $ ln -s ../../scripts/git-hooks/pre-commit
 ```
 
 You can also invoke these utilities manually against the development Docker containers by running:
 
-```
+```no-highlight
 invoke flake8
 invoke black
 invoke hadolint
+invoke markdownlint
 ```
 
 ## Introducing New Dependencies
@@ -55,6 +56,10 @@ New dependencies can be added to the project via the `poetry add` command. This 
 * Every model should have a docstring. Every custom method should include an explanation of its function.
 
 * Nested API serializers generate minimal representations of an object. These are stored separately from the primary serializers to avoid circular dependencies. Always import nested serializers from other apps directly. For example, from within the DCIM app you would write `from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer`.
+
+* The combination of `nautobot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedFilterSet` and `nautobot.extras.filters.CustomFieldModelFilterSet` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these three classes.
+
+* The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelForm` and `nautobot.extras.forms.RelationshipModelForm` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these three classes.
 
 ## Branding
 

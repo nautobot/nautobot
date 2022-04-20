@@ -1,9 +1,8 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.extras.filters import CustomFieldModelFilterSet, CreatedUpdatedFilterSet
+from nautobot.extras.filters import NautobotFilterSet
 from nautobot.utilities.filters import (
-    BaseFilterSet,
     NameSlugSearchFilterSet,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
@@ -18,12 +17,7 @@ __all__ = (
 )
 
 
-class TenantGroupFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         label="Tenant group (ID)",
@@ -40,7 +34,7 @@ class TenantGroupFilterSet(
         fields = ["id", "name", "slug", "description"]
 
 
-class TenantFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class TenantFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

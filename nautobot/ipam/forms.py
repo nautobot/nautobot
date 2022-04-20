@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 
 from nautobot.dcim.models import Device, Interface, Rack, Region, Site
 from nautobot.extras.forms import (
@@ -7,12 +8,11 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
-    RelationshipModelForm,
+    NautobotModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
@@ -70,10 +70,9 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 #
 
 
-class VRFForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VRF
@@ -142,9 +141,7 @@ class VRFFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
 #
 
 
-class RouteTargetForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
+class RouteTargetForm(NautobotModelForm, TenancyForm):
     class Meta:
         model = RouteTarget
         fields = [
@@ -206,7 +203,7 @@ class RouteTargetFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilter
 #
 
 
-class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RIRForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -242,9 +239,8 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldModelForm, RelationshipModelForm):
+class AggregateForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Aggregate
@@ -320,7 +316,7 @@ class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
 #
 
 
-class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class RoleForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -344,7 +340,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(BootstrapMixin, PrefixFieldMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -375,7 +371,6 @@ class PrefixForm(BootstrapMixin, PrefixFieldMixin, TenancyForm, CustomFieldModel
         },
     )
     role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Prefix
@@ -498,7 +493,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
         "is_pool",
         "expand",
     ]
-    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput())
+    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
     within_include = forms.CharField(
         required=False,
@@ -555,14 +550,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
 #
 
 
-class IPAddressForm(
-    BootstrapMixin,
-    TenancyForm,
-    ReturnURLForm,
-    AddressFieldMixin,
-    CustomFieldModelForm,
-    RelationshipModelForm,
-):
+class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -642,7 +630,6 @@ class IPAddressForm(
         },
     )
     primary_for_parent = forms.BooleanField(required=False, label="Make this the primary IP for the device/VM")
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = IPAddress
@@ -676,18 +663,18 @@ class IPAddressForm(
         initial = kwargs.get("initial", {}).copy()
 
         if instance:
-            if type(instance.assigned_object) is Interface:
+            if isinstance(instance.assigned_object, Interface):
                 initial["interface"] = instance.assigned_object
-            elif type(instance.assigned_object) is VMInterface:
+            elif isinstance(instance.assigned_object, VMInterface):
                 initial["vminterface"] = instance.assigned_object
             if instance.nat_inside:
                 nat_inside_parent = instance.nat_inside.assigned_object
-                if type(nat_inside_parent) is Interface:
+                if isinstance(nat_inside_parent, Interface):
                     initial["nat_site"] = nat_inside_parent.device.site.pk
                     if nat_inside_parent.device.rack:
                         initial["nat_rack"] = nat_inside_parent.device.rack.pk
                     initial["nat_device"] = nat_inside_parent.device.pk
-                elif type(nat_inside_parent) is VMInterface:
+                elif isinstance(nat_inside_parent, VMInterface):
                     initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
                     initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
         kwargs["initial"] = initial
@@ -713,33 +700,51 @@ class IPAddressForm(
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
             raise forms.ValidationError("Cannot select both a device interface and a virtual machine interface")
+
+        # Stash a copy of `assigned_object` before we replace it, so we can use it in `save()`.
+        self.instance._original_assigned_object = self.instance.assigned_object
         self.instance.assigned_object = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
 
         # Primary IP assignment is only available if an interface has been assigned.
         interface = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-        if self.cleaned_data.get("primary_for_parent") and not interface:
+        primary_for_parent = self.cleaned_data.get("primary_for_parent")
+        if primary_for_parent and not interface:
             self.add_error(
                 "primary_for_parent",
                 "Only IP addresses assigned to an interface can be designated as primary IPs.",
             )
 
+        # If `primary_for_parent` is unset, clear the `primary_ip{version}` for the
+        # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
+        # also checks for the `_primary_ip_unset_by_form` value.
+        device_primary_ip = Device.objects.filter(Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)).exists()
+        vm_primary_ip = VirtualMachine.objects.filter(
+            Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)
+        ).exists()
+
+        currently_primary_ip = device_primary_ip or vm_primary_ip
+
+        if not primary_for_parent and self.instance._original_assigned_object is not None and currently_primary_ip:
+            self.instance._primary_ip_unset_by_form = True
+
     def save(self, *args, **kwargs):
         ipaddress = super().save(*args, **kwargs)
 
-        # Assign/clear this IPAddress as the primary for the associated Device/VirtualMachine.
-        interface = self.instance.assigned_object
+        interface = ipaddress.assigned_object
+        primary_ip_attr = f"primary_ip{ipaddress.address.version}"  # e.g. `primary_ip4` or `primary_ip6`
+        primary_ip_unset_by_form = getattr(ipaddress, "_primary_ip_unset_by_form", False)
+
+        # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
         if interface and self.cleaned_data["primary_for_parent"]:
-            if ipaddress.address.version == 4:
-                interface.parent.primary_ip4 = ipaddress
-            else:
-                interface.parent.primary_ip6 = ipaddress
+            setattr(interface.parent, primary_ip_attr, ipaddress)
             interface.parent.save()
-        elif interface and ipaddress.address.version == 4 and interface.parent.primary_ip4 == ipaddress:
-            interface.parent.primary_ip4 = None
-            interface.parent.save()
-        elif interface and ipaddress.address.version == 6 and interface.parent.primary_ip6 == ipaddress:
-            interface.parent.primary_ip6 = None
-            interface.parent.save()
+
+        # Or clear it as the primary, saving the `original_assigned_object.parent` if
+        # `_primary_ip_unset_by_form` was set in `clean()`
+        elif primary_ip_unset_by_form:
+            parent = ipaddress._original_assigned_object.parent
+            setattr(parent, primary_ip_attr, None)
+            parent.save()
 
         return ipaddress
 
@@ -754,7 +759,6 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, Custo
         required=False,
         label="VRF",
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = IPAddress
@@ -973,7 +977,7 @@ class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMix
 #
 
 
-class VLANGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class VLANGroupForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -1023,7 +1027,7 @@ class VLANGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VLANForm(NautobotModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -1037,7 +1041,6 @@ class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipMo
         query_params={"site_id": "$site"},
     )
     role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VLAN
@@ -1172,12 +1175,11 @@ class VLANFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
 #
 
 
-class ServiceForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ServiceForm(NautobotModelForm):
     ports = NumericArrayField(
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Service

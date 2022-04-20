@@ -1,4 +1,5 @@
-from django.contrib.admin import site as admin_site
+from django.contrib.admin import site as admin_site, ModelAdmin
+from django.db import models
 
 from constance.admin import ConstanceAdmin, ConstanceForm, Config
 from django_celery_beat import admin  # noqa: F401
@@ -13,6 +14,7 @@ from social_django.models import Association, Nonce, UserSocialAuth
 from taggit.models import Tag
 
 from nautobot.utilities.forms import BootstrapMixin
+import nautobot.utilities.forms.widgets as widgets
 
 
 # Override default AdminSite attributes so we can avoid creating and
@@ -48,3 +50,11 @@ class ConfigAdmin(ConstanceAdmin):
 
 admin_site.unregister([Config])
 admin_site.register([Config], ConfigAdmin)
+
+
+class NautobotModelAdmin(ModelAdmin):
+    formfield_overrides = {
+        models.DateField: {"widget": widgets.DatePicker},
+        models.ForeignKey: {"widget": widgets.StaticSelect2},
+        models.ManyToManyField: {"widget": widgets.StaticSelect2Multiple},
+    }

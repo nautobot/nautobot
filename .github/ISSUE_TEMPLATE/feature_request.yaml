@@ -1,0 +1,106 @@
+---
+name: ✨ Feature Request
+description: Propose a new Nautobot feature or enhancement
+labels: ["type: feature"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        **NOTE:** IF YOUR ISSUE DOES NOT FOLLOW THIS TEMPLATE, YOU WILL BE REQUIRED TO
+        UPDATE THE ISSUE IN ORDER TO HAVE IT REVIEWED. This form is only for proposing
+        specific new features or enhancements. If you have a general idea or question,
+        please start a [discussion](https://github.com/nautobot/nautobot/discussions) instead.
+  - type: dropdown
+    id: persona
+    attributes:
+      label: As ...
+      description: WHO, the USER PERSONA; Please choose the appropriate [persona](https://github.com/nautobot/nautobot/wiki/Personas)
+      multiple: false
+      options:
+        - "Ozzie - Operator"
+        - "Nelly - Network Engineer"
+        - "Austin - Network Automation Engineer"
+        - "Tammy - Tools Integrator"
+        - "Mary - Manager"
+        - "Patti - Platform Admin"
+        - "Isabella - Infrastructure Owner"
+        - "Dan - Data Owner"
+        - "P.D. - Plugin Developer"
+        - "Cora - Coder"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: I want ...
+      description: WHAT; Please enter the desired functionality to be implemented.
+      placeholder: To develop Nautobot plugins that can be inserted as a top-level item in the navigation bar
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: So that ...
+      description: WHY; Please enter the reason or value for the desired functionality.
+      placeholder: >
+        My plugin is seen as first-class citizen by my users and so that the
+        plugins drop-down menu isn't overloaded. When I use Nautobot as an App Platform,
+        it'll also provide more focus on the Plugins/Apps than core SoT drop-downs (for
+        users that aren't permitted to view those items)
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: I know this is done when...
+      description: HOW; The requirements/acceptance criteria (a list) as to how this functionality should be implemented.
+      placeholder: |
+        - I create a Nautobot plugin and have the option to inject it in the Plugins
+          dropdown menu or create a new dedicated dropdown in the navigation bar.
+          
+        - When multiple plugins provide dedicated dropdowns, I can re-order the plugin
+          dropdowns in the navbar.
+    validations:
+      required: true
+  - type: checkboxes
+    id: pertains_to
+    attributes:
+      label: Optional - Feature groups this request pertains to.
+      description: Please choose all feature groups this request pertains to.
+      options:
+        - label: Automation
+        - label: Circuits
+        - label: DCIM
+        - label: IPAM
+        - label: Misc (including Data Sources)
+        - label: Organization
+        - label: Plugins (and other Extensibility)
+        - label: Security (Secrets, etc)
+        - label: Image Management
+        - label: UI/UX
+        - label: Documentation
+        - label: Other (not directly a platform feature)
+  - type: textarea
+    id: database_changes
+    attributes:
+      label: Database Changes
+      description: |
+        To support this new feature, does the necessary data already exist, or would new
+        models need to be created or additional fields on existing models need to be added?
+
+        It is OK to state you are unsure if this would or would not require changes.
+      placeholder: |
+        - ?
+  - type: textarea
+    id: external_dependencies
+    attributes:
+      label: External Dependencies
+      description: |
+        To support this new feature, would it require changing or introducing new dependencies
+        on external libraries or services?
+
+        It is OK to suggest an external library that could pose as a reference implementation
+        or be installed directly.
+      placeholder: |
+        - django-entangled
+        - django-extras

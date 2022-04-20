@@ -36,7 +36,7 @@ This will install the PostgreSQL database server and client.
 $ sudo apt install -y postgresql
 ```
 
-#### Create a Database
+#### Create a PostgreSQL Database
 
 At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
 is done with the following commands.
@@ -59,7 +59,7 @@ GRANT
 postgres=# \q
 ```
 
-#### Verify Service Status
+#### Verify PostgreSQL Service Status
 
 You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
 
@@ -88,7 +88,7 @@ This will install the MySQL database server and client. Additionally, MySQL requ
 sudo apt install -y libmysqlclient-dev mysql-server
 ```
 
-#### Create a Database
+#### Create a MySQL Database
 
 At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
@@ -112,7 +112,7 @@ owners.
 
 Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-mysql> CREATE DATABASE nautobot CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+mysql> CREATE DATABASE nautobot;
 Query OK, 1 row affected (0.00 sec)
 
 mysql> CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
@@ -125,7 +125,7 @@ mysql> \q
 Bye
 ```
 
-#### Verify Service Status
+#### Verify MySQL Service Status
 
 You can verify that authentication works issuing the following command and providing the configured password.
 
@@ -153,23 +153,23 @@ mysql> status
 --------------
 mysql  Ver 8.0.25-0ubuntu0.20.04.1 for Linux on x86_64 ((Ubuntu))
 
-Connection id:		13
-Current database:	nautobot
-Current user:		nautobot@localhost
-SSL:			Not in use
-Current pager:		stdout
-Using outfile:		''
-Using delimiter:	;
-Server version:		8.0.25-0ubuntu0.20.04.1 (Ubuntu)
-Protocol version:	10
-Connection:		Localhost via UNIX socket
-Server characterset:	utf8mb4
-Db     characterset:	utf8mb4
-Client characterset:	utf8mb4
-Conn.  characterset:	utf8mb4
-UNIX socket:		/var/run/mysqld/mysqld.sock
-Binary data as:		Hexadecimal
-Uptime:			26 min 31 sec
+Connection id:          13
+Current database:       nautobot
+Current user:           nautobot@localhost
+SSL:                    Not in use
+Current pager:          stdout
+Using outfile:          ''
+Using delimiter:        ;
+Server version:         8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+Protocol version:       10
+Connection:             Localhost via UNIX socket
+Server characterset:    utf8mb4
+Db     characterset:    utf8mb4
+Client characterset:    utf8mb4
+Conn.  characterset:    utf8mb4
+UNIX socket:            /var/run/mysqld/mysqld.sock
+Binary data as:         Hexadecimal
+Uptime:                 26 min 31 sec
 
 Threads: 2  Questions: 29  Slow queries: 0  Opens: 193  Flush tables: 3  Open tables: 112  Queries per second avg: 0.018
 --------------
@@ -182,7 +182,7 @@ Bye
 
 Since Redis was already installed, let's just verify that it's working using `redis-cli`:
 
-```
+```no-highlight
 $ redis-cli ping
 PONG
 ```

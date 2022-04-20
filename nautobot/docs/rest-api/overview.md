@@ -65,6 +65,9 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 
 Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
+!!! tip
+    You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=1.3` or `/api/?api_version=1.2`
+
 ## Endpoint Hierarchy
 
 Nautobot's entire REST API is housed under the API root at `https://<hostname>/api/`. The URL structure is divided at the root level by application: circuits, DCIM, extras, IPAM, plugins, tenancy, users, and virtualization. Within each application exists a separate path for each model. For example, the provider and circuit objects are located under the "circuits" application:
@@ -87,11 +90,90 @@ Each model generally has two views associated with it: a list view and a detail 
 
 Lists of objects can be filtered using a set of query parameters. For example, to find all interfaces belonging to the device with ID 6a522ebb-5739-4c5c-922f-ab4a2dc12eb0:
 
-```
+```no-highlight
 GET /api/dcim/interfaces/?device_id=6a522ebb-5739-4c5c-922f-ab4a2dc12eb0
 ```
 
 See the [filtering documentation](filtering.md) for more details.
+
+## Versioning
+
+As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
+
+1. A client may include a `version` in its HTTP Accept header, for example `Accept: application/json; version=1.3`
+2. A client may include an `api_version` as a URL query parameter, for example `/api/extras/jobs/?api_version=1.3`
+
+Generally the former approach is recommended when writing automated API integrations, as it can be set as a general request header alongside the [authentication token](authentication.md) and re-used across a series of REST API interactions, while the latter approach may be more convenient when initially exploring the REST API via the interactive documentation as described above.
+
+### Default Versions and Backward Compatibility
+
+By default, a REST API request that does not specify an API version number will default to compatibility with a specified Nautobot version. This default REST API version can be expected to remain constant throughout the lifespan of a given Nautobot major release.
+
+!!! note
+    For Nautobot 1.x, the default API behavior is to be compatible with the REST API of Nautobot version 1.2, in other words, for all Nautobot 1.x versions (beginning with Nautobot 1.2.0), `Accept: application/json` is functionally equivalent to `Accept: application/json; version=1.2`.
+
+!!! tip
+    The default REST API version compatibility may change in a subsequent Nautobot major release, so as a best practice, it is recommended that a REST API client _should always_ request the exact Nautobot REST API version that it is compatible with, rather than relying on the default behavior to remain constant.
+
+!!! tip
+    Any successful REST API response will include an `API-Version` header showing the API version that is in use for the specific API request being handled.
+
+### Non-Breaking Changes
+
+Non-breaking (forward- and backward-compatible) REST API changes may be introduced in major or minor Nautobot releases. Since these changes are non-breaking, they will _not_ correspond to the introduction of a new API version, but will be added seamlessly to the existing API version, and so will immediately be available to existing REST API clients. Examples would include:
+
+* Addition of new fields in GET responses
+* Added support for new, _optional_ fields in POST/PUT/PATCH requests
+* Deprecation (but not removal) of existing fields
+
+!!! important
+    There is no way to "opt out" of backwards-compatible enhancements to the REST API; because they are fully backwards-compatible there should never be a need to do so. Thus, for example, a client requesting API version `1.2` from a Nautobot 1.3 server may actually receive the (updated but still backwards-compatible) `1.3` API version as a response. For this reason, clients should always default to ignoring additional fields in an API response that they do not understand, rather than reporting an error.
+
+### Breaking Changes
+
+Breaking (non-backward-compatible) REST API changes also may be introduced in major or minor Nautobot releases. Examples would include:
+
+* Removal of deprecated fields
+* Addition of new, _required_ fields in POST/PUT/PATCH requests
+* Changed field types (for example, changing a single value to a list of values)
+* Redesigned API (for example, listing and accessing Job instances by UUID primary-key instead of by class-path string)
+
+Per Nautobot's [feature-deprecation policy](../development/index.md#deprecation-policy), the previous REST API version will continue to be supported for some time before eventually being removed.
+
+!!! important
+    When breaking changes are introduced in a minor release, for compatibility as described above, the default REST API behavior within the remainder of the current major release cycle will continue to be the previous (unchanged) API version. API clients must "opt in" to the new version of the API by explicitly requesting the new API version.
+
+!!! tip
+    This is another reason to always specify the exact `major.minor` Nautobot REST API version when developing a REST API client integration, as it guarantees that the client will be receiving the latest API feature set available in that release rather than possibly defaulting to an older REST API version that is still default but is now deprecated.
+
+### Example of API Version Behavior
+
+As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-compatible_ REST API for the `/api/extras/jobs/` endpoint, and also introduced a new, _backwards-compatible_ set of additional fields on the `/api/dcim/sites/` endpoint. Depending on what API version a REST client interacting with Nautobot 1.3 specified (or didn't specify), it would see the following responses from the server:
+
+| API endpoint        | Requested API version | Response                                     |
+| ------------------- | --------------------- | -------------------------------------------- |
+| `/api/extras/jobs/` | (unspecified)         | Deprecated 1.2-compatible REST API           |
+| `/api/extras/jobs/` | `1.2`                 | Deprecated 1.2-compatible REST API           |
+| `/api/extras/jobs/` | `1.3`                 | New/updated 1.3-compatible REST API          |
+
+!!! important
+    Note again that if not specifying an API version, the client _would not_ receive the latest API version when breaking changes are present. Even though the server had Nautobot version 1.3, the default Jobs REST API behavior would be that of Nautobot 1.2. Only by actually requesting API version `1.3` was the client able to access the new Jobs REST API.
+
+| API endpoint        | Requested API version | Response                                     |
+| ------------------- | --------------------- | -------------------------------------------- |
+| `/api/dcim/sites/`  | (unspecified)         | 1.3-updated, 1.2-compatible REST API         |
+| `/api/dcim/sites/`  | `1.2`                 | 1.3-updated, 1.2-compatible REST API         |
+| `/api/dcim/sites/`  | `1.3`                 | 1.3-updated, 1.2-compatible REST API         |
+
+| API endpoint        | Requested API version | Response                                     |
+| ------------------- | --------------------- | -------------------------------------------- |
+| `/api/dcim/racks/`  | (unspecified)         | 1.2-compatible REST API (unchanged)          |
+| `/api/dcim/racks/`  | `1.2`                 | 1.2-compatible REST API (unchanged)          |
+| `/api/dcim/racks/`  | `1.3`                 | 1.3-compatible REST API (unchanged from 1.2) |
+
+### APISelect with versioning capability
+
+The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
 
 ## Serialization
 
@@ -175,7 +257,7 @@ Together, these values identify a unique object in Nautobot. The assigned object
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
+-H "Accept: application/json; version=1.3; indent=4" \
 http://nautobot/api/ipam/ip-addresses/ \
 --data '{
     "address": "192.0.2.1/24",
@@ -213,9 +295,11 @@ If we wanted to assign this IP address to a virtual machine interface instead, w
 
 Most API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
 
-```
+```no-highlight
 GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
+```
 
+```json
 {
     "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
     "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
@@ -254,9 +338,11 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
 
 The brief format is much more terse:
 
-```
+```no-highlight
 GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
+```
 
+```json
 {
     "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
     "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
@@ -282,9 +368,10 @@ API responses which contain a list of many objects will be paginated for efficie
 
 Here is an example of a paginated response:
 
-```
+```json
 HTTP 200 OK
-Allow: GET, POST, OPTIONS
+Allow: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+API-Version: 1.2
 Content-Type: application/json
 Vary: Accept
 
@@ -310,7 +397,7 @@ Vary: Accept
 
 The default page is determined by the [`PAGINATE_COUNT`](../../configuration/optional-settings/#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
 
-```
+```no-highlight
 http://nautobot/api/dcim/devices/?limit=100
 ```
 
@@ -334,10 +421,12 @@ The maximum number of objects that can be returned is limited by the [`MAX_PAGE_
 
 ### Retrieving Multiple Objects
 
-To query Nautobot for a list of objects, make a `GET` request to the model's _list_ endpoint. Objects are listed under the response object's `results` parameter.
+To query Nautobot for a list of objects, make a `GET` request to the model's _list_ endpoint. Objects are listed under the response object's `results` parameter. Specifying the `Accept` header with the Nautobot API version is not required, but is strongly recommended.
 
 ```no-highlight
-curl -s -X GET http://nautobot/api/ipam/ip-addresses/ | jq '.'
+curl -s -X GET \
+-H "Accept: application/json; version=1.3" \
+http://nautobot/api/ipam/ip-addresses/ | jq '.'
 ```
 
 ```json
@@ -374,7 +463,9 @@ To query Nautobot for a single object, make a `GET` request to the model's _deta
     Note that the trailing slash is required. Omitting this will return a 302 redirect.
 
 ```no-highlight
-curl -s -X GET http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq '.'
+curl -s -X GET \
+-H "Accept: application/json; version=1.3" \
+http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq '.'
 ```
 
 ```json
@@ -387,12 +478,13 @@ curl -s -X GET http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69
 
 ### Creating a New Object
 
-To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](../authentication/) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`.
+To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](../authentication/) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version.
 
 ```no-highlight
 curl -s -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
 http://nautobot/api/ipam/prefixes/ \
 --data '{"prefix": "192.0.2.0/24", "site": 8df9e629-4338-438b-8ea9-06114f7be08e}' | jq '.'
 ```
@@ -436,7 +528,7 @@ To create multiple instances of a model using a single request, make a `POST` re
 ```no-highlight
 curl -X POST -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; indent=4" \
+-H "Accept: application/json; version=1.3; indent=4" \
 http://nautobot/api/dcim/sites/ \
 --data '[
 {"name": "Site 1", "slug": "site-1", "region": {"name": "United States"}},
@@ -470,12 +562,13 @@ http://nautobot/api/dcim/sites/ \
 
 ### Updating an Object
 
-To modify an object which has already been created, make a `PATCH` request to the model's _detail_ endpoint specifying its UUID. Include any data which you wish to update on the object. As with object creation, the `Authorization` and `Content-Type` headers must also be specified.
+To modify an object which has already been created, make a `PATCH` request to the model's _detail_ endpoint specifying its UUID. Include any data which you wish to update on the object. As with object creation, the `Authorization` and `Content-Type` headers must also be specified, and specifying the `Accept` header is also strongly recommended.
 
 ```no-highlight
 curl -s -X PATCH \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
 http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
 --data '{"status": "reserved"}' | jq '.'
 ```
@@ -523,6 +616,7 @@ Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` req
 curl -s -X PATCH \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
 http://nautobot/api/dcim/sites/ \
 --data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589", "status": "active"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f", "status": "active"}]'
 ```
@@ -539,6 +633,7 @@ To delete an object from Nautobot, make a `DELETE` request to the model's _detai
 ```no-highlight
 curl -s -X DELETE \
 -H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3" \
 http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/
 ```
 
@@ -555,6 +650,7 @@ Nautobot supports the simultaneous deletion of multiple objects of the same type
 curl -s -X DELETE \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
 http://nautobot/api/dcim/sites/ \
 --data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f"}, {"id": "c2516019-caf6-41f0-98a6-4276c1a73fa3"}]'
 ```

@@ -1,5 +1,9 @@
+import logging
+import uuid
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 
 from nautobot.dcim.models import Site, Rack
 from nautobot.ipam.models import VLAN
@@ -110,6 +114,36 @@ class RelationshipBaseTest(TestCase):
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
         self.m2ms_1.validated_save()
+
+        # Relationships involving a content type that doesn't actually have a backing model.
+        # This can occur in practice if, for example, a relationship is defined for a plugin-defined model,
+        # then the plugin is subsequently uninstalled or deactivated.
+        self.invalid_ct = ContentType.objects.create(app_label="nonexistent", model="nosuchmodel")
+
+        # Don't use validated_save() on these as it will fail due to the invalid content-type
+        self.invalid_relationships = [
+            Relationship.objects.create(
+                name="Invalid Relationship 1",
+                slug="invalid-relationship-1",
+                source_type=self.site_ct,
+                destination_type=self.invalid_ct,
+                type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            ),
+            Relationship.objects.create(
+                name="Invalid Relationship 2",
+                slug="invalid-relationship-2",
+                source_type=self.invalid_ct,
+                destination_type=self.site_ct,
+                type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+            ),
+            Relationship.objects.create(
+                name="Invalid Relationship 3",
+                slug="invalid-relationship-3",
+                source_type=self.invalid_ct,
+                destination_type=self.invalid_ct,
+                type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+            ),
+        ]
 
 
 class RelationshipTest(RelationshipBaseTest):
@@ -318,6 +352,38 @@ class RelationshipTest(RelationshipBaseTest):
 
 
 class RelationshipAssociationTest(RelationshipBaseTest):
+    def setUp(self):
+        super().setUp()
+
+        self.invalid_object_pks = [
+            uuid.uuid4(),
+            uuid.uuid4(),
+        ]
+
+        self.invalid_relationship_associations = [
+            RelationshipAssociation(
+                relationship=self.invalid_relationships[0],
+                source=self.sites[1],
+                destination_type=self.invalid_ct,
+                destination_id=self.invalid_object_pks[1],
+            ),
+            RelationshipAssociation(
+                relationship=self.invalid_relationships[1],
+                source_type=self.invalid_ct,
+                source_id=self.invalid_object_pks[0],
+                destination=self.sites[1],
+            ),
+            RelationshipAssociation(
+                relationship=self.invalid_relationships[2],
+                source_type=self.invalid_ct,
+                source_id=self.invalid_object_pks[0],
+                destination_type=self.invalid_ct,
+                destination_id=self.invalid_object_pks[1],
+            ),
+        ]
+        for cra in self.invalid_relationship_associations:
+            cra.validated_save()
+
     def test_clean_wrong_type(self):
         # Create with the wrong source Type
         with self.assertRaises(ValidationError) as handler:
@@ -350,7 +416,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
             cra.clean()
 
         expected_errors = {
-            "source": ["Unable to create more than one Primary Rack per Site association to Rack A (source)"]
+            "source": ["Unable to create more than one Primary Rack per Site association from Rack A (source)"]
         }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
@@ -365,7 +431,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2os_1, source=self.racks[0], destination=self.racks[2])
             cra.clean()
-        expected_errors = {"source": ["Unable to create more than one Redundant Rack association to Rack A (source)"]}
+        expected_errors = {"source": ["Unable to create more than one Redundant Rack association from Rack A (source)"]}
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         # Slightly tricky case - a symmetric one-to-one relationship where the proposed *source* is already in use
@@ -460,8 +526,137 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(cra.get_peer(self.vlans[0]), self.racks[0])
         self.assertEqual(cra.get_peer(self.vlans[1]), None)
 
+    def test_get_peer_invalid(self):
+        """Validate that get_peer() handles lookup errors gracefully."""
+        self.assertEqual(
+            self.invalid_relationship_associations[0].get_peer(self.invalid_relationship_associations[0].source), None
+        )
+        self.assertEqual(
+            self.invalid_relationship_associations[1].get_peer(self.invalid_relationship_associations[1].destination),
+            None,
+        )
+        self.assertEqual(self.invalid_relationship_associations[2].get_peer(None), None)
+
+    def test_str(self):
+        """Validate that the str() method works correctly."""
+        associations = [
+            RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[1]),
+            RelationshipAssociation(relationship=self.o2os_1, source=self.racks[0], destination=self.racks[1]),
+        ]
+        for association in associations:
+            association.validated_save()
+
+        self.assertEqual(str(associations[0]), f"{self.racks[0]} -> {self.sites[1]} - {self.o2o_1}")
+        self.assertEqual(str(associations[1]), f"{self.racks[0]} <-> {self.racks[1]} - {self.o2os_1}")
+        self.assertEqual(
+            str(self.invalid_relationship_associations[0]),
+            f"{self.sites[1]} -> unknown - {self.invalid_relationships[0]}",
+        )
+        self.assertEqual(
+            str(self.invalid_relationship_associations[1]),
+            f"unknown -> {self.sites[1]} - {self.invalid_relationships[1]}",
+        )
+        self.assertEqual(
+            str(self.invalid_relationship_associations[2]),
+            f"unknown <-> unknown - {self.invalid_relationships[2]}",
+        )
+
+    def test_get_relationships_data(self):
+        # In addition to the invalid associations for sites[1] defined in self.setUp(), add some valid ones
+        associations = [
+            RelationshipAssociation(relationship=self.o2m_1, source=self.sites[1], destination=self.vlans[0]),
+            RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[1]),
+            RelationshipAssociation(relationship=self.o2o_2, source=self.sites[0], destination=self.sites[1]),
+        ]
+        for association in associations:
+            association.validated_save()
+
+        with self.assertLogs(logger=logging.getLogger("nautobot.extras.models.relationships"), level="ERROR"):
+            data = self.sites[1].get_relationships_data()
+        self.maxDiff = None
+        # assertEqual doesn't work well on the entire data at once because it includes things like queryset objects
+        self.assertEqual(sorted(data.keys()), ["destination", "peer", "source"])
+        self.assertEqual(set(data["destination"].keys()), {self.o2o_1, self.o2o_2, self.invalid_relationships[1]})
+        self.assertEqual(
+            data["destination"][self.o2o_1],
+            {
+                "has_many": False,
+                "label": "Primary Rack",
+                "peer_type": self.rack_ct,
+                "url": reverse("dcim:rack", kwargs={"pk": self.racks[0].pk}),
+                "value": self.racks[0],
+            },
+        )
+        self.assertEqual(
+            data["destination"][self.o2o_2],
+            {
+                "has_many": False,
+                "label": "Alphabetically Subsequent",
+                "peer_type": self.site_ct,
+                "url": reverse("dcim:site", kwargs={"slug": self.sites[0].slug}),
+                "value": self.sites[0],
+            },
+        )
+        self.assertEqual(
+            data["destination"][self.invalid_relationships[1]],
+            {
+                "has_many": False,
+                "label": "Invalid Relationship 2",
+                "peer_type": self.invalid_ct,
+                "url": None,
+                "value": None,
+            },
+        )
+        self.assertEqual(set(data["peer"].keys()), {self.m2ms_1})
+        # Peer queryset is complex, but evaluates to an empty list in this case
+        self.assertEqual(list(data["peer"][self.m2ms_1]["queryset"]), [])
+        del data["peer"][self.m2ms_1]["queryset"]
+        self.assertEqual(
+            data["peer"][self.m2ms_1],
+            {
+                "has_many": True,
+                "label": "sites",
+                "peer_type": self.site_ct,
+                "value": None,
+            },
+        )
+        self.assertEqual(set(data["source"].keys()), {self.o2m_1, self.o2o_2, self.invalid_relationships[0]})
+        self.assertEqual(list(data["source"][self.o2m_1]["queryset"]), [associations[0]])
+        del data["source"][self.o2m_1]["queryset"]
+        self.assertEqual(
+            data["source"][self.o2m_1],
+            {
+                "has_many": True,
+                "label": "VLANs",
+                "peer_type": self.vlan_ct,
+                "value": None,
+            },
+        )
+        self.assertEqual(
+            data["source"][self.o2o_2],
+            {
+                "has_many": False,
+                "label": "Alphabetically Prior",
+                "peer_type": self.site_ct,
+                "url": None,
+                "value": None,
+            },
+        )
+        self.assertEqual(
+            data["source"][self.invalid_relationships[0]],
+            {
+                "has_many": False,
+                "label": "Invalid Relationship 1",
+                "peer_type": self.invalid_ct,
+                "url": None,
+                # value is None because the related object can't actually be found
+                "value": None,
+            },
+        )
+
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
+        initial_count = RelationshipAssociation.objects.count()
         associations = [
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
@@ -475,28 +670,28 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         # Create a self-referential association as well; validated_save() would correctly reject this one as invalid
         RelationshipAssociation.objects.create(relationship=self.o2o_2, source=self.sites[4], destination=self.sites[4])
 
-        self.assertEqual(6, RelationshipAssociation.objects.count())
+        self.assertEqual(6 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when their 'source' object is deleted
         self.racks[0].delete()
 
         # Both relations involving racks[0] should have been deleted
         # The relation between racks[1] and vlans[0] should remain, as should the site relations
-        self.assertEqual(4, RelationshipAssociation.objects.count())
+        self.assertEqual(4 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when their 'destination' object is deleted
         self.vlans[0].delete()
 
         # Site relation remains
-        self.assertEqual(3, RelationshipAssociation.objects.count())
+        self.assertEqual(3 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when there's a loop of source/destination references
         self.sites[3].delete()
-        self.assertEqual(1, RelationshipAssociation.objects.count())
+        self.assertEqual(1 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when the same object is both source and destination
         self.sites[4].delete()
-        self.assertEqual(0, RelationshipAssociation.objects.count())
+        self.assertEqual(initial_count, RelationshipAssociation.objects.count())
 
     def test_generic_relation(self):
         """Verify that the GenericRelations on the involved models work correctly."""

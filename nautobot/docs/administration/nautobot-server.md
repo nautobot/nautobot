@@ -68,7 +68,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 ```
 
 !!! note
-    The internals of this command are built into Celery. Please see the [official Celery workers guide](https://docs.celeryproject.org/en/stable/userguide/workers.html) for more information.
+    The internals of this command are built into Celery. Please see the [official Celery workers guide](https://docs.celeryq.dev/en/stable/userguide/workers.html) for more information.
 
 ### `collectstatic`
 
@@ -89,7 +89,7 @@ $ nautobot-server collectstatic
 
 `nautobot-server createsuperuser`
 
-Creates a superuser account that has all permissions. 
+Creates a superuser account that has all permissions.
 
 ```no-highlight
 $ nautobot-server createsuperuser
@@ -127,6 +127,23 @@ nautobot=> \q
 !!! note
     This is a built-in Django command. Please see the [official documentation on `dbshell`](https://docs.djangoproject.com/en/stable/ref/django-admin/#dbshell) for more information.
 
+### `dumpdata`
+
+```no-highlight
+$ nautobot-server dumpdata \
+  --natural-foreign \
+  --natural-primary \
+  --exclude contenttypes \
+  --exclude auth.permission \
+  --exclude extras.job \
+  --format json \
+  --indent 2 \
+  --traceback  > nautobot_dump.json
+```
+
+Use this command to generate a JSON dump of the database contents.
+
+One example of using this command would be to [`export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql).
 
 ### `fix_custom_fields`
 
@@ -165,12 +182,13 @@ Run health checks and exit 0 if everything went well.
 
 ```no-highlight
 $ nautobot-server health_check
-Cache backend: default   ... working
 DatabaseBackend          ... working
 DefaultFileStorageHealthCheck ... working
+RedisBackend             ... working
 ```
 
 Please see the [healthcheck documentation](../additional-features/healthcheck.md) for more information.
+
 ### `init`
 
 `nautobot-server init [config_path]`
@@ -200,6 +218,15 @@ There are a number of other options not covered here.
 
 !!! note
     This is a built-in management command provided by the [Cacheops plugin](https://github.com/Suor/django-cacheops) Nautobot for caching. Please see the official [Cacheops documentation on `invalidate`](https://github.com/Suor/django-cacheops#invalidation) for more information.
+
+### `loaddata`
+
+`nautobot-server loaddata --traceback nautobot_dump.json`
+
+To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
+
+- [`Remove the auto-populated Status records from the database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
 
 ### `migrate`
 
@@ -257,24 +284,24 @@ This will run the following management commands with default settings, in order:
 - `invalidate all`
 
 !!! note
-    Commands listed here that are not covered in this document here are Django built-in commands. 
+    Commands listed here that are not covered in this document here are Django built-in commands.
 
-`--no-clearsessions`<br>
+`--no-clearsessions`  
 Do not automatically clean out expired sessions.
 
-`--no-collectstatic`<br>
+`--no-collectstatic`  
 Do not automatically collect static files into a single location.
 
-`--no-invalidate-all`<br>
+`--no-invalidate-all`  
 Do not automatically invalidate cache for entire application.
 
-`--no-migrate`<br>
+`--no-migrate`  
 Do not automatically perform any database migrations.
 
-`--no-remove-stale-contenttypes`<br>
+`--no-remove-stale-contenttypes`  
 Do not automatically remove stale content types.
 
-`--no-trace-paths`<br>
+`--no-trace-paths`  
 Do not automatically generate missing cable paths.
 
 ```no-highlight
@@ -310,7 +337,7 @@ Invalidating cache...
 
 `nautobot-server renaturalize [app_label.ModelName [app_label.ModelName ...]]`
 
-Recalculate natural ordering values for the specified models. 
+Recalculate natural ordering values for the specified models.
 
 This defaults to recalculating natural ordering on all models which have one or more fields of type `NaturalOrderingField`:
 
@@ -356,10 +383,10 @@ Done.
 
 Run a job (script, report) to validate or update data in Nautobot.
 
-`--commit`<br>
+`--commit`  
 Commit changes to DB (defaults to dry-run if unset). `--username` is mandatory if using this argument.
 
-`--username <username>`<br>
+`--username <username>`  
 User account to impersonate as the requester of this job.
 
 ```no-highlight
@@ -444,10 +471,10 @@ Generate any missing cable paths among all cable termination objects in Nautobot
 
 After upgrading the database or working with Cables, Circuits, or other related objects, there may be a need to rebuild cached cable paths.
 
-`--force`<br>
+`--force`  
 Force recalculation of all existing cable paths.
 
-`--no-input`<br>
+`--no-input`  
 Do not prompt user for any input/confirmation.
 
 ```no-highlight
@@ -471,10 +498,10 @@ Finished.
 
 Start a simple listener to display received HTTP requests.
 
-`--port PORT`<br>
+`--port PORT`  
 Optional port number (default: `9000`)
 
-`--no-headers`<br>
+`--no-headers`  
 Hide HTTP request headers.
 
 ```no-highlight

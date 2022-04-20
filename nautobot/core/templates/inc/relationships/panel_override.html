@@ -1,0 +1,14 @@
+{% load helpers %}
+
+{% with relationships=relationships_fields_override %}
+    {% if relationships.source or relationships.destination or relationships.peer %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Relationships</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% include 'inc/relationships_table_rows.html' with relationships_data=relationships_fields_override %}
+            </table>
+        </div>
+    {% endif %}
+{% endwith %}
