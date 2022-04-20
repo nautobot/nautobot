@@ -561,6 +561,27 @@ The simplest way to test the entire execution of Jobs from 1.3 on is via calling
 
 Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.utilities.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 
+A simple example of a Job test case for 1.3.x and forward might look like the following:
+
+```python
+from nautobot.extras.models import Job, JobLogEntry
+from nautobot.utilities.testing import run_job_for_testing, TransactionTestCase
+
+
+class MyJobTestCase(TransactionTestCase):
+    def test_my_job(self):
+        # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
+        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
+        # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
+        job_result = run_job_for_testing(job, data={}, commit=False)
+
+        # Since we ran with commit=False, any database changes made by the job won't persist,
+        # but we can still inspect the logs created by running the job
+        log_entries = JobLogEntry.objects.filter(job_result=job_result)
+        for log_entry in log_entries:
+            self.assertEqual(log_entry.message, "...")
+```
+
 ### Nautobot 1.2
 
 If your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x, you need to handle a couple more things manually:
@@ -573,7 +594,7 @@ from django.conf import settings
 if "job_logs" in settings.DATABASES:
     settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
     settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
-  ```
+ ```
 
 Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test:
 
@@ -595,7 +616,6 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user"):
         name=job.class_path,
         obj_type=ContentType.objects.get_for_model(Job),
         user=user,
-        job_model=job,
         job_id=uuid.uuid4(),
     )
     with web_request_context(user=user) as request:
@@ -620,29 +640,6 @@ class MyJobTestCase(TransactionTestCase):
     def setUp(self):
         super().setUp()
         populate_status_choices(apps, None)
-```
-
----
-
-A simple example of a Job test case for 1.3.x and forward might look like the following:
-
-```python
-from nautobot.extras.models import Job, JobLogEntry
-from nautobot.utilities.testing import run_job_for_testing, TransactionTestCase
-
-
-class MyJobTestCase(TransactionTestCase):
-    def test_my_job(self):
-        # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
-        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
-        # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
-        job_result = run_job_for_testing(job, data={}, commit=False)
-
-        # Since we ran with commit=False, any database changes made by the job won't persist,
-        # but we can still inspect the logs created by running the job
-        log_entries = JobLogEntry.objects.filter(job_result=job_result)
-        for log_entry in log_entries:
-            self.assertEqual(log_entry.message, "...")
 ```
 
 !!! tip
