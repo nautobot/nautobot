@@ -238,8 +238,6 @@ jobs:
       - "tests-mysql"
   container-build:
     runs-on: "ubuntu-20.04"
-    needs:
-      - "integration-test"
     strategy:
       fail-fast: true
       matrix:
@@ -253,6 +251,8 @@ jobs:
         id: "gitbranch"
       - run: echo "##[set-output name=version;]$(egrep -m1 'file.*pyuwsgi-' poetry.lock | cut -f2 -d-)"
         id: "pyuwsgi"
+      - name: "Set up QEMU"
+        uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
         uses: "docker/setup-buildx-action@v1"
       - name: "Docker Metadata"
