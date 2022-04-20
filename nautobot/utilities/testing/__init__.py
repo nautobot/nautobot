@@ -67,8 +67,10 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
     if request and request.user:
         user_instance = request.user
     else:
-        user_model = get_user_model()
-        user_instance, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
+        User = get_user_model()
+        user_instance, _ = User.objects.get_or_create(
+            username=username, defaults={"is_superuser": True, "password": "password"}
+        )
     job_result = JobResult.objects.create(
         name=job.class_path,
         obj_type=ContentType.objects.get_for_model(Job),
@@ -94,10 +96,6 @@ class TransactionTestCase(_TransactionTestCase):
     """
     Base test case class using the TransactionTestCase for unit testing
     """
-
-    # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging
-    if "job_logs" in settings.DATABASES:
-        databases = ("default", "job_logs")
 
     def setUp(self):
         """Provide a clean, post-migration state before each test case.
