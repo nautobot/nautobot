@@ -153,6 +153,7 @@ ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-arm64/bin"
 
 RUN npm install --global markdownlint-cli@0.31.1
 
+# hadolint ignore=DL3006
 FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
 
 # Install development-specific dependencies of Nautobot
