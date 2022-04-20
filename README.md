@@ -20,15 +20,27 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ### Screenshots
 
-![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot1.png "Main page")
+![Screenshot of main page](nautobot/docs/media/screenshot1.png "Main page")
 
 ---
 
-![Screenshot of rack elevation](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot2.png "Rack elevation")
+![Screenshot of config contexts](nautobot/docs/media/screenshot2.png "Config Contexts")
 
 ---
 
-![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot3.png "Prefix hierarchy")
+![Screenshot of prefix hierarchy](nautobot/docs/media/screenshot3.png "Prefix hierarchy")
+
+---
+
+![Screenshot of golden config](nautobot/docs/media/screenshot4.png "Golden config")
+
+---
+
+![Screenshot of GraphQL](nautobot/docs/media/screenshot5.png "GraphQL API")
+
+---
+
+![Screenshot of chatops](nautobot/docs/media/screenshot6.png "ChatOps")
 
 ## Installation
 
