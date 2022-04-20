@@ -75,17 +75,39 @@ function setLightTheme() {
     displayDarkBtn();
 }
 
-$('#modalTheme').on('show.bs.modal', function(event) {
-    var button = $(event.relatedTarget) // Button that triggered the modal
+// $('#theme_modal').on('show.bs.modal', function(event) {
+//     var button = $(event.relatedTarget) // Button that triggered the modal
   
-    var modal = $(this)
+//     var modal = $(this)
   
-    modal.find('.modal-title').text('Select Nautobot Theme ')
-    modal.find('.modal-result').load('/modalTheme/')
-  })
+//     modal.find('.modal-title').text('Select Nautobot Theme ')
+//     modal.find('.modal-result').load('modals/modal_theme.html')
+//   })
 
-$('#modalTheme').on('hidden.bs.modal', function() {
-    var modal = $(this)
-    modal.find('.modal-title').text('')
-    modal.find('.modal-result').text('')
-})
+// $('#theme_modal').on('hidden.bs.modal', function() {
+//     var modal = $(this)
+//     modal.find('.modal-title').text('')
+//     modal.find('.modal-result').text('')
+// })
+
+$('#theme_modal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var obj = button.data('obj');
+    var url = button.data('url');
+    var modal_title = $(this).find('.modal-title');
+    var modal_body = $(this).find('.modal-body');
+    modal_title.text(obj);
+    modal_body.empty();
+    $.ajax({
+        url: url,
+        dataType: 'json',
+        success: function(json) {
+            $.each(json, function(i, segment) {
+                modal_body.append(
+                    'abcd' +
+                    '<hr />'
+                );
+            })
+        }
+    });
+});
