@@ -32,7 +32,7 @@ MD033: true
 # MD041 - First line in a file should be a top-level heading
 # This requires a top-level heading as the first line in every doc.
 # This is only ignored inline in docs/index.md, but enabled globally elsewhere.
-MD044: true
+MD041: true
 
 # MD046 - Code block style
 # This rule is triggered when unwanted or different code block styles are used in the same document.
