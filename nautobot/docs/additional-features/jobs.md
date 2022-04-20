@@ -566,6 +566,7 @@ Because of the way `run_job_for_testing` and more specifically `run_job()` works
 If your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x, you need to handle a couple more things manually:
 
 Set up the `"job_logs"` database correctly for testing:
+
 ```python
 from django.conf import settings
 
@@ -573,7 +574,9 @@ if "job_logs" in settings.DATABASES:
     settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
     settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
   ```
+
 Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test:
+
 ```python
 import uuid
 from django.contrib.auth import get_user_model
@@ -599,7 +602,9 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user"):
         run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
     return job_result
 ```
+
 Setup the `databases` field on the test class correctly, and re-create the default Statuses on `setUp` in your test classes, because `django.test.TransactionTestCase` truncates them on every `tearDown`:
+
 ```python
 from django.apps import apps
 from django.conf import settings
