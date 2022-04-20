@@ -104,8 +104,8 @@ Device.objects.filter(status=DeviceStatusChoices.STATUS_PLANNED)
 Update it to this:
 
 ```python
-from extras.models import Status
-from dcim.models import Device
+from nautobot.extras.models import Status
+from nautobot.dcim.models import Device
 
 Device.objects.filter(status=Status.objects.get(slug="planned"))
 ```
