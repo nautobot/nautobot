@@ -193,7 +193,7 @@ class ObjectPermissionForm(forms.ModelForm):
         # returns anything; we just want to make sure the specified constraints are valid.
         if object_types and constraints:
             # Normalize the constraints to a list of dicts
-            if type(constraints) is not list:
+            if not isinstance(constraints, list):
                 constraints = [constraints]
             for ct in object_types:
                 model = ct.model_class()

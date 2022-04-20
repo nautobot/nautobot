@@ -11,10 +11,12 @@
 When interacting with APIs, It's often necessary to build relationships between multiple models to achieve the result that is desired. Doing this typically requires multiple API calls to create the relationships. For example, lets assume that there are two devices in Nautobot. Each are assigned a site, region, roles, interfaces, and IP Addresses.
 
 Simply querying the `/api/dcim/devices/` API route provides:
-<div>
-  <details>
-    <summary>View API Results</summary>
-```
+
+<!-- markdownlint-disable MD033 -->
+<details>
+<summary>View API Results</summary>
+
+```json
 {
   "count": 2,
   "next": "https://demo.nautobot.com/api/dcim/devices/?limit=1&offset=2",
@@ -88,9 +90,8 @@ Simply querying the `/api/dcim/devices/` API route provides:
   ]
 }
 ```
-  </details>
-</div>
 
+</details>
 <br />
 There is a lot of useful information in that API call, but there is also a lot of information that is missing; such as interfaces and ip addresses associated with the devices. There is also potentially a lot of information that isn't needed for the specific task. To retrieve the missing information, subsequent API calls would need to be performed; and those API results would need to be correlated to the correct device.
 
@@ -106,15 +107,15 @@ In Nautobot, there is a link to the GraphQL web interface at the bottom right-ha
 
 If you're new to GraphQL, take a little bit of time to explore the *Documentation Explorer*. This can be accomplished by clicking the `< Docs` link in the GraphiQL interface. The information within *Documentation Explorer* is specific to creating queries in Nautobot.
 
-<img src="../images/graphql/01-graphiql-explorer.png" alt="Documentation Explorer" width="400">
+![Documentation Explorer](./images/graphql/01-graphiql-explorer.png)
 
 In the *Documentation Explorer*, search for `devices`. The results are all of the models that utilize the `devices` model.
 
-<img src="../images/graphql/02-graphiql-explorer-device-query.png" alt="Documentation Explorer: Devices" width="400">
+![Documentation Explorer: Devices](./images/graphql/02-graphiql-explorer-device-query.png)
 
 From the `devices` query, select `devices` from `Query.devices`. This will display all of the potential query fields from devices.
 
-<img src="../images/graphql/03-graphiql-explorer-device-attributes.png" alt="Documentation Explorer: Devices Attributes" width="400">
+![Documentation Explorer: Device Attributes](./images/graphql/03-graphiql-explorer-device-attributes.png)
 
 ### First Query
 
@@ -131,17 +132,15 @@ query {
 ```
 
 This query will retrieve a list of all devices by their hostname.
-<div>
-  <details>
-    <summary>View GraphQL Query Results</summary>
-    <img src="../images/graphql/04-graphql-query-01.png">
-  </details>
-</div>
 
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/04-graphql-query-01.png">
+</details>
 <br />
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
-<img src="../images/graphql/05-graphiql-autocomplete.png" alt="GraphQL: Autocompletion" width="400">
+![GraphQL: Autocompletion](./images/graphql/05-graphiql-autocomplete.png)
 
 ```graphql
 query {
@@ -155,13 +154,11 @@ query {
 ```
 
 The result is a list of all the devices by their hostname and associated interfaces by their names.
-<div>
-  <details>
-    <summary>View GraphQL Query Results</summary>
-    <img src="../images/graphql/06-graphql-query-02.png">
-  </details>
-</div>
 
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/06-graphql-query-02.png">
+</details>
 <br />
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
@@ -182,27 +179,22 @@ query {
 ```
 
 The results of the query look like:
-<div>
-  <details>
-    <summary>View GraphQL Query Results</summary>
-    <img src="../images/graphql/07-graphql-query-03.png">
-  </details>
-</div>
 
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/07-graphql-query-03.png">
+</details>
 <br />
-
 ### Filtering Queries
 
 These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 
 As an example. We can query devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
-<div>
-  <details>
-    <summary>View GraphQL Query Results</summary>
-    <img src="../images/graphql/08-graphql-query-04.png">
-  </details>
-</div>
 
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/08-graphql-query-04.png">
+</details>
 <br />
 GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`.
 
@@ -214,13 +206,10 @@ query {
 }
 ```
 
-<div>
-  <details>
-    <summary>View GraphQL Query Results</summary>
-    <img src="../images/graphql/09-graphql-query-05.png">
-  </details>
-</div>
-
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/09-graphql-query-05.png">
+</details>
 <br />
 You can also filter at deeper levels of the query. On many to one relationships you can filter the results based on an attribute of the field. Any attribute that relates to a GraphQLType can be filtered.
 
@@ -248,11 +237,26 @@ query {
 }
 ```
 
+<details>
+<summary>View GraphQL Query Results</summary>
+<img src="../images/graphql/11-graphql-query-06.png">
+</details>
+<br />
+You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
+
+```graphql
+query {
+  devices(site: "ams01", , limit: 1, offset: 1) {
+    name
+  }
+}
+```
+
 ## Using the GraphQL API in Nautobot
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.
 
-<img src="../images/graphql/10-graphql-swagger.png" alt="GraphQL: Swagger" width="400">
+![GraphQL: Swagger](./images/graphql/10-graphql-swagger.png)
 
 From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is required, as it is where we specify the GraphQL query. The `variables` field is optional; it's where we can assign values to any variables included in the query, if we choose to do so.
 

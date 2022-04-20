@@ -25,13 +25,34 @@ Please see the section on [migrating to Celery from RQ](./services.md#migrating-
 
 As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facilitate this, a new service called `celery-scheduler` is now required. Please review the [service installation documentation](./services.md#celery-beat-scheduler) to find out how to set it up.
 
+### Updating from Nautobot 1.2.x to 1.3.x
+
+#### Revision of Recommended MySQL UTF-8 Encoding
+
+The recommended database encoding settings have been revised to rely upon the default UTF-8 encoding provided by MySQL for collation of data in the database. Previously we were recommending in our documentation that the collation encoding be set explicitly to `utf8mb4_bin`. We are now recommending  `utf8mb4_0900_ai_ci` which is configured by default on unmodified MySQL database server deployments.
+
+The collation encoding is used to inform MySQL how characters are sorted in the database. This is important when it comes to retrieving data that has special characters or special byte-encoding such as accents or ligatures, and also including emojis. In some cases, with the `utf8mb4_bin` encoding we were previously recommending, case-insensitive searching may return inconsistent or incorrect results.
+
+!!! danger
+    It is **strongly recommended** that you backup your database before exuecitng this query and that you perform this in a non-production environment to identify any potential issues prior to updating your production environment.
+
+If you have an existing MySQL database, you may update your database to use the recommended encoding by using `nautobot-server dbshell` to launch a database shell and executing the following command:
+
+```no-highlight
+$ nautobot-server dbshell
+mysql> ALTER DATABASE nautobot COLLATE utf8mb4_0900_ai_ci;
+Query OK, 1 row affected (0.07 sec)
+```
+
+Please see the [official MySQL documentation on migrating collation encoding settings](https://dev.mysql.com/blog-archive/mysql-8-0-collations-migrating-from-older-collations/) for more information on troubleshooting any issues you may encounter.
+
 ## Update Prerequisites to Required Versions
 
-Nautobot v1.0.0 and later requires the following:
+Nautobot v1.3.0 and later requires the following:
 
 | Dependency | Minimum Version |
 |------------|-----------------|
-| Python     | 3.6             |
+| Python     | 3.7             |
 | PostgreSQL | 9.6             |
 | Redis      | 4.0             |
 
@@ -64,7 +85,7 @@ $ pip3 install --upgrade nautobot
 If you do not have any optional dependencies, you may skip this step.
 
 Once the new code is in place, verify that any optional Python packages required by your deployment (e.g. `napalm` or
-`django-auth-ldap`) are listed in `local_requirements.txt`. 
+`django-auth-ldap`) are listed in `local_requirements.txt`.
 
 Then, upgrade your dependencies using `pip3`:
 

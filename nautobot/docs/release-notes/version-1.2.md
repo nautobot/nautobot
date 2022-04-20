@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.2
 
 This document describes all new features and changes in Nautobot 1.2.
@@ -51,8 +52,8 @@ query {
 
 #### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
 
-Complex GraphQL queries have been greatly optimized thanks to integration of 
-[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+Complex GraphQL queries have been greatly optimized thanks to integration of
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot!
 
 In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
 
@@ -81,7 +82,7 @@ Jobs can now be optionally defined as `approval_required = True`, in which case 
 Jobs can now be scheduled for execution at a future date and time (such as during a planned maintenance window), and can also be scheduled for repeated execution on an hourly, daily, or weekly recurring cadence.
 
 !!! note
-    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
+    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
 Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
 
@@ -129,7 +130,7 @@ The Admin sub-site within Nautobot (`/admin/` and its child pages) has been reva
 Job log messages are now stored in a separate database table as a separate `JobLogEntry` data model, instead of being stored as JSON on the `JobResult` model/table. This provides faster and more robust rendering of `JobResult`-related views and lays groundwork for future enhancements of the Jobs feature.
 
 !!! note
-    If you use Jobs inside tests, your TestCase class(es) should have `@mock.patch("nautobot.extras.models.models.JOB_LOGS", None)`. This will allow the tests and the `JobLogEntry` objects to use the `default` database.
+    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../additional-features/jobs.md#testing-jobs) for details.
 
 !!! note
     Because `JobLogEntry` records reference their associated `JobResult`, the pattern `job.job_result = JobResult()` (creating only an in-memory `JobResult` object, rather than a database entry) will no longer work. Instead you will need to create a proper JobResult database object `job.job_result = JobResult.objects.create(...)`.
@@ -140,19 +141,31 @@ All models that have `slug` fields now use `AutoSlugField` from the `django-exte
 
 Just as with the UI, the `slug` can still always be explicitly set if desired.
 
-## v1.2.11 (2022-MM-DD)
+## v1.2.11 (2022-04-04)
 
 ### Added
 
+- [#1123](https://github.com/nautobot/nautobot/issues/1123) - Add validation for IPAddress assigned_object_type and assigned_object_id.
+- [#1146](https://github.com/nautobot/nautobot/issues/1146) - Added change date filtering lookup expressions to GraphQL.
+- [#1495](https://github.com/nautobot/nautobot/issues/1495) - Added full coverage of cable termination types to Graphene.
+- [#1501](https://github.com/nautobot/nautobot/issues/1501) - Add IP field to CSV export of device.
 - [#1529](https://github.com/nautobot/nautobot/pull/1529) - Added list of standard hex colors to the Tags documentation.
 
 ### Changed
 
+- [#1536](https://github.com/nautobot/nautobot/pull/1536) - Removed the ServiceUnavailable exception when no `primary_ip` is available for a device, but other connection options are available.
+- [#1581](https://github.com/nautobot/nautobot/issues/1581) - Changed MultipleChoiceJSONField to accept choices as a callable, fixing Datasource Contents provided by plugins are not accepted as valid choice by REST API.
+- [#1584](https://github.com/nautobot/nautobot/issues/1584) - Replaced links in docs to celeryproject.org with celeryq.dev
+
 ### Fixed
 
+- [#1313](https://github.com/nautobot/nautobot/issues/1313) - Fixed GraphQL query error on OneToOneFields such as `IPAddress.primary_ip4_for`
 - [#1408](https://github.com/nautobot/nautobot/issues/1408) - Fixed incorrect HTML in the Devices detail views.
 - [#1467](https://github.com/nautobot/nautobot/issues/1467) - Fixed an issue where at certain browser widths the nav bar would cover the top of the page content.
+- [#1523](https://github.com/nautobot/nautobot/issues/1523) - Fixed primary IP being unset after creating/updating different interface
 - [#1548](https://github.com/nautobot/nautobot/issues/1548) - Pin Jinja2 version for mkdocs requirements to fix RTD docs builds related to API deprecation in Jinja2 >= 3.1.0
+- [#1583](https://github.com/nautobot/nautobot/issues/1583) - Fixed Nautobot service definition in PostgreSQL-backed development environment.
+- [#1599](https://github.com/nautobot/nautobot/pull/1599) - Bump mkdocs version for Snyk report.
 
 ## v1.2.10 (2022-03-21)
 

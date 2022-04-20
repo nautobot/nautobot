@@ -90,6 +90,6 @@ def add_available_vlans(vlan_group, vlans):
         new_vlans.append({"vid": prev_vid + 1, "available": VLAN_VID_MAX - prev_vid})
 
     vlans = list(vlans) + new_vlans
-    vlans.sort(key=lambda v: v.vid if type(v) == VLAN else v["vid"])
+    vlans.sort(key=lambda v: v.vid if isinstance(v, VLAN) else v["vid"])
 
     return vlans

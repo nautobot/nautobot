@@ -9,7 +9,7 @@ Django migrations are used to express changes to the database schema. In most ca
 !!! warning
     Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
 
-```
+```no-highlight
 $ nautobot-server makemigrations <app> -n <name>
 $ nautobot-server migrate
 ```
@@ -23,7 +23,7 @@ Where possible, try to merge related changes into a single migration. For exampl
 
 If the new field introduces additional validation requirements (beyond what's included with the field itself), implement them in the model's `clean()` method. Remember to call the model's original method using `super()` before or after your custom validation as appropriate:
 
-```
+```python
 class Foo(models.Model):
 
     def clean(self):

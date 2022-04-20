@@ -647,8 +647,25 @@ class CoreConfig(NautobotConfig):
 
         super().ready()
 
+        # Magical monkey-patch TaggableManager to replace the `formfield()` method from our mixin.
+        from cacheops.utils import monkey_mix
+        from nautobot.extras.models import mixins
+        from taggit.managers import TaggableManager
 
-class NautobotServerConfig(ConstanceConfig):
+        monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
+
+
+class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
 
     verbose_name = "Configuration"
+
+
+class ConstanceDatabaseAppConfig(AppConfig):
+    """
+    Add an AppConfig for constance.backends.database
+    to work around https://github.com/jazzband/django-constance/issues/454
+    """
+
+    name = "constance.backends.database"
+    default_auto_field = "django.db.models.AutoField"

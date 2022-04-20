@@ -1,11 +1,14 @@
+import base64
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.testing import APIViewTestCases, APITestCase
 from nautobot.utilities.utils import deepmerge
+
+from rest_framework import HTTP_HEADER_ENCODING
 
 
 # Use the proper swappable User model
@@ -71,6 +74,190 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
         Group.objects.create(name="Group 1")
         Group.objects.create(name="Group 2")
         Group.objects.create(name="Group 3")
+
+
+class TokenTest(APIViewTestCases.APIViewTestCase):
+    model = Token
+    brief_fields = ["display", "id", "key", "url", "write_enabled"]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    def setUp(self):
+        super().setUp()
+
+        tokens = [
+            # We already start with one Token, created by the test class
+            Token.objects.create(user=self.user),
+            Token.objects.create(user=self.user),
+        ]
+
+        self.tokens = tokens + [self.token]
+
+        self.basic_auth_user_password = "abc123"
+        self.basic_auth_user_granted = User.objects.create_user(
+            username="basicusergranted", password=self.basic_auth_user_password
+        )
+
+        obj_perm = ObjectPermission(name="Test permission", actions=["add", "change", "view", "delete"])
+        obj_perm.save()
+        obj_perm.users.add(self.basic_auth_user_granted)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        self.basic_auth_user_permissionless = User.objects.create_user(
+            username="basicuserpermissionless", password=self.basic_auth_user_password
+        )
+
+        self.create_data = [
+            {
+                "description": "token1",
+            },
+            {
+                "description": "token2",
+            },
+            {
+                "description": "token3",
+            },
+        ]
+
+    def _create_basic_authentication_header(self, username, password):
+        """
+        Given username, password create a valid Basic authenticaition header string.
+
+        Same procedure used to test DRF.
+        """
+        credentials = f"{username}:{password}"
+        base64_credentials = base64.b64encode(credentials.encode(HTTP_HEADER_ENCODING)).decode(HTTP_HEADER_ENCODING)
+        return "Basic %s" % base64_credentials
+
+    def test_create_token_basic_authentication(self):
+        """
+        Test the provisioning of a new REST API token given a valid username and password.
+        """
+        auth = self._create_basic_authentication_header(
+            username=self.basic_auth_user_granted.username, password=self.basic_auth_user_password
+        )
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIn("key", response.data)
+        self.assertEqual(len(response.data["key"]), 40)
+        token = Token.objects.get(user=self.basic_auth_user_granted)
+        self.assertEqual(token.key, response.data["key"])
+
+    def test_create_token_basic_authentication_permissionless_user(self):
+        """
+        Test the behavior of the token create view when a user cannot create tokens
+        """
+        auth = self._create_basic_authentication_header(
+            username=self.basic_auth_user_permissionless.username, password=self.basic_auth_user_password
+        )
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_token_basic_authentication_invalid_password(self):
+        """
+        Test the behavior of the token create view when an invalid password is supplied
+        """
+        auth = self._create_basic_authentication_header(
+            username=self.basic_auth_user_granted.username, password="hunter2"
+        )
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_token_basic_authentication_invalid_user(self):
+        """
+        Test the behavior of the token create view when the user supplied is not a valid user
+        """
+        auth = self._create_basic_authentication_header(username="iamnotreal", password="P1n0cc#10")
+        response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_other_user_token_restriction(self):
+        """
+        Test to ensure that a user cannot create a token belonging to a different user.
+        """
+        # List all tokens available to user1
+        self.add_permissions("users.add_token")
+        self.add_permissions("users.change_token")
+        self.add_permissions("users.view_token")
+        previous_token_count = len(Token.objects.filter(user=self.basic_auth_user_granted))
+        self.client.post(self._get_list_url(), data={"user": self.basic_auth_user_granted.id}, **self.header)
+        self.assertEqual(len(Token.objects.filter(user=self.basic_auth_user_granted)), previous_token_count)
+
+    def test_edit_other_user_token_restriction(self):
+        """
+        Tests to ensure that a user cannot modify tokens belonging to other users.
+        """
+        other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
+
+        # Check to make sure user1 can't modify another user's token, without permissions
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 403)
+
+        self.add_permissions("users.add_token")
+        self.add_permissions("users.change_token")
+        self.add_permissions("users.view_token")
+        # Check to make sure user1 can't modify another user's token, with permissions
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 404)
+
+        # Check to make sure user1 can't take over another user's token, with permissions
+        previous_token_count = len(Token.objects.filter(user=self.user))
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"user": self.user.id}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(len(Token.objects.filter(user=self.user)), previous_token_count)
+
+        self.user.is_superuser = True
+        self.user.save()
+        # Check to make sure user1 can't modify another user's token, even as superuser
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 404)
+
+        # Check to make sure user1 can't take over another user's token, even as superuser
+        previous_token_count = len(Token.objects.filter(user=self.user))
+        response = self.client.patch(
+            self._get_detail_url(other_user_token), data={"user": self.user.id}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(len(Token.objects.filter(user=self.user)), previous_token_count)
+
+    def test_list_tokens_restrictions(self):
+        """
+        Test that the tokens API can only access tokens belonging to the authenticated user.
+        """
+        # Create users and tokens
+        other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
+
+        # List all tokens available to user1
+        self.add_permissions("users.view_token")
+        response = self.client.get(self._get_list_url(), **self.header)
+        # Assert that only the user1_token appears in the results
+        self.assertEqual(len(response.data["results"]), len(self.tokens))
+
+        token_ids_sot = sorted(map(lambda t: str(t.id), self.tokens))
+        token_ids_response = sorted(map(lambda t: t["id"], response.data["results"]))
+
+        self.assertEqual(token_ids_sot, token_ids_response)
+
+        # Check to make sure user1 can't search for another user's tokens
+        response = self.client.get(self._get_list_url(), data={"id": other_user_token.id}, **self.header)
+        self.assertEqual(len(response.data["results"]), 0)
+
+        # Check to make sure user1 can't access another user's tokens
+        response = self.client.get(self._get_detail_url(other_user_token), **self.header)
+        self.assertEqual(response.status_code, 404)
 
 
 class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):

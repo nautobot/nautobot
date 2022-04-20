@@ -8,7 +8,7 @@ Join the #nautobot channel in the Network to Code Slack for messages about secur
 
 We appreciate the time security researchers and users contribute to reporting vulnerabilities to the Nautobot Community.
 
-If you feel your report is safe for public disclosure (a CVE related to a dependency, or a low-risk bug) please feel free to open a bug [issue on GitHub](https://github.com/nautobot/nautobot/issues/new/choose). 
+If you feel your report is safe for public disclosure (a CVE related to a dependency, or a low-risk bug) please feel free to open a bug [issue on GitHub](https://github.com/nautobot/nautobot/issues/new/choose).
 
 If you are unsure of the severity of your report or you feel it should not be publicly disclosed until a fix has been released, you can also email [security@nautobot.com](mailto:security@nautobot.com) with the security details.
 
@@ -16,8 +16,8 @@ You may encrypt your email with the GPG keys of the security response members be
 
 ## When Should I Report a Vulnerability?
 
-- You think you discovered a potential security vulnerability in Nautobot   
-- You are unsure how a vulnerability affects Nautobot   
+- You think you discovered a potential security vulnerability in Nautobot
+- You are unsure how a vulnerability affects Nautobot
 - You think you discovered a vulnerability in another project that Nautobot depends on
 
 ## When Should I NOT Report a Vulnerability?
@@ -40,7 +40,7 @@ A public disclosure date is negotiated by the Nautobot maintainers and the bug s
 
 Disclosures, regardless of outcome, [will be published on GitHub](https://github.com/nautobot/nautobot/issues?q=label%3A%22security+disclosure%22) with the label "security disclosure".
 
-## Team 
+## Team
 
 Below are the current team members responsible for receiving and triaging Nautobot security issues.
 
