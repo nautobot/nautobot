@@ -146,6 +146,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#1667](https://github.com/nautobot/nautobot/issues/1667) - Updated README.md screenshots.
+
 ### Fixed
 
 ## v1.3.1 (2022-04-19)
