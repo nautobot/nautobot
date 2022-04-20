@@ -4,7 +4,6 @@ from contextlib import contextmanager
 
 from celery.contrib.testing.worker import start_worker
 from django.apps import apps
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import tag, TransactionTestCase as _TransactionTestCase
