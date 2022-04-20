@@ -189,6 +189,13 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Source of truth and network automation platform",
     "LICENSE": {"name": "Apache v2 License"},
     "VERSION": VERSION,
+    # For a semblance of backwards-compatibility with drf-yasg / OpenAPI 2.0, where "/api" was a common "basePath"
+    # in the schema.
+    # OpenAPI 3.0 removes "basePath" in favor of "servers", so we now declare "/api" as the server relative URL and
+    # trim it from all of the individual paths correspondingly.
+    # See also https://github.com/nautobot/nautobot-ansible/pull/135 for an example of why this is desirable.
+    "SERVERS": [{"url": "/api"}],
+    "SCHEMA_PATH_PREFIX_TRIM": True,
     # use sidecar - locally packaged UI files, not CDN
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
