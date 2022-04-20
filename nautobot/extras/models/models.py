@@ -67,9 +67,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     will be available to a Device in site A assigned to tenant B. Data is stored in JSON format.
     """
 
-    name = models.CharField(
-        max_length=100,
-    )
+    name = models.CharField(max_length=100, db_index=True)
 
     # A ConfigContext *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
@@ -226,7 +224,7 @@ class ConfigContextSchema(OrganizationalModel):
 
     name = models.CharField(max_length=200, unique=True)
     description = models.CharField(max_length=200, blank=True)
-    slug = AutoSlugField(populate_from="name", max_length=200, unique=None)
+    slug = AutoSlugField(populate_from="name", max_length=200, unique=None, db_index=True)
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -578,12 +576,12 @@ class ImageAttachment(BaseModel):
     """
 
     content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
-    object_id = models.UUIDField()
+    object_id = models.UUIDField(db_index=True)
     parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
     image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
     image_height = models.PositiveSmallIntegerField()
     image_width = models.PositiveSmallIntegerField()
-    name = models.CharField(max_length=50, blank=True)
+    name = models.CharField(max_length=50, blank=True, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

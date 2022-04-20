@@ -237,7 +237,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, db_index=True)
     role = models.ForeignKey(
         to="dcim.DeviceRole",
         on_delete=models.PROTECT,
@@ -392,12 +392,9 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         on_delete=models.CASCADE,
         related_name="interfaces",
     )
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, db_index=True)
     _name = NaturalOrderingField(
-        target_field="name",
-        naturalize_function=naturalize_interface,
-        max_length=100,
-        blank=True,
+        target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
     )
     description = models.CharField(max_length=200, blank=True)
     untagged_vlan = models.ForeignKey(

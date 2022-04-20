@@ -34,6 +34,7 @@ nav:
     - Migration:
         - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
+        - Migrating from PostgreSQL to MySQL: 'installation/migrating-from-postgresql.md'
     - Configuration:
         - Configuring Nautobot: 'configuration/index.md'
         - Required Settings: 'configuration/required-settings.md'

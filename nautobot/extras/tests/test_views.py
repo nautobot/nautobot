@@ -42,7 +42,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
@@ -1821,16 +1821,21 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
 
         cls.form_data = {
             "name": "Tag X",
             "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
+            "content_types": [ContentType.objects.get_for_model(Site).id],
         }
 
         cls.csv_data = (
@@ -1843,6 +1848,69 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.bulk_edit_data = {
             "color": "00ff00",
         }
+
+    def test_create_tags_with_content_types(self):
+        self.add_permissions("extras.add_tag")
+        site_content_type = ContentType.objects.get_for_model(Site)
+
+        form_data = {
+            **self.form_data,
+            "content_types": [site_content_type.id],
+        }
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        self.assertTrue(tag.exists())
+        self.assertEqual(tag[0].content_types.first(), site_content_type)
+
+    def test_create_tags_with_invalid_content_types(self):
+        self.add_permissions("extras.add_tag")
+        vlangroup_content_type = ContentType.objects.get_for_model(VLANGroup)
+
+        form_data = {
+            **self.form_data,
+            "content_types": [vlangroup_content_type.id],
+        }
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+
+        response = self.client.post(**request)
+        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        self.assertFalse(tag.exists())
+        self.assertIn("content_types: Select a valid choice", str(response.content))
+
+    def test_update_tags_remove_content_type(self):
+        """Test removing a tag content_type that is been tagged to a model"""
+        self.add_permissions("extras.change_tag")
+
+        tag_1 = Tag.objects.get(slug="tag-1")
+        site = Site.objects.create(name="site 1", slug="site-1")
+        site.tags.add(tag_1)
+
+        form_data = {
+            "name": tag_1.name,
+            "slug": tag_1.slug,
+            "color": "c0c0c0",
+            "content_types": [ContentType.objects.get_for_model(Device).id],
+        }
+
+        request = {
+            "path": self._get_url("edit", tag_1),
+            "data": post_data(form_data),
+        }
+
+        response = self.client.post(**request)
+        self.assertHttpStatus(
+            response, 200, ["content_types: Unable to remove dcim.site. Dependent objects were found."]
+        )
 
 
 class WebhookTestCase(

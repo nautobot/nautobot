@@ -24,7 +24,7 @@ A MIME type and file extension can optionally be defined for each export templat
 
 Here's an example device export template that will generate a simple Nagios configuration from a list of devices.
 
-```
+```jinja2
 {% for device in queryset %}{% if device.status and device.primary_ip %}define host{
         use                     generic-switch
         host_name               {{ device.name }}
@@ -35,7 +35,7 @@ Here's an example device export template that will generate a simple Nagios conf
 
 The generated output will look something like this:
 
-```
+```no-highlight
 define host{
         use                     generic-switch
         host_name               switch1

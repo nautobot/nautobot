@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.3.0-beta.1"
+version = "1.3.2-beta.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -60,13 +60,13 @@ django-filter = "~21.1"
 django-health-check = "~3.16.5"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.10.0"
-# Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
+# Modified Pre-order Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.13.4"
 # Prometheus metrics for Django
 django-prometheus = "~2.2.0"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
-# RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
+# RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
 django-rq = "~2.5.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.12.3", optional = true}
@@ -82,8 +82,12 @@ django-timezone-field = "~4.1.2"
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.13.1"
-# Swagger schema generation for the REST API
-drf-yasg = {extras = ["validation"], version = "~1.20.0"}
+# OpenAPI 3.0 schema generation for the REST API
+# TODO: fix for #688 is in master, not yet released
+# TODO: Remove "vendored" drf-spectacular
+drf-spectacular-sidecar = "2022.4.1"
+# 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
+drf-yasg = {version = "~1.20.0", extras = ["validation"]}
 # Git integrations for Python
 GitPython = "~3.1.27"
 # GraphQL support
@@ -142,7 +146,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = "~22.1.0"
+black = "~22.3.0"
 # Test code coverage measurement
 coverage = "~6.3.2"
 # Tool for debugging Django
@@ -157,7 +161,7 @@ invoke = "~1.6.0"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~3.2.3"
 # Rendering docs to HTML
-mkdocs = "~1.2.3"
+mkdocs = "~1.3.0"
 # Integration Tests
 requests = "~2.27.1"
 # Selenium web drivers for live integration testing
@@ -189,6 +193,7 @@ exclude = '''
     | buck-out
     | build
     | dist
+    | nautobot/third_party
   )/
 )
 '''
