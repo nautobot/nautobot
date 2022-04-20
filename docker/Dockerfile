@@ -144,7 +144,7 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 
 # Install NodeJS and use it to install markdownlint-cli
 
-RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-arm64.tar.gz && \
+RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-arm64.tar.xz && \
     mkdir -p /usr/local/lib/nodejs && \
     tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
     rm -rf /tmp/node.tar.xz
