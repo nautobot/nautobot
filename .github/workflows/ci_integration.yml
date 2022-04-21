@@ -241,9 +241,7 @@ jobs:
 
   container-build:
     runs-on: "ubuntu-20.04"
-    if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
-    needs:
-      - "integration-test"
+    if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/bsc-parallel-poetry')"
     strategy:
       fail-fast: true
       matrix:
