@@ -98,13 +98,7 @@
             </div>
         </div>
     </footer>
-    <!-- <div id="theme_modal" class="modal fade text-center">
-        <div class="modal-dialog">
-            <div class="modal-content">
-            </div>
-        </div>
-    </div> -->
-{% include 'inc/modal.html' with name='theme' content='abc'%}
+{% include 'modals/modal_theme.html' with name='theme'%}
 <script src="{% static 'js/theme.js' %}"></script>
 <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>

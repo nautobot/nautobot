@@ -534,3 +534,8 @@ span.hover_copy:hover .hover_copy_button {
 #accordion-toggle-all {
   display: inline;
 }
+
+/* Theme modal */
+.theme-table .img-responsive {
+  margin: 0 auto;
+}
