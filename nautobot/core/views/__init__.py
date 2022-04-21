@@ -147,6 +147,15 @@ class SearchView(View):
         )
 
 
+class ThemeView(View):
+    """
+    Display a modal for the user to select a theme for Nautobot.
+    """
+
+    def get(self, request):
+        return render(request, "modals/modal_theme.html", {})
+
+
 class StaticMediaFailureView(View):
     """
     Display a user-friendly error message with troubleshooting tips when a static media file fails to load.

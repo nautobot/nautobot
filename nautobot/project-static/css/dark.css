@@ -6,7 +6,8 @@ html {
   overflow-y: scroll;
 }
 html[data-theme="dark"] {
-  background: #000;
+  /* background: #000; */
+  background: #252627;
   filter: invert(1) hue-rotate(180deg);
 }
 /* Ignores inverting images for dark theme */
@@ -29,6 +30,13 @@ body {
 }
 body {
   padding-top: 70px;
+}
+body[data-theme="dark"] {
+  padding-top: 70px;
+  background-color: #252627 !important
+}
+.html .body[data-theme="dark"] {
+  background-color: #252627 !important
 }
 .wrapper {
   min-height: 100%;
@@ -533,9 +541,4 @@ span.hover_copy:hover .hover_copy_button {
 }
 #accordion-toggle-all {
   display: inline;
-}
-
-/* Theme modal */
-.theme-table .img-responsive {
-  margin: 0 auto;
 }

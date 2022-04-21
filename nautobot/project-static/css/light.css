@@ -5,27 +5,9 @@
 html {
   overflow-y: scroll;
 }
-html[data-theme="dark"] {
-  background: #000;
-  filter: invert(1) hue-rotate(180deg);
-}
-/* Ignores inverting images for dark theme */
-html[data-theme="dark"] img {
-  filter: invert(1) hue-rotate(180deg);
-}
-html[data-theme="dark"] button {
-  color: black;
-}
-html[data-theme="dark"] .btn {
-  color: black;
-}
-html[data-theme="dark"] .label {
-  color: black !important;
-}
 html,
 body {
   height: 100%;
-  overflow: auto;
 }
 body {
   padding-top: 70px;
@@ -533,9 +515,4 @@ span.hover_copy:hover .hover_copy_button {
 }
 #accordion-toggle-all {
   display: inline;
-}
-
-/* Theme modal */
-.theme-table .img-responsive {
-  margin: 0 auto;
 }
