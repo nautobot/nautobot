@@ -144,6 +144,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ## Added
 
+- [#1219](https://github.com/nautobot/nautobot/pull/1219) - Add ARM64 support (alpha).
+
 ### Changed
 
 - [#1667](https://github.com/nautobot/nautobot/issues/1667) - Updated README.md screenshots.
