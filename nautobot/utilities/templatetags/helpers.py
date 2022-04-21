@@ -324,13 +324,14 @@ def get_docs_url(model):
         >>> get_docs_url(obj)
         "static/docs/models/dcim/site.html"
     """
+    path = f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
     if model._meta.app_label in settings.PLUGINS:
         path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
-        if find(path):
-            return static(path)
-        return None
 
-    return static(f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html")
+    # Check to see if documentation exists in any of the static paths.
+    if find(path):
+        return static(path)
+    return None
 
 
 @library.filter()

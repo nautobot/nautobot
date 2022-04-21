@@ -145,6 +145,7 @@ ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-x64/bin"
 RUN npm install --global markdownlint-cli@0.31.1
 
 # Install development-specific dependencies of Nautobot
+# hadolint ignore=DL3059
 RUN poetry install --no-root --no-ansi --extras all
 
 # TODO Use nautobot init to generate the same config for all use cases
@@ -195,6 +196,7 @@ COPY docker/nautobot_config.append.py /opt/nautobot
 RUN useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
 
 # Make sure everything under /opt/nautobot and /prom_cache is owned by nautobot
+# hadolint ignore=DL3059
 RUN chown -R nautobot:nautobot /opt/nautobot /prom_cache
 
 # Set up Nautobot to run in production

@@ -124,10 +124,6 @@ class PluginWebhookTest(SeleniumTestCase):
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"))
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
 class PluginDocumentationTest(SeleniumTestCase):
     """These Testcases ensure plugin provided docs are supported."""
 

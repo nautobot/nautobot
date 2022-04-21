@@ -387,7 +387,7 @@ def loaddata(context, file_name):
 
 
 @task()
-def build_docs(context):
+def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
     build_nautobot_docs(context)
     build_example_plugin_docs(context)
@@ -506,7 +506,7 @@ def unittest(
 ):
     """Run Nautobot unit tests."""
     # First build the docs so they are available.
-    build_docs(context)
+    build_and_check_docs(context)
 
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
@@ -595,5 +595,6 @@ def tests(context, lint_only=False, keepdb=False):
     markdownlint(context)
     check_migrations(context)
     check_schema(context)
+    build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
