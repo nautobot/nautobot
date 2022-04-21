@@ -147,6 +147,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#1667](https://github.com/nautobot/nautobot/issues/1667) - Updated README.md screenshots.
+- [#1670](https://github.com/nautobot/nautobot/pull/1670) - Configure drf-spectacular schema to more closely match drf-yasg (related to: [nautobot-ansible#135](https://github.com/nautobot/nautobot-ansible/pull/135)).
 
 ### Fixed
 
