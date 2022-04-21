@@ -99,8 +99,7 @@ ENV PATH="${PATH}:/root/.local/bin"
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
 # For now we disable it.
-RUN poetry config virtualenvs.create false && \
-    poetry config installer.parallel false
+RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock README.md /source/
 
