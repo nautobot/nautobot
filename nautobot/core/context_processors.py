@@ -1,5 +1,4 @@
 from django.conf import settings as django_settings
-from django.contrib.auth import BACKEND_SESSION_KEY
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.extras.registry import registry
@@ -50,16 +49,4 @@ def sso_auth(request):
     return {
         "SAML_IDP": get_saml_idp,
         "SSO_AUTH_ENABLED": lambda: sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS),
-    }
-
-
-def user_auth_backend(request):
-    """
-    Expose the name of the current user's authentication backend
-    """
-
-    backend = request.session.get(BACKEND_SESSION_KEY, None)
-
-    return {
-        "USER_AUTH_BACKEND": backend,
     }

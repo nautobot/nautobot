@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
+    BACKEND_SESSION_KEY,
     login as auth_login,
     logout as auth_logout,
     update_session_auth_hash,
@@ -125,6 +126,10 @@ class LogoutView(View):
 #
 
 
+def get_auth_backend(request):
+    return request.session.get(BACKEND_SESSION_KEY, None)
+
+
 class ProfileView(LoginRequiredMixin, View):
     template_name = "users/profile.html"
 
@@ -135,6 +140,7 @@ class ProfileView(LoginRequiredMixin, View):
             self.template_name,
             {
                 "active_tab": "profile",
+                "user_auth_backend": get_auth_backend(request),
             },
         )
 
@@ -150,6 +156,7 @@ class UserConfigView(LoginRequiredMixin, View):
             {
                 "preferences": request.user.all_config(),
                 "active_tab": "preferences",
+                "user_auth_backend": get_auth_backend(request),
             },
         )
 
@@ -187,6 +194,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
             {
                 "form": form,
                 "active_tab": "change_password",
+                "user_auth_backend": get_auth_backend(request),
             },
         )
 
@@ -204,6 +212,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
             {
                 "form": form,
                 "active_tab": "change_password",
+                "user_auth_backend": get_auth_backend(request),
             },
         )
 
@@ -224,6 +233,7 @@ class TokenListView(LoginRequiredMixin, View):
             {
                 "tokens": tokens,
                 "active_tab": "api_tokens",
+                "user_auth_backend": get_auth_backend(request),
             },
         )
 
