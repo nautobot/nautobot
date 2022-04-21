@@ -152,7 +152,7 @@ Available tasks:
                       capablility).
   check-migrations    Check for missing migrations.
   check-schema        Render the REST API schema and check for problems.
-  cli                 Launch a bash shell inside the running Nautobot container.
+  cli                 Launch a bash shell inside the running Nautobot (or other) Docker container.
   createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
   debug               Start Nautobot and its dependencies in debug mode.
   destroy             Destroy all containers and volumes.
@@ -187,8 +187,9 @@ A development environment can be easily started up from the root of the project 
 
 Additional useful commands for the development environment:
 
-* `invoke start` - Starts all Docker containers to run in the background with debug disabled
-* `invoke stop` - Stops all containers created by `invoke start`
+* `invoke start [-s servicename]` - Starts all Docker containers (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
