@@ -51,7 +51,7 @@ def multivalue_field_factory(field_class):
 
             return [
                 # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-                super(field_class, self).to_python(v)
+                super(field_class, self).to_python(v)  # pylint: disable=bad-super-call
                 for v in value
                 if v
             ]

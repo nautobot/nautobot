@@ -267,7 +267,7 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=[], custom_data=None, custom_template=None, items=None, weight=1000):
+    def __init__(self, name, permissions=None, custom_data=None, custom_template=None, items=None, weight=1000):
         """
         Ensure panel properties.
 
@@ -279,6 +279,8 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this panel.
             weight (int): The weight of this panel.
         """
+        if permissions is None:
+            permissions = []
         super().__init__(permissions)
         self.custom_data = custom_data
         self.custom_template = custom_template
@@ -314,7 +316,7 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=[], items=None, weight=1000):
+    def __init__(self, name, permissions=None, items=None, weight=1000):
         """
         Ensure group properties.
 
@@ -324,6 +326,8 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this group.
             weight (int): The weight of this group.
         """
+        if permissions is None:
+            permissions = []
         super().__init__(permissions)
         self.name = name
         self.weight = weight

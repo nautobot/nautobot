@@ -126,12 +126,14 @@ class BaseJob:
     def __str__(self):
         return self.name
 
+    # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
+
     @classproperty
-    def file_path(cls):
+    def file_path(cls):  # pylint: disable=no-self-argument
         return inspect.getfile(cls)
 
     @classproperty
-    def class_path(cls):
+    def class_path(cls):  # pylint: disable=no-self-argument
         """
         Unique identifier of a specific Job class, in the form <source_grouping>/<module_name>/<ClassName>.
 
@@ -162,72 +164,72 @@ class BaseJob:
         return "/".join([source_grouping, cls.__module__, cls.__name__])
 
     @classproperty
-    def class_path_dotted(cls):
+    def class_path_dotted(cls):  # pylint: disable=no-self-argument
         """
         Dotted class_path, suitable for use in things like Python logger names.
         """
         return cls.class_path.replace("/", ".")
 
     @classproperty
-    def class_path_js_escaped(cls):
+    def class_path_js_escaped(cls):  # pylint: disable=no-self-argument
         """
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
-    def grouping(cls):
+    def grouping(cls):  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
         return getattr(module, "name", module.__name__)
 
     @classproperty
-    def name(cls):
+    def name(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "name", cls.__name__)
 
     @classproperty
-    def description(cls):
+    def description(cls):  # pylint: disable=no-self-argument
         return dedent(getattr(cls.Meta, "description", "")).strip()
 
     @classproperty
-    def description_first_line(cls):
+    def description_first_line(cls):  # pylint: disable=no-self-argument
         if cls.description:
             return cls.description.splitlines()[0]
         return ""
 
     @classproperty
-    def commit_default(cls):
+    def commit_default(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "commit_default", True)
 
     @classproperty
-    def hidden(cls):
+    def hidden(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "hidden", False)
 
     @classproperty
-    def field_order(cls):
+    def field_order(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "field_order", None)
 
     @classproperty
-    def read_only(cls):
+    def read_only(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "read_only", False)
 
     @classproperty
-    def approval_required(cls):
+    def approval_required(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "approval_required", False)
 
     @classproperty
-    def soft_time_limit(cls):
+    def soft_time_limit(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "soft_time_limit", 0)
 
     @classproperty
-    def time_limit(cls):
+    def time_limit(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "time_limit", 0)
 
     @classproperty
-    def has_sensitive_variables(cls):
+    def has_sensitive_variables(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "has_sensitive_variables", True)
 
     @classproperty
-    def properties_dict(cls):
+    def properties_dict(cls):  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
 

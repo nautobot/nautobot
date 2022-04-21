@@ -565,8 +565,8 @@ class Prefix(PrimaryModel, StatusModel):
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
-    @classproperty
-    def STATUS_CONTAINER(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_CONTAINER(cls):  # pylint: disable=no-self-argument
         """Return a cached "container" `Status` object for later reference."""
         if getattr(cls, "__status_container", None) is None:
             cls.__status_container = Status.objects.get_for_model(Prefix).get(slug="container")
@@ -884,8 +884,8 @@ class IPAddress(PrimaryModel, StatusModel):
     def get_duplicates(self):
         return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
-    @classproperty
-    def STATUS_SLAAC(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
         """Return a cached "slaac" `Status` object for later reference."""
         cls.__status_slaac = getattr(cls, "__status_slaac", None)
         if cls.__status_slaac is None:

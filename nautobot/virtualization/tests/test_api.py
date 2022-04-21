@@ -161,19 +161,19 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             local_context_data={"A": 1},
             status=statuses[0],
-        ),
+        )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
             cluster=clusters[0],
             local_context_data={"B": 2},
             status=statuses[0],
-        ),
+        )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
             cluster=clusters[0],
             local_context_data={"C": 3},
             status=statuses[0],
-        ),
+        )
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this

@@ -139,14 +139,14 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf2",
             label="Computed Field Two",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf3",
             label="Computed Field Three",
@@ -328,13 +328,13 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
 
 class ContentTypeTest(APITestCase):
@@ -2288,19 +2288,19 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             user=user1,
             assigned_object_type=ct,
             assigned_object_id=site1.pk,
-        ),
+        )
         Note.objects.create(
             note="Site maintenance has ended.",
             user=user1,
             assigned_object_type=ct,
             assigned_object_id=site1.pk,
-        ),
+        )
         Note.objects.create(
             note="Site is under duress.",
             user=user2,
             assigned_object_type=ct,
             assigned_object_id=site2.pk,
-        ),
+        )
 
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase):

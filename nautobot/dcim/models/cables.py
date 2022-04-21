@@ -134,8 +134,8 @@ class Cable(PrimaryModel, StatusModel):
     def get_absolute_url(self):
         return reverse("dcim:cable", args=[self.pk])
 
-    @classproperty
-    def STATUS_CONNECTED(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_CONNECTED(cls):  # pylint: disable=no-self-argument
         """Return a cached "connected" `Status` object for later reference."""
         if getattr(cls, "__status_connected", None) is None:
             try:

@@ -266,16 +266,16 @@ class ConfigContextSchemaTestCase(
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 4", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
         cls.form_data = {
             "name": "Schema X",
@@ -614,19 +614,19 @@ class NoteTestCase(
             user=user,
             assigned_object_type=content_type,
             assigned_object_id=site.pk,
-        ),
+        )
         Note.objects.create(
             note="Site maintenance has ended.",
             user=user,
             assigned_object_type=content_type,
             assigned_object_id=site.pk,
-        ),
+        )
         Note.objects.create(
             note="Site is under duress.",
             user=user,
             assigned_object_type=content_type,
             assigned_object_id=site.pk,
-        ),
+        )
 
         cls.form_data = {
             "note": "This is Site note.",
