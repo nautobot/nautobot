@@ -171,7 +171,7 @@ def buildx(
     platforms="linux/amd64",
     tag="networktocode/nautobot-dev-py3.7:local",
     target="dev",
-    poetry_parallel=False
+    poetry_parallel=False,
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
     print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
