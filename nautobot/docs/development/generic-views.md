@@ -1,4 +1,4 @@
-## Common Views
+# Generic Views
 
 * `ObjectView` - Retrieve a single object for display.
 * `ObjectListView` - List a series of objects.
