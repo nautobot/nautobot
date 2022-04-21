@@ -686,7 +686,7 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
 
         # Validate untagged VLAN
         if self.untagged_vlan and self.untagged_vlan.site not in [
-            self.parent.site,
+            self.parent_object.site,
             None,
         ]:
             raise ValidationError(

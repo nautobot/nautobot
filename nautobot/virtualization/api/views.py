@@ -1,4 +1,3 @@
-from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework.routers import APIRootView
 
 from nautobot.dcim.models import Device
@@ -94,40 +93,8 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
         return serializers.VirtualMachineWithConfigContextSerializer
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]
-    ),
-    create=extend_schema(responses={"201": serializers.VMInterfaceSerializer}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
-    list=extend_schema(responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
-)
 class VMInterfaceViewSet(ModelViewSet):
     queryset = VMInterface.objects.prefetch_related("virtual_machine", "parent", "tags", "tagged_vlans")
-    serializer_class = serializers.VMInterfaceSerializerVersion3
+    serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
     brief_prefetch_fields = ["virtual_machine"]
-
-    def is_not_version13(self):
-        return (
-            not self.brief
-            and not getattr(self, "swagger_fake_view", False)
-            and (
-                not hasattr(self.request, "major_version")
-                or self.request.major_version > 1
-                or (self.request.major_version == 1 and self.request.minor_version < 3)
-            )
-        )
-
-    def get_queryset(self):
-        if self.is_not_version13:
-            return VMInterface.objects.prefetch_related("virtual_machine", "tags", "tagged_vlans")
-        return super().get_queryset()
-
-    def get_serializer_class(self):
-        if self.is_not_version13():
-            return serializers.VMInterfaceSerializer
-        return super().get_serializer_class()

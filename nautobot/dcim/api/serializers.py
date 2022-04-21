@@ -1035,55 +1035,6 @@ class InterfaceSerializer(
     )
     cable = NestedCableSerializer(read_only=True)
     count_ipaddresses = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Interface
-        fields = [
-            "id",
-            "url",
-            "device",
-            "name",
-            "label",
-            "type",
-            "enabled",
-            "lag",
-            "mtu",
-            "mac_address",
-            "mgmt_only",
-            "description",
-            "mode",
-            "untagged_vlan",
-            "tagged_vlans",
-            "cable",
-            "cable_peer",
-            "cable_peer_type",
-            "connected_endpoint",
-            "connected_endpoint_type",
-            "connected_endpoint_reachable",
-            "tags",
-            "count_ipaddresses",
-            "custom_fields",
-            "computed_fields",
-        ]
-        opt_in_fields = ["computed_fields"]
-
-    def validate(self, data):
-
-        # Validate many-to-many VLAN assignments
-        device = self.instance.device if self.instance else data.get("device")
-        for vlan in data.get("tagged_vlans", []):
-            if vlan.site not in [device.site, None]:
-                raise serializers.ValidationError(
-                    {
-                        "tagged_vlans": f"VLAN {vlan} must belong to the same site as the interface's parent device, or "
-                        f"it must be global."
-                    }
-                )
-
-        return super().validate(data)
-
-
-class InterfaceSerializerVersion13(InterfaceSerializer):
     parent = NestedInterfaceSerializer(required=False, allow_null=True)
     bridge = NestedInterfaceSerializer(required=False, allow_null=True)
 
@@ -1119,6 +1070,21 @@ class InterfaceSerializerVersion13(InterfaceSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+
+    def validate(self, data):
+
+        # Validate many-to-many VLAN assignments
+        device = self.instance.device if self.instance else data.get("device")
+        for vlan in data.get("tagged_vlans", []):
+            if vlan.site not in [device.site, None]:
+                raise serializers.ValidationError(
+                    {
+                        "tagged_vlans": f"VLAN {vlan} must belong to the same site as the interface's parent device, or "
+                        f"it must be global."
+                    }
+                )
+
+        return super().validate(data)
 
 
 class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, CustomFieldModelSerializer):

@@ -220,6 +220,8 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
         required=False,
         many=True,
     )
+    parent = NestedVMInterfaceSerializer(required=False, allow_null=True)
+    bridge = NestedVMInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VMInterface
@@ -229,6 +231,8 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
             "virtual_machine",
             "name",
             "enabled",
+            "parent",
+            "bridge",
             "mtu",
             "mac_address",
             "description",
@@ -252,27 +256,3 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
                 )
 
         return super().validate(data)
-
-
-class VMInterfaceSerializerVersion3(VMInterfaceSerializer):
-    parent = NestedVMInterfaceSerializer(required=False, allow_null=True)
-    bridge = NestedVMInterfaceSerializer(required=False, allow_null=True)
-
-    class Meta:
-        model = VMInterface
-        fields = [
-            "id",
-            "url",
-            "virtual_machine",
-            "name",
-            "enabled",
-            "parent",
-            "bridge",
-            "mtu",
-            "mac_address",
-            "description",
-            "mode",
-            "untagged_vlan",
-            "tagged_vlans",
-            "tags",
-        ]

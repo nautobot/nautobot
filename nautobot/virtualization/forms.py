@@ -542,7 +542,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         required=False,
         display_field="display_name",
         query_params={
-            "virtual_machine_id": "virtual_machine",
+            "virtual_machine_id": "$virtual_machine",
         },
     )
     bridge = DynamicModelChoiceField(
