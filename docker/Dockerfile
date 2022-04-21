@@ -95,10 +95,6 @@ RUN curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
 ENV PATH="${PATH}:/root/.local/bin"
 
 # Poetry shouldn't create a venv as we want global install
-# Poetry 1.1.0 added parallel installation as an option;
-# unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
-# while simultaneously atttempting to *use* those packages to install other packages.
-# For now we disable it.
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock README.md /source/
