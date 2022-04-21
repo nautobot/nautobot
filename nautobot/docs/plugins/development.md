@@ -877,20 +877,21 @@ Some of the more common views are:
 * `BulkCreateView` - Create new objects in bulk.
 * `BulkDeleteView` - Delete objects in bulk.
 * `BulkEditView` - Edit objects in bulk.
+* `BulkImportView` - Import objects in bulk from CSV.
 
-Requirements to use the views.
+Once you define a view by subclassing any of the above generic classes, you must register it in your `urls.py` as usual. There are a few things to be aware of here:
 
 * Reverse URL naming needs to follow a template of `{modelname}_{method}` where the **model name** is lowercased model class name from `models.py` and **method** is the purpose of the view. E.g. `_list`, `_add`, `_edit`.
-* Specifically for the `ObjectListView` the URLs for each of the `action_buttons` to be utilized must be built out. By default this view has `action_buttons = ("add", "import", "export")`.  This means by default Nautobot would expect to have URLs/Views to be build for `add` and `import`, also `list` since that is the initial URL for this view.
+* The default rendering context for the `ObjectListView` includes some standard `action_buttons` for interacting with the listed model. By default this view defines `action_buttons = ("add", "import", "export")`. The `export` action is handled automatically by `ObjectListView`, but the `add` and `import` actions need corresponding views in order to work. In other words, if you implement an `ObjectListView` and do not override its `action_buttons`, you must also implement and register the corresponding `ObjectEditView` and `BulkImportView` subclasses as well.
 
 !!! warning
     If you're missing any of the aforementioned URLs/Views, when accessing your list view it will result in a error `Reverse for 'None' not found. 'None' is not a valid view function or pattern name.`
 
-If all of these views are not required you can simply update your view and overload the action buttons.  E.g. `action_buttons = ("add",)` or if none are required `action_buttons = ()`.
+If you do not need `ObjectEditView` and/or `BulkImportView` for your particular model, as an alternative you can simply update your `ObjectListView` subclass to overload the action buttons.  For example, `action_buttons = ("add",)` or if none are required `action_buttons = ()`.
 
-To demonstrate this concepts we can look at the `example_plugin` from the documentation.
+To demonstrate these concepts we can look at the `example_plugin` included in the Nautobot repository.
 
-The example plugin has a simple model called `ExampleModel`.
+The example plugin has a simple model called `ExampleModel`:
 
 ```python
 class ExampleModel(OrganizationalModel):
@@ -903,7 +904,7 @@ class ExampleModel(OrganizationalModel):
         ordering = ["name"]
 ```
 
-For the view its inheriting `generic.ObjectListView` and does **not** overload the `action_buttons`.
+The list view for this model subclasses `generic.ObjectListView` and does **not** overload the `action_buttons`:
 
 ```python
 class ExampleModelListView(generic.ObjectListView):
@@ -916,7 +917,7 @@ class ExampleModelListView(generic.ObjectListView):
 ```
 
 !!! info
-    Since action_buttons was not overloaded, `action_buttons = ("add", "import", "export")` is inherited.
+    Since `action_buttons` was not overloaded, `action_buttons = ("add", "import", "export")` is inherited.
 
 In order for this to work properly we expect to see `urls.py` have each of the required URLs/Views implemented with the template mentioned above.
 
