@@ -60,7 +60,7 @@ class VRF(PrimaryModel):
     are said to exist in the "global" table.)
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     rd = models.CharField(
         max_length=VRF_RD_MAX_LENGTH,
         unique=True,
@@ -761,6 +761,7 @@ class IPAddress(PrimaryModel, StatusModel):
         choices=IPAddressRoleChoices,
         blank=True,
         help_text="The functional role of this IP",
+        db_index=True,
     )
     assigned_object_type = models.ForeignKey(
         to=ContentType,
@@ -770,7 +771,7 @@ class IPAddress(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    assigned_object_id = models.UUIDField(blank=True, null=True)
+    assigned_object_id = models.UUIDField(blank=True, null=True, db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
     nat_inside = models.ForeignKey(
         to="self",
@@ -787,6 +788,7 @@ class IPAddress(PrimaryModel, StatusModel):
         validators=[DNSValidator],
         verbose_name="DNS Name",
         help_text="Hostname or FQDN (not case-sensitive)",
+        db_index=True,
     )
     description = models.CharField(max_length=200, blank=True)
 
@@ -1008,9 +1010,9 @@ class VLANGroup(OrganizationalModel):
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None)
+    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -1097,7 +1099,7 @@ class VLAN(PrimaryModel, StatusModel):
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, db_index=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1214,7 +1216,7 @@ class Service(PrimaryModel):
         null=True,
         blank=True,
     )
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     protocol = models.CharField(max_length=50, choices=ServiceProtocolChoices)
     ports = JSONArrayField(
         base_field=models.PositiveIntegerField(

@@ -62,10 +62,10 @@ class ObjectChange(BaseModel):
         null=True,
     )
     user_name = models.CharField(max_length=150, editable=False)
-    request_id = models.UUIDField(editable=False)
+    request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
     changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.PROTECT, related_name="+")
-    changed_object_id = models.UUIDField()
+    changed_object_id = models.UUIDField(db_index=True)
     changed_object = GenericForeignKey(ct_field="changed_object_type", fk_field="changed_object_id")
     related_object_type = models.ForeignKey(
         to=ContentType,
@@ -96,6 +96,17 @@ class ObjectChange(BaseModel):
 
     class Meta:
         ordering = ["-time"]
+        get_latest_by = "time"
+        indexes = [
+            models.Index(
+                name="extras_objectchange_triple_idx",
+                fields=["request_id", "changed_object_type_id", "changed_object_id"],
+            ),
+            models.Index(
+                name="extras_objectchange_double_idx",
+                fields=["request_id", "changed_object_type_id"],
+            ),
+        ]
 
     def __str__(self):
         return "{} {} {} by {}".format(

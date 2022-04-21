@@ -32,6 +32,19 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Linting: flake8"
         run: "poetry run invoke flake8"
+  markdownlint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Linting: markdownlint"
+        uses: "nosborn/github-action-markdown-cli@v3.0.1"
+        with:
+          config_file: ".markdownlint.yml"
+          files: "nautobot examples *.md"
+          ignore_files: "nautobot/project-static"
   hadolint:
     runs-on: "ubuntu-20.04"
     env:
@@ -69,6 +82,7 @@ jobs:
     needs:
       - "black"
       - "flake8"
+      - "markdownlint"
       - "hadolint"
   check-schema:
     runs-on: "ubuntu-20.04"
@@ -98,6 +112,7 @@ jobs:
     needs:
       - "black"
       - "flake8"
+      - "markdownlint"
       - "hadolint"
 
   tests-postgres:

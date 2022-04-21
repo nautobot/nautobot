@@ -227,6 +227,14 @@ For detailed installation instructions, please see the [official Poetry installa
 $ brew install hadolint
 ```
 
+#### Install markdownlint-cli
+
+[markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) is a tool used to validate and lint Markdown files, such as Nautobot's documentation, to ensure that they are correctly constructed. On macOS with [Homebrew](https://brew.sh/) you can install markdownlint-cli by running:
+
+```no-highlight
+$ brew install markdownlint-cli
+```
+
 #### Creating a Python Virtual Environment
 
 A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or *virtualenv*) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
