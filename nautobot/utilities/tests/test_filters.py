@@ -150,6 +150,65 @@ class BaseFilterSetTest(TestCase):
     def setUpTestData(cls):
         cls.filters = cls.TestFilterSet().filters
 
+    def test_generated_lookup_expression_filters(self):
+        """
+        Tests to ensure the internal helper method expands a CharFilter out to all natural lookup expressions.
+
+        Used by declared filters expansion and adding new filters.
+        """
+        magic_lookups = self.TestFilterSet._generate_lookup_expression_filters(
+            "magic_charfield", django_filters.CharFilter(field_name="charfield")
+        )
+
+        self.assertEqual(magic_lookups["magic_charfield__n"].lookup_expr, "exact")
+        self.assertEqual(magic_lookups["magic_charfield__n"].exclude, True)
+        self.assertEqual(magic_lookups["magic_charfield__ie"].lookup_expr, "iexact")
+        self.assertEqual(magic_lookups["magic_charfield__ie"].exclude, False)
+        self.assertEqual(magic_lookups["magic_charfield__nie"].lookup_expr, "iexact")
+        self.assertEqual(magic_lookups["magic_charfield__nie"].exclude, True)
+        self.assertEqual(magic_lookups["magic_charfield__ic"].lookup_expr, "icontains")
+        self.assertEqual(magic_lookups["magic_charfield__ic"].exclude, False)
+        self.assertEqual(magic_lookups["magic_charfield__nic"].lookup_expr, "icontains")
+        self.assertEqual(magic_lookups["magic_charfield__nic"].exclude, True)
+        self.assertEqual(magic_lookups["magic_charfield__isw"].lookup_expr, "istartswith")
+        self.assertEqual(magic_lookups["magic_charfield__isw"].exclude, False)
+        self.assertEqual(magic_lookups["magic_charfield__nisw"].lookup_expr, "istartswith")
+        self.assertEqual(magic_lookups["magic_charfield__nisw"].exclude, True)
+        self.assertEqual(magic_lookups["magic_charfield__iew"].lookup_expr, "iendswith")
+        self.assertEqual(magic_lookups["magic_charfield__iew"].exclude, False)
+        self.assertEqual(magic_lookups["magic_charfield__niew"].lookup_expr, "iendswith")
+        self.assertEqual(magic_lookups["magic_charfield__niew"].exclude, True)
+        self.assertEqual(magic_lookups["magic_charfield__re"].lookup_expr, "regex")
+        self.assertEqual(magic_lookups["magic_charfield__re"].exclude, False)
+        self.assertEqual(magic_lookups["magic_charfield__nre"].lookup_expr, "regex")
+        self.assertEqual(magic_lookups["magic_charfield__nre"].exclude, True)
+        self.assertEqual(magic_lookups["magic_charfield__ire"].lookup_expr, "iregex")
+        self.assertEqual(magic_lookups["magic_charfield__ire"].exclude, False)
+        self.assertEqual(magic_lookups["magic_charfield__nire"].lookup_expr, "iregex")
+        self.assertEqual(magic_lookups["magic_charfield__nire"].exclude, True)
+
+    def test_add_filter_field(self):
+        """
+        Testing to ensure add_filter method adds provided filter to resulting list as well as automagic expanded lookup expressions.
+        """
+        new_filter_set_field_name = "tacos"
+        new_filter_set_field = django_filters.CharFilter(field_name="charfield")
+
+        self.assertNotIn("tacos", self.TestFilterSet().filters.keys())
+
+        self.TestFilterSet.add_filter(new_filter_name=new_filter_set_field_name, new_filter_field=new_filter_set_field)
+
+        new_filter_keys = self.TestFilterSet().filters.keys()
+        self.assertIn("tacos", new_filter_keys)
+        self.assertIn("tacos__n", new_filter_keys)
+        self.assertIn("tacos__ie", new_filter_keys)
+
+        with self.assertRaises(TypeError):
+            self.TestFilterSet.add_filter(new_filter_name="tacos", new_filter_field=None)
+
+        with self.assertRaises(AttributeError):
+            self.TestFilterSet.add_filter(new_filter_name="charfield", new_filter_field=new_filter_set_field)
+
     def test_char_filter(self):
         self.assertIsInstance(self.filters["charfield"], django_filters.CharFilter)
         self.assertEqual(self.filters["charfield"].lookup_expr, "exact")

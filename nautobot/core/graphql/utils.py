@@ -71,3 +71,31 @@ def get_filtering_args_from_filterset(filterset_class):
         args["_type"] = args.pop("type")
 
     return args
+
+
+def construct_resolver(model_name, resolver_type):
+    """Constructs a resolve_[cable_peer|connected_endpoint]_<endpoint> function for a given model type.
+
+    Args:
+        model_name (str): Name of the model to construct a resolver function for (e.g. CircuitTermination).
+        resolver_type (str): One of ['connected_endpoint', 'cable_peer']
+    """
+    if resolver_type == "cable_peer":
+
+        def resolve(self, args):
+            peer = self.get_cable_peer()
+            if type(peer).__name__ == model_name:
+                return peer
+            return None
+
+        return resolve
+
+    if resolver_type == "connected_endpoint":
+
+        def resolve(self, args):
+            peer = self.connected_endpoint
+            if type(peer).__name__ == model_name:
+                return peer
+            return None
+
+        return resolve

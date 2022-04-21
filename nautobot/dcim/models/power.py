@@ -43,7 +43,7 @@ class PowerPanel(PrimaryModel):
 
     site = models.ForeignKey(to="Site", on_delete=models.PROTECT)
     rack_group = models.ForeignKey(to="RackGroup", on_delete=models.PROTECT, blank=True, null=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
 
     csv_headers = ["site", "rack_group", "name"]
 

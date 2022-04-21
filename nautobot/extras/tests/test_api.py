@@ -46,6 +46,8 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.utils import TaggableClassesQuery
+from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
@@ -750,6 +752,21 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_create_with_plugin_provided_contents(self):
+        """Test that `provided_contents` published by a plugin works."""
+        self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
+        url = self._get_list_url()
+        data = {
+            "name": "plugin_test",
+            "slug": "plugin-test",
+            "remote_url": "https://localhost/plugin-test",
+            "provided_contents": ["example_plugin.textfile"],
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(list(response.data["provided_contents"]), data["provided_contents"])
+
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
@@ -949,6 +966,12 @@ class JobAPIRunTestMixin:
     Mixin providing test cases for the "run" API endpoint, shared between the different versions of Job API testing.
     """
 
+    def setUp(self):
+        super().setUp()
+        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        self.job_model.enabled = True
+        self.job_model.validated_save()
+
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         """To be implemented by classes using this mixin."""
         raise NotImplementedError
@@ -1094,6 +1117,51 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         schedule = ScheduledJob.objects.last()
+        self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
+
+        return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_object_var_no_schedule(self, mock_get_worker_count):
+        """
+        Run a job with `approval_required` without providing a schedule.
+
+        Assert an immediate schedule that enforces it.
+        """
+        # Set approval_required=True
+        self.job_model.approval_required = True
+        self.job_model.save()
+
+        # Do the stuff.
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": device_role.pk,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+            # schedule is omitted
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        # Assert that a JobResult was NOT created.
+        self.assertFalse(JobResult.objects.exists())
+
+        # Assert that we have an immediate ScheduledJob and that it matches the job_model.
+        schedule = ScheduledJob.objects.last()
+        self.assertIsNotNone(schedule)
+        self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
+        self.assertEqual(schedule.approval_required, self.job_model.approval_required)
         self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
 
         return (response, schedule)  # so subclasses can do additional testing
@@ -1260,7 +1328,7 @@ class JobTestVersion13(
     """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
 
     model = Job
-    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "source", "url"]
+    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
     choices_fields = None
     update_data = {
         # source, module_name, job_class_name, installed are NOT editable
@@ -1294,12 +1362,6 @@ class JobTestVersion13(
 
     run_success_response_status = status.HTTP_201_CREATED
     api_version = "1.3"
-
-    def setUp(self):
-        super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        self.job_model.enabled = True
-        self.job_model.validated_save()
 
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
@@ -1377,12 +1439,6 @@ class JobTestVersion12(
 
     run_success_response_status = status.HTTP_200_OK
     api_version = "1.2"
-
-    def setUp(self):
-        super().setUp()
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        job_model.enabled = True
-        job_model.validated_save()
 
     def get_run_url(self, class_path="local/api_test_job/APITestJob"):
         return reverse("extras-api:job-run", kwargs={"class_path": class_path})
@@ -2113,7 +2169,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
         """
 
 
-class TagTest(APIViewTestCases.APIViewTestCase):
+class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag
     brief_fields = ["color", "display", "id", "name", "slug", "url"]
     create_data = [
@@ -2136,9 +2192,90 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+
+    def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
+
+        tag = Tag.objects.get(slug=self.create_data[0]["slug"])
+        self.assertEqual(
+            tag.content_types.count(),
+            TaggableClassesQuery().as_queryset.count(),
+        )
+
+
+class TagTestVersion13(
+    APIViewTestCases.CreateObjectViewTestCase,
+    APIViewTestCases.UpdateObjectViewTestCase,
+):
+    model = Tag
+    brief_fields = ["color", "display", "id", "name", "slug", "url"]
+    api_version = "1.3"
+    create_data = [
+        {"name": "Tag 4", "slug": "tag-4", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
+        {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
+    ]
+    bulk_update_data = {"content_types": [Site._meta.label_lower]}
+
+    @classmethod
+    def setUpTestData(cls):
+        tags = (
+            Tag.objects.create(name="Tag 1", slug="tag-1"),
+            Tag.objects.create(name="Tag 2", slug="tag-2"),
+            Tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in tags:
+            tag.content_types.add(ContentType.objects.get_for_model(Site))
+            tag.content_types.add(ContentType.objects.get_for_model(Device))
+
+    def test_create_tags_with_invalid_content_types(self):
+        self.add_permissions("extras.add_tag")
+
+        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+
+        tag = Tag.objects.filter(slug=data["slug"])
+        self.assertHttpStatus(response, 400)
+        self.assertFalse(tag.exists())
+        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+
+    def test_create_tags_without_content_types(self):
+        self.add_permissions("extras.add_tag")
+        data = {
+            "name": "Tag 8",
+            "slug": "tag-8",
+        }
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(str(response.data["content_types"][0]), "This field is required.")
+
+    def test_update_tags_remove_content_type(self):
+        """Test removing a tag content_type that is been tagged to a model"""
+        self.add_permissions("extras.change_tag")
+
+        tag_1 = Tag.objects.get(slug="tag-1")
+        site = Site.objects.create(name="site 1", slug="site-1")
+        site.tags.add(tag_1)
+
+        url = self._get_detail_url(tag_1)
+        data = {"content_types": [Device._meta.label_lower]}
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            str(response.data["content_types"][0]), "Unable to remove dcim.site. Dependent objects were found."
+        )
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

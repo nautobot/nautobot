@@ -16,6 +16,7 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
+    MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
     TagFilter,
@@ -872,7 +873,7 @@ class InterfaceFilterSet(
         field_name="name",
         label="Device (name)",
     )
-    device_id = MultiValueCharFilter(
+    device_id = MultiValueUUIDFilter(
         method="filter_device_id",
         field_name="pk",
         label="Device (ID)",
@@ -1106,13 +1107,13 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     )
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
-    rack_id = MultiValueCharFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
+    rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
-    site_id = MultiValueCharFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
+    site_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
     site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
-    tenant_id = MultiValueCharFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
+    tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     tag = TagFilter()
 
@@ -1149,7 +1150,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
@@ -1162,7 +1163,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
@@ -1175,7 +1176,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:

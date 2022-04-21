@@ -4,8 +4,8 @@ from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_yasg import openapi
-from drf_yasg.utils import no_body, swagger_auto_schema
+from nautobot.third_party.drf_spectacular.types import OpenApiTypes
+from nautobot.third_party.drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -20,7 +20,6 @@ from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
-    ModelViewSetMixin,
     ModelViewSet,
     ReadOnlyModelViewSet,
 )
@@ -109,7 +108,7 @@ class ConfigContextQuerySetMixin:
         """
         queryset = super().get_queryset()
         request = self.get_serializer_context()["request"]
-        if self.brief or "config_context" in request.query_params.get("exclude", []):
+        if self.brief or (request is not None and "config_context" in request.query_params.get("exclude", [])):
             return queryset
         return queryset.annotate_config_context_data()
 
@@ -223,7 +222,7 @@ class DynamicGroupViewSet(ModelViewSet):
 
     # FIXME(jathan): Figure out how to do dynamic `responses` serializer based on the `content_type`
     # of the DynamicGroup? May not be possible or even desirable to have a "dynamic schema".
-    # @swagger_auto_schema(method="get", responses={200: member_response})
+    # @extend_schema(methods=["get"], responses={200: member_response})
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
         """List member objects of the same type as the `content_type` for this dynamic group."""
@@ -263,7 +262,7 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
 
-    @swagger_auto_schema(method="post", request_body=serializers.GitRepositorySerializer)
+    @extend_schema(methods=["post"], request=serializers.GitRepositorySerializer)
     @action(detail=True, methods=["post"])
     def sync(self, request, pk):
         """
@@ -290,9 +289,9 @@ class GraphQLQueryViewSet(ModelViewSet):
     serializer_class = serializers.GraphQLQuerySerializer
     filterset_class = filters.GraphQLQueryFilterSet
 
-    @swagger_auto_schema(
-        method="post",
-        request_body=serializers.GraphQLQueryInputSerializer,
+    @extend_schema(
+        methods=["post"],
+        request=serializers.GraphQLQueryInputSerializer,
         responses={"200": serializers.GraphQLQueryOutputSerializer},
     )
     @action(detail=True, methods=["post"])
@@ -325,7 +324,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, approval_required, request):
+def _create_schedule(serializer, data, commit, job, job_model, request):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -345,17 +344,26 @@ def _create_schedule(serializer, data, commit, job, approval_required, request):
     else:
         time = serializer["start_time"]
         name = serializer["name"]
+
+    # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
+    #
+    # We pass in job_class and job_model here partly for forward/backward compatibility logic, and
+    # part fallback safety. It's mildly useful to store both the class_path string and the JobModel
+    # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
+    # null) you still have a bit of context on the ScheduledJob as to what it was originally
+    # scheduled for.
     scheduled_job = ScheduledJob(
         name=name,
         task="nautobot.extras.jobs.scheduled_job_handler",
         job_class=job.class_path,
+        job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
         kwargs=job_kwargs,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
-        approval_required=approval_required,
+        approval_required=job_model.approval_required,
     )
     scheduled_job.save()
     return scheduled_job
@@ -395,14 +403,24 @@ def _run_job(request, job_model, legacy_response=False):
         raise CeleryWorkerNotRunningException()
 
     job_content_type = ContentType.objects.get(app_label="extras", model="job")
-
     schedule_data = input_serializer.data.get("schedule")
-    # BUG TODO: it looks like by omitting "schedule" you can immediately run an approval_required job here...
+
+    # Default to a null JobResult.
+    job_result = None
+
+    # Assert that a job with `approval_required=True` has a schedule that enforces approval and
+    # executes immediately.
+    if schedule_data is None and job_model.approval_required:
+        schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
+
+    # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model.approval_required, request)
-        job_result = None
+        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request)
     else:
         schedule = None
+
+    # ... If we can't create one, create a JobResult instead.
+    if schedule is None:
         job_result = JobResult.enqueue_job(
             run_job,
             job.class_path,
@@ -435,26 +453,27 @@ def _run_job(request, job_model, legacy_response=False):
 class JobViewSet(
     # DRF mixins:
     # note no CreateModelMixin
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     # Nautobot mixins:
     BulkUpdateModelMixin,
     BulkDestroyModelMixin,
-    ModelViewSetMixin,
     # Base class
-    viewsets.GenericViewSet,
+    ReadOnlyModelViewSet,
 ):
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
-    # I don't see an easy way for swagger_auto_schema to provide a different schema depending on the API version.
-    # Since for now we default to the pre-1.3 API behavior, document that version in the schema for now.
-    @swagger_auto_schema(responses={"200": serializers.JobClassSerializer(many=True)})
+    # Custom schema for the deprecated 1.2 API version of this endpoint.
+    # For 1.3 and later, the standard autogenerated API schema is correct and does not need to be customized here.
+    @extend_schema(
+        filters=False,
+        responses={"200": serializers.JobClassSerializer(many=True)},
+        versions=["1.2"],
+    )
     def list(self, request, *args, **kwargs):
-        """List all known Jobs. Note that filtering of this list is only supported with API version 1.3 or later."""
+        """List all known Jobs."""
         if request.major_version > 1 or request.minor_version >= 3:
             # API version 1.3 or later - standard model-based response
             return super().list(request, *args, **kwargs)
@@ -486,7 +505,7 @@ class JobViewSet(
 
         return Response(serializer.data)
 
-    @swagger_auto_schema(
+    @extend_schema(
         deprecated=True,
         operation_id="extras_jobs_read_deprecated",
         responses={"200": serializers.JobClassDetailSerializer()},
@@ -523,8 +542,8 @@ class JobViewSet(
 
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
-    @action(detail=True)
+    @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
+    @action(detail=True, filterset_class=None)
     def variables(self, request, pk):
         """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
@@ -571,9 +590,9 @@ class JobViewSet(
             "POST": ["%(app_label)s.run_%(model_name)s"],
         }
 
-    @swagger_auto_schema(
+    @extend_schema(
         methods=["post"],
-        request_body=serializers.JobInputSerializer,
+        request=serializers.JobInputSerializer,
         responses={"201": serializers.JobRunResponseSerializer},
     )
     @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
@@ -582,10 +601,10 @@ class JobViewSet(
         job_model = self.get_object()
         return _run_job(request, job_model)
 
-    @swagger_auto_schema(
+    @extend_schema(
         deprecated=True,
         methods=["post"],
-        request_body=serializers.JobInputSerializer,
+        request=serializers.JobInputSerializer,
         responses={"200": serializers.JobClassDetailSerializer()},
         operation_id="extras_jobs_run_deprecated",
     )
@@ -678,16 +697,16 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             "POST": ["%(app_label)s.change_%(model_name)s"],
         }
 
-    @swagger_auto_schema(
-        method="post",
+    @extend_schema(
+        methods=["post"],
         responses={"200": serializers.ScheduledJobSerializer},
-        request_body=no_body,
-        manual_parameters=[
-            openapi.Parameter(
+        request=None,
+        parameters=[
+            OpenApiParameter(
                 "force",
-                openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="force execution even if start time has passed",
-                type=openapi.TYPE_BOOLEAN,
+                type=OpenApiTypes.BOOL,
             )
         ],
     )
@@ -729,9 +748,9 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             "POST": ["%(app_label)s.delete_%(model_name)s"],
         }
 
-    @swagger_auto_schema(
-        method="post",
-        request_body=no_body,
+    @extend_schema(
+        methods=["post"],
+        request=None,
     )
     @action(detail=True, methods=["post"], permission_classes=[ScheduledJobDeletePermissions])
     def deny(self, request, pk):
@@ -753,10 +772,10 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             "POST": ["%(app_label)s.view_%(model_name)s"],
         }
 
-    @swagger_auto_schema(
-        method="post",
+    @extend_schema(
+        methods=["post"],
         responses={"200": serializers.JobResultSerializer},
-        request_body=no_body,
+        request=None,
     )
     @action(detail=True, url_path="dry-run", methods=["post"], permission_classes=[ScheduledJobViewPermissions])
     def dry_run(self, request, pk):
@@ -881,10 +900,32 @@ class StatusViewSetMixin(ModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    create=extend_schema(responses={"201": serializers.TagSerializer}, versions=["1.2"]),
+    partial_update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+)
 class TagViewSet(CustomFieldModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
-    serializer_class = serializers.TagSerializer
+    serializer_class = serializers.TagSerializerVersion13
     filterset_class = filters.TagFilterSet
+
+    def get_serializer_class(self):
+        if (
+            not self.brief
+            and not getattr(self, "swagger_fake_view", False)
+            and (
+                not hasattr(self.request, "major_version")
+                or self.request.major_version > 1
+                or (self.request.major_version == 1 and self.request.minor_version < 3)
+            )
+        ):
+            return serializers.TagSerializer
+        return super().get_serializer_class()
 
 
 #

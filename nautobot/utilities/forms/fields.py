@@ -223,7 +223,7 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
     Field for choosing any number of `ContentType` objects.
 
     Optionally can restrict the available ContentTypes to those supporting a particular feature only.
-    Optionally can pass the selection through as a list of `{app_label}.{model}` strings intead of PK values.
+    Optionally can pass the selection through as a list of `{app_label}.{model}` strings instead of PK values.
     """
 
     STATIC_CHOICES = True

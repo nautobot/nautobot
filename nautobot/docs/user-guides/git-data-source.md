@@ -225,7 +225,7 @@ Similar to the other data sources, the repository can be added by navigating to 
 
 Once the repository syncs the details can be found in the **Synchronization Status** tab.  For example, the platform specifics were synced:
 
-![Syncronization Menu With Loaded Contexts](./images/git-as-data-source/14-git-data-source.png)
+![Synchronization Menu With Loaded Contexts](./images/git-as-data-source/14-git-data-source.png)
 
 The repository structure is:
 

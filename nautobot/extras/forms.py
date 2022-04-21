@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db.models.fields import TextField
-from django.forms import inlineformset_factory
+from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
@@ -71,7 +71,7 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .utils import FeatureQuery
+from .utils import FeatureQuery, TaggableClassesQuery
 
 
 #
@@ -323,7 +323,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
     tenant_groups = DynamicModelMultipleChoiceField(queryset=TenantGroup.objects.all(), required=False)
     tenants = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
     data = JSONField(label="")
 
     class Meta:
@@ -779,8 +779,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         choices=get_git_datasource_content_choices,
     )
 
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = GitRepository
         fields = [
@@ -934,8 +932,6 @@ class JobForm(BootstrapMixin, forms.Form):
 class JobEditForm(NautobotModelForm):
     slug = SlugField()
 
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = Job
         fields = [
@@ -1048,7 +1044,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         queryset=Job.objects.all(),
         required=False,
         to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/job-models/"),
+        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
     )
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
@@ -1089,8 +1085,8 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     model = ObjectChange
     q = forms.CharField(required=False, label="Search")
-    time_after = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
-    time_before = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
+    time__gte = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
+    time__lte = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
     action = forms.ChoiceField(
         choices=add_blank_choice(ObjectChangeActionChoices),
         required=False,
@@ -1216,8 +1212,6 @@ class SecretForm(NautobotModelForm):
     provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
-
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Secret
@@ -1390,10 +1384,27 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
 class TagForm(NautobotModelForm):
     slug = SlugField()
+    content_types = ModelMultipleChoiceField(
+        label="Content Type(s)",
+        queryset=TaggableClassesQuery().as_queryset,
+    )
 
     class Meta:
         model = Tag
-        fields = ["name", "slug", "color", "description"]
+        fields = ["name", "slug", "color", "description", "content_types"]
+
+    def clean(self):
+        data = super().clean()
+
+        if self.instance.present_in_database:
+            # check if tag is assigned to any of the removed content_types
+            content_types_id = [content_type.id for content_type in self.cleaned_data["content_types"]]
+            errors = self.instance.validate_content_types_removal(content_types_id)
+
+            if errors:
+                raise ValidationError(errors)
+
+        return data
 
 
 class TagCSVForm(CustomFieldModelCSVForm):
@@ -1419,6 +1430,12 @@ class AddRemoveTagsForm(forms.Form):
 class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Tag
     q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+        queryset=TaggableClassesQuery().as_queryset,
+    )
 
 
 class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):

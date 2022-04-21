@@ -54,9 +54,9 @@ class RackGroup(MPTTModel, OrganizationalModel):
     campus. If a Site instead represents a single building, a RackGroup might represent a single room or floor.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None)
+    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     parent = TreeForeignKey(
         to="self",
@@ -165,8 +165,8 @@ class Rack(PrimaryModel, StatusModel):
     Each Rack is assigned to a Site and (optionally) a RackGroup.
     """
 
-    name = models.CharField(max_length=100)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
+    name = models.CharField(max_length=100, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     facility_id = models.CharField(
         max_length=50,
         blank=True,
@@ -198,7 +198,7 @@ class Rack(PrimaryModel, StatusModel):
         null=True,
         help_text="Functional role",
     )
-    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number")
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
         max_length=50,
         blank=True,

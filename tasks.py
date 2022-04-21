@@ -111,6 +111,7 @@ def docker_compose(context, command, **kwargs):
 def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
+        print(f'Running command "{command}"')
         context.run(command, pty=True, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
@@ -135,7 +136,11 @@ def run_command(context, command, **kwargs):
 )
 def build(context, force_rm=False, cache=True):
     """Build Nautobot docker image."""
-    command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
+    command = (
+        "build"
+        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
+        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
+    )
 
     if not cache:
         command += " --no-cache"
@@ -165,11 +170,19 @@ def buildx(
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
     print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
-    command = f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile --build-arg PYTHON_VER={context.nautobot.python_ver} ."
+    command = (
+        f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
+        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
+        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
+        " ."
+    )
     if not cache:
         command += " --no-cache"
     else:
-        command += f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver} --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
+        command += (
+            f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver}"
+            f" --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
+        )
 
     context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
@@ -181,6 +194,15 @@ def get_nautobot_version():
 
     version_match = re.findall(r"version = \"(.*)\"\n", content)
     return version_match[0]
+
+
+def get_dependency_version(dependency_name):
+    """Get the version of a given direct dependency from `pyproject.toml`."""
+    with open("pyproject.toml", "r") as fh:
+        content = fh.read()
+
+    version_match = re.search(rf'^{dependency_name} = .*"[~^]?([0-9.]+)"', content, flags=re.MULTILINE)
+    return version_match.group(1)
 
 
 @task(
@@ -399,11 +421,38 @@ def hadolint(context):
 
 
 @task
+def markdownlint(context):
+    """Lint Markdown files."""
+    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
 
     run_command(context, command)
+
+
+@task(
+    help={
+        "api_version": "Check a single specified API version only.",
+    },
+)
+def check_schema(context, api_version=None):
+    if api_version is not None:
+        api_versions = [api_version]
+    else:
+        nautobot_version = get_nautobot_version()
+        # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
+        current_major, current_minor = nautobot_version.split(".")[:2]
+        assert current_major == "1", f"check_schemas version calc must be updated to handle version {current_major}"
+        api_versions = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+
+    for api_version in api_versions:
+        command = f"nautobot-server spectacular --api-version {api_version} --validate --fail-on-warn --file /dev/null"
+        run_command(context, command)
 
 
 @task(
@@ -516,6 +565,8 @@ def tests(context, lint_only=False, keepdb=False):
     black(context)
     flake8(context)
     hadolint(context)
+    markdownlint(context)
     check_migrations(context)
+    check_schema(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
