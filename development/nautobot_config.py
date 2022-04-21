@@ -92,6 +92,14 @@ if not TESTING:
     }
 
 #
+# Plugins
+#
+
+PLUGINS = [
+    "example_plugin",
+]
+
+#
 # Redis
 #
 

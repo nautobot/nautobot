@@ -175,6 +175,8 @@ rich = "~12.5.1"
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
+pylint = {version = "~2.14.5", python = "^3.7.2"}
+pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -203,3 +205,131 @@ exclude = '''
   )/
 )
 '''
+
+[tool.pylint.master]
+load-plugins = "pylint_django"
+py-version = "3.7"
+ignore-paths = [
+    ".*third_party.*"
+]
+
+[tool.pylint.basic]
+# No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
+no-docstring-rgx="^(_|test_|Meta$)"
+# Don't complain about "pk" as a variable name
+good-names = """_,i,j,k,pk"""
+
+[tool.pylint.message_control]
+# TODO: re-enable and fix these as time permits
+disable=""",
+    abstract-class-instantiated,
+    abstract-method,
+    access-member-before-definition,
+    arguments-differ,
+    arguments-renamed,
+    assignment-from-no-return,
+    assignment-from-none,
+    attribute-defined-outside-init,
+    bad-super-call,
+    broad-except,
+    consider-iterating-dictionary,
+    consider-using-f-string,
+    consider-using-from-import,
+    consider-using-in,
+    consider-using-generator,
+    cyclic-import,
+    dangerous-default-value,
+    deprecated-decorator,
+    deprecated-method,
+    deprecated-module,
+    duplicate-code,
+    duplicate-key,
+    empty-docstring,
+    exec-used,
+    expression-not-assigned,
+    fixme,
+    function-redefined,
+    global-statement,
+    global-variable-not-assigned,
+    hard-coded-auth-user,
+    implicit-str-concat,
+    import-error,
+    import-outside-toplevel,
+    inconsistent-return-statements,
+    invalid-envvar-default,
+    invalid-name,
+    invalid-overridden-method,
+    invalid-str-returned,
+    keyword-arg-before-vararg,
+    line-too-long,
+    logging-format-interpolation,
+    logging-fstring-interpolation,
+    missing-class-docstring,
+    missing-function-docstring,
+    missing-module-docstring,
+    modelform-uses-exclude,
+    no-else-raise,
+    no-else-return,
+    no-member,
+    no-self-argument,
+    no-value-for-parameter,
+    not-an-iterable,
+    not-callable,
+    pointless-statement,
+    pointless-string-statement,
+    protected-access,
+    raise-missing-from,
+    redefined-argument-from-local,
+    redefined-builtin,
+    redefined-outer-name,
+    redundant-unittest-assert,
+    reimported,
+    self-assigning-variable,
+    signature-differs,
+    super-init-not-called,
+    super-with-arguments,
+    superfluous-parens,
+    too-few-public-methods,
+    too-many-ancestors,
+    too-many-arguments,
+    too-many-boolean-expressions,
+    too-many-branches,
+    too-many-instance-attributes,
+    too-many-lines,
+    too-many-locals,
+    too-many-nested-blocks,
+    too-many-public-methods,
+    too-many-return-statements,
+    too-many-statements,
+    trailing-comma-tuple,
+    unbalanced-tuple-unpacking,
+    undefined-loop-variable,
+    ungrouped-imports,
+    unidiomatic-typecheck,
+    unnecessary-comprehension,
+    unnecessary-dunder-call,
+    unnecessary-pass,
+    unspecified-encoding,
+    unsubscriptable-object,
+    unused-argument,
+    unused-import,
+    unused-variable,
+    unused-wildcard-import,
+    use-dict-literal,
+    use-list-literal,
+    use-maxsplit-arg,
+    used-before-assignment,
+    useless-object-inheritance,
+    useless-super-delegation,
+    using-constant-test,
+    wildcard-import,
+    wrong-import-order,
+    wrong-import-position,
+    """
+
+[tool.pylint.miscellaneous]
+# We don't want to fail on "TODO" comments as there are plenty of those in our code for good reason
+notes = """,
+    FIXME,
+    XXX,
+    """
