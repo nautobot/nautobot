@@ -122,3 +122,33 @@ class PluginWebhookTest(SeleniumTestCase):
         with open(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"), "r") as f:
             self.assertEqual(json.loads(f.read()), {"message": "created"})
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"))
+
+
+@skipIf(
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
+)
+class PluginDocumentationTest(SeleniumTestCase):
+    """These Testcases ensure plugin provided docs are supported."""
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+    def tearDown(self):
+        self.logout()
+        super().tearDown()
+
+    def test_object_edit_help_provided(self):
+        """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_add")}')
+
+        self.assertTrue(self.browser.links.find_by_partial_href("example_plugin/docs/models/examplemodel.html"))
+
+    def test_object_edit_help_not_provided(self):
+        """The AnotherExampleModel object doesn't provide model documentation, this test ensures no help link is provided."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:anotherexamplemodel_add")}')
+
+        self.assertFalse(self.browser.links.find_by_partial_href("example_plugin/docs/models/anotherexamplemodel.html"))

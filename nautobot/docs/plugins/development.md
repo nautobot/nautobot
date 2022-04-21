@@ -1027,7 +1027,7 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 
 ## Adding Help Documentation
 
-If you are using the `generic.ObjectEditView` from Nautobot for your object, the form will include a help icon with a link to that object's documentation. In order to resolve this link, the view expects to find the documentation for this object in a specific directory tree:
+If you are using the `generic.ObjectEditView` from Nautobot for your object, the form can automatically include a help icon with a link to that object's documentation. For this to happen, Nautobot must be able to find the documentation for this object in a specific directory tree within your plugin:
 
 ```no-highlight
 plugin_name/                   # "nautobot_animal_sounds"

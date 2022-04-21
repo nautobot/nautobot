@@ -5,6 +5,7 @@ import re
 import yaml
 from django import template
 from django.conf import settings
+from django.contrib.staticfiles.finders import find
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import strip_tags
@@ -308,20 +309,26 @@ def get_docs_url(model):
     """Return the documentation URL for the specified model.
 
     Nautobot Core models have a path like docs/models/{app_label}/{model_name}
-    while plugins will have {app_label}/docs/models/{model_name}.
+    while plugins will have {app_label}/docs/models/{model_name}. If the html file
+    does not exist, this function will return None.
 
     Args:
         model (models.Model): Instance of a Django model
 
     Returns:
-        str: URL for the documentation of the object.
+        str: static URL for the documentation of the object.
+        or
+        None
 
     Example:
         >>> get_docs_url(obj)
         "static/docs/models/dcim/site.html"
     """
     if model._meta.app_label in settings.PLUGINS:
-        return static(f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html")
+        path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
+        if find(path):
+            return static(path)
+        return None
 
     return static(f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html")
 

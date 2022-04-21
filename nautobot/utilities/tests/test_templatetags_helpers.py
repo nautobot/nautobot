@@ -28,7 +28,7 @@ from nautobot.utilities.templatetags.helpers import (
 )
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
-from example_plugin.models import ExampleModel
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 @skipIf(
@@ -118,6 +118,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(get_docs_url(site), static("docs/models/dcim/site.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
         self.assertEqual(get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))
+        # AnotherExampleModel does not have documentation.
+        another_model = AnotherExampleModel.objects.create(name="test", number=1)
+        self.assertIsNone(get_docs_url(another_model))
 
     def test_has_perms(self):
         self.assertTrue(callable(has_perms))
