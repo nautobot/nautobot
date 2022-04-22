@@ -126,8 +126,8 @@ class LogoutView(View):
 #
 
 
-def get_auth_backend(request):
-    return request.session.get(BACKEND_SESSION_KEY, None)
+def is_django_auth_user(request):
+    return request.session.get(BACKEND_SESSION_KEY, None) == "nautobot.core.authentication.ObjectPermissionBackend"
 
 
 class ProfileView(LoginRequiredMixin, View):
@@ -140,7 +140,7 @@ class ProfileView(LoginRequiredMixin, View):
             self.template_name,
             {
                 "active_tab": "profile",
-                "user_auth_backend": get_auth_backend(request),
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
@@ -156,7 +156,7 @@ class UserConfigView(LoginRequiredMixin, View):
             {
                 "preferences": request.user.all_config(),
                 "active_tab": "preferences",
-                "user_auth_backend": get_auth_backend(request),
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
@@ -178,11 +178,11 @@ class ChangePasswordView(LoginRequiredMixin, View):
     template_name = "users/change_password.html"
 
     def get(self, request):
-        # LDAP users cannot change their password here
-        if getattr(request.user, "ldap_username", None):
+        # Non-Django authentication users cannot change their password here
+        if not is_django_auth_user(request):
             messages.warning(
                 request,
-                "LDAP-authenticated user credentials cannot be changed within Nautobot.",
+                "Non-Django authentication user credentials cannot be changed within Nautobot.",
             )
             return redirect("user:profile")
 
@@ -194,11 +194,18 @@ class ChangePasswordView(LoginRequiredMixin, View):
             {
                 "form": form,
                 "active_tab": "change_password",
-                "user_auth_backend": get_auth_backend(request),
+                "user_auth_backend": is_django_auth_user(request),
             },
         )
 
     def post(self, request):
+        # Non-Django authentication users cannot change their password here
+        if not is_django_auth_user(request):
+            messages.warning(
+                request,
+                "Non-Django authentication user credentials cannot be changed within Nautobot.",
+            )
+            return redirect("user:profile")
         form = PasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
             form.save()
@@ -212,7 +219,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
             {
                 "form": form,
                 "active_tab": "change_password",
-                "user_auth_backend": get_auth_backend(request),
+                "user_auth_backend": is_django_auth_user(request),
             },
         )
 
@@ -233,7 +240,7 @@ class TokenListView(LoginRequiredMixin, View):
             {
                 "tokens": tokens,
                 "active_tab": "api_tokens",
-                "user_auth_backend": get_auth_backend(request),
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
