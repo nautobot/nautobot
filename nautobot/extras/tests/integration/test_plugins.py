@@ -122,3 +122,25 @@ class PluginWebhookTest(SeleniumTestCase):
         with open(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"), "r") as f:
             self.assertEqual(json.loads(f.read()), {"message": "created"})
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"))
+
+
+class PluginReturnUrlTestCase(SeleniumTestCase):
+    """
+    Integration tests for the CustomField and CustomFieldChoice models.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+    def test_plugin_return_url(self):
+        """This test ensures that plugins return url for new objects is the list view."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_add")}')
+
+        form = self.browser.find_by_tag("form")
+
+        # Check that the Cancel button takes you to the ExampleModel List view.
+        form.first.links.find_by_text("Cancel").click()
+        self.assertEqual(self.browser.find_by_tag("h1").value, "Example Models")
