@@ -1,11 +1,15 @@
-
 from django.core.management.base import BaseCommand
-from pylint.lint import Run
+from pylint import run_pylint
+
 
 class Command(BaseCommand):
-
     def add_arguments(self, parser):
-        parser.add_argument("module", nargs="*", help="Module(s) to evaluate", default=["nautobot"])
+        parser.add_argument(
+            "module",
+            nargs="*",
+            help="Module(s) to evaluate",
+            default=["nautobot", "examples", "development", "tasks.py"],
+        )
 
     def handle(self, *args, **options):
-        results = Run(["--verbose"] + options.pop("module"), exit=True)
+        run_pylint(["--verbose"] + options.pop("module"))

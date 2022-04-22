@@ -462,6 +462,13 @@ def flake8(context):
 
 
 @task
+def pylint(context):
+    """Perform static analysis of Nautobot code."""
+    command = "nautobot-server pylint"
+    run_command(context, command)
+
+
+@task
 def hadolint(context):
     """Check Dockerfile for hadolint compliance and other style issues."""
     command = "hadolint docker/Dockerfile"

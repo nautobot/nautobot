@@ -332,7 +332,7 @@ class ExpandableIPAddressField(forms.CharField):
         super().__init__(*args, **kwargs)
         if not self.help_text:
             self.help_text = (
-                "Specify a numeric range to create multiple IPs.<br />" "Example: <code>192.0.2.[1,5,100-254]/24</code>"
+                "Specify a numeric range to create multiple IPs.<br />Example: <code>192.0.2.[1,5,100-254]/24</code>"
             )
 
     def to_python(self, value):

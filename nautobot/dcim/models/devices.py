@@ -297,15 +297,13 @@ class DeviceType(PrimaryModel):
             raise ValidationError({"u_height": "Child device types must be 0U."})
 
     def save(self, *args, **kwargs):
-        ret = super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
         # Delete any previously uploaded image files that are no longer in use
         if self._original_front_image and self.front_image != self._original_front_image:
             self._original_front_image.delete(save=False)
         if self._original_rear_image and self.rear_image != self._original_rear_image:
             self._original_rear_image.delete(save=False)
-
-        return ret
 
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)

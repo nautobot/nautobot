@@ -78,5 +78,4 @@ class Command(BaseCommand):
             exec(options["command"], self.get_namespace())
             return
 
-        shell = code.interact(banner=BANNER_TEXT, local=self.get_namespace())
-        return shell
+        code.interact(banner=BANNER_TEXT, local=self.get_namespace())
