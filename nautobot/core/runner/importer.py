@@ -8,17 +8,18 @@ logan.importer
 
 from __future__ import absolute_import, unicode_literals
 
+import sys
+
+from importlib import import_module
+from .settings import load_settings, create_module
+
 basestring = unicode = str
+
 
 def execfile(afile, globalz=None, localz=None):
     with open(afile, "r") as fh:
         exec(fh.read(), globalz, localz)
 
-
-import sys
-
-from importlib import import_module
-from .settings import load_settings, create_module
 
 installed = False
 

@@ -58,6 +58,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
 
     return True
 
+
 # 2.0 TODO: #824 rename field_name to field_slug
 @nautobot_task
 def delete_custom_field_data(field_name, content_type_pk_set):

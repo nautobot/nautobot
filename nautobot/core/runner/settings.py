@@ -8,18 +8,19 @@ logan.settings
 
 from __future__ import absolute_import
 
-basestring = unicode = str
-
-def execfile(afile, globalz=None, localz=None):
-    with open(afile, "r") as fh:
-        exec(fh.read(), globalz, localz)
-
-
 import errno
 import imp  # pylint: disable=deprecated-module
 import os
 import sys
 from django.conf import settings as django_settings
+
+basestring = unicode = str
+
+
+def execfile(afile, globalz=None, localz=None):
+    with open(afile, "r") as fh:
+        exec(fh.read(), globalz, localz)
+
 
 __all__ = ("create_default_settings", "load_settings")
 

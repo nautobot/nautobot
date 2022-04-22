@@ -268,6 +268,7 @@ class RackViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
         return None
 
+
 #
 # Rack reservations
 #

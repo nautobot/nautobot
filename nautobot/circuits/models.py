@@ -5,11 +5,10 @@ from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import ObjectChange, StatusModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 from .choices import CircuitTerminationSideChoices
 
