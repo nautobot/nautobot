@@ -316,10 +316,10 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task(help={"container": "Name of the container to shell into"})
-def cli(context, container="nautobot"):
-    """Launch a bash shell inside the running Nautobot container."""
-    docker_compose(context, f"exec {container} bash", pty=True)
+@task(help={"service": "Name of the service to shell into"})
+def cli(context, service="nautobot"):
+    """Launch a bash shell inside the running Nautobot (or other) Docker container."""
+    docker_compose(context, f"exec {service} bash", pty=True)
 
 
 @task(
@@ -441,6 +441,7 @@ def check_migrations(context):
     },
 )
 def check_schema(context, api_version=None):
+    """Render the REST API schema and check for problems."""
     if api_version is not None:
         api_versions = [api_version]
     else:
