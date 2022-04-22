@@ -434,6 +434,8 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
+        return None
+
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -481,7 +483,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
-            return self.check_for_export(request, model, content_type)
+            response = self.check_for_export(request, model, content_type)
+            if response is not None:
+                return response
         return Response(context)
 
 
@@ -584,7 +588,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.perform_create(request, *args, **kwargs)
         return Response(context)
 
-    def perform_create(self, request, *args, **kwargs):
+    # TODO: this conflicts with DRF's CreateModelMixin.perform_create(self, serializer) API
+    def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
         """
         Function to validate the ObjectForm and to create a new object.
         """
@@ -608,7 +613,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.perform_update(request, *args, **kwargs)
         return Response(context)
 
-    def perform_update(self, request, *args, **kwargs):
+    # TODO: this conflicts with DRF's UpdateModelMixin.perform_update(self, serializer) API
+    def perform_update(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
         """
         Function to validate the ObjectEditForm and to update/partial_update an existing object.
         """
@@ -738,7 +744,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
             messages.success(request, msg)
         return obj_table
 
-    def bulk_create(self, request):
+    def bulk_create(self, request, *args, **kwargs):
         context = {}
         if request.method == "POST":
             return self.perform_bulk_create(request)
@@ -842,7 +848,8 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         """
         return self.perform_bulk_update(request, **kwargs)
 
-    def perform_bulk_update(self, request, **kwargs):
+    # TODO: this conflicts with BulkUpdateModelMixin.perform_bulk_update(self, objects, update_data, partial)
+    def perform_bulk_update(self, request, **kwargs):  # pylint: disable=arguments-differ
         """
         request.POST "_edit": Function to render the user selection of objects in a table form/BulkUpdateForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.

@@ -113,3 +113,5 @@ def construct_resolver(model_name, resolver_type):
             return None
 
         return resolve_connected_endpoint
+
+    raise ValueError(f"resolver_type must be 'cable_peer' or 'connected_endpoint', not '{resolver_type}'")

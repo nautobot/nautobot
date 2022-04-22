@@ -301,7 +301,7 @@ class Cable(PrimaryModel, StatusModel):
         Return all termination types compatible with termination A.
         """
         if self.termination_a is None:
-            return
+            return None
         return COMPATIBLE_TERMINATION_TYPES[self.termination_a._meta.model_name]
 
 

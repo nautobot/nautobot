@@ -1,7 +1,7 @@
 import logging
 import os
 
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from django.apps import AppConfig, apps as global_apps
@@ -214,11 +214,13 @@ def register_homepage_panels(path, label, homepage_layout):
 class HomePageBase(ABC):
     """Base class for homepage layout classes."""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def initial_dict(self):  # to be implemented by each subclass
         return {}
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def fixed_fields(self):  # to be implemented by subclass
         return ()
 
@@ -226,11 +228,13 @@ class HomePageBase(ABC):
 class NavMenuBase(ABC):  # replaces PermissionsMixin
     """Base class for navigation classes."""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def initial_dict(self):  # to be implemented by each subclass
         return {}
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def fixed_fields(self):  # to be implemented by subclass
         return ()
 

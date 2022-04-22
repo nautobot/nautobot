@@ -705,14 +705,3 @@ class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
         self.user.save()
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
-
-    def assertHttpStatus(self, response, expected_status):
-        """
-        Provide more detail in the event of an unexpected HTTP response.
-        """
-        err_message = "Expected HTTP status {}; received {}: {}"
-        self.assertEqual(
-            response.status_code,
-            expected_status,
-            err_message.format(expected_status, response.status_code, response.data),
-        )

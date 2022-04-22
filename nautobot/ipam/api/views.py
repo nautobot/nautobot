@@ -337,13 +337,13 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
         default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
         default_code = "precondition_failed"
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, pk=None, *args, **kwargs):
         try:
             return super().retrieve(request, pk)
         except IPAddress.NATOutsideMultipleObjectsReturned:
             raise self.NATOutsideIncompatibleLegacyBehavior
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         try:
             return super().list(request)
         except IPAddress.NATOutsideMultipleObjectsReturned as e:

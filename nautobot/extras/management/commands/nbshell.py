@@ -72,7 +72,7 @@ class Command(BaseCommand):
 
         return namespace
 
-    def handle(self, **options):
+    def handle(self, *args, **options):
         # If Python code has been passed, execute it and exit.
         if options["command"]:
             exec(options["command"], self.get_namespace())

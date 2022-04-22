@@ -122,7 +122,7 @@ class BaseJob:
                 self.test_methods.append(method_name)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
     # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
 
@@ -1229,6 +1229,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             _run_job()
     else:
         _run_job()
+
+    return True
 
 
 @nautobot_task

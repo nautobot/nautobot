@@ -266,6 +266,7 @@ class RackViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 rack_units = serializers.RackUnitSerializer(page, many=True, context={"request": request})
                 return self.get_paginated_response(rack_units.data)
 
+        return None
 
 #
 # Rack reservations

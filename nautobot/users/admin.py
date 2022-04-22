@@ -216,6 +216,7 @@ class ActionListFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(actions=[self.value()])
+        return None
 
 
 class ObjectTypeListFilter(admin.SimpleListFilter):
@@ -230,6 +231,7 @@ class ObjectTypeListFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(object_types=self.value())
+        return None
 
 
 @admin.register(ObjectPermission)

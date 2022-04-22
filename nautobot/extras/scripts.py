@@ -49,16 +49,16 @@ class BaseScript(BaseJob):
 
     # Logging
 
-    def log_success(self, message):
+    def log_success(self, message):  # pylint: disable=arguments-differ
         super().log_success(obj=None, message=message)
 
-    def log_info(self, message):
+    def log_info(self, message):  # pylint: disable=arguments-differ
         super().log_info(obj=None, message=message)
 
-    def log_warning(self, message):
+    def log_warning(self, message):  # pylint: disable=arguments-differ
         super().log_warning(obj=None, message=message)
 
-    def log_failure(self, message):
+    def log_failure(self, message):  # pylint: disable=arguments-differ
         super().log_failure(obj=None, message=message)
 
 

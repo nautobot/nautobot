@@ -87,7 +87,7 @@ class LoganImporter:
         """
         # Only find/load the module matching self.name - otherwise let the standard Python import machinery handle it
         if fullname != self.name:
-            return
+            return None
 
         return LoganLoader(
             name=self.name,

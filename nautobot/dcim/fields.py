@@ -70,7 +70,7 @@ class MACAddressCharField(models.CharField):
         return EUI
 
     @property
-    def validators(self):
+    def validators(self):  # pylint: disable=invalid-overridden-method
         # rely on db to validate len
         return []
 

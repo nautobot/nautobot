@@ -41,6 +41,7 @@ def _get_user_if_authenticated(user, objectchange):
         return user
     else:
         logger.warning(f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}")
+        return None
 
 
 def _handle_changed_object(change_context, sender, instance, **kwargs):

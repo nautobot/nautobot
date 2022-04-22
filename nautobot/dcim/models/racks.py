@@ -105,9 +105,9 @@ class RackGroup(MPTTModel, OrganizationalModel):
             self.description,
         )
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
         # Remove MPTT-internal fields
-        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"], **kwargs)
 
     def clean(self):
         super().clean()

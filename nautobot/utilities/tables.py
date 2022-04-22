@@ -218,7 +218,7 @@ class ButtonsColumn(tables.TemplateColumn):
             }
         )
 
-    def header(self):
+    def header(self):  # pylint: disable=invalid-overridden-method
         return ""
 
 
@@ -228,7 +228,7 @@ class ChoiceFieldColumn(tables.Column):
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
     """
 
-    def render(self, record, bound_column, value):
+    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         if value:
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
@@ -275,7 +275,7 @@ class LinkedCountColumn(tables.Column):
         self.url_params = url_params
         super().__init__(*args, default=default, **kwargs)
 
-    def render(self, record, value):
+    def render(self, record, value):  # pylint: disable=arguments-differ
         if value:
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:
@@ -362,7 +362,7 @@ class CustomFieldColumn(tables.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record, bound_column, value):
+    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         if value is None:
             return self.default
 

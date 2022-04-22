@@ -344,11 +344,13 @@ class Aggregate(PrimaryModel):
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
+        return None
 
     @property
     def prefix(self):
         if self.cidr_str:
             return netaddr.IPNetwork(self.cidr_str)
+        return None
 
     @prefix.setter
     def prefix(self, prefix):
@@ -634,11 +636,13 @@ class Prefix(PrimaryModel, StatusModel):
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
+        return None
 
     @property
     def prefix(self):
         if self.cidr_str:
             return netaddr.IPNetwork(self.cidr_str)
+        return None
 
     @prefix.setter
     def prefix(self, prefix):
@@ -953,9 +957,9 @@ class IPAddress(PrimaryModel, StatusModel):
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the assigned object, if any
-        return super().to_objectchange(action, related_object=self.assigned_object)
+        return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
 
     def to_csv(self):
 
@@ -988,6 +992,7 @@ class IPAddress(PrimaryModel, StatusModel):
         if self.host is not None and self.prefix_length is not None:
             cidr = "%s/%s" % (self.host, self.prefix_length)
             return netaddr.IPNetwork(cidr)
+        return None
 
     @address.setter
     def address(self, address):

@@ -16,7 +16,7 @@ def execfile(afile, globalz=None, localz=None):
 
 
 import errno
-import imp
+import imp  # pylint: disable=deprecated-module
 import os
 import sys
 from django.conf import settings as django_settings
@@ -61,7 +61,7 @@ def load_settings(mod_or_filename, silent=False, allow_extras=True, settings=dja
     else:
         conf = mod_or_filename
 
-    add_settings(conf, allow_extras=allow_extras, settings=settings)
+    return add_settings(conf, allow_extras=allow_extras, settings=settings)
 
 
 def add_settings(mod, allow_extras=True, settings=django_settings):

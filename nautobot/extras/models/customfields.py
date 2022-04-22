@@ -414,12 +414,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
         # Prior to Nautobot 1.4, `slug` was a non-existent field, but now it's mandatory.
         # Protect against get_or_create() or other ORM usage where callers aren't calling clean() before saving.
         # Normally we'd just say "Don't do that!" but we know there are some cases of this in the wild.
         self._fixup_empty_fields()
-        super().save(**kwargs)
+        super().save(*args, **kwargs)
 
     def to_form_field(
         self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
@@ -677,7 +677,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         super().delete(*args, **kwargs)
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the parent field
         try:
             field = self.field
@@ -685,4 +685,4 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             # The parent field has already been deleted
             field = None
 
-        return super().to_objectchange(action, related_object=field)
+        return super().to_objectchange(action, related_object=field, **kwargs)

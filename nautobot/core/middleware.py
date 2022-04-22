@@ -34,7 +34,7 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
     def process_request(self, request):
         # Bypass middleware if remote authentication is not enabled
         if not remote_auth_enabled(auth_backends=settings.AUTHENTICATION_BACKENDS):
-            return
+            return None
 
         return super().process_request(request)
 
@@ -118,11 +118,11 @@ class ExceptionHandlingMiddleware:
 
         # Don't catch exceptions when in debug mode
         if settings.DEBUG:
-            return
+            return None
 
         # Ignore Http404s (defer to Django's built-in 404 handling)
         if isinstance(exception, Http404):
-            return
+            return None
 
         # Handle exceptions that occur from REST API requests
         if is_api_request(request):
@@ -140,3 +140,5 @@ class ExceptionHandlingMiddleware:
         # Return a custom error message, or fall back to Django's default 500 error handling
         if custom_template:
             return server_error(request, template_name=custom_template)
+
+        return None
