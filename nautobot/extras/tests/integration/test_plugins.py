@@ -141,6 +141,8 @@ class PluginReturnUrlTestCase(SeleniumTestCase):
 
         form = self.browser.find_by_tag("form")
 
-        # Check that the Cancel button takes you to the ExampleModel List view.
-        form.first.links.find_by_text("Cancel").click()
-        self.assertEqual(self.browser.find_by_tag("h1").value, "Example Models")
+        # Check that the Cancel button is a link to the examplemodel_list view.
+        element = form.first.links.find_by_text("Cancel").first
+        self.assertEqual(
+            element["href"], f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_list")}'
+        )
