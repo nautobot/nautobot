@@ -864,6 +864,12 @@ class RandomAnimalView(View):
 
 This view retrieves a random animal from the database and and passes it as a context variable when rendering a template named `animal.html`, which doesn't exist yet. To create this template, first create a directory named `templates/nautobot_animal_sounds/` within the plugin source directory. (We use the plugin's name as a subdirectory to guard against naming collisions with other plugins.) Then, create a template named `animal.html` as described below.
 
+### Utilizing Nautobot Generic Views
+
+Starting in Nautobot 1.1.0 via [PR](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in plugin development.  These views have some requirements that must be in place in order to work.  These can be used by importing them from `from nautobot.core.views import generic`.
+
+More documentation and examples can be found in [Generic Views](../development/generic-views.md) guide.
+
 ### Extending the Base Template
 
 Nautobot provides a base template to ensure a consistent user experience, which plugins can extend with their own content. This template includes four content blocks:
