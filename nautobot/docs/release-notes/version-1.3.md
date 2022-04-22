@@ -153,6 +153,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Fixed
 
+- [#1659](https://github.com/nautobot/nautobot/pull/1659) - Added some missing test/lint commands to the [development getting-started](../development/getting-started.md) documentation, and made `invoke cli` parameters match `invoke start/stop`.
 - [#1666](https://github.com/nautobot/nautobot/pull/1666) - Fixed errors in documentation with incomplete import statements.
 
 ## v1.3.1 (2022-04-19)
