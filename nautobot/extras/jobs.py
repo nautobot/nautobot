@@ -103,8 +103,6 @@ class BaseJob:
         - has_sensitive_variables (bool)
         """
 
-        pass
-
     def __init__(self):
         self.logger = logging.getLogger(f"nautobot.jobs.{self.__class__.__name__}")
 
@@ -192,7 +190,7 @@ class BaseJob:
 
     @classproperty
     def description_first_line(cls):  # pylint: disable=no-self-argument
-        if cls.description:
+        if cls.description:  # pylint: disable=using-constant-test
             return cls.description.splitlines()[0]
         return ""
 
@@ -254,7 +252,7 @@ class BaseJob:
         Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
         The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
         """
-        vars = dict()
+        vars = {}
         # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
         base_classes = reversed(inspect.getmro(cls))
         attr_names = [name for base in base_classes for name in base.__dict__.keys()]
@@ -333,7 +331,7 @@ class BaseJob:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
 
-        if self.field_order:
+        if self.field_order:  # pylint: disable=using-constant-test
             form.order_fields(self.field_order)
 
         if approval_view:
@@ -502,13 +500,11 @@ class BaseJob:
         """
         Method invoked when this Job is run, before any "test_*" methods.
         """
-        pass
 
     def post_run(self):
         """
         Method invoked after "run()" and all "test_*" methods.
         """
-        pass
 
     # Logging
 

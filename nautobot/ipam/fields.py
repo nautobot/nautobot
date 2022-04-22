@@ -13,9 +13,6 @@ class VarbinaryIPField(models.BinaryField):
 
     description = "IP network address"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def db_type(self, connection):
         """Returns the correct field type for a given database vendor."""
 

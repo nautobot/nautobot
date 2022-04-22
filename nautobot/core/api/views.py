@@ -418,7 +418,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 if isinstance(version, tuple):
                     version = ".".join(str(n) for n in version)
             installed_apps[app_config.name] = version
-        installed_apps = {k: v for k, v in sorted(installed_apps.items())}
+        installed_apps = dict(sorted(installed_apps.items()))
 
         # Gather installed plugins
         plugins = {}
@@ -426,7 +426,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
             plugin_name = plugin_name.rsplit(".", 1)[-1]
             plugin_config = apps.get_app_config(plugin_name)
             plugins[plugin_name] = getattr(plugin_config, "version", None)
-        plugins = {k: v for k, v in sorted(plugins.items())}
+        plugins = dict(sorted(plugins.items()))
 
         # Gather Celery workers
         workers = celery_app.control.inspect().active()  # list or None

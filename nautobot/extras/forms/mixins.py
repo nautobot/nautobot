@@ -407,7 +407,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
 
                 # Are any of the objects we want a relationship with already entangled with another object?
                 if relationship.has_many(peer_side):
-                    target_peers = [item for item in self.cleaned_data[field_name]]
+                    target_peers = list(self.cleaned_data[field_name])
                 else:
                     target_peers = [self.cleaned_data[field_name]]
 

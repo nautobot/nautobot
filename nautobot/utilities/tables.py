@@ -49,8 +49,8 @@ class BaseTable(tables.Table):
             self.empty_text = f"No {self._meta.model._meta.verbose_name_plural} found"
 
         # Hide non-default columns
-        default_columns = list(getattr(self.Meta, "default_columns", list()))
-        extra_columns = [c[0] for c in kwargs.get("extra_columns", list())]  # extra_columns is a list of tuples
+        default_columns = list(getattr(self.Meta, "default_columns", []))
+        extra_columns = [c[0] for c in kwargs.get("extra_columns", [])]  # extra_columns is a list of tuples
         if default_columns:
             for column in self.columns:
                 if column.name not in default_columns and column.name not in extra_columns:

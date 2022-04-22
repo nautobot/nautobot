@@ -669,7 +669,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     queryset = None
     model_form = None
-    related_object_forms = dict()
+    related_object_forms = {}
     template_name = "generic/object_import.html"
 
     def get_required_permission(self):
@@ -729,7 +729,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             logger.debug("Processing form for related objects: {related_object_form}")
 
                             related_obj_pks = []
-                            for i, rel_obj_data in enumerate(data.get(field_name, list())):
+                            for i, rel_obj_data in enumerate(data.get(field_name, [])):
 
                                 f = related_object_form(obj, rel_obj_data)
 

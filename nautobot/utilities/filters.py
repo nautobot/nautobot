@@ -56,7 +56,7 @@ def multivalue_field_factory(field_class):
                 if v
             ]
 
-    return type("MultiValue{}".format(field_class.__name__), (NewField,), dict())
+    return type("MultiValue{}".format(field_class.__name__), (NewField,), {})
 
 
 #

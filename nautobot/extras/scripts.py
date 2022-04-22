@@ -66,5 +66,3 @@ class Script(BaseScript, Job):
     """
     Classes which inherit this model will appear in the list of available scripts.
     """
-
-    pass

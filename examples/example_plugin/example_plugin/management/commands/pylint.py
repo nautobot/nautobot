@@ -8,4 +8,4 @@ class Command(BaseCommand):
         parser.add_argument("module", nargs="*", help="Module(s) to evaluate", default=["nautobot"])
 
     def handle(self, *args, **options):
-        results = Run(options.pop("module"), exit=True)
+        results = Run(["--verbose"] + options.pop("module"), exit=True)

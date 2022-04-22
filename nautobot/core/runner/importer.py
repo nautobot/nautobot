@@ -46,7 +46,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class LoganImporter(object):
+class LoganImporter:
     """Implementation of importlib.abc.MetaPathFinder interface."""
 
     def __init__(self, name, config_path, default_settings=None, allow_extras=True, callback=None):
@@ -98,7 +98,7 @@ class LoganImporter(object):
         )
 
 
-class LoganLoader(object):
+class LoganLoader:
     """Implementation of importlib.abc.Loader interface."""
 
     def __init__(self, name, config_path, default_settings=None, allow_extras=True, callback=None):

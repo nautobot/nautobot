@@ -485,7 +485,7 @@ class Rack(PrimaryModel, StatusModel):
                     ):
                         elevation.pop(u, None)
 
-        return [u for u in elevation.values()]
+        return list(elevation.values())
 
     def get_available_units(self, u_height=1, rack_face=None, exclude=None):
         """

@@ -27,7 +27,7 @@ def parse_numeric_range(string, base=10):
       '0-3,5' => [0, 1, 2, 3, 5]
       '2,8-b,d,f' => [2, 8, 9, a, b, d, f]
     """
-    values = list()
+    values = []
     for dash_range in string.split(","):
         try:
             begin, end = dash_range.split("-")

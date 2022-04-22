@@ -425,7 +425,7 @@ def as_range(n):
     try:
         int(n)
     except (TypeError, ValueError):
-        return list()
+        return []
     return range(int(n))
 
 

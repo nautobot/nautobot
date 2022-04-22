@@ -19,7 +19,7 @@ class ChoiceField(serializers.Field):
     def __init__(self, choices, allow_blank=False, **kwargs):
         self.choiceset = choices
         self.allow_blank = allow_blank
-        self._choices = dict()
+        self._choices = {}
 
         # Unpack grouped choices
         for k, v in choices:

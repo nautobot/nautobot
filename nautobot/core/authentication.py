@@ -22,7 +22,7 @@ logger = logging.getLogger("nautobot.authentication")
 class ObjectPermissionBackend(ModelBackend):
     def get_all_permissions(self, user_obj, obj=None):
         if not user_obj.is_active or user_obj.is_anonymous:
-            return dict()
+            return {}
         if not hasattr(user_obj, "_object_perm_cache"):
             user_obj._object_perm_cache = self.get_object_permissions(user_obj)
         return user_obj._object_perm_cache

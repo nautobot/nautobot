@@ -67,7 +67,7 @@ class ExternalAuthMiddleware(MiddlewareMixin):
             assign_permissions_to_user(request.user, settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS)
 
 
-class ObjectChangeMiddleware(object):
+class ObjectChangeMiddleware:
     """
     This middleware performs three functions in response to an object being created, updated, or deleted:
 
@@ -102,7 +102,7 @@ class ObjectChangeMiddleware(object):
         return response
 
 
-class ExceptionHandlingMiddleware(object):
+class ExceptionHandlingMiddleware:
     """
     Intercept certain exceptions which are likely indicative of installation issues and provide helpful instructions
     to the user.
