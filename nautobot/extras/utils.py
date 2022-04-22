@@ -14,7 +14,14 @@ from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
 from nautobot.core.fields import slugify_dots_to_dashes
-from nautobot.extras.constants import EXTRAS_FEATURES, JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.constants import (
+    EXTRAS_FEATURES,
+    JOB_MAX_GROUPING_LENGTH,
+    JOB_MAX_NAME_LENGTH,
+    JOB_MAX_SLUG_LENGTH,
+    JOB_MAX_SOURCE_LENGTH,
+    JOB_OVERRIDABLE_FIELDS,
+)
 from nautobot.extras.registry import registry
 
 
@@ -217,15 +224,54 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     else:
         default_slug = slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}")
 
+    # Unrecoverable errors
+    if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
+        logger.error(
+            'Unable to store Jobs from "%s" as Job models because the source exceeds %d characters in length!',
+            job_source,
+            JOB_MAX_SOURCE_LENGTH,
+        )
+        return (None, False)
+    if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:
+        logger.error(
+            'Unable to store Jobs from module "%s" as Job models because the module exceeds %d characters in length!',
+            job_class.__module__,
+            JOB_MAX_NAME_LENGTH,
+        )
+        return (None, False)
+    if len(job_class.__name__) > JOB_MAX_NAME_LENGTH:
+        logger.error(
+            'Unable to represent Job class "%s" as a Job model because the class name exceeds %d characters in length!',
+            job_class.__name__,
+            JOB_MAX_NAME_LENGTH,
+        )
+        return (None, False)
+
+    # Recoverable errors
+    if len(job_class.grouping) > JOB_MAX_GROUPING_LENGTH:
+        logger.warning(
+            'Job class "%s" grouping "%s" exceeds %d characters in length, it will be truncated in the database.',
+            job_class.__name__,
+            job_class.grouping,
+            JOB_MAX_GROUPING_LENGTH,
+        )
+    if len(job_class.name) > JOB_MAX_NAME_LENGTH:
+        logger.warning(
+            'Job class "%s" name "%s" exceeds %d characters in length, it will be truncated in the database.',
+            job_class.__name__,
+            job_class.name,
+            JOB_MAX_NAME_LENGTH,
+        )
+
     job_model, created = job_model_class.objects.get_or_create(
-        source=job_source,
+        source=job_source[:JOB_MAX_SOURCE_LENGTH],
         git_repository=git_repository,
-        module_name=job_class.__module__,
-        job_class_name=job_class.__name__,
+        module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+        job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
-            "slug": default_slug,
-            "grouping": job_class.grouping,
-            "name": job_class.name,
+            "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
+            "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
+            "name": job_class.name[:JOB_MAX_NAME_LENGTH],
             "installed": True,
             "enabled": False,
         },

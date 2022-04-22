@@ -922,6 +922,16 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     job_info.job_class,
                     git_repository=repository_record,
                 )
+
+                if job_model is None:
+                    job_result.log(
+                        message="Failed to create Job record; check Nautobot logs for details",
+                        grouping="jobs",
+                        level_choice=LogLevelChoices.LOG_FAILURE,
+                        logger=logger,
+                    )
+                    continue
+
                 if created:
                     message = "Created Job record"
                 else:
