@@ -146,6 +146,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#1219](https://github.com/nautobot/nautobot/pull/1219) - Add ARM64 support (alpha).
 - [#1426](https://github.com/nautobot/nautobot/issues/1426) - Added plugin development documentation around using ObjectListView.
+- [#1674](https://github.com/nautobot/nautobot/pull/1674) - Added flag in Dockerfile, tasks.py to enable Poetry install parallelization.
 
 ### Changed
 
