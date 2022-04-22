@@ -190,7 +190,7 @@ def register_homepage_panels(path, label, homepage_layout):
                             )
                         else:
                             raise TypeError(f"Third level objects need to be an instance of HomePageItem: {group_item}")
-                    panel_perms |= set(group_item.permissions)
+                        panel_perms |= set(group_item.permissions)
                     registry_items[item.name]["items"] = OrderedDict(
                         sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
                     )

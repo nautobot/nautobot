@@ -429,7 +429,7 @@ class CustomFieldEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a choice that is in use.
-                protected_obj, err_msg = err.args
+                protected_obj, err_msg = err.args  # pylint: disable=unbalanced-tuple-unpacking
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
@@ -674,7 +674,7 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a something that is in use.
-                protected_obj, err_msg = err.args
+                protected_obj, err_msg = err.args  # pylint: disable=unbalanced-tuple-unpacking
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
@@ -1886,7 +1886,7 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a choice that is in use.
-                protected_obj, err_msg = err.args
+                protected_obj, err_msg = err.args  # pylint: disable=unbalanced-tuple-unpacking
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)

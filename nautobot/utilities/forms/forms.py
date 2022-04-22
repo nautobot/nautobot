@@ -64,7 +64,7 @@ class BootstrapMixin(forms.BaseForm):
             forms.RadioSelect,
         ]
 
-        for field_name, field in self.fields.items():
+        for field in self.fields.values():
             if field.widget.__class__ not in exempt_widgets:
                 css = field.widget.attrs.get("class", "")
                 field.widget.attrs["class"] = " ".join([css, "form-control"]).strip()

@@ -182,7 +182,7 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
         template = loader.get_template(template_name)
     except TemplateDoesNotExist:
         return HttpResponseServerError("<h1>Server Error (500)</h1>", content_type="text/html")
-    type_, error, traceback = sys.exc_info()
+    type_, error, _traceback = sys.exc_info()
 
     return HttpResponseServerError(
         template.render(

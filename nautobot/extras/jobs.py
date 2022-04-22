@@ -443,7 +443,7 @@ class BaseJob:
         if not isinstance(data, dict):
             raise ValidationError("Job data needs to be a dict")
 
-        for k, v in data.items():
+        for k in data:
             if k not in vars:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
@@ -1114,9 +1114,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             logger=logger,
         )
 
+    file_ids = None
     try:
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.
-        file_ids = None
         file_fields = list(job._get_file_vars())
         file_ids = [data[f] for f in file_fields]
 

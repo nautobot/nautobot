@@ -87,7 +87,7 @@ class CSVDataField(forms.CharField):
     def validate(self, value):
         if value is None:
             return None
-        headers, records = value
+        headers, _records = value
         validate_csv(headers, self.fields, self.required_fields)
 
         return value
@@ -137,7 +137,7 @@ class CSVFileField(forms.FileField):
         if value is None:
             return None
 
-        headers, records = value
+        headers, _records = value
         validate_csv(headers, self.fields, self.required_fields)
 
         return value

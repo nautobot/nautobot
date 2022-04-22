@@ -64,7 +64,7 @@ def rest_api_server_error(request, *args, **kwargs):
     """
     Handle exceptions and return a useful error message for REST API requests.
     """
-    type_, error, traceback = sys.exc_info()
+    type_, error, _traceback = sys.exc_info()
     data = {
         "error": str(error),
         "exception": type_.__name__,

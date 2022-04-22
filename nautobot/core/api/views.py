@@ -593,7 +593,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         Returns:
             response (dict), status_code (int): Payload of the response to send and the status code.
         """
-        query, variables, operation_name, id = GraphQLView.get_graphql_params(request, data)
+        query, variables, operation_name, _id = GraphQLView.get_graphql_params(request, data)
 
         execution_result = self.execute_graphql_request(request, data, query, variables, operation_name)
 

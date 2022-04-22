@@ -278,8 +278,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
                 logger.warning('GitRepository "%s" not found?', source[4:])
             source = "git"
 
-        for module_name, module_details in modules.items():
-            for job_class_name, job_class in module_details["jobs"].items():
+        for module_details in modules.values():
+            for job_class in module_details["jobs"].values():
                 # TODO: catch DB error in case where multiple Jobs have the same grouping + name
                 job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
                 if job_model is not None:

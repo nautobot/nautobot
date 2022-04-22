@@ -156,7 +156,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
                 requested_prefixes = serializer.validated_data
                 # Allocate prefixes to the requested objects based on availability within the parent
-                for i, requested_prefix in enumerate(requested_prefixes):
+                for requested_prefix in requested_prefixes:
 
                     # Find the first available prefix equal to or larger than the requested size
                     for available_prefix in available_prefixes.iter_cidrs():

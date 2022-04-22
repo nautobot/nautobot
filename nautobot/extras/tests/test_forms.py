@@ -1036,7 +1036,7 @@ class DeprecatedAliasesTestCase(TestCase):
                     # Ensure that warnings are always triggered
                     warnings.simplefilter("always")
 
-                    class MyForm(deprecated_form_class):
+                    class MyForm(deprecated_form_class):  # pylint: disable=unused-variable
                         pass
 
                     self.assertEqual(len(warn_list), 1)
@@ -1051,7 +1051,7 @@ class DeprecatedAliasesTestCase(TestCase):
                     # Ensure that warnings are always triggered
                     warnings.simplefilter("always")
 
-                    class MyBetterForm(replacement_form_class):
+                    class MyBetterForm(replacement_form_class):  # pylint: disable=unused-variable
                         pass
 
                     self.assertEqual(len(warn_list), 0)

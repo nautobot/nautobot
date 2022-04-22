@@ -8,26 +8,16 @@ logan.importer
 
 from __future__ import absolute_import, unicode_literals
 
-try:
-    unicode
-except NameError:
-    basestring = unicode = str  # Python 3
+basestring = unicode = str
 
-try:
-    execfile
-except NameError:  # Python3
-
-    def execfile(afile, globalz=None, localz=None):
-        with open(afile, "r") as fh:
-            exec(fh.read(), globalz, localz)
+def execfile(afile, globalz=None, localz=None):
+    with open(afile, "r") as fh:
+        exec(fh.read(), globalz, localz)
 
 
 import sys
 
-try:
-    from django.utils.importlib import import_module  # django<=1.9
-except ImportError:
-    from importlib import import_module
+from importlib import import_module
 from .settings import load_settings, create_module
 
 installed = False

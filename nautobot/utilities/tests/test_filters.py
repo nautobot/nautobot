@@ -1083,7 +1083,7 @@ class SearchFilterTest(TestCase):
         with self.assertRaises(TypeError):
             barf = None
 
-            class BarfSiteFilterSet(SiteFilterSet):
+            class BarfSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(
                     filter_predicates={
                         "asn": {"preprocessor": barf, "lookup_expr": "exact"},
@@ -1093,11 +1093,11 @@ class SearchFilterTest(TestCase):
         # Missing preprocessor callable in expanded form should also fail
         with self.assertRaises(TypeError):
 
-            class MissingSiteFilterSet(SiteFilterSet):
+            class MissingSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact"}})
 
         # Incorrect lookup_info type (must be str or dict)
         with self.assertRaises(TypeError):
 
-            class InvalidSiteFilterSet(SiteFilterSet):
+            class InvalidSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(filter_predicates={"asn": ["icontains"]})

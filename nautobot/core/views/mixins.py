@@ -84,7 +84,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         for action in actions:
             if action not in ("view", "add", "change", "delete"):
                 raise ValueError(f"Unsupported action: {action}")
-        permissions.append("{}.{}_{}".format(model._meta.app_label, action, model._meta.model_name))
+            permissions.append("{}.{}_{}".format(model._meta.app_label, action, model._meta.model_name))
         return permissions
 
     def get_required_permission(self):

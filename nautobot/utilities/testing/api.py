@@ -667,7 +667,7 @@ class APIViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_on_object(self):
             if hasattr(self.model, "notes"):
-                instance1, instance2 = self._get_queryset()[:2]
+                instance1 = self._get_queryset().first()
                 # Add object-level permission
                 obj_perm = ObjectPermission(
                     name="Test permission",

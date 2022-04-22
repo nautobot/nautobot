@@ -8,18 +8,11 @@ logan.settings
 
 from __future__ import absolute_import
 
-try:
-    unicode
-except NameError:
-    basestring = unicode = str  # Python 3
+basestring = unicode = str
 
-try:
-    execfile
-except NameError:  # Python3
-
-    def execfile(afile, globalz=None, localz=None):
-        with open(afile, "r") as fh:
-            exec(fh.read(), globalz, localz)
+def execfile(afile, globalz=None, localz=None):
+    with open(afile, "r") as fh:
+        exec(fh.read(), globalz, localz)
 
 
 import errno
