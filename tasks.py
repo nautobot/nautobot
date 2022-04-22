@@ -132,9 +132,10 @@ def run_command(context, command, **kwargs):
     help={
         "force_rm": "Always remove intermediate containers.",
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
     }
 )
-def build(context, force_rm=False, cache=True):
+def build(context, force_rm=False, cache=True, poetry_parallel=True):
     """Build Nautobot docker image."""
     command = (
         "build"
@@ -146,6 +147,8 @@ def build(context, force_rm=False, cache=True):
         command += " --no-cache"
     if force_rm:
         command += " --force-rm"
+    if poetry_parallel:
+        command += " --build-arg POETRY_PARALLEL=true"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
     docker_compose(context, command)
@@ -158,6 +161,7 @@ def build(context, force_rm=False, cache=True):
         "platforms": "Comma-separated list of strings for which to build. (Default: linux/amd64)",
         "tag": "Tags to be applied to the built image. (Default: networktocode/nautobot-dev:local)",
         "target": "Build target from the Dockerfile. (Default: dev)",
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: False)",
     }
 )
 def buildx(
@@ -167,6 +171,7 @@ def buildx(
     platforms="linux/amd64",
     tag="networktocode/nautobot-dev-py3.7:local",
     target="dev",
+    poetry_parallel=False,
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
     print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
@@ -183,6 +188,8 @@ def buildx(
             f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver}"
             f" --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
         )
+    if poetry_parallel:
+        command += " --build-arg POETRY_PARALLEL=true"
 
     context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 

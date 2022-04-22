@@ -297,6 +297,7 @@ jobs:
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
             PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
+            POETRY_PARALLEL=true
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
         uses: "docker/metadata-action@v3"
@@ -328,3 +329,4 @@ jobs:
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
             PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
+            POETRY_PARALLEL=true

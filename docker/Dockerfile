@@ -74,6 +74,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 FROM base as dependencies
 ARG PYUWSGI_VER
+ARG POETRY_PARALLEL
 
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
@@ -98,9 +99,9 @@ ENV PATH="${PATH}:/root/.local/bin"
 # Poetry 1.1.0 added parallel installation as an option;
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
-# For now we disable it.
+# This is disabled by default (safer), but can be re-enabled by setting POETRY_PARALLEL=true
 RUN poetry config virtualenvs.create false && \
-    poetry config installer.parallel false
+    poetry config installer.parallel ${POETRY_PARALLEL:-false}
 
 COPY pyproject.toml poetry.lock README.md /source/
 
