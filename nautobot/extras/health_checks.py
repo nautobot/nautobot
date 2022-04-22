@@ -41,7 +41,12 @@ class RedisBackend(BaseHealthCheckBackend):
         # if Sentinel is enabled we need to check Redis using Sentinel
         if self.sentinel_url is not None:
             try:
-                sentinel = Sentinel(self.sentinel_url["locations"], socket_timeout=self.sentinel_url["socket_timeout"])
+                sentinel = Sentinel(
+                    self.sentinel_url["locations"],
+                    password=self.sentinel_url["password"],
+                    sentinel_kwargs=self.sentinel_url["sentinel_kwargs"],
+                    socket_timeout=self.sentinel_url["socket_timeout"],
+                )
                 with sentinel.master_for(self.sentinel_url["service_name"], db=self.sentinel_url["db"]) as master:
                     master.ping()
             except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
