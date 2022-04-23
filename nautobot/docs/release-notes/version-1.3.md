@@ -140,7 +140,7 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.2 (2022-MM-DD)
+## v1.3.2 (2022-04-22)
 
 ## Added
 
@@ -157,6 +157,14 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#1659](https://github.com/nautobot/nautobot/pull/1659) - Added some missing test/lint commands to the [development getting-started](../development/getting-started.md) documentation, and made `invoke cli` parameters match `invoke start/stop`.
 - [#1666](https://github.com/nautobot/nautobot/pull/1666) - Fixed errors in documentation with incomplete import statements.
+- [#1682](https://github.com/nautobot/nautobot/issues/1682) - Fixed Nautobot health checks failing if Redis Sentinel password is required.
+
+### Security
+
+!!! important
+    Critical CVEs in Django versions `>= 3.2, < 3.2.13`. This update upgrades Django to `3.2.13`.
+
+- [#1686](https://github.com/nautobot/nautobot/pull/1686) - Implemented fixes for [CVE-2022-28347](https://github.com/advisories/GHSA-w24h-v9qh-8gxj) and [CVE-2022-28346](https://github.com/advisories/GHSA-2gwj-7jmv-h26r) to require Django >=3.2.13.
 
 ## v1.3.1 (2022-04-19)
 
