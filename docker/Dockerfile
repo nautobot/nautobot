@@ -4,10 +4,10 @@ ARG PYUWSGI_VER
 ################################ Overview
 # This builds the following hierarchy of images:
 #
-# python:${PYTHON_VER}-slim --> (base) --> (dependencies) --> (dependencies-dev) -->  dev
-#                                 |              .                    |
-#                                 V              .                    V
-#                               final <...........                final-dev
+# python:${PYTHON_VER}-slim --> (base) --> (dependencies) --> (dependencies-dev-platform-ARCH) --> (dependencies-dev) -->  dev
+#                                 |              .                                                        |
+#                                 V              .                                                        V
+#                               final <...........                                                    final-dev
 #
 # base (intermediate build target; basis for all other images herein)
 #   adds OS-level dependencies for *running* Nautobot
@@ -21,8 +21,10 @@ ARG PYUWSGI_VER
 #   uses Pip/Poetry to install Nautobot's Python dependencies (but *not* development dependencies or Nautobot itself)
 #   uses Poetry to build a Nautobot wheel (but not yet install it)
 #
+# dependencies-dev-platform-ARCH (intermediate build target)
+#   installs Hadolint, Markdownlint which have platform specific commands
+#
 # dependencies-dev (intermediate build target)
-#   installs hadolint for validating Dockerfiles
 #   uses Poetry to additionally install Nautobot's *development* dependencies
 #   adds files and configuration for Nautobot development server to run
 #
@@ -72,6 +74,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 FROM base as dependencies
 ARG PYUWSGI_VER
+ARG POETRY_PARALLEL
 
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
@@ -96,9 +99,9 @@ ENV PATH="${PATH}:/root/.local/bin"
 # Poetry 1.1.0 added parallel installation as an option;
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
-# For now we disable it.
+# This is disabled by default (safer), but can be re-enabled by setting POETRY_PARALLEL=true
 RUN poetry config virtualenvs.create false && \
-    poetry config installer.parallel false
+    poetry config installer.parallel ${POETRY_PARALLEL:-false}
 
 COPY pyproject.toml poetry.lock README.md /source/
 
@@ -119,15 +122,15 @@ COPY nautobot /source/nautobot
 # Build the wheel
 RUN poetry build
 
-################################ Stage: dependencies-dev (intermediate build target)
+################################ Stage: dependencies-dev-platform-ARCH (intermediate build target)
 
-FROM dependencies as dependencies-dev
+FROM dependencies as dependencies-dev-platform-amd64
 
 # Install hadolint for linting Dockerfiles
-RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && \
+RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
     chmod +x /usr/bin/hadolint
 
-# Install NodeJS and use it to install markdownlint-cli
+# Install NodeJS for installing markdownlint-cli
 
 RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
     mkdir -p /usr/local/lib/nodejs && \
@@ -136,6 +139,27 @@ RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux
 
 ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-x64/bin"
 
+FROM dependencies as dependencies-dev-platform-arm64
+
+# Install hadolint for linting Dockerfiles
+RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
+    chmod +x /usr/bin/hadolint
+
+# Install NodeJS for installing markdownlint-cli
+
+RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-arm64.tar.xz && \
+    mkdir -p /usr/local/lib/nodejs && \
+    tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
+    rm -rf /tmp/node.tar.xz
+
+ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-arm64/bin"
+
+################################ Stage: dependencies-dev (intermediate build target)
+
+# hadolint ignore=DL3006
+FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
+
+# Install markdownlint-cli
 RUN npm install --global markdownlint-cli@0.31.1
 
 # Install development-specific dependencies of Nautobot

@@ -22,15 +22,19 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Screenshots
 
-![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot1.png "Main page")
+![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_main_page.png "Main page")
 
 ---
 
-![Screenshot of rack elevation](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot2.png "Rack elevation")
+![Screenshot of config contexts](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_config_contexts.png "Config Contexts")
 
 ---
 
-![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot3.png "Prefix hierarchy")
+![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_prefix_hierarchy.png "Prefix hierarchy")
+
+---
+
+![Screenshot of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_graphiql.png "GraphQL API")
 
 ## Installation
 
@@ -41,6 +45,22 @@ Please see [the documentation](https://nautobot.readthedocs.io/en/stable/install
 Below is a simplified overview of the Nautobot application stack for reference:
 
 ![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
+
+## Plugins and Extensibility
+
+Nautobot offers the ability to customize your setup to better align with your direct business needs. It does so through the use of various plugins that have been developed for network automation, and are designed to be used in environments where needed.
+
+There are many plugins available within the Nautobot Apps ecosystem. The below screenshots are an example of some popular ones that are currently available.
+
+### Plugin Screenshots
+
+#### Golden Config Plugin
+
+![Screenshot of golden config](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_golden_config.png "Golden config")
+
+#### ChatOps Plugin
+
+![Screenshot of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_chatops.png "ChatOps")
 
 ## Providing Feedback
 
