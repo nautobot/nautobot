@@ -180,7 +180,7 @@ The default `lookup_expr` unless otherwise specified is “exact”, as seen in 
 When this method is called, the internal state is default, making reverse introspection impossible, because the `lookup_expr` is defaulting to “exact”:
 
 ```python
-(Pdb) field = self.filters[name]
+(Pdb) field = self.filters["console_ports"]
 (Pdb) field.exclude
 False
 (Pdb) field.lookup_expr
