@@ -74,6 +74,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 FROM base as dependencies
 ARG PYUWSGI_VER
+ARG POETRY_PARALLEL
 
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
@@ -98,9 +99,9 @@ ENV PATH="${PATH}:/root/.local/bin"
 # Poetry 1.1.0 added parallel installation as an option;
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
-# For now we disable it.
+# This is disabled by default (safer), but can be re-enabled by setting POETRY_PARALLEL=true
 RUN poetry config virtualenvs.create false && \
-    poetry config installer.parallel false
+    poetry config installer.parallel ${POETRY_PARALLEL:-false}
 
 COPY pyproject.toml poetry.lock README.md /source/
 
@@ -158,12 +159,9 @@ ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-arm64/bin"
 # hadolint ignore=DL3006
 FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
 
-# Install markdownlint-cli
-RUN npm install --global markdownlint-cli@0.31.1
-
-# Install development-specific dependencies of Nautobot
-# hadolint ignore=DL3059
-RUN poetry install --no-root --no-ansi --extras all
+# Install markdownlint-cli & development-specific dependencies of Nautobot
+RUN npm install --global markdownlint-cli@0.31.1 && \
+    poetry install --no-root --no-ansi --extras all
 
 # TODO Use nautobot init to generate the same config for all use cases
 COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
@@ -209,12 +207,9 @@ RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
 COPY docker/uwsgi.ini /opt/nautobot
 COPY docker/nautobot_config.append.py /opt/nautobot
 
-# Make sure we don't run as a root user
-RUN useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
-
-# Make sure everything under /opt/nautobot and /prom_cache is owned by nautobot
-# hadolint ignore=DL3059
-RUN chown -R nautobot:nautobot /opt/nautobot /prom_cache
+# Make sure we don't run as a root user and make sure everything under /opt/nautobot and /prom_cache is owned by nautobot
+RUN useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
+    chown -R nautobot:nautobot /opt/nautobot /prom_cache
 
 # Set up Nautobot to run in production
 USER nautobot
