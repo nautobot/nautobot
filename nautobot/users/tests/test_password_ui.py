@@ -39,7 +39,8 @@ class PasswordUITest(TestCase):
     )
     def test_change_password_disabled(self):
         """
-        Mock an authenticated user and check the change password functionality isn't visible or available
+        Mock an SSO-authenticated user, log them in by force and check that the change
+        password functionality isn't visible in the UI or available server-side
         """
         User.objects.filter(username="sso_user").delete()
         sso_user = User.objects.create_user(username="sso_user", is_superuser=True)
