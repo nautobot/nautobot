@@ -1,6 +1,5 @@
 import django_tables2 as tables
 from django.conf import settings
-from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
@@ -44,7 +43,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .utils import get_job_content_type
 
 
 TAGGED_ITEM = """
@@ -520,29 +518,9 @@ class JobLogEntryTable(BaseTable):
         }
 
 
-def related_object_link(record):
-    """
-    Get a link to the related object, if any, associated with the given JobResult record.
-    """
-    # record.related_object is potentially slow if the related object is a Job class,
-    # as it needs to actually (re)load the Job class into memory. That's unnecessary
-    # computation as we don't actually need the class itself, just its class_path which is already
-    # available as record.name on the JobResult itself. So save some trouble:
-    if record.obj_type == get_job_content_type():
-        return reverse("extras:job", kwargs={"class_path": record.name})
-
-    # If it's not a Job class, maybe it's something like a GitRepository, which we can look up cheaply:
-    related_object = record.related_object
-    if related_object:
-        return related_object.get_absolute_url()
-    return None
-
-
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
-    job_model = tables.Column(verbose_name="Job", linkify=True)
-    obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    related_object = tables.Column(verbose_name="Related Object", linkify=related_object_link, accessor="related_name")
+    linked_record = tables.Column(verbose_name="Job / Git Repository", linkify=True)
     name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
@@ -554,6 +532,15 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+
+    def order_linked_record(self, queryset, is_descending):
+        return (
+            queryset.order_by(
+                ("-" if is_descending else "") + "job_model__name",
+                ("-" if is_descending else "") + "name",
+            ),
+            True,
+        )
 
     def render_summary(self, record):
         """
@@ -581,16 +568,14 @@ class JobResultTable(BaseTable):
             "pk",
             "created",
             "name",
-            "job_model",
-            "obj_type",
-            "related_object",
+            "linked_record",
             "duration",
             "completed",
             "user",
             "status",
             "summary",
         )
-        default_columns = ("pk", "created", "job_model", "related_object", "user", "status", "summary")
+        default_columns = ("pk", "created", "linked_record", "user", "status", "summary")
 
 
 #

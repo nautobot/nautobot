@@ -438,6 +438,9 @@ class JobResult(BaseModel, CustomFieldModel):
         instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
         but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
         to plugin model instances.
+
+        This method is potentially rather slow as get_job() may need to actually load the Job class from disk;
+        consider carefully whether you actually need to use it.
         """
         from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
 
@@ -467,16 +470,36 @@ class JobResult(BaseModel, CustomFieldModel):
     def related_name(self):
         """
         Similar to self.name, but if there's an appropriate `related_object`, use its name instead.
-        """
-        if self.obj_type == get_job_content_type():
-            return self.name
 
+        Since this calls related_object, the same potential performance concerns exist. Use with caution.
+        """
         related_object = self.related_object
         if not related_object:
             return self.name
         if hasattr(related_object, "name"):
             return related_object.name
         return str(related_object)
+
+    @property
+    def linked_record(self):
+        """
+        A newer alternative to self.related_object that looks up an extras.models.Job instead of an extras.jobs.Job.
+        """
+        if self.job_model is not None:
+            return self.job_model
+        model_class = self.obj_type.model_class()
+        if model_class is not None:
+            if hasattr(model_class, "name"):
+                try:
+                    return model_class.objects.get(name=self.name)
+                except model_class.DoesNotExist:
+                    pass
+            if hasattr(model_class, "class_path"):
+                try:
+                    return model_class.objects.get(class_path=self.name)
+                except model_class.DoesNotExist:
+                    pass
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
