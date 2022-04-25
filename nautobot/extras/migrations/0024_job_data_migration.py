@@ -1,11 +1,6 @@
 from django.db import migrations
 
 from nautobot.core.fields import slugify_dots_to_dashes
-from nautobot.extras.constants import (
-    JOB_MAX_GROUPING_LENGTH,
-    JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
-)
 
 
 def _create_job_model(job_model_class, class_path):
@@ -15,10 +10,10 @@ def _create_job_model(job_model_class, class_path):
         if len(source) > 110:
             print(f'Skipping Job model creation from "{class_path}" as the source is too long')
             return None
-        if len(module_name) > JOB_MAX_NAME_LENGTH or len(module_name) > JOB_MAX_GROUPING_LENGTH:
+        if len(module_name) > 100:
             print(f'Skipping Job model creation from "{class_path}" as the module_name is too long')
             return None
-        if len(job_class_name) > JOB_MAX_NAME_LENGTH:
+        if len(job_class_name) > 100:
             print(f'Skipping Job model creation from "{class_path}" as the job_class_name is too long')
             return None
 
@@ -27,7 +22,7 @@ def _create_job_model(job_model_class, class_path):
             module_name=module_name,
             job_class_name=job_class_name,
             # AutoSlugField.slugify_function isn't applied during migrations, need to manually generate slug
-            slug=slugify_dots_to_dashes(f"{source}-{module_name}-{job_class_name}")[:JOB_MAX_SLUG_LENGTH],
+            slug=slugify_dots_to_dashes(f"{source}-{module_name}-{job_class_name}")[:320],
             defaults={
                 "grouping": module_name,
                 "name": job_class_name,
