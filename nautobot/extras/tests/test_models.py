@@ -39,6 +39,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -794,7 +795,7 @@ class JobResultTest(TestCase):
         job_class = get_job("local/test_pass/TestPass")
         job_result = JobResult(
             name=job_class.class_path,
-            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            obj_type=get_job_content_type(),
             job_id=uuid.uuid4(),
         )
 
@@ -1175,7 +1176,7 @@ class JobLogEntryTest(TestCase):
 
         job_result = JobResult.objects.create(
             name=job_class.class_path,
-            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            obj_type=get_job_content_type(),
             user=None,
             job_id=uuid.uuid4(),
         )

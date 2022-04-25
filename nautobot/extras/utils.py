@@ -1,4 +1,5 @@
 import collections
+import functools
 import hashlib
 import hmac
 import inspect
@@ -19,6 +20,12 @@ from nautobot.extras.registry import registry
 
 
 logger = logging.getLogger(__name__)
+
+
+@functools.lru_cache(maxsize=None)
+def get_job_content_type():
+    """Return a cached instance of the `ContentType` for `extras.Job`."""
+    return ContentType.objects.get(app_label="extras", model="job")
 
 
 def is_taggable(obj):

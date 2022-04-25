@@ -7,7 +7,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.test.client import RequestFactory
 
 from nautobot.dcim.models import DeviceRole, Site
@@ -15,6 +14,7 @@ from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, Job, JobResult, Status, CustomField
 from nautobot.extras.models.models import JobLogEntry
+from nautobot.extras.utils import get_job_content_type
 from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase
 
 
@@ -37,7 +37,7 @@ def create_job_result_and_run_job(module, name, *, data=None, commit=True, reque
     if data is None:
         data = {}
     job_class, job_model = get_job_class_and_model(module, name)
-    job_content_type = ContentType.objects.get(app_label="extras", model="job")
+    job_content_type = get_job_content_type()
     job_result = JobResult.objects.create(
         name=job_model.class_path,
         obj_type=job_content_type,

@@ -1,6 +1,5 @@
 import django_tables2 as tables
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -45,6 +44,7 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+from .utils import get_job_content_type
 
 
 TAGGED_ITEM = """
@@ -528,7 +528,7 @@ def related_object_link(record):
     # as it needs to actually (re)load the Job class into memory. That's unnecessary
     # computation as we don't actually need the class itself, just its class_path which is already
     # available as record.name on the JobResult itself. So save some trouble:
-    if record.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+    if record.obj_type == get_job_content_type():
         return reverse("extras:job", kwargs={"class_path": record.name})
 
     # If it's not a Job class, maybe it's something like a GitRepository, which we can look up cheaply:
@@ -559,7 +559,7 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
-        log_objects = JobLogEntry.objects.filter(job_result__pk=record.pk)
+        log_objects = record.logs.all()
         success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
         info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
         warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()

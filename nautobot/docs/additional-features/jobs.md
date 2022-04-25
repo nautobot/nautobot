@@ -582,6 +582,7 @@ from django.test import TransactionTestCase
 
 from nautobot.extras.jobs import run_job
 from nautobot.extras.models import Job, JobResult, JobLogEntry
+from nautobot.extras.utils import get_job_content_type
 
 
 if "job_logs" in settings.DATABASES:
@@ -599,7 +600,7 @@ class MyJobTestCase(TransactionTestCase):
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
         job_result = JobResult.objects.create(
             name=job.class_path,
-            obj_type=ContentType.objects.get(app_label="extras", model="job"),
+            obj_type=get_job_content_type(),
             job_model=job,
             job_id=uuid.uuid4(),
         )
