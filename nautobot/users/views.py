@@ -182,7 +182,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
         if not is_django_auth_user(request):
             messages.warning(
                 request,
-                "Non-Django authentication user credentials cannot be changed within Nautobot.",
+                "Remotely authenticated user credentials cannot be changed within Nautobot.",
             )
             return redirect("user:profile")
 
