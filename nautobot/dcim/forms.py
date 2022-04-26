@@ -2792,7 +2792,7 @@ class InterfaceBulkEditForm(
             self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
             self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
         else:
-            # See #4523
+            # See netbox-community/netbox#4523
             if "pk" in self.initial:
                 site = None
                 interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).prefetch_related("device__site")
