@@ -12,14 +12,13 @@ from nautobot.dcim.choices import (
     PortTypeChoices,
 )
 
+from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-
 from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import serialize_object, serialize_object_v2
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
@@ -71,12 +70,14 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         except ObjectDoesNotExist:
             # The parent DeviceType has already been deleted
             device_type = None
+
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
             action=action,
-            related_object=device_type,
             object_data=serialize_object(self),
+            object_data_v2=serialize_object_v2(self),
+            related_object=device_type,
         )
 
     def instantiate_model(self, model, device, **kwargs):

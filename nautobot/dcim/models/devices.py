@@ -107,7 +107,7 @@ class DeviceType(PrimaryModel):
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
     model = models.CharField(max_length=100)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="model", unique=None)
+    slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     is_full_depth = models.BooleanField(
@@ -271,7 +271,7 @@ class DeviceType(PrimaryModel):
         elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufactuer_id={self.manufacturer_id}&device_type_id={self.pk}"
+                url = f"{reverse('dcim:device_list')}?manufacturer_id={self.manufacturer_id}&device_type_id={self.pk}"
                 raise ValidationError(
                     {
                         "u_height": mark_safe(
@@ -438,6 +438,7 @@ class Platform(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -473,9 +474,9 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, blank=True, null=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True)
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    name = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
         max_length=50,
         blank=True,
@@ -892,7 +893,7 @@ class VirtualChassis(PrimaryModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, db_index=True)
     domain = models.CharField(max_length=30, blank=True)
 
     csv_headers = ["name", "domain", "master"]

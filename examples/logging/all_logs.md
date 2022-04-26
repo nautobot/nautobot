@@ -1,3 +1,5 @@
+# Logging "All" Logs
+
 This example captures all logs sent to the python logger.  This is helpful if you don't know the logger name
 for the loggers config or if you simply want to make sure you collect ALL logs.  But be warned, ALL logs might
 be a lot of logs:

@@ -84,7 +84,7 @@ def add_settings(mod, allow_extras=True, settings=django_settings):
     for setting in dir(mod):
         if setting == setting.upper():
             setting_value = getattr(mod, setting)
-            if setting in TUPLE_SETTINGS and type(setting_value) == str:
+            if setting in TUPLE_SETTINGS and isinstance(setting_value, str):
                 setting_value = (setting_value,)  # In case the user forgot the comma.
 
             # Any setting that starts with EXTRA_ and matches a setting that is a list or tuple

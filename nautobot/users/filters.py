@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.models import Q
 
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.filters import BaseFilterSet
 
 __all__ = (
@@ -67,6 +67,22 @@ class UserFilterSet(BaseFilterSet):
             | Q(last_name__icontains=value)
             | Q(email__icontains=value)
         )
+
+
+class TokenFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+
+    class Meta:
+        model = Token
+        fields = ["id", "key", "write_enabled", "created", "expires"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(description__icontains=value))
 
 
 class ObjectPermissionFilterSet(BaseFilterSet):

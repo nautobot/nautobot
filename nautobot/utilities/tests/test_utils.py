@@ -3,13 +3,21 @@ from django.test import TestCase
 
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.utils import (
-    get_filterset_for_model,
     deepmerge,
     dict_to_filter_params,
+    get_form_for_model,
+    get_filterset_for_model,
+    get_model_from_name,
+    get_route_for_model,
+    get_table_for_model,
     normalize_querydict,
 )
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
+from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
+from nautobot.dcim.tables import DeviceTable, SiteTable
+
+from example_plugin.models import ExampleModel
 
 
 class DictToFilterParamsTest(TestCase):
@@ -134,10 +142,59 @@ class DeepMergeTest(TestCase):
         self.assertEqual(deepmerge(dict1, dict2), merged)
 
 
-class GetFiltersetModelTest(TestCase):
+class GetFooForModelTest(TestCase):
+    """Tests for the various `get_foo_for_model()` functions."""
+
     def test_get_filterset_for_model(self):
+        """
+        Test the util function `get_filterset_for_model` returns the appropriate FilterSet, if model (as dotted string or class) provided.
+        """
+        self.assertEqual(get_filterset_for_model("dcim.device"), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
+        self.assertEqual(get_filterset_for_model("dcim.site"), SiteFilterSet)
         self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)
+
+    def test_get_form_for_model(self):
+        """
+        Test the util function `get_form_for_model` returns the appropriate Form, if form type and model (as dotted string or class) provided.
+        """
+        self.assertEqual(get_form_for_model("dcim.device", "Filter"), DeviceFilterForm)
+        self.assertEqual(get_form_for_model(Device, "Filter"), DeviceFilterForm)
+        self.assertEqual(get_form_for_model("dcim.site", "Filter"), SiteFilterForm)
+        self.assertEqual(get_form_for_model(Site, "Filter"), SiteFilterForm)
+        self.assertEqual(get_form_for_model("dcim.device"), DeviceForm)
+        self.assertEqual(get_form_for_model(Device), DeviceForm)
+        self.assertEqual(get_form_for_model("dcim.site"), SiteForm)
+        self.assertEqual(get_form_for_model(Site), SiteForm)
+
+    def test_get_route_for_model(self):
+        """
+        Test the util function `get_route_for_model` returns the appropriate URL route name, if model (as dotted string or class) provided.
+        """
+        self.assertEqual(get_route_for_model("dcim.device", "list"), "dcim:device_list")
+        self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
+        self.assertEqual(get_route_for_model("dcim.site", "list"), "dcim:site_list")
+        self.assertEqual(get_route_for_model(Site, "list"), "dcim:site_list")
+        self.assertEqual(
+            get_route_for_model("example_plugin.examplemodel", "list"), "plugins:example_plugin:examplemodel_list"
+        )
+        self.assertEqual(get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+
+    def test_get_table_for_model(self):
+        """
+        Test the util function `get_table_for_model` returns the appropriate Table, if model (as dotted string or class) provided.
+        """
+        self.assertEqual(get_table_for_model("dcim.device"), DeviceTable)
+        self.assertEqual(get_table_for_model(Device), DeviceTable)
+        self.assertEqual(get_table_for_model("dcim.site"), SiteTable)
+        self.assertEqual(get_table_for_model(Site), SiteTable)
+
+    def test_get_model_from_name(self):
+        """
+        Test the util function `get_model_from_name` returns the appropriate Model, if the dotted name provided.
+        """
+        self.assertEqual(get_model_from_name("dcim.device"), Device)
+        self.assertEqual(get_model_from_name("dcim.site"), Site)
 
 
 class IsTruthyTest(TestCase):

@@ -26,7 +26,7 @@ because the **Device Type** object also serves as a template. This templating fe
 
 Device Types can serve as templates for Devices, and as such the two are very similar. Here is a screenshot of a Device Type:
 
-![](../images/getting-started-nautobot-ui/21-device-type.png)
+![Device type example](../images/getting-started-nautobot-ui/21-device-type.png)
 
 Creating a Device Type is very similar to [creating a Device](creating-devices.md).
 
@@ -38,9 +38,9 @@ To create a Device Type:
     * A Device Type requires a **Manufacturer** object to be created prior to creating the Device Type
     * Device Type requires **Manufacturer**, **Model**, **Slug**, and **Height** values at creation
     * In this example, name the Device Type `MX240-edge`
-4. On the home page for the specific Device Type, click on `+Add Components` and select `Interfaces`    
+4. On the home page for the specific Device Type, click on `+Add Components` and select `Interfaces`
 
-![](../images/getting-started-nautobot-ui/15-create-device-type.png)
+![Create a device type](../images/getting-started-nautobot-ui/15-create-device-type.png)
 
 You will now see the `Interface Template` form:
 
@@ -52,20 +52,20 @@ You will now see the `Interface Template` form:
     * Add a `Description` and `Label` (optional)
 2. Click `Create and Add More`
 3. Create the `xe-` Interfaces
-    * This example shows bulk creation using a range (`xe-[0-1]/0/[0-9]`) in `Name` 
+    * This example shows bulk creation using a range (`xe-[0-1]/0/[0-9]`) in `Name`
     * Select the appropriate Type from the drop-down selector
-4. Click on `Create`    
+4. Click on `Create`
 
-![](../images/getting-started-nautobot-ui/16-interface-templates.png)
+![Create interface templates](../images/getting-started-nautobot-ui/16-interface-templates.png)
 
 Clicking the `Create` button will take you back to the home screen for the Device Type you are editing. There, you will
 see that the **Interfaces** tab now has the expected 21 Interfaces listed.
 
-![](../images/getting-started-nautobot-ui/17-templated-interfaces.png)
+![Example interface template](../images/getting-started-nautobot-ui/17-templated-interfaces.png)
 
 !!! note
     As of this writing (Nautobot 1.0.3), Interfaces cannot be assigned in to a LAG in the Device Type template; component
-    Interfaces must be designated in the specific instantiation of s Device created from the Device Type 
+    Interfaces must be designated in the specific instantiation of a Device created from the Device Type.
 
 ## Creating a New Device Using the Device Type
 
@@ -78,10 +78,10 @@ Create a new Device with these attributes:
 
 On the main screen for the new *Device*, you will see an **Interfaces** tab with the expected Interfaces from the *Device Type* template:
 
-![](../images/getting-started-nautobot-ui/18-assign-device-type.png)
+![Assign device type](../images/getting-started-nautobot-ui/18-assign-device-type.png)
 
 !!! note
-    Device Type properties only apply to **new** instantiations of Devices from the Type; 
+    Device Type properties only apply to **new** instantiations of Devices from the Type;
     Devices created prior to a modification of the Device Type will not inherit the changes retroactively
 
 ## Specifying the LAG Components on the Device
@@ -93,8 +93,8 @@ edit this new Device, specifying the component `ae0` Interfaces.
 2. On the `Editing Interfaces` form, select `ae0` in the `Parent LAG` drop-down selector
 3. Click on `Apply`; you will be taken back to the main page for the Device
 
-![](../images/getting-started-nautobot-ui/19-edit-ints-for-lag.png)
+![Edit LAG interface](../images/getting-started-nautobot-ui/19-edit-ints-for-lag.png)
 
 On the Device's main page, notice that `xe-0/0/9` and `xe-1/0/9` are now assigned to the `ae0` LAG:
 
-![](../images/getting-started-nautobot-ui/20-ints-int-lag.png)
+![LAG interface example](../images/getting-started-nautobot-ui/20-ints-int-lag.png)

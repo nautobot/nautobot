@@ -24,3 +24,5 @@ db_output.*
 celerybeat-schedule
 geckodriver.log
 uwsgi.ini
+jobs/*
+htmlcov/*

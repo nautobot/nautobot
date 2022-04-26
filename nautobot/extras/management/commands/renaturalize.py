@@ -39,7 +39,7 @@ class Command(BaseCommand):
                     model = app_config.get_model(model_name)
                 except LookupError:
                     raise CommandError("Unknown model: {}.{}".format(app_label, model_name))
-                fields = [field for field in model._meta.concrete_fields if type(field) is NaturalOrderingField]
+                fields = [field for field in model._meta.concrete_fields if isinstance(field, NaturalOrderingField)]
                 if not fields:
                     raise CommandError(
                         "Invalid model: {}.{} does not employ natural ordering".format(app_label, model_name)
@@ -50,7 +50,7 @@ class Command(BaseCommand):
             # Find *all* models with NaturalOrderingFields
             for app_config in apps.get_app_configs():
                 for model in app_config.models.values():
-                    fields = [field for field in model._meta.concrete_fields if type(field) is NaturalOrderingField]
+                    fields = [field for field in model._meta.concrete_fields if isinstance(field, NaturalOrderingField)]
                     if fields:
                         models.append((model, fields))
 

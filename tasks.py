@@ -42,7 +42,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.6",
+            "python_ver": "3.7",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_files": [
@@ -111,6 +111,7 @@ def docker_compose(context, command, **kwargs):
 def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
+        print(f'Running command "{command}"')
         context.run(command, pty=True, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
@@ -131,16 +132,23 @@ def run_command(context, command, **kwargs):
     help={
         "force_rm": "Always remove intermediate containers.",
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
     }
 )
-def build(context, force_rm=False, cache=True):
+def build(context, force_rm=False, cache=True, poetry_parallel=True):
     """Build Nautobot docker image."""
-    command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
+    command = (
+        "build"
+        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
+        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
+    )
 
     if not cache:
         command += " --no-cache"
     if force_rm:
         command += " --force-rm"
+    if poetry_parallel:
+        command += " --build-arg POETRY_PARALLEL=true"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
     docker_compose(context, command)
@@ -153,6 +161,7 @@ def build(context, force_rm=False, cache=True):
         "platforms": "Comma-separated list of strings for which to build. (Default: linux/amd64)",
         "tag": "Tags to be applied to the built image. (Default: networktocode/nautobot-dev:local)",
         "target": "Build target from the Dockerfile. (Default: dev)",
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: False)",
     }
 )
 def buildx(
@@ -160,16 +169,27 @@ def buildx(
     cache=False,
     cache_dir="",
     platforms="linux/amd64",
-    tag="networktocode/nautobot-dev-py3.6:local",
+    tag="networktocode/nautobot-dev-py3.7:local",
     target="dev",
+    poetry_parallel=False,
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
     print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
-    command = f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile --build-arg PYTHON_VER={context.nautobot.python_ver} ."
+    command = (
+        f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
+        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
+        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
+        " ."
+    )
     if not cache:
         command += " --no-cache"
     else:
-        command += f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver} --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
+        command += (
+            f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver}"
+            f" --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
+        )
+    if poetry_parallel:
+        command += " --build-arg POETRY_PARALLEL=true"
 
     context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
@@ -181,6 +201,15 @@ def get_nautobot_version():
 
     version_match = re.findall(r"version = \"(.*)\"\n", content)
     return version_match[0]
+
+
+def get_dependency_version(dependency_name):
+    """Get the version of a given direct dependency from `pyproject.toml`."""
+    with open("pyproject.toml", "r") as fh:
+        content = fh.read()
+
+    version_match = re.search(rf'^{dependency_name} = .*"[~^]?([0-9.]+)"', content, flags=re.MULTILINE)
+    return version_match.group(1)
 
 
 @task(
@@ -203,7 +232,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.6":
+    if context.nautobot.python_ver == "3.7":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
@@ -294,10 +323,10 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task(help={"container": "Name of the container to shell into"})
-def cli(context, container="nautobot"):
-    """Launch a bash shell inside the running Nautobot container."""
-    docker_compose(context, f"exec {container} bash", pty=True)
+@task(help={"service": "Name of the service to shell into"})
+def cli(context, service="nautobot"):
+    """Launch a bash shell inside the running Nautobot (or other) Docker container."""
+    docker_compose(context, f"exec {service} bash", pty=True)
 
 
 @task(
@@ -399,11 +428,39 @@ def hadolint(context):
 
 
 @task
+def markdownlint(context):
+    """Lint Markdown files."""
+    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
 
     run_command(context, command)
+
+
+@task(
+    help={
+        "api_version": "Check a single specified API version only.",
+    },
+)
+def check_schema(context, api_version=None):
+    """Render the REST API schema and check for problems."""
+    if api_version is not None:
+        api_versions = [api_version]
+    else:
+        nautobot_version = get_nautobot_version()
+        # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
+        current_major, current_minor = nautobot_version.split(".")[:2]
+        assert current_major == "1", f"check_schemas version calc must be updated to handle version {current_major}"
+        api_versions = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+
+    for api_version in api_versions:
+        command = f"nautobot-server spectacular --api-version {api_version} --validate --fail-on-warn --file /dev/null"
+        run_command(context, command)
 
 
 @task(
@@ -516,6 +573,8 @@ def tests(context, lint_only=False, keepdb=False):
     black(context)
     flake8(context)
     hadolint(context)
+    markdownlint(context)
     check_migrations(context)
+    check_schema(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)

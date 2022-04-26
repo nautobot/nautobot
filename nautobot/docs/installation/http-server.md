@@ -58,12 +58,12 @@ $ sudo dnf install -y nginx
 #### Configure NGINX
 
 Once NGINX is installed, copy and paste the following NGINX configuration into
-`/etc/nginx/sites-available/nautobot.conf` for Ubuntu or `/etc/nginx/conf.d/nautobot.conf` for CentOS/RHEL: 
+`/etc/nginx/sites-available/nautobot.conf` for Ubuntu or `/etc/nginx/conf.d/nautobot.conf` for CentOS/RHEL:
 
-!!! note 
+!!! note
     If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
-```
+```nginxconf
 server {
     listen 443 ssl http2 default_server;
     listen [::]:443 ssl http2 default_server;
@@ -141,7 +141,8 @@ $ sudo systemctl restart nginx
 ## Confirm Permissions for NAUTOBOT_ROOT
 
 Ensure that the `NAUTOBOT_ROOT` permissions are set to `755`.
-If permissions need to be changed, as the `nautobot` user run: 
+If permissions need to be changed, as the `nautobot` user run:
+
 ```no-highlight
 $ chmod 755 $NAUTOBOT_ROOT
 ```
@@ -166,9 +167,11 @@ If you are unable to connect to the HTTP server, check that:
 - Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
 
 ### Static Media Failure
+
 If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify the permissions on the `$NAUTOBOT_ROOT` directory are `755`.
 
 Example of correct permissions:
+
 ```no-highlight
 [root@localhost ~]# ls -l /opt/
 total 4
@@ -179,6 +182,7 @@ drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
 If the permissions are not correct, modify them accordingly.
 
 Example of modifying the permissions:
+
 ```no-highlight
 [nautobot@localhost ~]$ ls -l /opt/
 total 4

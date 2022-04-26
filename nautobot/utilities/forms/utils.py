@@ -8,6 +8,7 @@ from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP
 
 __all__ = (
     "add_blank_choice",
+    "add_field_to_filter_form_class",
     "expand_alphanumeric_pattern",
     "expand_ipaddress_pattern",
     "form_from_model",
@@ -186,3 +187,16 @@ def validate_csv(headers, fields, required_fields):
     for f in required_fields:
         if f not in headers:
             raise forms.ValidationError(f'Required column header "{f}" not found.')
+
+
+def add_field_to_filter_form_class(form_class, field_name, field_obj):
+    """
+    Attach a field to an existing filter form class.
+    """
+    if not isinstance(field_obj, forms.Field):
+        raise TypeError(f"Custom form field `{field_name}` is not an instance of django.forms.Field.")
+    if field_name in form_class.base_fields:
+        raise AttributeError(
+            f"There was a conflict with filter form field `{field_name}`, the custom filter form field was ignored."
+        )
+    form_class.base_fields[field_name] = field_obj

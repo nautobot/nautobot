@@ -1,34 +1,40 @@
+# Nautobot
+
 ![Nautobot](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/nautobot_logo.svg "Nautobot logo")
 
-Nautobot is a Network Source of Truth and Network Automation Platform.  
+Nautobot is a Network Source of Truth and Network Automation Platform.
 
 > Nautobot was initially developed as a fork of NetBox (v2.10.4).  NetBox was originally developed by Jeremy Stretch at DigitalOcean and the NetBox Community.
 
 Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
-[PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database. 
+[PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
 The complete documentation for Nautobot can be found at [Read the Docs](https://nautobot.readthedocs.io/en/stable/).
 
 Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join us in the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com)!
 
-### Build Status
+## Build Status
 
 | Branch      | Status |
 |-------------|------------|
 | **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
 | **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
 
-### Screenshots
+## Screenshots
 
-![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot1.png "Main page")
-
----
-
-![Screenshot of rack elevation](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot2.png "Rack elevation")
+![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_main_page.png "Main page")
 
 ---
 
-![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot3.png "Prefix hierarchy")
+![Screenshot of config contexts](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_config_contexts.png "Config Contexts")
+
+---
+
+![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_prefix_hierarchy.png "Prefix hierarchy")
+
+---
+
+![Screenshot of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_graphiql.png "GraphQL API")
 
 ## Installation
 
@@ -39,6 +45,22 @@ Please see [the documentation](https://nautobot.readthedocs.io/en/stable/install
 Below is a simplified overview of the Nautobot application stack for reference:
 
 ![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
+
+## Plugins and Extensibility
+
+Nautobot offers the ability to customize your setup to better align with your direct business needs. It does so through the use of various plugins that have been developed for network automation, and are designed to be used in environments where needed.
+
+There are many plugins available within the Nautobot Apps ecosystem. The below screenshots are an example of some popular ones that are currently available.
+
+### Plugin Screenshots
+
+#### Golden Config Plugin
+
+![Screenshot of golden config](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_golden_config.png "Golden config")
+
+#### ChatOps Plugin
+
+![Screenshot of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_chatops.png "ChatOps")
 
 ## Providing Feedback
 

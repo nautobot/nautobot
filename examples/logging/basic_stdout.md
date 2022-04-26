@@ -1,3 +1,5 @@
+# Logging to `stdout`
+
 This example provides adequate logging for basic deployments where the logs to stdout are captured by
 some external process such as Docker or Kubernetes:
 
@@ -31,6 +33,7 @@ LOGGING = {
     },
 }
 ```
+
 ## Example Logs
 
 ```no-highlight

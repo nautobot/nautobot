@@ -1,4 +1,3 @@
-from django.db.models import QuerySet
 from rest_framework.pagination import LimitOffsetPagination
 
 from nautobot.utilities.config import get_settings_or_config
@@ -13,12 +12,7 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
 
     def paginate_queryset(self, queryset, request, view=None):
 
-        if isinstance(queryset, QuerySet):
-            self.count = queryset.count()
-        else:
-            # We're dealing with an iterable, not a QuerySet
-            self.count = len(queryset)
-
+        self.count = self.get_count(queryset)
         self.limit = self.get_limit(request)
         self.offset = self.get_offset(request)
         self.request = request
