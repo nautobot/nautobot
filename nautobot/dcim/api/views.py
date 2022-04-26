@@ -7,8 +7,8 @@ from django.db.models import F
 from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from nautobot.third_party.drf_spectacular.types import OpenApiTypes
-from nautobot.third_party.drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
