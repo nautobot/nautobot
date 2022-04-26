@@ -1079,6 +1079,10 @@ class TagTestCase(TestCase):
         self.assertEqual(filtered_data.count(), 1)
         self.assertEqual(filtered_data[0], self.tags[0])
 
+    def test_search(self):
+        params = {"q": "tag-1"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class WebhookTestCase(TestCase):
     queryset = Webhook.objects.all()
