@@ -2,6 +2,10 @@
 
 Nautobot is packaged as a Docker image for use in a production environment. The published image is based on the `python:3.7-slim` image to maintain the most compatibility with Nautobot deployments. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com) for the most up to date information.
 
+## Platforms
+
+Nautobot docker images are currently provided for both `linux/amd64` and `linux/arm64` architectures.  Please note ARM64 support is untested by our automated tests and should be considered in an alpha state.
+
 ## Tags
 
 A set of Docker images are built for each Nautobot release and published to both [Docker Hub](https://hub.docker.com/r/networktocode/nautobot/) and the [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot).

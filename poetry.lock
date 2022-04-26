@@ -352,7 +352,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "django"
-version = "3.2.12"
+version = "3.2.13"
 description = "A high-level Python Web framework that encourages rapid development and clean, pragmatic design."
 category = "main"
 optional = false
@@ -1284,7 +1284,7 @@ textfsm = ">=1.1.2"
 
 [[package]]
 name = "netutils"
-version = "1.0.0"
+version = "1.1.0"
 description = "Common helper functions useful in network automation."
 category = "main"
 optional = false
@@ -2210,7 +2210,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "e45080391af91d5cef3c8f49f0aa95c0671fecf5b02dd6592c945f4457d80d9a"
+content-hash = "2afdfab41f541ca79b7efe8307c74d884e76e56c938941ff3bd2fbe2da7d86e6"
 
 [metadata.files]
 amqp = [
@@ -2452,8 +2452,8 @@ deprecated = [
     {file = "Deprecated-1.2.13.tar.gz", hash = "sha256:43ac5335da90c31c24ba028af536a91d41d53f9e6901ddb021bcc572ce44e38d"},
 ]
 django = [
-    {file = "Django-3.2.12-py3-none-any.whl", hash = "sha256:9b06c289f9ba3a8abea16c9c9505f25107809fb933676f6c891ded270039d965"},
-    {file = "Django-3.2.12.tar.gz", hash = "sha256:9772e6935703e59e993960832d66a614cf0233a1c5123bc6224ecc6ad69e41e2"},
+    {file = "Django-3.2.13-py3-none-any.whl", hash = "sha256:b896ca61edc079eb6bbaa15cf6071eb69d6aac08cce5211583cfb41515644fdf"},
+    {file = "Django-3.2.13.tar.gz", hash = "sha256:6d93497a0a9bf6ba0e0b1a29cccdc40efbfc76297255b1309b3a884a688ec4b6"},
 ]
 django-ajax-tables = [
     {file = "django_ajax_tables-1.1.1-py3-none-any.whl", hash = "sha256:62e0138949153c0a994eefbf469f5496b1ad98bc073e170bc021a1aada7a32d0"},
@@ -2821,8 +2821,8 @@ netmiko = [
     {file = "netmiko-4.0.0.tar.gz", hash = "sha256:7d58419223b5269a8c205977db19704a378277b68e6e87173c0af4ebd7ca7667"},
 ]
 netutils = [
-    {file = "netutils-1.0.0-py3-none-any.whl", hash = "sha256:f6e695dc761f41c68d3b2b9763f6ac3bc636d8b3c70c9886dae2655b2eab5c2b"},
-    {file = "netutils-1.0.0.tar.gz", hash = "sha256:ead1d927374a76a9ff78867b5f72b66cd26eaa9ec9e8d00e12e8085694a0275a"},
+    {file = "netutils-1.1.0-py3-none-any.whl", hash = "sha256:bcb4367689c773cd30bf898b15bed38f22dc8bd69e64f2272bb9dd4726bf41d4"},
+    {file = "netutils-1.1.0.tar.gz", hash = "sha256:90ab637c60ae18c515191224c52a7b0a1eb6fdde2f8dd40dfac638f2dd06ef2c"},
 ]
 ntc-templates = [
     {file = "ntc_templates-3.0.0-py3-none-any.whl", hash = "sha256:a652ff1659803d98fc088fc1b0838a74533316b0ad627c1220c0424dd82d12b3"},

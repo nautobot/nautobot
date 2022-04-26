@@ -125,7 +125,9 @@ class PluginWebhookTest(SeleniumTestCase):
 
 
 class PluginDocumentationTest(SeleniumTestCase):
-    """These Testcases ensure plugin provided docs are supported."""
+    """
+    Integration tests for ensuring plugin provided docs are supported.
+    """
 
     def setUp(self):
         super().setUp()
@@ -148,3 +150,26 @@ class PluginDocumentationTest(SeleniumTestCase):
         self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:anotherexamplemodel_add")}')
 
         self.assertFalse(self.browser.links.find_by_partial_href("example_plugin/docs/models/anotherexamplemodel.html"))
+
+class PluginReturnUrlTestCase(SeleniumTestCase):
+    """
+    Integration tests for reversing plugin return urls.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+    def test_plugin_return_url(self):
+        """This test ensures that plugins return url for new objects is the list view."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_add")}')
+
+        form = self.browser.find_by_tag("form")
+
+        # Check that the Cancel button is a link to the examplemodel_list view.
+        element = form.first.links.find_by_text("Cancel").first
+        self.assertEqual(
+            element["href"], f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_list")}'
+        )
