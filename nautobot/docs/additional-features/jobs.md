@@ -582,6 +582,9 @@ class MyJobTestCase(TransactionTestCase):
             self.assertEqual(log_entry.message, "...")
 ```
 
+!!! tip
+    For more advanced examples (such as testing jobs executed with `commit=True`, for example) refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
+
 ### Nautobot 1.2
 
 If your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x, you need to handle a couple more things manually:
@@ -594,7 +597,7 @@ from django.conf import settings
 if "job_logs" in settings.DATABASES:
     settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
     settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
- ```
+```
 
 Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test:
 
@@ -641,9 +644,6 @@ class MyJobTestCase(TransactionTestCase):
         super().setUp()
         populate_status_choices(apps, None)
 ```
-
-!!! tip
-    For more advanced examples (such as testing jobs executed with `commit=True`, for example) refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
 
 ## Example Jobs
 
