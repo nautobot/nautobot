@@ -31,11 +31,14 @@ class PasswordUITest(TestCase):
         self.assertIn("New password confirmation", str(get_response.content))
 
         # Check POST change_password functionality
-        post_response = self.client.post(reverse("user:change_password"), data={
-            "old_password": "foo",
-            "new_password1": "bar",
-            "new_password2": "baz",
-        })
+        post_response = self.client.post(
+            reverse("user:change_password"),
+            data={
+                "old_password": "foo",
+                "new_password1": "bar",
+                "new_password2": "baz",
+            },
+        )
         self.assertIn("The two password fields", str(post_response.content))
 
     @override_settings(
@@ -43,6 +46,7 @@ class PasswordUITest(TestCase):
             "social_core.backends.google.GoogleOAuth2",
             "nautobot.core.authentication.ObjectPermissionBackend",
         ]
+        # unnecessary
     )
     def test_change_password_disabled(self):
         """
