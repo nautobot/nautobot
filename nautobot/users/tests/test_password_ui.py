@@ -18,7 +18,6 @@ class PasswordUITest(TestCase):
         """
         Check that a Django-authentication-based user is allowed to change their password
         """
-        User.objects.filter(username="non_sso_user").delete()
         non_sso_user = User.objects.create_user(username="non_sso_user", is_superuser=True)
         self.client.force_login(non_sso_user)
         profile_response = self.client.get(reverse("user:profile"))
@@ -28,8 +27,16 @@ class PasswordUITest(TestCase):
             self.assertIn("Change Password", str(response.content))
 
         # Check GET change_password functionality
-        response = self.client.get(reverse("user:change_password"))
-        self.assertIn("New password confirmation", str(response.content))
+        get_response = self.client.get(reverse("user:change_password"))
+        self.assertIn("New password confirmation", str(get_response.content))
+
+        # Check POST change_password functionality
+        post_response = self.client.post(reverse("user:change_password"), data={
+            "old_password": "foo",
+            "new_password1": "bar",
+            "new_password2": "baz",
+        })
+        self.assertIn("The two password fields", str(post_response.content))
 
     @override_settings(
         AUTHENTICATION_BACKENDS=[
@@ -42,7 +49,6 @@ class PasswordUITest(TestCase):
         Mock an SSO-authenticated user, log them in by force and check that the change
         password functionality isn't visible in the UI or available server-side
         """
-        User.objects.filter(username="sso_user").delete()
         sso_user = User.objects.create_user(username="sso_user", is_superuser=True)
         self.request_factory = RequestFactory()
         self.request = self.request_factory.get("/")
