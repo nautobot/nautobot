@@ -151,6 +151,7 @@ class PluginDocumentationTest(SeleniumTestCase):
 
         self.assertFalse(self.browser.links.find_by_partial_href("example_plugin/docs/models/anotherexamplemodel.html"))
 
+
 class PluginReturnUrlTestCase(SeleniumTestCase):
     """
     Integration tests for reversing plugin return urls.
