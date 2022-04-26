@@ -1,6 +1,8 @@
 const htmlEl = document.getElementsByTagName('html')[0];
 const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
 
+var darkElement = document.getElementById("dark-theme");
+
 // CurrentTheme overrides auto-detection when specified by manually clicking theme button
 if (currentTheme && currentTheme != "system") {
     // Set theme setting to HTML dataset element, for CSS rendering
@@ -67,8 +69,10 @@ function detectThemeSettings() {
 
 function setDarkTheme() {
     htmlEl.dataset.theme = "dark";
+    darkElement.disabled = undefined;
 }
 
 function setLightTheme() {
     htmlEl.dataset.theme = "light";
+    darkElement.disabled = "disabled";
 }
