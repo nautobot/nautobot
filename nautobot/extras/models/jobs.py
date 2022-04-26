@@ -29,6 +29,10 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_MAX_GROUPING_LENGTH,
+    JOB_MAX_NAME_LENGTH,
+    JOB_MAX_SLUG_LENGTH,
+    JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.plugins.utils import import_object
@@ -64,7 +68,7 @@ class Job(PrimaryModel):
 
     # Information used to locate the Job source code
     source = models.CharField(
-        max_length=16,
+        max_length=JOB_MAX_SOURCE_LENGTH,
         choices=JobSourceChoices,
         editable=False,
         db_index=True,
@@ -81,20 +85,20 @@ class Job(PrimaryModel):
         help_text="Git repository that provides this job",
     )
     module_name = models.CharField(
-        max_length=100,
+        max_length=JOB_MAX_NAME_LENGTH,
         editable=False,
         db_index=True,
         help_text="Dotted name of the Python module providing this job",
     )
     job_class_name = models.CharField(
-        max_length=100,
+        max_length=JOB_MAX_NAME_LENGTH,
         editable=False,
         db_index=True,
         help_text="Name of the Python class providing this job",
     )
 
     slug = AutoSlugField(
-        max_length=320,
+        max_length=JOB_MAX_SLUG_LENGTH,
         populate_from=["class_path"],
         slugify_function=slugify_dots_to_dashes,
     )
@@ -102,9 +106,15 @@ class Job(PrimaryModel):
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     grouping = models.CharField(
-        max_length=255, help_text="Human-readable grouping that this job belongs to", db_index=True
+        max_length=JOB_MAX_GROUPING_LENGTH,
+        help_text="Human-readable grouping that this job belongs to",
+        db_index=True,
     )
-    name = models.CharField(max_length=100, help_text="Human-readable name of this job", db_index=True)
+    name = models.CharField(
+        max_length=JOB_MAX_NAME_LENGTH,
+        help_text="Human-readable name of this job",
+        db_index=True,
+    )
     description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
     # Control flags
@@ -303,14 +313,18 @@ class Job(PrimaryModel):
             raise ValidationError('A Git repository may only be specified when the source is "git"')
 
         # Protect against invalid input when auto-creating Job records
-        if len(self.module_name) > 100:
-            raise ValidationError("Module name may not exceed 100 characters in length")
-        if len(self.job_class_name) > 100:
-            raise ValidationError("Job class name may not exceed 100 characters in length")
-        if len(self.grouping) > 255:
-            raise ValidationError("Grouping may not exceed 255 characters in length")
-        if len(self.name) > 100:
-            raise ValidationError("Name may not exceed 100 characters in length")
+        if len(self.source) > JOB_MAX_SOURCE_LENGTH:
+            raise ValidationError(f"Source may not exceed {JOB_MAX_SOURCE_LENGTH} characters in length")
+        if len(self.module_name) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Module name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
+            raise ValidationError("Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+        if len(self.name) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.slug) > JOB_MAX_SLUG_LENGTH:
+            raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
 
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})
