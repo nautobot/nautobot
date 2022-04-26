@@ -1284,7 +1284,7 @@ textfsm = ">=1.1.2"
 
 [[package]]
 name = "netutils"
-version = "1.0.0"
+version = "1.1.0"
 description = "Common helper functions useful in network automation."
 category = "main"
 optional = false
@@ -2210,7 +2210,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "8721c34bb18c9fbde16063bd827f0138d2297d377b194fc0e68305685d7e61ed"
+content-hash = "2afdfab41f541ca79b7efe8307c74d884e76e56c938941ff3bd2fbe2da7d86e6"
 
 [metadata.files]
 amqp = [
@@ -2821,8 +2821,8 @@ netmiko = [
     {file = "netmiko-4.0.0.tar.gz", hash = "sha256:7d58419223b5269a8c205977db19704a378277b68e6e87173c0af4ebd7ca7667"},
 ]
 netutils = [
-    {file = "netutils-1.0.0-py3-none-any.whl", hash = "sha256:f6e695dc761f41c68d3b2b9763f6ac3bc636d8b3c70c9886dae2655b2eab5c2b"},
-    {file = "netutils-1.0.0.tar.gz", hash = "sha256:ead1d927374a76a9ff78867b5f72b66cd26eaa9ec9e8d00e12e8085694a0275a"},
+    {file = "netutils-1.1.0-py3-none-any.whl", hash = "sha256:bcb4367689c773cd30bf898b15bed38f22dc8bd69e64f2272bb9dd4726bf41d4"},
+    {file = "netutils-1.1.0.tar.gz", hash = "sha256:90ab637c60ae18c515191224c52a7b0a1eb6fdde2f8dd40dfac638f2dd06ef2c"},
 ]
 ntc-templates = [
     {file = "ntc_templates-3.0.0-py3-none-any.whl", hash = "sha256:a652ff1659803d98fc088fc1b0838a74533316b0ad627c1220c0424dd82d12b3"},
