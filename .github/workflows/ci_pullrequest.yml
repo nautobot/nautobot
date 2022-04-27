@@ -255,8 +255,8 @@ jobs:
   #       run: "poetry build"
   container-build:
     runs-on: "ubuntu-20.04"
-    needs:
-      - "integration-test"
+    # needs:
+    #   - "integration-test"
     name: "Build Docker Container"
     strategy:
       fail-fast: true
