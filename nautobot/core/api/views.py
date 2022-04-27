@@ -19,10 +19,10 @@ from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
-from drf_spectacular.plumbing import get_relative_url, set_query_parameters
-from drf_spectacular.renderers import OpenApiJsonRenderer
-from drf_spectacular.utils import extend_schema
-from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
+from nautobot.third_party.drf_spectacular.plumbing import get_relative_url, set_query_parameters
+from nautobot.third_party.drf_spectacular.renderers import OpenApiJsonRenderer
+from nautobot.third_party.drf_spectacular.utils import extend_schema
+from nautobot.third_party.drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
 from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
@@ -446,12 +446,12 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter and page styling.
     """
 
-    class DummyOpenAPIRenderer(OpenApiJsonRenderer):
+    class FakeOpenAPIRenderer(OpenApiJsonRenderer):
         """For backwards-compatibility with drf-yasg, allow `?format=openapi` as a way to request the schema JSON."""
 
         format = "openapi"
 
-    renderer_classes = SpectacularSwaggerView.renderer_classes + [DummyOpenAPIRenderer]
+    renderer_classes = SpectacularSwaggerView.renderer_classes + [FakeOpenAPIRenderer]
 
     template_name = "swagger_ui.html"
 

@@ -50,7 +50,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -1267,6 +1267,24 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_patching_primary_ip4_success(self):
+        """
+        Validate we can set primary_ip4 on a device using a PATCH.
+        """
+        # Add object-level permission
+        self.add_permissions("dcim.change_device")
+
+        dev = Device.objects.get(name="Device 3")
+        dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t")
+        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", assigned_object=dev_intf)
+
+        patch_data = {"primary_ip4": dev_ip_addr.pk}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
 class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):

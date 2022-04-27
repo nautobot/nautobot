@@ -1,6 +1,6 @@
 from django.conf.urls import include
 from django.urls import path
-from drf_spectacular.views import (
+from nautobot.third_party.drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularJSONAPIView,
     SpectacularYAMLAPIView,

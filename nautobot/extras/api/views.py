@@ -4,8 +4,8 @@ from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from nautobot.third_party.drf_spectacular.types import OpenApiTypes
+from nautobot.third_party.drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -20,7 +20,6 @@ from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
-    ModelViewSetMixin,
     ModelViewSet,
     ReadOnlyModelViewSet,
 )
@@ -454,16 +453,13 @@ def _run_job(request, job_model, legacy_response=False):
 class JobViewSet(
     # DRF mixins:
     # note no CreateModelMixin
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     # Nautobot mixins:
     BulkUpdateModelMixin,
     BulkDestroyModelMixin,
-    ModelViewSetMixin,
     # Base class
-    viewsets.GenericViewSet,
+    ReadOnlyModelViewSet,
 ):
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer

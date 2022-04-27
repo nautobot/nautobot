@@ -19,11 +19,11 @@ For the initial release only dynamic groups of `Device` and `VirtualMachine` obj
 
 Plugins can now extend existing FilterSets and Filter Forms. This allows plugins to provide alternative lookup methods or custom queries in the UI or API that may not already exist today.
 
-You can refer to the [development guide](../development/#extending-filters) on how to create new filters and fields.
+You can refer to the [plugin development guide](../plugins/development.md#extending-filters) on how to create new filters and fields.
 
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
-GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [user guide](../user-guides/graphql.md#filtering-queries) for examples.
+GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [GraphQL user guide](../user-guides/graphql.md#filtering-queries) for examples.
 
 #### Job Database Model ([#1001](https://github.com/nautobot/nautobot/issues/1001))
 
@@ -59,7 +59,7 @@ IP addresses can now be associated with multiple outside NAT IP addresses. To do
 A new version of the REST API `/api/ipam/ip-addresses/*` endpoints have been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
 
 !!! note
-    There are some guardrails on this feature to support backwards compatibility. If you consume the API without specifying the version header or query argument and start associating multiple IPs to have the same NAT inside IP address, an error will be thrown. Existing schema returns `nat_outside` as a single object, where as 1.3 and beyond will return this as a list.
+    There are some guardrails on this feature to support backwards compatibility. If you consume the REST API without specifying the version header or query argument and start associating multiple IPs to have the same NAT inside IP address, an error will be reported, because the existing REST API schema returns `nat_outside` as a single object, where as 1.3 and beyond will return this as a list.
 
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
@@ -77,7 +77,7 @@ The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive reg
 
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
 
-Introduce the `/api/users/tokens/` REST API endpoint, which includes a child endpoint that can be employed by a user to provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
+Nautobot now has an `/api/users/tokens/` REST API endpoint where a user can provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
 
 ```bash
 $ curl -X POST \
@@ -90,29 +90,25 @@ This endpoint specifically supports Basic Authentication in addition to the othe
 
 #### REST API Versioning ([#1465](https://github.com/nautobot/nautobot/issues/1465))
 
-Nautobot's REST API now supports multiple versions, which may requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
+Nautobot's REST API now supports multiple versions, which may be requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
 
 - The REST API endpoints that are versioned in the 1.3.0 release are
     - `/api/extras/jobs/` listing endpoint
-    - `/api/extras/tags/` create/put/patch endpoint
-    - `/api/ipam/ip-addresses/` endpoints
-- All others endpoints are currently un-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
+    - `/api/extras/tags/` create/put/patch endpoints
+    - all `/api/ipam/ip-addresses/` endpoints
+- All other REST API endpoints are currently non-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
 - If a REST API client does not request a specific REST API version (in other words, requests `Accept: application/json` rather than `Accept: application/json; version=1.3`) the API behavior will be compatible with Nautobot 1.2, at a minimum for the remainder of the Nautobot 1.x release cycle.
-- The API behavior may change to a newer default version in a Nautobot major release (e.g. 2.0).
-- To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the new Jobs REST API, `Accept: application/json; version=1.3`).
+- The API behavior may change to a newer default version in a Nautobot major release (such as 2.0).
+- To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the updated REST API endpoints mentioned above, `Accept: application/json; version=1.3`).
 
 !!! tip
     As a best practice, when developing a Nautobot REST API integration, your client should _always_ request the current API version it is being developed against, rather than relying on the default API behavior (which may change with a new Nautobot major release, as noted, and which also may not include the latest and greatest API endpoints already available but not yet made default in the current release).
 
 #### Webhook Pre/Post-change Data Added to Request Body ([#330](https://github.com/nautobot/nautobot/issues/330))
 
-Webhooks now provide a snapshot of data before and after a change. This also includes the differences between the old and new data. See the default request body section in webhook docs [here](../models/extras/webhook.md#default-request-body).
+Webhooks now provide a snapshot of data before and after a change, as well as the differences between the old and new data. See the default request body section in the [webhook docs](../models/extras/webhook.md#default-request-body).
 
 ### Changed
-
-#### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
-
-We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 
 #### Docker Images Now Default to Python 3.7 ([#1252](https://github.com/nautobot/nautobot/pull/1252))
 
@@ -134,13 +130,70 @@ For users migrating from an earlier Nautobot release, any existing tags will def
 
 Note that a Tag created programmatically via the ORM without assigning any `content_types` will not be applicable to any model until content-types are assigned to it.
 
+#### Update Jinja2 to 3.x ([#1474](https://github.com/nautobot/nautobot/pull/1474))
+
+We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
+
 ### Removed
 
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.0b2 (2022-MM-DD)
+## v1.3.3 (2022-MM-DD)
+
+### Added
+
+### Changed
+
+- [#1680](https://github.com/nautobot/nautobot/pull/1680) - Bump netutils dependency to 1.1.0.
+
+### Fixed
+
+- [#473](https://github.com/nautobot/nautobot/issues/473) - Fix `get_return_url` for plugin reverse URLs.
+- [#1538](https://github.com/nautobot/nautobot/issues/1538) - Fix incorrect page title alignment on the "Device Type Import" page.
+- [#1679](https://github.com/nautobot/nautobot/issues/1679) - Fix a data migration error when upgrading to 1.3.x with pre-existing JobResults that reference Jobs with names exceeding 100 characters in length.
+- [#1685](https://github.com/nautobot/nautobot/issues/1685) - Fix Hadolint issue of `docker/Dockerfile`.
+- [#1697](https://github.com/nautobot/nautobot/pull/1697) - Fix docs incorrectly stating Celerey Redis URLs defaulting from CACHES.
+
+## v1.3.2 (2022-04-22)
+
+### Added
+
+- [#1219](https://github.com/nautobot/nautobot/pull/1219) - Add ARM64 support (alpha).
+- [#1426](https://github.com/nautobot/nautobot/issues/1426) - Added plugin development documentation around using ObjectListView.
+- [#1674](https://github.com/nautobot/nautobot/pull/1674) - Added flag in Dockerfile, tasks.py to enable Poetry install parallelization.
+
+### Changed
+
+- [#1667](https://github.com/nautobot/nautobot/issues/1667) - Updated README.md screenshots.
+- [#1670](https://github.com/nautobot/nautobot/pull/1670) - Configure drf-spectacular schema to more closely match drf-yasg (related to: [nautobot-ansible#135](https://github.com/nautobot/nautobot-ansible/pull/135)).
+
+### Fixed
+
+- [#1659](https://github.com/nautobot/nautobot/pull/1659) - Added some missing test/lint commands to the [development getting-started](../development/getting-started.md) documentation, and made `invoke cli` parameters match `invoke start/stop`.
+- [#1666](https://github.com/nautobot/nautobot/pull/1666) - Fixed errors in documentation with incomplete import statements.
+- [#1682](https://github.com/nautobot/nautobot/issues/1682) - Fixed Nautobot health checks failing if Redis Sentinel password is required.
+
+### Security
+
+!!! important
+    Critical CVEs in Django versions `>= 3.2, < 3.2.13`. This update upgrades Django to `3.2.13`.
+
+- [#1686](https://github.com/nautobot/nautobot/pull/1686) - Implemented fixes for [CVE-2022-28347](https://github.com/advisories/GHSA-w24h-v9qh-8gxj) and [CVE-2022-28346](https://github.com/advisories/GHSA-2gwj-7jmv-h26r) to require Django >=3.2.13.
+
+## v1.3.1 (2022-04-19)
+
+### Changed
+
+- [#1647](https://github.com/nautobot/nautobot/pull/1647) - Changed class inheritance of JobViewSet to be simpler and more self-consistent.
+
+### Fixed
+
+- [#1278](https://github.com/nautobot/nautobot/issues/1278) - Fixed several different errors that could be raised when working with RelationshipAssociations.
+- [#1662](https://github.com/nautobot/nautobot/issues/1662) - Fixed nat_outside prefetch on Device API view, and displaying multiple nat_outside entries on VM detail view.
+
+## v1.3.0 (2022-04-18)
 
 ### Added
 

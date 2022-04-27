@@ -269,7 +269,7 @@ class DynamicGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    members = tables.Column(accessor="count", verbose_name="Group Members")
+    members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
     actions = ButtonsColumn(DynamicGroup, pk_field="slug")
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
@@ -671,10 +671,10 @@ class RelationshipAssociationTable(BaseTable):
     actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
 
     source_type = tables.Column()
-    source = tables.Column(linkify=True, orderable=False)
+    source = tables.Column(linkify=True, orderable=False, accessor="get_source")
 
     destination_type = tables.Column()
-    destination = tables.Column(linkify=True, orderable=False)
+    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination")
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation

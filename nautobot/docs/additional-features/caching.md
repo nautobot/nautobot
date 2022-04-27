@@ -135,7 +135,7 @@ Example:
 ```python
 CACHEOPS_REDIS = False
 CACHEOPS_SENTINEL = {
-    "db": 0,
+    "db": 1,
     "locations": [
         ("mysentinel.redis.example.com", 26379),
         ("othersentinel.redis.example.com", 26379),

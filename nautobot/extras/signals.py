@@ -231,7 +231,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
             for job_class_name, job_class in module_details["jobs"].items():
                 # TODO: catch DB error in case where multiple Jobs have the same grouping + name
                 job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
-                job_models.append(job_model)
+                if job_model is not None:
+                    job_models.append(job_model)
 
     for job_model in Job.objects.all():
         if job_model.installed and job_model not in job_models:

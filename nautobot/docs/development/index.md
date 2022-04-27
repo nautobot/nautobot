@@ -8,13 +8,6 @@ Nautobot is a community-based Free Open Source Software (FOSS) project sponsored
 
 The Nautobot Core Team is responsible for the direction and execution of the code that gets committed to the project.
 
-The following individuals are on the Nautobot Core Team:
-
-* John Anderson
-* Glenn Matthews
-* Jathan McCollum
-* Jason Edelman
-
 ## Project Structure
 
 Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:

@@ -203,7 +203,7 @@ A dict of additional options passed to the Celery broker transport. This is only
 
 Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
 
-Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+Default: `'redis://localhost:6379/0'`
 
 Celery broker URL used to tell workers where queues are located.
 
@@ -213,7 +213,7 @@ Celery broker URL used to tell workers where queues are located.
 
 Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
 
-Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+Default: `'redis://localhost:6379/0'`
 
 Celery result backend used to tell workers where to store task results (tombstones).
 
