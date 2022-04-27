@@ -85,7 +85,13 @@
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i> <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a> &middot;
+                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
+                        {% if settings.BRANDING_URLS.docs %}
+                             <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>
+                        {% else %}
+                            <a href="{% static 'docs/index.html' %}">Docs</a>
+                        {% endif %}
+                        &middot;
                         <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
                         <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;

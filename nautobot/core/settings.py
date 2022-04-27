@@ -657,7 +657,7 @@ BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
 # Branding URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
-    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", f"{STATIC_URL}docs/index.html"),
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", None),
     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 }
 
