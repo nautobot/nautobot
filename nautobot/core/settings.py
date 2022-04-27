@@ -291,7 +291,7 @@ INSTALLED_APPS = [
     "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
-    "nautobot.third_party.drf_spectacular",
+    "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
     "health_check",

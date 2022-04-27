@@ -6,7 +6,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
 )
 from django.db.models import AutoField, ManyToManyField
-from nautobot.third_party.drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
