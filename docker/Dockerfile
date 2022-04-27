@@ -175,7 +175,7 @@ FROM dependencies as dependencies-dev-python
 RUN poetry install --no-root --no-ansi --extras all
 
 ################################ Stage: build-docs (intermediate build target)
-# Docs get built as it's own stage because again we need dev dependencies as a base but
+# Docs get built as their own stage because again we need dev dependencies as a base but
 # want to collect the output of `mkdocs` for the `build-nautobot` stage
 
 FROM dependencies-dev-python as build-docs
