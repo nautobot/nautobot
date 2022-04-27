@@ -1,5 +1,4 @@
 import collections
-import functools
 import hashlib
 import hmac
 import inspect
@@ -7,6 +6,7 @@ import logging
 import pkgutil
 import sys
 
+from cacheops import file_cache
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -22,7 +22,7 @@ from nautobot.extras.registry import registry
 logger = logging.getLogger(__name__)
 
 
-@functools.lru_cache(maxsize=None)
+@file_cache.cached(timeout=60)
 def get_job_content_type():
     """Return a cached instance of the `ContentType` for `extras.Job`."""
     return ContentType.objects.get(app_label="extras", model="job")

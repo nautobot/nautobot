@@ -9,7 +9,8 @@ from django.utils import timezone
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import JobLogEntry, JobResult
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.utilities.utils import copy_safe_request, get_job_content_type
+from nautobot.extras.utils import get_job_content_type
+from nautobot.utilities.utils import copy_safe_request
 
 
 class Command(BaseCommand):
