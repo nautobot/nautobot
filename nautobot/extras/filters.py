@@ -977,7 +977,7 @@ class TagFilterSet(NautobotFilterSet):
             return queryset
         return queryset.filter(
             Q(name__icontains=value) | Q(slug__icontains=value) | Q(content_types__model__icontains=value)
-        )
+        ).distinct()
 
 
 #
