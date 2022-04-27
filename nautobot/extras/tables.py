@@ -575,7 +575,7 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
         )
-        default_columns = ("pk", "created", "linked_record", "user", "status", "summary")
+        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
 
 
 #
