@@ -1,13 +1,7 @@
 from rest_framework import serializers
 
 from nautobot.core.api import WritableNestedSerializer
-from nautobot.virtualization.models import (
-    Cluster,
-    ClusterGroup,
-    ClusterType,
-    VirtualMachine,
-    VMInterface
-)
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = [
     "NestedClusterGroupSerializer",
