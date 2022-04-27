@@ -2854,26 +2854,6 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
         model = Interface
         fields = Interface.csv_headers
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit LAG choices to interfaces belonging to this device (or virtual chassis)
-        device = None
-        if self.is_bound and "device" in self.data:
-            try:
-                device = self.fields["device"].to_python(self.data["device"])
-            except forms.ValidationError:
-                pass
-        if device and device.virtual_chassis:
-            self.fields["lag"].queryset = Interface.objects.filter(
-                Q(device=device) | Q(device__virtual_chassis=device.virtual_chassis),
-                type=InterfaceTypeChoices.TYPE_LAG,
-            )
-        elif device:
-            self.fields["lag"].queryset = Interface.objects.filter(device=device, type=InterfaceTypeChoices.TYPE_LAG)
-        else:
-            self.fields["lag"].queryset = Interface.objects.none()
-
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data
         if "enabled" not in self.data:
