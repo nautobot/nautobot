@@ -2512,7 +2512,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         label="Parent interface",
-        display_field="display_name",
+        display_field="display",
         query_params={
             "kind": "physical",
         },
@@ -2522,7 +2522,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         label="LAG interface",
-        display_field="display_name",
+        display_field="display",
         query_params={
             "type": "lag",
         },
@@ -2610,7 +2610,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     parent = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display_name",
+        display_field="display",
         query_params={
             "device_id": "$device",
             "kind": "physical",
@@ -2626,7 +2626,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display_name",
+        display_field="display",
         query_params={
             "device_id": "$device",
             "type": "lag",
@@ -2730,7 +2730,7 @@ class InterfaceBulkEditForm(
     parent = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display_name",
+        display_field="display",
         query_params={
             "kind": "physical",
         },
@@ -2739,7 +2739,7 @@ class InterfaceBulkEditForm(
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display_name",
+        display_field="display",
         query_params={
             "type": "lag",
         },
@@ -2853,6 +2853,26 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = Interface
         fields = Interface.csv_headers
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Limit LAG choices to interfaces belonging to this device (or virtual chassis)
+        device = None
+        if self.is_bound and "device" in self.data:
+            try:
+                device = self.fields["device"].to_python(self.data["device"])
+            except forms.ValidationError:
+                pass
+        if device and device.virtual_chassis:
+            self.fields["lag"].queryset = Interface.objects.filter(
+                Q(device=device) | Q(device__virtual_chassis=device.virtual_chassis),
+                type=InterfaceTypeChoices.TYPE_LAG,
+            )
+        elif device:
+            self.fields["lag"].queryset = Interface.objects.filter(device=device, type=InterfaceTypeChoices.TYPE_LAG)
+        else:
+            self.fields["lag"].queryset = Interface.objects.none()
 
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data
