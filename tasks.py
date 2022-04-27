@@ -154,7 +154,7 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True):
     docker_compose(context, command)
 
     # Build the docs so they are available.
-    build_and_check_docs(context)
+    build_nautobot_docs(context)
 
 
 @task(
