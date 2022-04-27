@@ -522,3 +522,8 @@ span.hover_copy:hover .hover_copy_button {
 .theme-table .img-responsive {
   margin: 0 auto;
 }
+.theme-table .active-theme {
+  border: 5px solid #FF0000;
+  /*background-color: #000;
+  padding: 10px;*/
+}
