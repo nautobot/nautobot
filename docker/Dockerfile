@@ -68,9 +68,6 @@ ARG PYUWSGI_VER
 # build-nautobot (intermediate build target)
 #   uses Poetry to build a Nautobot wheel (but not yet install it)
 #
-# dependencies-dev-python (intermediate build target)
-#   uses Poetry to additionally install Nautobot's *development* dependencies
-#
 # dependencies-dev-platform-ARCH (intermediate build target)
 #   installs Hadolint, Node.JS which have platform specific commands
 #
@@ -197,7 +194,7 @@ FROM dependencies as build-nautobot
 COPY nautobot /source/nautobot
 
 # Copy in the built docs to bundle with the wheel
-COPY --from=build-docs /source/docs /source/docs
+COPY --from=build-docs /source/nautobot/project-static/docs /source/nautobot/project-static/docs
 
 # Build the wheel
 RUN poetry build
@@ -245,7 +242,7 @@ RUN npm install --global markdownlint-cli@0.31.1
 # /source from build-nautobot will include docs from build-docs as well
 COPY --from=build-nautobot /source /source
 
-# The longer we wait to copy custom config files over, the more layers get cached
+# TODO Use nautobot init to generate the same config for all use cases
 COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Run Nautobot development server by default
@@ -272,8 +269,8 @@ FROM base as final
 ARG PYTHON_VER
 
 # Copy from "build-nautobot" the required python libraries and binaries
-COPY --from=build-nautobot /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
-COPY --from=build-nautobot /usr/local/bin /usr/local/bin
+COPY --from=dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
 COPY --from=build-nautobot /source/dist/*.whl /tmp
 
 # Install the Nautobot wheel

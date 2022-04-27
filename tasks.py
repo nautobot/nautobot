@@ -137,6 +137,10 @@ def run_command(context, command, **kwargs):
 )
 def build(context, force_rm=False, cache=True, poetry_parallel=True):
     """Build Nautobot docker image."""
+
+    # First build the docs so they are available.
+    build_and_check_docs(context)
+
     command = (
         "build"
         f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
