@@ -4,8 +4,8 @@ from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from nautobot.third_party.drf_spectacular.types import OpenApiTypes
-from nautobot.third_party.drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status

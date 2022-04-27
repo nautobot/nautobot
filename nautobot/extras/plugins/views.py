@@ -7,7 +7,7 @@ from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
 from django.views.generic import View
-from nautobot.third_party.drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
