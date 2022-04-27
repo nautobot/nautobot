@@ -657,17 +657,17 @@ class CoreConfig(NautobotConfig):
         from nautobot.core.graphql import BigInteger
 
         @convert_django_field.register(JSONField)
-        def convert_json(field, registry=None):
+        def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert JSONField to GenericScalar."""
             return generic.GenericScalar()
 
         @convert_django_field.register(BinaryField)
-        def convert_binary(field, registry=None):
+        def convert_binary(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert BinaryField to String."""
             return String()
 
         @convert_django_field.register(BigIntegerField)
-        def convert_biginteger(field, registry=None):
+        def convert_biginteger(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert BigIntegerField to BigInteger scalar."""
             return BigInteger()
 

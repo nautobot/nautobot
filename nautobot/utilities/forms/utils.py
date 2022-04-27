@@ -79,8 +79,8 @@ def expand_alphanumeric_pattern(string):
     parsed_range = parse_alphanumeric_range(pattern)
     for i in parsed_range:
         if re.search(ALPHANUMERIC_EXPANSION_PATTERN, remnant):
-            for string in expand_alphanumeric_pattern(remnant):
-                yield "{}{}{}".format(lead, i, string)
+            for string2 in expand_alphanumeric_pattern(remnant):
+                yield "{}{}{}".format(lead, i, string2)
         else:
             yield "{}{}{}".format(lead, i, remnant)
 
@@ -103,8 +103,8 @@ def expand_ipaddress_pattern(string, family):
     parsed_range = parse_numeric_range(pattern, base)
     for i in parsed_range:
         if re.search(regex, remnant):
-            for string in expand_ipaddress_pattern(remnant, family):
-                yield "".join([lead, format(i, "x" if family == 6 else "d"), string])
+            for string2 in expand_ipaddress_pattern(remnant, family):
+                yield "".join([lead, format(i, "x" if family == 6 else "d"), string2])
         else:
             yield "".join([lead, format(i, "x" if family == 6 else "d"), remnant])
 

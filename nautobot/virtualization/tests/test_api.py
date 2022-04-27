@@ -345,8 +345,8 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         self.add_permissions("virtualization.add_vminterface")
 
         vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        status = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
-        status.content_types.remove(vminterface_ct)
+        status_active = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+        status_active.content_types.remove(vminterface_ct)
 
         data = {
             "virtual_machine": VirtualMachine.objects.first().id,

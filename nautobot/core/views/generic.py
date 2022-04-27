@@ -820,11 +820,11 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     widget_attrs = {}
 
     def _import_form(self, *args, **kwargs):
-        class ImportForm(BootstrapMixin, Form):
+        class CSVImportForm(BootstrapMixin, Form):
             csv_data = CSVDataField(from_form=self.model_form, widget=Textarea(attrs=self.widget_attrs))
             csv_file = CSVFileField(from_form=self.model_form)
 
-        return ImportForm(*args, **kwargs)
+        return CSVImportForm(*args, **kwargs)
 
     def _save_obj(self, obj_form, request):
         """

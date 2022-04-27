@@ -336,7 +336,7 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
         return "API Root"
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
 
         return Response(
             OrderedDict(

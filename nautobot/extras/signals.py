@@ -50,7 +50,7 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
     """
     from .jobs import enqueue_job_hooks  # avoid circular import
 
-    m2m_changed = False
+    object_m2m_changed = False
 
     # Determine the type of change being made
     if kwargs.get("created"):
@@ -59,14 +59,14 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
         action = ObjectChangeActionChoices.ACTION_UPDATE
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
-        m2m_changed = True
+        object_m2m_changed = True
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        if m2m_changed:
+        if object_m2m_changed:
             related_changes = ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(instance),
                 changed_object_id=instance.pk,
@@ -258,7 +258,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
     Job = apps.get_model("extras", "Job")
-    GitRepository = apps.get_model("extras", "GitRepository")
+    GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
     # To make reverse migrations safe
     if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):

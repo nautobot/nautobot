@@ -136,16 +136,16 @@ class ConfigContextView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
-            "format": format,
+            "format": format_,
         }
 
 
@@ -180,18 +180,18 @@ class ObjectConfigContextView(generic.ObjectView):
 
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
             "rendered_context": instance.get_config_context(),
             "source_contexts": source_contexts,
-            "format": format,
+            "format": format_,
             "base_template": self.base_template,
             "active_tab": "config-context",
         }
@@ -219,16 +219,16 @@ class ConfigContextSchemaView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontextschema.format", format, commit=True)
+                request.user.set_config("extras.configcontextschema.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontextschema.format", "json")
+            format_ = request.user.get_config("extras.configcontextschema.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
-            "format": format,
+            "format": format_,
         }
 
 
@@ -1738,13 +1738,13 @@ class SecretView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         provider = registry["secrets_providers"].get(instance.provider)
 
@@ -1752,7 +1752,7 @@ class SecretView(generic.ObjectView):
         groups_table = tables.SecretsGroupTable(groups, orderable=False)
 
         return {
-            "format": format,
+            "format": format_,
             "provider_name": provider.name if provider else instance.provider,
             "groups_table": groups_table,
         }

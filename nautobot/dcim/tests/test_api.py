@@ -1762,9 +1762,9 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
     def test_active_status_not_found(self):
         self.add_permissions("dcim.add_interface")
 
-        status = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
         interface_ct = ContentType.objects.get_for_model(Interface)
-        status.content_types.remove(interface_ct)
+        status_active.content_types.remove(interface_ct)
         device = Device.objects.first()
 
         data = {

@@ -878,10 +878,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         Return a QuerySet matching all Interfaces assigned to this Device or, if this Device is a VC master, to another
         Device belonging to the same VirtualChassis.
         """
-        filter = Q(device=self)
+        filter_q = Q(device=self)
         if self.virtual_chassis and self.virtual_chassis.master == self:
-            filter |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
-        return Interface.objects.filter(filter)
+            filter_q |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
+        return Interface.objects.filter(filter_q)
 
     @property
     def common_vc_interfaces(self):

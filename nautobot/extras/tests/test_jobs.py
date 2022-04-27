@@ -693,12 +693,12 @@ class JobHookTest(CeleryTestCase):
             self.assertSequenceEqual(log_messages, expected_log_messages)
 
     @mock.patch.object(JobResult, "enqueue_job")
-    def test_enqueue_job_hook_skipped(self, mock):
+    def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
         change_context = JobHookChangeContext(user=self.user)
         with change_logging(change_context):
             Site.objects.create(name="Test Job Hook Site 2")
 
-        self.assertFalse(mock.called)
+        self.assertFalse(mock_enqueue_job.called)
 
 
 class RemoveScheduledJobManagementCommandTestCase(TestCase):

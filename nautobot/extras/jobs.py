@@ -252,23 +252,23 @@ class BaseJob:
         Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
         The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
         """
-        vars = {}
+        cls_vars = {}
         # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
         base_classes = reversed(inspect.getmro(cls))
         attr_names = [name for base in base_classes for name in base.__dict__.keys()]
         for name in attr_names:
             attr_class = getattr(cls, name, None).__class__
-            if name not in vars and issubclass(attr_class, ScriptVariable):
-                vars[name] = getattr(cls, name)
+            if name not in cls_vars and issubclass(attr_class, ScriptVariable):
+                cls_vars[name] = getattr(cls, name)
 
-        return vars
+        return cls_vars
 
     @classmethod
     def _get_file_vars(cls):
         """Return an ordered dict of FileVar fields."""
-        vars = cls._get_vars()
+        cls_vars = cls._get_vars()
         file_vars = OrderedDict()
-        for name, attr in vars.items():
+        for name, attr in cls_vars.items():
             if isinstance(attr, FileVar):
                 file_vars[name] = attr
 
@@ -387,7 +387,7 @@ class BaseJob:
         exceptions here, we leave it up the caller to handle those cases. The normal job execution code
         path would consider this a failure of the job execution, as described in `nautobot.extras.jobs.run_job`.
         """
-        vars = cls._get_vars()
+        cls_vars = cls._get_vars()
         return_data = {}
 
         if not isinstance(data, dict):
@@ -396,7 +396,7 @@ class BaseJob:
         for field_name, value in data.items():
             # If a field isn't a var, skip it (e.g. `_commit`).
             try:
-                var = vars[field_name]
+                var = cls_vars[field_name]
             except KeyError:
                 continue
 
@@ -436,13 +436,13 @@ class BaseJob:
         return return_data
 
     def validate_data(self, data):
-        vars = self._get_vars()
+        cls_vars = self._get_vars()
 
         if not isinstance(data, dict):
             raise ValidationError("Job data needs to be a dict")
 
         for k in data:
-            if k not in vars:
+            if k not in cls_vars:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
         # defer validation to the form object

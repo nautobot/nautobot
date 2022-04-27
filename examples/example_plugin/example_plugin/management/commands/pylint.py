@@ -8,8 +8,16 @@ class Command(BaseCommand):
             "targets",
             nargs="*",
             help="Module(s) or directory(s) to evaluate",
-            default=["nautobot", "examples", "development", "tasks.py"],
+            default=["nautobot", "tasks.py"],
+        )
+        parser.add_argument(
+            "--recursive",
+            action="store_true",
+            help="Discover Python modules and packages in the file system subtree."
         )
 
     def handle(self, *args, **options):
-        run_pylint(["--verbose"] + options.pop("targets"))
+        args = ["--verbose"] + options.pop("targets")
+        if options.pop("recursive"):
+            args.append("--recursive=y")
+        run_pylint(args)
