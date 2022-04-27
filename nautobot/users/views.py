@@ -177,12 +177,14 @@ class UserConfigView(LoginRequiredMixin, View):
 class ChangePasswordView(LoginRequiredMixin, View):
     template_name = "users/change_password.html"
 
+    RESTRICTED_NOTICE = "Remotely authenticated user credentials cannot be changed within Nautobot."
+
     def get(self, request):
         # Non-Django authentication users cannot change their password here
         if not is_django_auth_user(request):
             messages.warning(
                 request,
-                "Remotely authenticated user credentials cannot be changed within Nautobot.",
+                self.RESTRICTED_NOTICE,
             )
             return redirect("user:profile")
 
@@ -203,7 +205,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
         if not is_django_auth_user(request):
             messages.warning(
                 request,
-                "Non-Django authentication user credentials cannot be changed within Nautobot.",
+                self.RESTRICTED_NOTICE,
             )
             return redirect("user:profile")
 

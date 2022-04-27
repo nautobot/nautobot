@@ -1,25 +1,22 @@
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.test import override_settings, RequestFactory, TestCase
+from django.test import override_settings, RequestFactory
 from django.urls import reverse
 
+from nautobot.utilities.testing import TestCase
 from social_django.utils import load_strategy, load_backend
 
 User = get_user_model()
 
 
 class PasswordUITest(TestCase):
-    def tearDown(self):
-        self.client.logout()
-
     def test_change_password_enabled(self):
         """
         Check that a Django-authentication-based user is allowed to change their password
         """
-        non_sso_user = User.objects.create_user(username="non_sso_user", is_superuser=True)
-        self.client.force_login(non_sso_user)
         profile_response = self.client.get(reverse("user:profile"))
         preferences_response = self.client.get(reverse("user:preferences"))
         api_tokens_response = self.client.get(reverse("user:token_list"))
@@ -46,27 +43,34 @@ class PasswordUITest(TestCase):
             "social_core.backends.google.GoogleOAuth2",
             "nautobot.core.authentication.ObjectPermissionBackend",
         ]
-        # unnecessary
     )
     def test_change_password_disabled(self):
         """
         Mock an SSO-authenticated user, log them in by force and check that the change
         password functionality isn't visible in the UI or available server-side
         """
+        # Logout the non-SSO user
+        self.client.logout()
+
         sso_user = User.objects.create_user(username="sso_user", is_superuser=True)
+
         self.request_factory = RequestFactory()
         self.request = self.request_factory.get("/")
         SessionMiddleware(lambda: None).process_request(self.request)
-        strategy = load_strategy(request=self.request)
-        backend = load_backend(strategy=strategy, name="google-oauth2", redirect_uri="/")
+
+        # load 'social_django.strategy.DjangoStrategy' from social_core into the fake request
+        django_strategy = load_strategy(request=self.request)
+
+        # Load GoogleOAuth2 authentication backend to test against in the mock
+        google_auth_backend = load_backend(strategy=django_strategy, name="google-oauth2", redirect_uri="/")
 
         # Mock an authenticated SSO pipeline
         with mock.patch("social_core.backends.base.BaseAuth.pipeline", return_value=sso_user):
-            result = strategy.authenticate(backend=backend, response=mock.Mock())
+            result = django_strategy.authenticate(backend=google_auth_backend, response=mock.Mock())
             self.assertEqual(result, sso_user)
             self.assertEqual(result.backend, "social_core.backends.google.GoogleOAuth2")
             self.assertTrue(sso_user.is_authenticated)
-            self.client.force_login(sso_user)
+            self.client.force_login(sso_user, backend=settings.AUTHENTICATION_BACKENDS[0])
 
             # Check UI
             profile_response = self.client.get(reverse("user:profile"))
@@ -84,6 +88,6 @@ class PasswordUITest(TestCase):
                 self.assertIn("User Profile", str(response.content))
                 # Check warning message
                 self.assertIn(
-                    "Non-Django authentication user credentials cannot be changed within Nautobot.",
+                    "Remotely authenticated user credentials cannot be changed within Nautobot.",
                     str(response.content),
                 )

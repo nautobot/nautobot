@@ -146,11 +146,11 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
-- [#1503](https://github.com/nautobot/nautobot/pull/1675) - SSO users can no longer interact with or see the change password form.
 - [#1680](https://github.com/nautobot/nautobot/pull/1680) - Bump netutils dependency to 1.1.0.
 
 ### Fixed
 
+- [#1503](https://github.com/nautobot/nautobot/issues/1503) - SSO users can no longer interact with or see the change password form.
 - [#1685](https://github.com/nautobot/nautobot/issues/1685) - Fix Hadolint issue of `docker/Dockerfile`.
 
 ## v1.3.2 (2022-04-22)
