@@ -156,6 +156,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1538](https://github.com/nautobot/nautobot/issues/1538) - Fix incorrect page title alignment on the "Device Type Import" page.
 - [#1679](https://github.com/nautobot/nautobot/issues/1679) - Fix a data migration error when upgrading to 1.3.x with pre-existing JobResults that reference Jobs with names exceeding 100 characters in length.
 - [#1685](https://github.com/nautobot/nautobot/issues/1685) - Fix Hadolint issue of `docker/Dockerfile`.
+- [#1692](https://github.com/nautobot/nautobot/issues/1692) - Fix duplicate tags in search list results.
 - [#1697](https://github.com/nautobot/nautobot/pull/1697) - Fix docs incorrectly stating Celerey Redis URLs defaulting from CACHES.
 
 ## v1.3.2 (2022-04-22)
