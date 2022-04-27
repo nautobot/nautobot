@@ -5,26 +5,26 @@ ARG PYUWSGI_VER
 # This builds the following hierarchy of images:
 #
 # python:${PYTHON_VER}-slim
-#               |
-#              V
-#           (base)
-#              | -------------------------------------------------------------
-#             V                                                              |
-#     (dependencies)                                                        |
-#             |                                                            V
-#            |--------------------> (build-nautobot) . . . . . . . . >  final
-#           V                          /\                  .
-# (dependencies-dev-python)            .                  .
-#            |                        .                  .
-#           |-----------------> (build-docs)            .
-#          V                                           .
-# (dependencies-dev-platform-ARCH)                    .
-#              |                                     .
-#             V                                     .
-#    (dependencies-dev) < . . . . . . . . . . . . . 
-#       |           |
-#      V           V
-#     dev       final-dev
+#            |
+#            V
+#         (base)
+#            |----------------------------------------------------------
+#            V                                                          |
+#     (dependencies)                                                    |
+#            |                                                          V
+#            |----------------> (build-nautobot) . . . . . . . . . >  final
+#            V                        /\               .
+# (dependencies-dev-python)            .               .
+#            |                         .               .
+#            |-----------------> (build-docs)          .
+#            V                                         .
+# (dependencies-dev-platform-ARCH)                     .
+#            |                                         .
+#            V                                         .
+#    (dependencies-dev) < . . . . . . . . . . . . . . .
+#       |          |
+#       V          V
+#      dev     final-dev
 #
 #  The design philosphy for this image hierarchy is:
 #  
