@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
 from nautobot.core.api import WritableNestedSerializer
-from nautobot.dcim.models import Interface
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
     ClusterType,
     VirtualMachine,
+    VMInterface
 )
 
 __all__ = [
@@ -67,5 +67,5 @@ class NestedVMInterfaceSerializer(WritableNestedSerializer):
     virtual_machine = NestedVirtualMachineSerializer(read_only=True)
 
     class Meta:
-        model = Interface
+        model = VMInterface
         fields = ["id", "url", "virtual_machine", "name"]
