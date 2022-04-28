@@ -241,7 +241,7 @@ jobs:
   container-build-check:
     name: "Check to see if we need to build a container"
     # needs: "integration-test"
-    runs-on: "ubunut-20.04"
+    runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
