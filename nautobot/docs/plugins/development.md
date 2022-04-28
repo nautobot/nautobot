@@ -150,6 +150,7 @@ Nautobot looks for the `config` variable within a plugin's `__init__.py` to load
 | `config_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "configuration" view defined by this plugin |
 | `default_settings` | `{}` | A dictionary of configuration parameters and their default values |
 | `home_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "home" or "dashboard" view defined by this plugin |
+| `docs_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "documentation" view defined by this plugin |
 | `installed_apps` | `[]` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
 | `max_version` | `None` | Maximum version of Nautobot with which the plugin is compatible |
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
@@ -340,7 +341,7 @@ config = AnimalSoundsConfig
 
 and now the "Configuration" button that appears in the Installed Plugins table next to "Animal Sounds" will be a link to your configuration view.
 
-Similarly, if your plugin provides a "plugin home" or "dashboard" view, you can provide a link for the "Home" button in the Installed Plugins table by defining `home_view_name` on your `PluginConfig` class.
+Similarly, if your plugin provides a "plugin home" or "dashboard" view, you can provide a link for the "Home" button in the Installed Plugins table by defining `home_view_name` on your `PluginConfig` class. This can also be done for documentation by defining `docs_view_name` on your `PluginConfig` class.
 
 ## Extending Existing Functionality
 
@@ -994,3 +995,17 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 
 !!! warning
     This example is provided as a minimal reference implementation only. It does not address authentication, performance, or the myriad of other concerns that plugin authors should have.
+
+## Adding Help Documentation
+
+If you are using the `generic.ObjectEditView` from Nautobot for your object, the form can automatically include a help icon with a link to that object's documentation. For this to happen, Nautobot must be able to find the documentation for this object in a specific directory tree within your plugin:
+
+```no-highlight
+plugin_name/                   # "nautobot_animal_sounds"
+  - static/
+    - plugin_name/             # "nautobot_animal_sounds"
+      - docs/
+        - index.html
+        - models/
+          - object_model.html  # "animal.html"
+```

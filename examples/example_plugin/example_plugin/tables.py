@@ -6,7 +6,7 @@ from nautobot.utilities.tables import (
     ToggleColumn,
 )
 
-from example_plugin.models import ExampleModel
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 class ExampleModelTable(BaseTable):
@@ -18,4 +18,16 @@ class ExampleModelTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ExampleModel
+        fields = ["pk", "name", "number"]
+
+
+class AnotherExampleModelTable(BaseTable):
+    """Table for list view of `AnotherExampleModel` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    actions = ButtonsColumn(AnotherExampleModel)
+
+    class Meta(BaseTable.Meta):
+        model = AnotherExampleModel
         fields = ["pk", "name", "number"]

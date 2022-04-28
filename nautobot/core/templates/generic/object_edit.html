@@ -11,12 +11,16 @@
         <div class="row">
             <div class="col-md-6 col-md-offset-3">
                 <h3>
-                    {% if settings.DOCS_ROOT %}
-                        <div class="pull-right">
-                            <button type="button" class="btn btn-link btn-xs" data-toggle="modal" data-target="#docs_modal" title="Help">
-                              <i class="mdi mdi-help-circle"></i>
-                            </button>
-                        </div>
+                    {% if obj %}
+                        {% with obj|get_docs_url as docs_url %}
+                            {% if docs_url %}
+                                <div class="pull-right">
+                                    <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
+                                        <i class="mdi mdi-help-circle"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
                     {% endif %}
                     {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
                 </h3>
@@ -56,7 +60,4 @@
             </div>
         </div>
     </form>
-    {% if obj and settings.DOCS_ROOT %}
-        {% include 'inc/modal.html' with name='docs' content=obj|get_docs %}
-    {% endif %}
 {% endblock %}
