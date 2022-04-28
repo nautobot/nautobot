@@ -5,7 +5,8 @@ import re
 import yaml
 from django import template
 from django.conf import settings
-from django.templatetags.static import StaticNode
+from django.contrib.staticfiles.finders import find
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
@@ -304,32 +305,33 @@ def percentage(x, y):
 
 @library.filter()
 @register.filter()
-def get_docs(model):
-    """Render and return documentation for the specified model.
+def get_docs_url(model):
+    """Return the documentation URL for the specified model.
+
+    Nautobot Core models have a path like docs/models/{app_label}/{model_name}
+    while plugins will have {app_label}/docs/models/{model_name}. If the html file
+    does not exist, this function will return None.
 
     Args:
         model (models.Model): Instance of a Django model
 
     Returns:
-        str: documentation for the specified model in Markdown format
+        str: static URL for the documentation of the object.
+        or
+        None
 
     Example:
-        >>> get_docs(obj)
-        "some text"
+        >>> get_docs_url(obj)
+        "static/docs/models/dcim/site.html"
     """
-    path = "{}/models/{}/{}.md".format(settings.DOCS_ROOT, model._meta.app_label, model._meta.model_name)
-    try:
-        with open(path, encoding="utf-8") as docfile:
-            content = docfile.read()
-    except FileNotFoundError:
-        return "Unable to load documentation, file not found: {}".format(path)
-    except IOError:
-        return "Unable to load documentation, error reading file: {}".format(path)
+    path = f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
+    if model._meta.app_label in settings.PLUGINS:
+        path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
 
-    # Render Markdown with the admonition extension
-    content = markdown(content, extensions=["admonition", "fenced_code", "tables"])
-
-    return mark_safe(content)
+    # Check to see if documentation exists in any of the static paths.
+    if find(path):
+        return static(path)
+    return None
 
 
 @library.filter()

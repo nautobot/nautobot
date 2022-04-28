@@ -2,21 +2,20 @@ import json
 from io import StringIO
 import uuid
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.test.client import RequestFactory
 
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, Job, JobResult, Status, CustomField
+from nautobot.extras.models import FileProxy, Job, Status, CustomField, JobResult
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase
-
+from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -33,19 +32,11 @@ def get_job_class_and_model(module, name):
 
 
 def create_job_result_and_run_job(module, name, *, data=None, commit=True, request=None):
-    """Test helper function to call get_job_class_and_model() then create a JobResult and call run_job()."""
+    """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
     if data is None:
         data = {}
     job_class, job_model = get_job_class_and_model(module, name)
-    job_content_type = ContentType.objects.get(app_label="extras", model="job")
-    job_result = JobResult.objects.create(
-        name=job_model.class_path,
-        obj_type=job_content_type,
-        job_model=job_model,
-        user=None,
-        job_id=uuid.uuid4(),
-    )
-    run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
+    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, request=request)
     job_result.refresh_from_db()
     return job_result
 
@@ -83,6 +74,28 @@ class JobTest(TransactionTestCase):
             "or equal to the soft time limit of 10.0 seconds. "
             "This job will fail silently after 5.0 seconds.",
         )
+
+    def test_job_pass_with_run_job_directly(self):
+        """
+        Job test with pass result calling run_job directly in order to test for backwards stability of its API.
+
+        Because calling run_job directly used to be the best practice for testing jobs, we want to ensure that calling
+        it still works even if we ever change the run_job call in the run_job_for_testing wrapper.
+        """
+        module = "test_pass"
+        name = "TestPass"
+        job_class, job_model = get_job_class_and_model(module, name)
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        job_result = JobResult.objects.create(
+            name=job_model.class_path,
+            obj_type=job_content_type,
+            job_model=job_model,
+            user=None,
+            job_id=uuid.uuid4(),
+        )
+        run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
+        job_result = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
 
     def test_job_pass(self):
         """

@@ -150,13 +150,19 @@ Copy the description from the pull request to the release.
 
 Now that there is a tagged release, the final step is to upload the package to the Python Package Index.
 
-First, you'll need to build the Python package distributions:
+First, you'll need to render the documentation.
+
+```no-highlight
+poetry run mkdocs build --no-directory-urls --strict
+```
+
+Second, you'll need to build the Python package distributions (which will include the rendered documentation):
 
 ```no-highlight
 $ poetry build
 ```
 
-Next, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
+Finally, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
 
 ```no-highlight
 $ poetry publish --username __token__ --password <api_token>
