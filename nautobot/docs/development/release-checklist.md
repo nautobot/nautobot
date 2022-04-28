@@ -156,7 +156,7 @@ First, you'll need to render the documentation.
 poetry run mkdocs build --no-directory-urls --strict
 ```
 
-Second, you'll need to build the Python package distributions:
+Second, you'll need to build the Python package distributions (which will include the rendered documentation):
 
 ```no-highlight
 $ poetry build
