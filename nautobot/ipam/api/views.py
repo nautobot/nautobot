@@ -1,6 +1,6 @@
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from nautobot.third_party.drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException

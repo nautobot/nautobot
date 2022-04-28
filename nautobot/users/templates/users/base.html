@@ -15,7 +15,7 @@
             <li{% if active_tab == "preferences" %} class="active"{% endif %}>
                 <a href="{% url 'user:preferences' %}">Preferences</a>
             </li>
-            {% if not request.user.ldap_username %}
+            {% if is_django_auth_user %}
                 <li{% if active_tab == "change_password" %} class="active"{% endif %}>
                     <a href="{% url 'user:change_password' %}">Change Password</a>
                 </li>

@@ -1,8 +1,8 @@
 import logging
 import re
 
-from nautobot.third_party.drf_spectacular.extensions import OpenApiSerializerFieldExtension
-from nautobot.third_party.drf_spectacular.openapi import AutoSchema
+from drf_spectacular.extensions import OpenApiSerializerFieldExtension
+from drf_spectacular.openapi import AutoSchema
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
