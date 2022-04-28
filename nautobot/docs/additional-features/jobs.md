@@ -553,57 +553,27 @@ Provision of user input (`data` values) via the CLI is not supported at this tim
 
 Jobs are Python code and can be tested as such, usually via [Django unit-test features](https://docs.djangoproject.com/en/stable/topics/testing/). That said, there are a few useful tricks specific to testing Jobs.
 
-While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job. The simplest way to do so is via calling the `nautobot.extras.jobs.run_job()` method, as this is the same function used to execute a Job via Nautobot's Celery worker process. As part of your test, you can call `run_job` directly rather than enqueuing it for the worker to handle; this is simpler and generally quite sufficient for testing.
+While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job. Nautobot 1.3 introduced a few enhancements to make this simpler to do, but it's also quite possible to test under Nautobot 1.2 with a bit more effort.
 
-Because of the way `run_job()` works, which is somewhat complex behind the scenes, there are a few things you'll need to do in your test code:
+### Nautobot 1.3 and later
 
-1. Inherit from `django.test.TransactionTestCase` instead of `django.test.TestCase`. (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes.)
-2. Set your test class's `databases` attribute to `("default", "job_logs")`. (`job_logs` is a proxy connection to the same (`default`) database that's used exclusively for Job logging.)
+The simplest way to test the entire execution of Jobs from 1.3 on is via calling the `nautobot.utilities.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
 
-!!! tip
-    Additionally, *if your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x*, you should add the following block to your test module:
+Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.utilities.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 
-        from django.conf import settings
-
-        if "job_logs" in settings.DATABASES:
-            settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
-            settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
-
-    This code isn't *needed* in Nautobot 1.3.x and later, as the `"job_logs"` database will already be set up correctly for testability, but it also won't hurt anything to include.
-
-A simple example of a Job test case that's implemented to be backwards-compatible with Nautobot 1.2.x might look like the following:
+A simple example of a Job test case for 1.3.x and forward might look like the following:
 
 ```python
-import uuid
-
-from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
-from django.test import TransactionTestCase
-
-from nautobot.extras.jobs import run_job
-from nautobot.extras.models import Job, JobResult, JobLogEntry
-
-
-if "job_logs" in settings.DATABASES:
-    settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
-    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+from nautobot.extras.models import Job, JobLogEntry
+from nautobot.utilities.testing import run_job_for_testing, TransactionTestCase
 
 
 class MyJobTestCase(TransactionTestCase):
-    if "job_logs" in settings.DATABASES:
-        databases = ("default", "job_logs")
-
     def test_my_job(self):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
         job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
-        job_result = JobResult.objects.create(
-            name=job.class_path,
-            obj_type=ContentType.objects.get(app_label="extras", model="job"),
-            job_model=job,
-            job_id=uuid.uuid4(),
-        )
-        run_job(data={"my_variable": "my_value"}, request=None, commit=False, job_result_pk=job_result.pk)
+        job_result = run_job_for_testing(job, data={}, commit=False)
 
         # Since we ran with commit=False, any database changes made by the job won't persist,
         # but we can still inspect the logs created by running the job
@@ -614,6 +584,66 @@ class MyJobTestCase(TransactionTestCase):
 
 !!! tip
     For more advanced examples (such as testing jobs executed with `commit=True`, for example) refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
+
+### Nautobot 1.2
+
+If your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x, you need to handle a couple more things manually:
+
+Set up the `"job_logs"` database correctly for testing:
+
+```python
+from django.conf import settings
+
+if "job_logs" in settings.DATABASES:
+    settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
+    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+```
+
+Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test:
+
+```python
+import uuid
+from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
+
+from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.jobs import run_job
+from nautobot.extras.models import JobResult, Job
+
+def run_job_for_testing(job, data=None, commit=True, username="test-user"):
+    if data is None:
+        data = {}
+    user_model = get_user_model()
+    user, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
+    job_result = JobResult.objects.create(
+        name=job.class_path,
+        obj_type=ContentType.objects.get_for_model(Job),
+        user=user,
+        job_id=uuid.uuid4(),
+    )
+    with web_request_context(user=user) as request:
+        run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
+    return job_result
+```
+
+Setup the `databases` field on the test class correctly, and re-create the default Statuses on `setUp` in your test classes, because `django.test.TransactionTestCase` truncates them on every `tearDown`:
+
+```python
+from django.apps import apps
+from django.conf import settings
+from django.test import TransactionTestCase
+
+from nautobot.extras.management import populate_status_choices
+
+class MyJobTestCase(TransactionTestCase):
+    # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging
+    if "job_logs" in settings.DATABASES:
+        databases = ("default", "job_logs")
+
+    def setUp(self):
+        super().setUp()
+        populate_status_choices(apps, None)
+```
 
 ## Example Jobs
 
