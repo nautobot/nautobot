@@ -249,7 +249,7 @@ jobs:
       - name: "Check comments for magic statement"
         id: comment_check
         run: |
-          echo $(gh pr view --json comments -q "[.comments[] | {body_trigger: .body | test(\"scope\"), author_assoc_trigger: .authorAssociation | test(\"MEMBER\")} | .body_trigger == true and .author_assoc_trigger == true] | any")
+          echo $(gh pr view https://github.com/nautobot/nautobot/pull/${{ github.event.number }} --json comments -q "[.comments[] | {body_trigger: .body | test(\"scope\"), author_assoc_trigger: .authorAssociation | test(\"MEMBER\")} | .body_trigger == true and .author_assoc_trigger == true] | any")
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # outputs:
