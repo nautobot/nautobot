@@ -243,6 +243,7 @@ jobs:
     # needs: "integration-test"
     runs-on: "ubuntu-20.04"
     steps:
+      - run: echo ${{ github.event.number }}
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Check comments for magic statement"
