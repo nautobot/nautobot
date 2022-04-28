@@ -553,15 +553,15 @@ Provision of user input (`data` values) via the CLI is not supported at this tim
 
 Jobs are Python code and can be tested as such, usually via [Django unit-test features](https://docs.djangoproject.com/en/stable/topics/testing/). That said, there are a few useful tricks specific to testing Jobs.
 
-While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job. Nautobot 1.3 introduced a few enhancements to make this simpler to do, but it's also quite possible to test under Nautobot 1.2 with a bit more effort.
+While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job. Nautobot 1.3.3 introduced a few enhancements to make this simpler to do, but it's also quite possible to test in earlier releases with a bit more effort.
 
-### Nautobot 1.3 and later
+### Nautobot 1.3.3 and later
 
-The simplest way to test the entire execution of Jobs from 1.3 on is via calling the `nautobot.utilities.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
+The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.utilities.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
 
 Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.utilities.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 
-A simple example of a Job test case for 1.3.x and forward might look like the following:
+A simple example of a Job test case for 1.3.3 and forward might look like the following:
 
 ```python
 from nautobot.extras.models import Job, JobLogEntry
@@ -585,9 +585,9 @@ class MyJobTestCase(TransactionTestCase):
 !!! tip
     For more advanced examples (such as testing jobs executed with `commit=True`, for example) refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
 
-### Nautobot 1.2
+### Nautobot 1.3.2 and earlier (including 1.2)
 
-If your test case needs to be backwards-compatible with test execution against Nautobot 1.2.x, you need to handle a couple more things manually:
+If your test case needs to be backwards-compatible with test execution against Nautobot 1.3.2 and/or earlier, you need to handle a couple more things manually:
 
 Set up the `"job_logs"` database correctly for testing:
 
