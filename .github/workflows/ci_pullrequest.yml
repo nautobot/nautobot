@@ -248,7 +248,7 @@ jobs:
       - name: "Check comments for magic statement"
         id: comment_check
         run: |
-          echo "::set-output name=magic_comment_present::$(gh pr view --json number --json comments -q \"[.comments[] | {body_trigger: .body | test(\\\"scope\\\"), author_assoc_trigger: .authorAssociation | test(\\\"MEMBER\\\")} | .body_trigger == true and .author_assoc_trigger == true] | any\")"
+          echo "::set-output name=magic_comment_present::$(gh pr view --json number --json comments -q \"[.comments[] | {body_trigger: .body | test(\\"scope\\"), author_assoc_trigger: .authorAssociation | test(\\\"MEMBER\\\")} | .body_trigger == true and .author_assoc_trigger == true] | any\")"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
