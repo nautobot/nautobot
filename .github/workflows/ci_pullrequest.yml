@@ -258,12 +258,8 @@ jobs:
       - container_build_check
     if: ${{ needs.container_build_check.outputs.magic_comment_present == 'true' }}
     runs-on: "ubuntu-20.04"
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: [ "3.7" ]
     env:
-      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+      INVOKE_NAUTOBOT_PYTHON_VER: "3.7"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
@@ -283,11 +279,11 @@ jobs:
         id: "dockermeta"
         uses: "docker/metadata-action@v3"
         with:
-          images: "ghcr.io/nautobot/nautobot-dev"
+          images: "ghcr.io/nautobot/nautobot-pr-validation"
           flavor: |
             latest=false
           tags: |
-            type=ref,enable=true,priority=600,prefix=pr-,suffix=-py${{ matrix.python-version }},event=pr
+            type=ref,enable=true,priority=600,prefix=pr-,suffix=-py3.7,event=pr
           labels: |
             org.opencontainers.image.title=Nautobot (PR VALIDATION IMAGE)
       - name: "Build"
@@ -303,6 +299,6 @@ jobs:
           cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
           context: "."
           build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
+            PYTHON_VER=3.7
             PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
             POETRY_PARALLEL=true
