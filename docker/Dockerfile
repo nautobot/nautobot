@@ -268,7 +268,8 @@ RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
 FROM base as final
 ARG PYTHON_VER
 
-# Copy from "build-nautobot" the required python libraries and binaries
+# Copy from "dependencies" the required python libraries and binaries
+# Copy from "build-nautobot" the built Nautobot wheel
 COPY --from=dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
 COPY --from=dependencies /usr/local/bin /usr/local/bin
 COPY --from=build-nautobot /source/dist/*.whl /tmp
