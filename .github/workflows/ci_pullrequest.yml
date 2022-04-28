@@ -236,75 +236,73 @@ jobs:
     needs:
       - "tests-postgres"
       - "tests-mysql"
-  # Build-only of Python package for validation
-  python-build:
-    name: "Build Python Package"
-    needs:
-      - "integration-test"
-    runs-on: "ubuntu-20.04"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v2"
-      - name: "Set up Python"
-        uses: "actions/setup-python@v2"
-        with:
-          python-version: "3.9"
-      - name: "Install Python Packages"
-        run: "pip install poetry"
-      - name: "Run Poetry Build"
-        run: "poetry build"
   # Build a quick container for validating the build succeeds (never break the builds)
   # Push to ghcr.io/nautobot/nautobot-dev to be able to pull down if required for validation (see: #1683)
-  container-build:
-    name: "Build Docker Container"
-    needs:
-      - "integration-test"
-    runs-on: "ubuntu-20.04"
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: [ "3.7" ]
-    env:
-      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+  container-build-check:
+    name: "Check to see if we need to build a container"
+    # needs: "integration-test"
+    runs-on: "ubunut-20.04"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
-      - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: "gitbranch"
-      - run: echo "##[set-output name=version;]$(egrep -m1 'file.*pyuwsgi-' poetry.lock | cut -f2 -d-)"
-        id: "pyuwsgi"
-      - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v1"
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Docker Metadata"
-        id: "dockermeta"
-        uses: "docker/metadata-action@v3"
-        with:
-          images: "ghcr.io/nautobot/nautobot-dev"
-          flavor: |
-            latest=false
-          tags: |
-            type=ref,enable=true,priority=600,prefix=pr-,suffix=-py${{ matrix.python-version }},event=pr
-          labels: |
-            org.opencontainers.image.title=Nautobot (PR VALIDATION IMAGE)
-      - name: "Build"
-        uses: "docker/build-push-action@v2"
-        with:
-          push: true
-          target: final
-          file: "docker/Dockerfile"
-          platforms: "linux/amd64"
-          tags: "${{ steps.dockermeta.outputs.tags }}"
-          labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
-            POETRY_PARALLEL=true
+      - name: "Check comments for magic statement"
+        id: comment_check
+        run: echo "::set-output name=magic_comment_present::$(gh pr view --json number --json comments -q \"[.comments[] | {body_trigger: .body | test(\\\"scope\\\"), author_assoc_trigger: .authorAssociation | test(\\\"MEMBER\\\")} | .body_trigger == true and .author_assoc_trigger == true] | any\")"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        outputs:
+          magic_comment_present: ${{ steps.comment_check.outputs.magic_comment_present }}
+
+  # container-build:
+  #   name: "Build Docker Container"
+  #   needs:
+  #     - container-build-check
+  #   runs-on: "ubuntu-20.04"
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       python-version: [ "3.7" ]
+  #   env:
+  #     INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+  #   steps:
+  #     - name: "Check out repository code"
+  #       uses: "actions/checkout@v2"
+  #     - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+  #       id: "gitbranch"
+  #     - run: echo "##[set-output name=version;]$(egrep -m1 'file.*pyuwsgi-' poetry.lock | cut -f2 -d-)"
+  #       id: "pyuwsgi"
+  #     - name: "Set up Docker Buildx"
+  #       uses: "docker/setup-buildx-action@v1"
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: "Docker Metadata"
+  #       id: "dockermeta"
+  #       uses: "docker/metadata-action@v3"
+  #       with:
+  #         images: "ghcr.io/nautobot/nautobot-dev"
+  #         flavor: |
+  #           latest=false
+  #         tags: |
+  #           type=ref,enable=true,priority=600,prefix=pr-,suffix=-py${{ matrix.python-version }},event=pr
+  #         labels: |
+  #           org.opencontainers.image.title=Nautobot (PR VALIDATION IMAGE)
+  #     - name: "Build"
+  #       uses: "docker/build-push-action@v2"
+  #       with:
+  #         push: true
+  #         target: final
+  #         file: "docker/Dockerfile"
+  #         platforms: "linux/amd64"
+  #         tags: "${{ steps.dockermeta.outputs.tags }}"
+  #         labels: "${{ steps.dockermeta.outputs.labels }}"
+  #         cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+  #         cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+  #         context: "."
+  #         build-args: |
+  #           PYTHON_VER=${{ matrix.python-version }}
+  #           PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
+  #           POETRY_PARALLEL=true
