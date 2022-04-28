@@ -144,6 +144,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#1481](https://github.com/nautobot/nautobot/issues/1481) - Pre-Generate Docs, Add Support for Plugin-Provided Docs
+
 ### Changed
 
 - [#1680](https://github.com/nautobot/nautobot/pull/1680) - Bump netutils dependency to 1.1.0.
