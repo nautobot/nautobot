@@ -5,14 +5,14 @@ from contextlib import contextmanager
 from celery.contrib.testing.worker import start_worker
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.test import tag, TransactionTestCase as _TransactionTestCase
 
 from nautobot.core.celery import app
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import run_job
 from nautobot.extras.management import populate_status_choices
-from nautobot.extras.models import JobResult, Job
+from nautobot.extras.models import JobResult
+from nautobot.extras.utils import get_job_content_type
 
 from .api import APITestCase, APIViewTestCases
 from .utils import (
@@ -72,7 +72,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         )
     job_result = JobResult.objects.create(
         name=job.class_path,
-        obj_type=ContentType.objects.get_for_model(Job),
+        obj_type=get_job_content_type(),
         user=user_instance,
         job_model=job,
         job_id=uuid.uuid4(),
