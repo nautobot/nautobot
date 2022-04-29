@@ -560,6 +560,7 @@ class JSONFieldTest(NautobotTestCase):
         """
         self.user.is_superuser = True
         self.user.save()
+        create_test_device("Foo Device")
         custom_field = CustomField(
             type="json",
             name="json-field",
