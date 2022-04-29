@@ -155,6 +155,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Fixed
 
 - [#473](https://github.com/nautobot/nautobot/issues/473) - Fix `get_return_url` for plugin reverse URLs.
+- [#1430](https://github.com/nautobot/nautobot/issues/1430) - Fix not being able to print Job results, related IPs.
 - [#1503](https://github.com/nautobot/nautobot/issues/1503) - SSO users can no longer interact with or see the change password form.
 - [#1515](https://github.com/nautobot/nautobot/issues/1515) - Further fixes for slow/unresponsive jobs results display.
 - [#1538](https://github.com/nautobot/nautobot/issues/1538) - Fix incorrect page title alignment on the "Device Type Import" page.
