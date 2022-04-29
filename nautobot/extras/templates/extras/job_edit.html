@@ -1,0 +1,133 @@
+{% extends "generic/object_edit.html" %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Job Source</strong></div>
+        <div class="panel-body">
+            <div class="form-group">
+                <label class="col-md-3 control-label">Source</label>
+                <div class="col-md-9" style="padding-top: 7px">
+                    {{ obj.source | split:"." | first | bettertitle }}
+                    <span class="help-block">Source of the Python code for this job</span>
+                </div>
+            </div>
+            {% if obj.source == "git" %}
+                <div class="form-group">
+                    <label class="col-md-3 control-label">Repository</label>
+                    <div class="col-md-9" style="padding-top: 7px">
+                        <td>{{ obj.git_repository | placeholder }}</td>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="form-group">
+                <label class="col-md-3 control-label">Module</label>
+                <div class="col-md-9" style="padding-top: 7px">
+                    <code>{{ obj.module_name }}</code>
+                    <span class="help-block">Dotted name of the Python module providing this job</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Job Class</label>
+                <div class="col-md-9" style="padding-top: 7px">
+                    <code>{{ obj.job_class_name }}</code>
+                    <span class="help-block">Name of the Python class providing this job</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-md-9 col-md-offset-3">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" disabled="true" {% if obj.installed %}checked="checked"{% endif %}>
+                            Installed
+                        </label>
+                        <span class="help-block">
+                            Whether the Python class providing this job is presently installed and loadable
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Job</strong></div>
+        <div class="panel-body">
+            {% render_field form.enabled %}
+            {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
+            {% render_field form.slug %}
+            {% include "extras/inc/overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Properties</strong></div>
+        <div class="panel-body">
+            {% include "extras/inc/overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.commit_default override_field=form.commit_default_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.hidden override_field=form.hidden_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.read_only override_field=form.read_only_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.soft_time_limit override_field=form.soft_time_limit_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.time_limit override_field=form.time_limit_override %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+
+{% block javascript %}
+{{ block.super }}
+{{ obj.job_class.properties_dict | json_script:"job_class_properties" }}
+<script>
+    const job_class_properties = JSON.parse(document.getElementById("job_class_properties").textContent);
+    const description_default = $("#id_description").val();
+    /* All id_*_override fields */
+    $("[id^=id_][id$=_override]").change(function() {
+        const override_id = $(this).attr("id");
+        /* What's the form field this is an override for? */
+        const field_id = override_id.slice(0, -9);
+        const field = $("#" + field_id);
+        const field_name = field_id.slice(3);
+        if ($(this).prop("checked")) {
+            field.attr("readonly", null);
+            field.attr("disabled", null);
+        } else {
+            /* Revert the field to its default value */
+            if (field.attr("type") == "checkbox") {
+                /* Do we have a job class object to derive properties from? */
+                if (job_class_properties != "") {
+                    field.prop("checked", job_class_properties[field_name]);
+                } else {
+                    /* No, we don't - it's probably not installed */
+                    field.prop("checked", field.attr("checked"));
+                }
+                /*
+                 * Checkboxes can't be "readonly" in HTML :-(
+                 * Note that "disabled" fields aren't included in form submission, so we have to be sure to
+                 * re-enable them at form submission time.
+                 */
+                field.attr("disabled", "disabled");
+            } else {
+                /* Do we have a job class object to derive properties from? */
+                if (job_class_properties != "") {
+                    field.val(job_class_properties[field_name]);
+                } else if (field_name != "description") {
+                    /* No, we don't - it's probably not installed */
+                    field.val(field.attr("value"));
+                } else {
+                    /* Textarea fields don't have a "value" attribute */
+                    field.val(description_default);
+                }
+                field.attr("readonly", "readonly");
+            }
+        }
+    });
+    $("[id^=id_][id$=_override]").change();
+
+    /* As mentioned above, we need to re-enable all checkboxes on form submission so they get included */
+    $("form").submit(function() {
+        $('input[type="checkbox"]:disabled').each(function() {
+            $(this).attr("disabled", null);
+        });
+    });
+</script>
+{% endblock javascript %}

@@ -1,9 +1,11 @@
 from collections import OrderedDict
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
+from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 
 class ChoiceField(serializers.Field):
@@ -21,7 +23,7 @@ class ChoiceField(serializers.Field):
 
         # Unpack grouped choices
         for k, v in choices:
-            if type(v) in [list, tuple]:
+            if isinstance(v, (list, tuple)):
                 for k2, v2 in v:
                     self._choices[k2] = v2
             else:
@@ -78,6 +80,7 @@ class ChoiceField(serializers.Field):
         return self._choices
 
 
+@extend_schema_field(str)
 class ContentTypeField(RelatedField):
     """
     Represent a ContentType as '<app_label>.<model>'
@@ -114,3 +117,8 @@ class SerializedPKRelatedField(PrimaryKeyRelatedField):
 
     def to_representation(self, value):
         return self.serializer(value, context={"request": self.context["request"]}).data
+
+
+@extend_schema_field(str)
+class TimeZoneSerializerField(TimeZoneSerializerField_):
+    """Represents a time zone as a string."""

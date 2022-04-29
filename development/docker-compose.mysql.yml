@@ -2,14 +2,24 @@
 version: "3.4"
 services:
   nautobot:
-    depends_on:
-      - mysql
-  mysql:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
+  worker:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
+  celery_worker:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
+  celery_beat:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
+  db:
     image: mysql:8
-    command: "--character-set-server=utf8mb4 --collation-server=utf8mb4_bin"
     env_file:
       - dev.env
     volumes:
+      # Unit tests require the createdb permission to clone the database
+      - ./mysql-unittests.sql:/docker-entrypoint-initdb.d/mysql-unittests.sql
       - mysqldata_nautobot:/var/lib/mysql
 volumes:
   mysqldata_nautobot:

@@ -1,17 +1,17 @@
 import copy
 import datetime
-import json
 import inspect
-from importlib import import_module
+import json
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.serializers import serialize
-from django.db.models import Count, OuterRef, Subquery, Model
+from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.template import engines
+from django.utils.module_loading import import_string
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
@@ -46,6 +46,31 @@ def csv_format(data):
             csv.append("{}".format(value))
 
     return ",".join(csv)
+
+
+def get_route_for_model(model, action):
+    """
+    Return the URL route name for the given model and action. Does not perform any validation.
+    Supports both core and plugin routes.
+
+    Args:
+        model (models.Model, str): Class, Instance, or dotted string of a Django Model
+        action (str): name of the action in the route
+
+    Returns:
+        str: return the name of the view for the model/action provided.
+    Examples:
+        >>> viewname(Device, "list")
+        "dcim:device_list"
+    """
+
+    if isinstance(model, str):
+        model = get_model_from_name(model)
+    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+    if model._meta.app_label in settings.PLUGINS:
+        viewname = f"plugins:{viewname}"
+
+    return viewname
 
 
 def hex_to_rgb(hex):
@@ -139,6 +164,24 @@ def serialize_object(obj, extra=None, exclude=None):
         # Explicitly excluded keys
         if isinstance(exclude, (list, tuple)) and key in exclude:
             data.pop(key)
+
+    return data
+
+
+def serialize_object_v2(obj):
+    """
+    Return a JSON serialized representation of an object using obj's serializer.
+    """
+    from nautobot.core.api.exceptions import SerializerNotFound
+    from nautobot.utilities.api import get_serializer_for_model
+
+    # Try serializing obj(model instance) using its API Serializer
+    try:
+        serializer_class = get_serializer_for_model(obj.__class__)
+        data = serializer_class(obj, context={"request": None}).data
+    except SerializerNotFound:
+        # Fall back to generic JSON representation of obj
+        data = serialize_object(obj)
 
     return data
 
@@ -298,7 +341,7 @@ def flatten_dict(d, prefix="", separator="."):
     ret = {}
     for k, v in d.items():
         key = separator.join([prefix, k]) if prefix else k
-        if type(v) is dict:
+        if isinstance(v, dict):
             ret.update(flatten_dict(v, prefix=key))
         else:
             ret[key] = v
@@ -382,36 +425,107 @@ def copy_safe_request(request):
     )
 
 
-def get_filterset_for_model(model):
-    """Return the FilterSet class associated with a given model.
+def get_model_from_name(model_name):
+    """Given a full model name in dotted format (example: `dcim.model`), a model class is returned if valid.
 
-    The FilterSet class is expected to be in the filters module within the application
-    associated with the model and its name is expected to be {ModelName}FilterSet
+    :param model_name: Full dotted name for a model as a string (ex: `dcim.model`)
+    :type model_name: str
 
-    Not all models have a FilterSet defined so this function can return None as well
+    :raises TypeError: If given model name is not found.
 
-    Returns:
-        either the filterset class or none
+    :return: Found model.
     """
-    if not inspect.isclass(model):
-        raise TypeError(f"model class {model} was passes as an instance!")
-    if not issubclass(model, Model):
-        raise TypeError(f"{model} is not a subclass of Django Model class")
+    from django.apps import apps
 
     try:
-        filterset_name = f"{model.__name__}FilterSet"
-        if model._meta.app_label in settings.PLUGINS:
-            return getattr(import_module(f"{model._meta.app_label}.filters"), filterset_name)
-        else:
-            return getattr(import_module(f"nautobot.{model._meta.app_label}.filters"), filterset_name)
-    except ModuleNotFoundError:
-        # The name of the module is not correct
-        pass
-    except AttributeError:
-        # Unable to find a filterset for this model
+        return apps.get_model(model_name)
+    except (ValueError, LookupError) as exc:
+        raise TypeError(exc) from exc
+
+
+def get_related_class_for_model(model, module_name, object_suffix):
+    """Return the appropriate class associated with a given model matching the `module_name` and
+    `object_suffix`.
+
+    The given `model` can either be a model class or a dotted representation (ex: `dcim.device`).
+
+    The object class is expected to be in the module within the application
+    associated with the model and its name is expected to be `{ModelName}{object_suffix}`.
+
+    If a matching class is not found, this will return `None`.
+
+    Returns:
+        Either the matching object class or None
+    """
+    if isinstance(model, str):
+        model = get_model_from_name(model)
+    if not inspect.isclass(model):
+        raise TypeError(f"{model!r} is not a Django Model class")
+    if not issubclass(model, Model):
+        raise TypeError(f"{model!r} is not a subclass of a Django Model class")
+
+    # e.g. "nautobot.dcim.forms.DeviceFilterForm"
+    app_label = model._meta.app_label
+    object_name = f"{model.__name__}{object_suffix}"
+    object_path = f"{app_label}.{module_name}.{object_name}"
+    if app_label not in settings.PLUGINS:
+        object_path = f"nautobot.{object_path}"
+
+    try:
+        return import_string(object_path)
+    # The name of the module is not correct or unable to find the desired object for this model
+    except (AttributeError, ImportError, ModuleNotFoundError):
         pass
 
     return None
+
+
+def get_filterset_for_model(model):
+    """Return the `FilterSet` class associated with a given `model`.
+
+    The `FilterSet` class is expected to be in the `filters` module within the application
+    associated with the model and its name is expected to be `{ModelName}FilterSet`.
+
+    If a matching `FilterSet` is not found, this will return `None`.
+
+    Returns:
+        Either the `FilterSet` class or `None`
+    """
+    return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
+
+
+def get_form_for_model(model, form_prefix=""):
+    """Return the `Form` class associated with a given `model`.
+
+    The `Form` class is expected to be in the `forms` module within the application
+    associated with the model and its name is expected to be `{ModelName}{form_prefix}Form`.
+
+    If a matching `Form` is not found, this will return `None`.
+
+    Args:
+        form_prefix (str):
+            An additional prefix for the form name (e.g. `Filter`, such as to retrieve
+            `FooFilterForm`) that will come after the model name.
+
+    Returns:
+        Either the `Form` class or `None`
+    """
+    object_suffix = f"{form_prefix}Form"
+    return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
+
+
+def get_table_for_model(model):
+    """Return the `Table` class associated with a given `model`.
+
+    The `Table` class is expected to be in the `tables` module within the application
+    associated with the model and its name is expected to be `{ModelName}Table`.
+
+    If a matching `Table` is not found, this will return `None`.
+
+    Returns:
+        Either the `Table` class or `None`
+    """
+    return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
 
 
 # Setup UtilizationData named tuple for use by multiple methods

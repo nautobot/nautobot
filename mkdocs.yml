@@ -1,11 +1,9 @@
 dev_addr: '127.0.0.1:8001'
 edit_uri: edit/main/nautobot/docs
+site_dir: nautobot/project-static/docs
 site_name: Nautobot Documentation
 site_url: https://nautobot.readthedocs.io/
 repo_url: https://github.com/nautobot/nautobot
-python:
-    install:
-        - requirements: docs/requirements.txt
 theme:
     name: readthedocs
     navigation_depth: 4
@@ -34,6 +32,7 @@ nav:
     - Migration:
         - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
+        - Migrating from PostgreSQL to MySQL: 'installation/migrating-from-postgresql.md'
     - Configuration:
         - Configuring Nautobot: 'configuration/index.md'
         - Required Settings: 'configuration/required-settings.md'
@@ -74,6 +73,7 @@ nav:
         - Context Data: 'additional-features/config-contexts.md'
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'
+        - Dynamic Groups: 'additional-features/dynamic-groups.md'
         - Export Templates: 'models/extras/exporttemplate.md'
         - Git Repositories: 'models/extras/gitrepository.md'
         - Health Check: 'additional-features/healthcheck.md'
@@ -118,3 +118,4 @@ nav:
         - Version 1.0: 'release-notes/version-1.0.md'
         - Version 1.1: 'release-notes/version-1.1.md'
         - Version 1.2: 'release-notes/version-1.2.md'
+        - Version 1.3: 'release-notes/version-1.3.md'

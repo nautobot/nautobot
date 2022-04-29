@@ -1,6 +1,6 @@
 import datetime
 
-from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.circuits.models import Circuit, CircuitType, Provider, ProviderNetwork
 from nautobot.extras.models import Status
 from nautobot.utilities.testing import ViewTestCases
 
@@ -22,7 +22,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Provider X",
             "slug": "provider-x",
             "asn": 65123,
-            "account": "1234",
+            "account": "this-is-a-long-account-number-012345678901234567890123456789",
             "portal_url": "http://example.com/portal",
             "noc_contact": "noc@example.com",
             "admin_contact": "admin@example.com",
@@ -40,7 +40,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "asn": 65009,
-            "account": "5678",
+            "account": "this-is-a-long-account-number-012345678901234567890123456789",
             "portal_url": "http://example.com/portal2",
             "noc_contact": "noc2@example.com",
             "admin_contact": "admin2@example.com",
@@ -148,3 +148,53 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
             "comments": "New comments",
         }
+
+
+class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ProviderNetwork
+
+    @classmethod
+    def setUpTestData(cls):
+
+        providers = (
+            Provider(name="Provider 1", slug="provider-1"),
+            Provider(name="Provider 2", slug="provider-2"),
+        )
+        Provider.objects.bulk_create(providers)
+
+        ProviderNetwork.objects.bulk_create(
+            [
+                ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 8", provider=providers[0]),
+            ]
+        )
+
+        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
+
+        cls.form_data = {
+            "name": "ProviderNetwork X",
+            "slug": "provider-network-x",
+            "provider": providers[1].pk,
+            "description": "A new ProviderNetwork",
+            "comments": "Longer description goes here",
+            "tags": [t.pk for t in tags],
+        }
+
+        cls.csv_data = (
+            "name,slug,provider,description",
+            "Provider Network 4,provider-network-4,Provider 1,Foo",
+            "Provider Network 5,provider-network-5,Provider 1,Bar",
+            "Provider Network 6,provider-network-6,Provider 1,Baz",
+            "Provider Network 7,,Provider 1,Baz",
+        )
+
+        cls.bulk_edit_data = {
+            "provider": providers[1].pk,
+            "description": "New description",
+            "comments": "New comments",
+        }
+
+        cls.slug_test_object = "Provider Network 8"
+        cls.slug_source = "name"

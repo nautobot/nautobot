@@ -15,7 +15,7 @@ Each cable must have two endpoints defined. These endpoints are sometimes refere
 
 Each cable may be assigned a type, label, length, and color. Each cable must also assigned to an operational [`status`](https://nautobot.readthedocs.io/en/stable/models/extras/status/). The following statuses are available by default:
 
-* Active 
+* Active
 * Planned
 * Decommissioning
 

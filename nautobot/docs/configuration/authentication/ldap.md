@@ -58,13 +58,13 @@ AUTHENTICATION_BACKENDS = [
 Define all of the parameters required below in your `nautobot_config.py`. Complete documentation of all `django-auth-ldap` configuration options is included in the project's [official documentation](http://django-auth-ldap.readthedocs.io/).
 
 !!! info
-    When using Windows Server 2012 you may need to specify a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure, or `3268` for non-secure.
+    When using Windows Server 2012 you may wish to use the [Global Catalog](https://docs.microsoft.com/en-us/windows/win32/ad/global-catalog) by specifying a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure (`ldaps://`), or `3268` for non-secure.
 
 ```python
 import ldap
 
 # Server URI
-AUTH_LDAP_SERVER_URI = "ldaps://ad.example.com"
+AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
 
 # The following may be needed if you are binding to Active Directory.
 AUTH_LDAP_CONNECTION_OPTIONS = {
@@ -74,26 +74,51 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
 # Set the DN and password for the Nautobot service account.
 AUTH_LDAP_BIND_DN = "CN=NAUTOBOTSA, OU=Service Accounts,DC=example,DC=com"
 AUTH_LDAP_BIND_PASSWORD = "demo"
-
-# Include this `ldap.set_option` call if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
-ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 ```
 
-### TLS Options
+### Encryption Options
+
+It is recommended when using LDAP to use STARTTLS, however SSL can also be used.
+
+#### TLS Options
 
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
 
-Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`.
-
-```
+```python
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
 AUTH_LDAP_START_TLS = True
+```
+
+#### SSL Options
+
+SSL can also be used by using the `ldaps://` URI scheme.
+
+```python
+AUTH_LDAP_SERVER_URI = "ldaps://ad.example.com"
+```
+
+#### Certificate Validation
+
+When using either TLS or SSL it is necessary to validate the certificate from your LDAP server.  Copy your CA cert to `/opt/nautobot/ca.pem`.
+
+```python
 # Set the path to the trusted CA certificates and create a new internal SSL context.
 AUTH_LDAP_CONNECTION_OPTIONS = {
-    ldap.OPT_X_TLS_CACERTFILE: "/path/to/ca.pem",
+    ldap.OPT_X_TLS_CACERTFILE: "/opt/nautobot/ca.pem",
     ldap.OPT_X_TLS_NEWCTX: 0
 }
 ```
+
+If you prefer you can ignore the certificate, however, this is only recommended in development and not production.
+
+```python
+# WARNING: You should not do this in production!
+AUTH_LDAP_CONNECTION_OPTIONS = {
+    ldap.OPT_X_TLS_REQUIRE_CERT: ldap.OPT_X_TLS_NEVER,
+}
+```
+
+Additional ldap connection options can be found in the [python-ldap documentation](https://www.python-ldap.org/en/python-ldap-3.3.0/reference/ldap.html?highlight=cacert#options).
 
 ### User Authentication
 
@@ -184,7 +209,6 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 !!! warning
     Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
-
 
 ## Multiple LDAP Server Support
 

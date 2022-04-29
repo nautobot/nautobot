@@ -6,13 +6,12 @@ from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
 
 from nautobot.dcim.fields import ASNField
-from nautobot.extras.models import ObjectChange, StatusModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import serialize_object
 
 __all__ = (
     "Region",
@@ -76,12 +75,7 @@ class Region(MPTTModel, OrganizationalModel):
 
     def to_objectchange(self, action):
         # Remove MPTT-internal fields
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self, exclude=["level", "lft", "rght", "tree_id"]),
-        )
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
 
 
 #
@@ -106,7 +100,7 @@ class Site(PrimaryModel, StatusModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     slug = AutoSlugField(populate_from="name")
     region = models.ForeignKey(
         to="dcim.Region",

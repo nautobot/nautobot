@@ -3,7 +3,6 @@ from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.auth.backends import (
-    BaseBackend,
     ModelBackend,
     RemoteUserBackend as _RemoteUserBackend,
 )
@@ -103,21 +102,6 @@ class RemoteUserBackend(_RemoteUserBackend):
         return settings.REMOTE_AUTH_AUTO_CREATE_USER
 
     def has_perm(self, user_obj, perm, obj=None):
-        return False
-
-
-class DummyBackend(BaseBackend):
-    """Passthrough backend that does not authenticate or check permissions."""
-
-    def has_perm(self, *args, **kwargs):
-        """
-        This is only for the fallback dummy backend so that it will passthrough.
-        If `has_perm()` returns `True` it indicates that the backend has
-        authorized the user for a permission, which is what we don't want if
-        we're just passing through. This will allow permission checks to fall
-        through to the next backend as well until `True` or a `PermissionDenied`
-        isn't raised.
-        """
         return False
 
 

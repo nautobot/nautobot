@@ -1,6 +1,7 @@
 import datetime
 
 from netaddr import IPNetwork
+from django.test import override_settings
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
@@ -19,6 +20,7 @@ from nautobot.ipam.models import (
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import ViewTestCases
+from nautobot.utilities.testing.utils import extract_page_body
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -202,7 +204,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_test_object = "Role 8"
 
 
-class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
 
     @classmethod
@@ -279,6 +281,24 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "is_pool": False,
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_empty_queryset(self):
+        """
+        Testing filtering items for non-existent Status actually returns 0 results. For issue #1312 in which the filter
+        view expected to return 0 results was instead returning items in list. Used the Status of "deprecated" in this test,
+        but the same behavior was observerd in other filters, such as IPv4/IPv6.
+        """
+        prefixes = self._get_queryset().all()
+        self.assertEqual(prefixes.count(), 3)
+
+        url = self._get_url("list")
+        response = self.client.get(f"{url}?status=deprecated")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        for prefix in prefixes:
+            self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
 
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):

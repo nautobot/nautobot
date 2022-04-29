@@ -15,7 +15,7 @@ You will always base pull requests off of either the `develop` branch, for fixes
 When developing Nautobot, you'll be working on your own fork, so your first step will be to [fork the official GitHub repository](https://github.com/nautobot/nautobot/fork). You will then clone your GitHub fork locally for development.
 
 !!! note
-	It is highly recommended that you use SSH with GitHub. If you haven't already, make sure that you [setup Git](https://docs.github.com/en/github/getting-started-with-github/set-up-git) and [add an SSH key to your GitHub account](https://help.github.com/articles/generating-ssh-keys/) before proceeding.
+    It is highly recommended that you use SSH with GitHub. If you haven't already, make sure that you [setup Git](https://docs.github.com/en/github/getting-started-with-github/set-up-git) and [add an SSH key to your GitHub account](https://help.github.com/articles/generating-ssh-keys/) before proceeding.
 
 In this guide, SSH will be used to interact with Git.
 
@@ -39,21 +39,21 @@ NOTICE           dist         nautobot    scripts
 
 Git refers to remote repositories as *remotes*. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
 
-- `origin` - The default remote name used to refer to *your fork of Nautobot*
-- `upstream` - The main remote used to refer to the *official Nautobot repository*
+* `origin` - The default remote name used to refer to *your fork of Nautobot*
+* `upstream` - The main remote used to refer to the *official Nautobot repository*
 
 ### Setting up your Remotes
 
 Remote repos are managed using the `git remote` command.
 
 Upon cloning Nautobot for the first time, you will have only a single remote:
-
+<!-- markdownlint-disable MD010 -->
 ```no-highlight
 $ git remote -v
 origin	git@github.com:yourusername/nautobot.git (fetch)
 origin	git@github.com:yourusername/nautobot.git (push)
 ```
-
+<!-- markdownlint-enable MD010 -->
 Add the official Nautobot repo as a the `upstream` remote:
 
 ```no-highlight
@@ -61,7 +61,7 @@ $ git remote add upstream git@github.com:nautobot/nautobot.git
 ```
 
 View your remotes again to confirm you've got both `origin` pointing to your fork and `upstream` pointing to the official repo:
-
+<!-- markdownlint-disable MD010 -->
 ```no-highlight
 $ git remote -v
 origin	git@github.com:yourusername/nautobot.git (fetch)
@@ -69,11 +69,11 @@ origin	git@github.com:yourusername/nautobot.git (push)
 upstream	git@github.com:nautobot/nautobot.git (fetch)
 upstream	git@github.com:nautobot/nautobot.git (push)
 ```
-
+<!-- markdownlint-enable MD010 -->
 You're now ready to proceed to the next steps.
 
 !!! hint
-	You will always **push** changes to `origin` (your fork) and **pull** changes from `upstream` (official repo).
+    You will always **push** changes to `origin` (your fork) and **pull** changes from `upstream` (official repo).
 
 ### Creating a Branch
 
@@ -87,7 +87,7 @@ $ git pull upstream develop
 ```
 
 !!! warning
-	If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
+    If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
 
 Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username or your initials, and suffix it with the issue number if appropriate, separated by hyphens. For example:
 
@@ -100,7 +100,7 @@ $ git checkout -b yourusername-myfeature-1234
 Nautobot ships with a [Git pre-commit hook](https://githooks.com/) script that automatically checks for style compliance and missing database migrations prior to committing changes. This helps avoid erroneous commits that result in CI test failures.
 
 !!! note
-	This pre-commit hook currently only supports the Python Virtual Environment Workflow.
+    This pre-commit hook currently only supports the Python Virtual Environment Workflow.
 
 You are encouraged to enable it by creating a link to `scripts/git-hooks/pre-commit`:
 
@@ -147,19 +147,27 @@ $ invoke --list
 Available tasks:
 
   black               Check Python code style with Black.
-  build               Build all docker images.
-  cli                 Launch a bash shell inside the running Nautobot container.
+  build               Build Nautobot docker image.
+  buildx              Build Nautobot docker image using the experimental buildx docker functionality (multi-arch
+                      capablility).
+  check-migrations    Check for missing migrations.
+  check-schema        Render the REST API schema and check for problems.
+  cli                 Launch a bash shell inside the running Nautobot (or other) Docker container.
   createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
-  dumpdata            Dump database data into file, only for development environment use.
   debug               Start Nautobot and its dependencies in debug mode.
   destroy             Destroy all containers and volumes.
+  docker-push         Tags and pushes docker images to the appropriate repos, intended for release use only.
+  dumpdata            Dump data from database to db_output file.
   flake8              Check for PEP8 compliance and other style issues.
-  loaddata            Load data from file into database, only for development environment use.
+  hadolint            Check Dockerfile for hadolint compliance and other style issues.
+  integration-test    Run Nautobot integration tests.
+  loaddata            Load data from file.
   makemigrations      Perform makemigrations operation in Django.
+  markdownlint        Lint Markdown files.
   migrate             Perform migrate operation in Django.
   nbshell             Launch an interactive nbshell session.
   post-upgrade        Performs Nautobot common post-upgrade operations using a single entrypoint.
-  restart             Gracefully restart all containers.
+  restart             Gracefully restart containers.
   start               Start Nautobot and its dependencies in detached mode.
   stop                Stop Nautobot and its dependencies.
   tests               Run all tests and linters.
@@ -172,15 +180,16 @@ Available tasks:
 
 A development environment can be easily started up from the root of the project using the following commands:
 
-- `invoke build` - Builds Nautobot docker images
-- `invoke migrate` - Performs database migration operation in Django
-- `invoke createsuperuser` - Creates a superuser account for the Nautobot application
-- `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
+* `invoke build` - Builds Nautobot docker images
+* `invoke migrate` - Performs database migration operation in Django
+* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
+* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
 
 Additional useful commands for the development environment:
 
-- `invoke start` - Starts all Docker containers to run in the background with debug disabled
-- `invoke stop` - Stops all containers created by `invoke start`
+* `invoke start [-s servicename]` - Starts all Docker containers (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
@@ -201,11 +210,11 @@ This workflow uses Python and Poetry to work with your development environment l
 
 There are a few things you'll need:
 
-- A Linux system or environment
-- A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../installation/#installing-nautobot-dependencies)
-- A Redis server, which can also be [installed locally](../../installation/#installing-nautobot-dependencies)
-- A supported version of Python
-- A recent version of [Poetry](https://python-poetry.org/docs/#installation)
+* A Linux system or environment
+* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../installation/#installing-nautobot-dependencies)
+* A Redis server, which can also be [installed locally](../../installation/#installing-nautobot-dependencies)
+* A supported version of Python
+* A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
 #### Install Poetry
 
@@ -225,6 +234,14 @@ For detailed installation instructions, please see the [official Poetry installa
 
 ```no-highlight
 $ brew install hadolint
+```
+
+#### Install markdownlint-cli
+
+[markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) is a tool used to validate and lint Markdown files, such as Nautobot's documentation, to ensure that they are correctly constructed. On macOS with [Homebrew](https://brew.sh/) you can install markdownlint-cli by running:
+
+```no-highlight
+$ brew install markdownlint-cli
 ```
 
 #### Creating a Python Virtual Environment
@@ -283,7 +300,7 @@ Collecting ipython
 
 It may not always be convenient to enter into the virtual shell just to run programs. You may also execute a given command ad hoc within the project's virtual shell by using `poetry run`:
 
-```
+```no-highlight
 $ poetry run mkdocs serve
 ```
 
@@ -292,10 +309,10 @@ Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) 
 #### Configuring Nautobot
 
 !!! note
-	Unless otherwise noted, all following commands should be executed inside the virtualenv.
+    Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
-	Use `poetry shell` to enter the virtualenv.
+    Use `poetry shell` to enter the virtualenv.
 
 Nautobot's configuration file is `nautobot_config.py`.
 
@@ -448,6 +465,7 @@ By Nautobot convention, unit tests must be [tagged](https://docs.djangoproject.c
     New unit tests **must always** inherit from `nautobot.utilities.testing.TestCase`. Do not use `django.test.TestCase`.
 
 Wrong:
+
 ```python
 from django.test import TestCase
 
@@ -457,6 +475,7 @@ class MyTestCase(TestCase):
 ```
 
 Right:
+
 ```python
 from nautobot.utilities.testing import TestCase
 
@@ -484,7 +503,7 @@ In cases where you haven't made any changes to the database (which is most of th
     Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
 
 !!! warning
-	In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
+    In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
 
 #### Integration Tests
 
@@ -507,9 +526,10 @@ By Nautobot convention, integration tests must be [tagged](https://docs.djangopr
 !!! warning
     New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SeleniumTestCase` and added in the `integration` directory in the `tests` directory of an inner Nautobot application. Do not use any other base class for integration tests.
 
-We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and managable continuous development cycle.
+We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and manageable continuous development cycle.
 
 Wrong:
+
 ```python
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 
@@ -519,6 +539,7 @@ class MyIntegrationTestCase(StaticLiveServerTestCase):
 ```
 
 Right:
+
 ```python
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
@@ -543,8 +564,16 @@ Integration tests are run using the `invoke integration-test` command. All integ
 
 The following environment variables can be provided when running tests to customize where Nautobot looks for Selenium and where Selenium looks for Nautobot. If using the default setup documented above, there is no need to customize these.
 
-- `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
-- `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
+* `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
+* `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
+
+### Verifying the REST API Schema
+
+If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "1.2", "1.3")
+
+| Docker Compose Workflow | Virtual Environment Workflow                                                               |
+|-------------------------|--------------------------------------------------------------------------------------------|
+| `invoke check-schema`   | `nautobot-server spectacular --api-version 1.2 --validate --fail-on-warn --file /dev/null` |
 
 ### Verifying Code Style
 
@@ -557,15 +586,20 @@ To enforce best practices around consistent [coding style](style-guide.md), Naut
 
 ### Handling Migrations
 
+If you're unsure whether a database schema migration is needed based on your changes, you can run the following command:
+
+| Docker Compose Workflow   | Virtual Environment Workflow                                                                       |
+|---------------------------|----------------------------------------------------------------------------------------------------|
+| `invoke check-migrations` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check` |
+
 If your branch modifies a Django model (and as a result requires a database schema modification), please be sure to provide a meaningful name to the migration before pushing.
 
-- If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
-- If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
+* If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
+* If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
 
 You’ll also want to run `black` against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
 
 When modifying model field attributes, modify the test data in the tests too to reflect these changes and also any forms which refer to the model.
-
 
 ## Working on Documentation
 
@@ -587,6 +621,14 @@ Once the `mkdocs` command has been installed, you can preview the documentation
 using `mkdocs serve`,  which should start a web server at `http://localhost:8001`.
 
 Documentation is written in Markdown. If you need to add additional pages or sections to the documentation, you can add them to `mkdocs.yml` at the root of the repository.
+
+### Verifying Documentation
+
+Nautobot uses [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint-cli) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
+
+| Docker Compose Workflow | Virtual Environment Workflow                                                               |
+|-------------------------|--------------------------------------------------------------------------------------------|
+| `invoke markdownlint`   | `markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md` |
 
 ## Submitting Pull Requests
 

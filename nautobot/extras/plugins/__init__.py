@@ -1,6 +1,7 @@
 import collections
 import inspect
 from importlib import import_module
+from logging import getLogger
 
 from packaging import version
 
@@ -24,6 +25,7 @@ from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.secrets import register_secrets_provider
 from nautobot.utilities.choices import ButtonColorChoices
 
+logger = getLogger(__name__)
 
 # Initialize plugin registry stores
 # registry["datasource_content"], registry["secrets_providers"] are not plugin-exclusive; initialized in extras.registry
@@ -75,15 +77,17 @@ class PluginConfig(NautobotConfig):
         "*": {"ops": "all"},
     }
 
-    # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure"
+    # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure", "plugins:myplugin:docs"
     home_view_name = None
     config_view_name = None
+    docs_view_name = None
 
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
     banner_function = "banner.banner"
     custom_validators = "custom_validators.custom_validators"
     datasource_contents = "datasources.datasource_contents"
+    filter_extensions = "filter_extensions.filter_extensions"
     graphql_types = "graphql.types.graphql_types"
     homepage_layout = "homepage.layout"
     jinja_filters = "jinja_filters"
@@ -171,6 +175,21 @@ class PluginConfig(NautobotConfig):
             for secrets_provider in secrets_providers:
                 register_secrets_provider(secrets_provider)
             self.features["secrets_providers"] = secrets_providers
+
+        # Register custom filters (if any)
+        filter_extensions = import_object(f"{self.__module__}.{self.filter_extensions}")
+        if filter_extensions is not None:
+            register_filter_extensions(filter_extensions, self.name)
+            self.features["filter_extensions"] = {"filterset_fields": [], "filterform_fields": []}
+            for filter_extension in filter_extensions:
+                for filterset_field_name in filter_extension.filterset_fields.keys():
+                    self.features["filter_extensions"]["filterset_fields"].append(
+                        f"{filter_extension.model} -> {filterset_field_name}"
+                    )
+                for filterform_field_name in filter_extension.filterform_fields.keys():
+                    self.features["filter_extensions"]["filterform_fields"].append(
+                        f"{filter_extension.model} -> {filterform_field_name}"
+                    )
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -354,6 +373,61 @@ def register_jobs(class_list):
 
         registry["plugin_jobs"].append(job)
 
+    # Note that we do not (and cannot) update the Job records in the Nautobot database at this time.
+    # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
+
+
+class PluginFilterExtension:
+    """Class that may be returned by a registered Filter Extension function."""
+
+    model = None
+
+    filterset_fields = {}
+
+    filterform_fields = {}
+
+
+def register_filter_extensions(filter_extensions, plugin_name):
+    """
+    Register a list of PluginFilterExtension classes
+    """
+    from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
+    from nautobot.utilities.forms.utils import add_field_to_filter_form_class
+
+    for filter_extension in filter_extensions:
+        if not issubclass(filter_extension, PluginFilterExtension):
+            raise TypeError(f"{filter_extension} is not a subclass of extras.plugins.PluginFilterExtension!")
+        if filter_extension.model is None:
+            raise TypeError(f"PluginFilterExtension class {filter_extension} does not define a valid model!")
+
+        model_filterset_class = get_filterset_for_model(filter_extension.model)
+        model_filterform_class = get_form_for_model(filter_extension.model, "Filter")
+
+        for new_filterset_field_name, new_filterset_field in filter_extension.filterset_fields.items():
+            if not new_filterset_field_name.startswith(f"{plugin_name}_"):
+                raise ValueError(
+                    f"Attempted to create a custom filter `{new_filterset_field_name}` that did not start with `{plugin_name}`"
+                )
+
+            try:
+                model_filterset_class.add_filter(new_filterset_field_name, new_filterset_field)
+            except AttributeError:
+                logger.error(
+                    f"There was a conflict with filter set field `{new_filterset_field_name}`, the custom filter set field was ignored."
+                )
+
+        for new_filterform_field_name, new_filterform_field in filter_extension.filterform_fields.items():
+            try:
+                add_field_to_filter_form_class(
+                    form_class=model_filterform_class,
+                    field_name=new_filterform_field_name,
+                    field_obj=new_filterform_field,
+                )
+            except AttributeError:
+                logger.error(
+                    f"There was a conflict with filter form field `{new_filterform_field_name}`, the custom filter form field was ignored."
+                )
+
 
 #
 # Navigation menu links
@@ -376,11 +450,11 @@ class PluginMenuItem:
         self.link = link
         self.link_text = link_text
         if permissions is not None:
-            if type(permissions) not in (list, tuple):
+            if not isinstance(permissions, (list, tuple)):
                 raise TypeError("Permissions must be passed as a tuple or list.")
             self.permissions = permissions
         if buttons is not None:
-            if type(buttons) not in (list, tuple):
+            if not isinstance(buttons, (list, tuple)):
                 raise TypeError("Buttons must be passed as a tuple or list.")
             self.buttons = buttons
 
@@ -399,7 +473,7 @@ class PluginMenuButton:
         self.title = title
         self.icon_class = icon_class
         if permissions is not None:
-            if type(permissions) not in (list, tuple):
+            if not isinstance(permissions, (list, tuple)):
                 raise TypeError("Permissions must be passed as a tuple or list.")
             self.permissions = permissions
         if color is not None:

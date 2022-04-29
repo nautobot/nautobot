@@ -12,16 +12,14 @@ from nautobot.extras.forms import (
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
-    CustomFieldModelForm,
+    NautobotModelForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
-    RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -52,7 +50,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 #
 
 
-class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ClusterTypeForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -75,7 +73,7 @@ class ClusterTypeCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ClusterGroupForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -98,7 +96,7 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class ClusterForm(NautobotModelForm, TenancyForm):
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
@@ -108,7 +106,6 @@ class ClusterForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationshi
         query_params={"region_id": "$region"},
     )
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Cluster
@@ -257,9 +254,7 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 #
 
 
-class VirtualMachineForm(
-    BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm
-):
+class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -273,7 +268,6 @@ class VirtualMachineForm(
         query_params={"vm_role": "True"},
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VirtualMachine
@@ -474,7 +468,7 @@ class VirtualMachineFilterForm(
 #
 
 
-class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm, RelationshipModelForm):
+class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -493,7 +487,6 @@ class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm,
             "site_id": "null",
         },
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VMInterface
@@ -564,7 +557,6 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             "site_id": "null",
         },
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -683,7 +675,6 @@ class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
 class VirtualMachineBulkAddComponentForm(CustomFieldBulkCreateForm, BootstrapMixin, forms.Form):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     name_pattern = ExpandableNameField(label="Name")
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         nullable_fields = []

@@ -62,7 +62,7 @@ If you have developed any custom integrations or plugins you may need to update 
 
 ## Data Model Changes
 
-The following backwards-incompatible changes have been made to the data model in Nautobot. 
+The following backwards-incompatible changes have been made to the data model in Nautobot.
 
 ### Status Fields
 
@@ -86,7 +86,7 @@ For example, the built-in **Active** status has a slug of `active`, so the `acti
 Because `status` fields are now stored in the database, they cannot have a default value, just like other similar objects like Device Roles or Device Types. In cases where `status` was not required to be set because it would use the default value, you must now provide a `status` yourself.  
 
 !!! note
-	For consistency in the API, the `slug` value of a `status` is used when creating or updating an object.
+    For consistency in the API, the `slug` value of a `status` is used when creating or updating an object.
 
 #### Choices in Code
 
@@ -104,8 +104,8 @@ Device.objects.filter(status=DeviceStatusChoices.STATUS_PLANNED)
 Update it to this:
 
 ```python
-from extras.models import Status
-from dcim.models import Device
+from nautobot.extras.models import Status
+from nautobot.dcim.models import Device
 
 Device.objects.filter(status=Status.objects.get(slug="planned"))
 ```
@@ -124,7 +124,7 @@ There is no longer a distinct `UserConfig` model; instead, user configuration an
 ### Custom Fields
 
 !!! tip
-	You can no longer rename or change the type of a custom field.
+    You can no longer rename or change the type of a custom field.
 
 Custom Fields have been overhauled for asserting data integrity and improving user experience.
 
@@ -134,7 +134,7 @@ Custom Fields have been overhauled for asserting data integrity and improving us
 ### IPAM Network Field Types
 
 !!! tip
-	Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../rest-api/filtering.md#network-and-host-fields) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.)
+    Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../rest-api/filtering.md#network-and-host-fields) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.)
 
 All IPAM objects with network field types (`ipam.Aggregate`, `ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types.
 
@@ -148,7 +148,7 @@ Below is a summary of the underlying technical changes to network fields. These 
 - Network membership queries are accomplished by triangulating the "position" of an address using the IP, broadcast, and prefix length of the source and target addresses.
 
 !!! note
-	You should never have to worry about the binary nature of how the network fields are stored in the database! The Django database ORM takes care of it all!
+    You should never have to worry about the binary nature of how the network fields are stored in the database! The Django database ORM takes care of it all!
 
 #### Changes to `IPAddress`
 
@@ -156,7 +156,7 @@ The following fields have changed when working with `ipam.IPAddress` objects:
 
 ##### `address` is now a computed field
 
-This field is computed from `{host}/{prefix_length}` and is represented as a `netaddr.IPNetwork` object. 
+This field is computed from `{host}/{prefix_length}` and is represented as a `netaddr.IPNetwork` object.
 
 ```python
 >>> ip = IPAddress(address="1.1.1.1/30")
@@ -164,7 +164,7 @@ This field is computed from `{host}/{prefix_length}` and is represented as a `ne
 IPNetwork('1.1.1.1/30')
 ```
 
-While this field is now a virtual field, it can still be used in many ways. 
+While this field is now a virtual field, it can still be used in many ways.
 
 It can be used to create objects:
 
@@ -182,18 +182,18 @@ IPNetwork('1.1.1.1/30')
 ```
 
 !!! note
-	If you use a `prefix_length` other than `/32` (IPv4) or `/128` (IPv6) it **must** be included in your lookups
+    If you use a `prefix_length` other than `/32` (IPv4) or `/128` (IPv6) it **must** be included in your lookups
 
-This field *cannot be used in **nested** filter expressions*: 
+This field *cannot be used in **nested** filter expressions*:
 
 ```python
 >>> Device.objects.filter(primary_ip4__address="1.1.1.1")
 django.core.exceptions.FieldError: Related Field got invalid lookup: address
 ```
 
-##### `host` contains the IP address 
+##### `host` contains the IP address
 
-The IP (host) component of the address is now stored in the `host` field. 
+The IP (host) component of the address is now stored in the `host` field.
 
 ```python
 >>> ip.host
@@ -206,7 +206,7 @@ This field *can* be used in nested filter expressions, for example:
 >>> Device.objects.filter(primary_ip4__host="1.1.1.1")
 ```
 
-##### `prefix_length` contains the prefix length 
+##### IPAddress `prefix_length` contains the prefix length
 
 This is an integer, such as `30` for `/30`.
 
@@ -228,7 +228,7 @@ For example, if you have multiple `IPAddress` objects with the same `host` value
 <IPAddressQuerySet [<IPAddress: 1.1.1.1/30>]>
 ```
 
-##### `broadcast` contains the broadcast address
+##### IPAddress `broadcast` contains the broadcast address
 
 If the prefix length is that of a host prefix (e.g. `/32`), `broadcast` will be the same as the `host` :
 
@@ -245,19 +245,19 @@ If the prefix length is any larger (e.g. `/24`), `broadcast` will be that of the
 ```
 
 !!! note
-	This field is largely for internal use only for facilitating network membership queries and it is not recommend that you use it for filtering.
+    This field is largely for internal use only for facilitating network membership queries and it is not recommend that you use it for filtering.
 
 #### Changes to `Aggregate` and `Prefix`
 
-The following fields have changed when working with `ipam.Aggregate` and `ipam.Prefix` objects. These objects share the same field changes. 
+The following fields have changed when working with `ipam.Aggregate` and `ipam.Prefix` objects. These objects share the same field changes.
 
 For these examples we will be using `Prefix` objects, but they apply just as equally to `Aggregate` objects.
 
 ##### `prefix` is now a computed field
 
-This field is computed from `{network}/{prefix_length}` and is represented as a `netaddr.IPNetwork` object. 
+This field is computed from `{network}/{prefix_length}` and is represented as a `netaddr.IPNetwork` object.
 
-While this field is now a virtual field, it can still be used in many ways. 
+While this field is now a virtual field, it can still be used in many ways.
 
 It can be used to create objects:
 
@@ -274,16 +274,16 @@ It can be used in `.get()` and `.filter()` lookups where `prefix` is the primary
 <PrefixQuerySet [<Prefix: 1.1.1.0/24>]>
 ```
 
-##### `network` contains the network address 
+##### `network` contains the network address
 
-The network component of the address is now stored in the `network` field. 
+The network component of the address is now stored in the `network` field.
 
 ```python
 >>> net.network
 '1.1.1.0'
 ```
 
-##### `prefix_length` contains the prefix length 
+##### Aggregate/Prefix `prefix_length` contains the prefix length
 
 This is an integer, such as `24` for `/24`.
 
@@ -305,7 +305,7 @@ For example, if you have multiple `Prefix` objects with the same `network` value
 <PrefixQuerySet [<Prefix: 1.1.1.0/25>]>
 ```
 
-##### `broadcast` contains the broadcast address
+##### Aggregate/Prefix `broadcast` contains the broadcast address
 
 The `broadcast` will be derived from the `prefix_length` and will be that of the last network address for that prefix length (e.g. `1.1.1.255`):
 
@@ -315,7 +315,7 @@ The `broadcast` will be derived from the `prefix_length` and will be that of the
 ```
 
 !!! note
-	This field is largely for internal use only for facilitating network membership queries and it is not recommend that you use it for filtering.
+    This field is largely for internal use only for facilitating network membership queries and it is not recommend that you use it for filtering.
 
 #### Membership Lookups
 
@@ -324,14 +324,14 @@ Nautobot 1.0.x and 1.1.x did not support the custom lookup expressions that NetB
 In Nautobot 1.2.0 and later, both model manager methods and custom lookup expressions are supported for this purpose, but the latter are now preferred for most use cases and are generally equivalent to their counterparts in NetBox.
 
 !!! note
-	Nautobot did not mimic the support of non-subnets for the `net_in` query to avoid mistakes and confusion caused by an IP address being mistaken for a /32 as an example.
+    Nautobot did not mimic the support of non-subnets for the `net_in` query to avoid mistakes and confusion caused by an IP address being mistaken for a /32 as an example.
 
 ##### net_mask_length
 
 *Returns target addresses matching the source address prefix length.*
 
 !!! note
-	The NetBox filter net_mask_length should use the `prefix_length` field for filtering.
+    The NetBox filter net_mask_length should use the `prefix_length` field for filtering.
 
 NetBox:
 
@@ -351,7 +351,7 @@ Prefix.objects.filter(prefix_length=value)
 
 ## REST API Changes
 
-The following backwards-incompatible changes have been made to the REST API in Nautobot. 
+The following backwards-incompatible changes have been made to the REST API in Nautobot.
 
 ### Display field
 

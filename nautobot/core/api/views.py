@@ -9,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
 from rest_framework import status
 from rest_framework.response import Response
@@ -18,8 +19,10 @@ from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
-from drf_yasg.openapi import Schema, TYPE_OBJECT, TYPE_ARRAY
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.plumbing import get_relative_url, set_query_parameters
+from drf_spectacular.renderers import OpenApiJsonRenderer
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
 from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
@@ -49,6 +52,20 @@ HTTP_ACTIONS = {
 #
 # Mixins
 #
+
+
+class NautobotAPIVersionMixin:
+    """Add Nautobot-specific handling to the base APIView class."""
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Returns the final response object."""
+        response = super().finalize_response(request, response, *args, **kwargs)
+        try:
+            # Add the API version to the response, if available
+            response["API-Version"] = request.version
+        except AttributeError:
+            pass
+        return response
 
 
 class BulkUpdateModelMixin:
@@ -158,7 +175,6 @@ class ModelViewSetMixin:
                 logger.debug(f"Nested serializer for {self.queryset.model} not found!")
 
         # Fall back to the hard-coded serializer class
-        logger.debug(f"Using serializer {self.serializer_class}")
         return self.serializer_class
 
     def get_queryset(self):
@@ -175,16 +191,35 @@ class ModelViewSetMixin:
 
         return super().initialize_request(request, *args, **kwargs)
 
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Restrict the view's queryset to allow only the permitted objects for the given request.
+
+        Subclasses (such as nautobot.extras.api.views.JobModelViewSet) may wish to override this.
+
+        Called by initial(), below.
+        """
+        # Restrict the view's QuerySet to allow only the permitted objects for the given user, if applicable
+        if request.user.is_authenticated:
+            action = HTTP_ACTIONS[request.method]
+            if action:
+                self.queryset = self.queryset.restrict(request.user, action)
+
     def initial(self, request, *args, **kwargs):
+        """
+        Runs anything that needs to occur prior to calling the method handler.
+
+        Override of internal Django Rest Framework API.
+        """
         super().initial(request, *args, **kwargs)
 
-        if not request.user.is_authenticated:
-            return
+        # Django Rest Framework stores the raw API version string e.g. "1.2" as request.version.
+        # For convenience we split it out into integer major/minor versions as well.
+        major, minor = request.version.split(".")
+        request.major_version = int(major)
+        request.minor_version = int(minor)
 
-        # Restrict the view's QuerySet to allow only the permitted objects
-        action = HTTP_ACTIONS[request.method]
-        if action:
-            self.queryset = self.queryset.restrict(request.user, action)
+        self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
         logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
@@ -199,7 +234,13 @@ class ModelViewSetMixin:
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
 
-class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixin, ModelViewSet_):
+class ModelViewSet(
+    NautobotAPIVersionMixin,
+    BulkUpdateModelMixin,
+    BulkDestroyModelMixin,
+    ModelViewSetMixin,
+    ModelViewSet_,
+):
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
     """
@@ -209,7 +250,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixi
         Check that the provided instance or list of instances are matched by the current queryset. This confirms that
         any newly created or modified objects abide by the attributes granted by any applicable ObjectPermissions.
         """
-        if type(instance) is list:
+        if isinstance(instance, list):
             # Check that all instances are still included in the view's queryset
             conforming_count = self.queryset.filter(pk__in=[obj.pk for obj in instance]).count()
             if conforming_count != len(instance):
@@ -252,7 +293,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixi
         return super().perform_destroy(instance)
 
 
-class ReadOnlyModelViewSet(ModelViewSetMixin, ReadOnlyModelViewSet_):
+class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyModelViewSet_):
     """
     Extend DRF's ReadOnlyModelViewSet to support queryset restriction.
     """
@@ -263,18 +304,17 @@ class ReadOnlyModelViewSet(ModelViewSetMixin, ReadOnlyModelViewSet_):
 #
 
 
-class APIRootView(APIView):
+class APIRootView(NautobotAPIVersionMixin, APIView):
     """
     This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
     """
 
     _ignore_model_permissions = True
-    exclude_from_schema = True
-    swagger_schema = None
 
     def get_view_name(self):
         return "API Root"
 
+    @extend_schema(exclude=True)
     def get(self, request, format=None):
 
         return Response(
@@ -323,13 +363,29 @@ class APIRootView(APIView):
         )
 
 
-class StatusView(APIView):
+class StatusView(NautobotAPIVersionMixin, APIView):
     """
     A lightweight read-only endpoint for conveying the current operational status.
     """
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "django-version": {"type": "string"},
+                    "installed-apps": {"type": "object"},
+                    "nautobot-version": {"type": "string"},
+                    "plugins": {"type": "object"},
+                    "python-version": {"type": "string"},
+                    "rq-workers-running": {"type": "integer"},
+                    "celery-workers-running": {"type": "integer"},
+                },
+            }
+        }
+    )
     def get(self, request):
         # Gather the version numbers from all installed Django apps
         installed_apps = {}
@@ -337,9 +393,9 @@ class StatusView(APIView):
             app = app_config.module
             version = getattr(app, "VERSION", getattr(app, "__version__", None))
             if version:
-                if type(version) is tuple:
+                if isinstance(version, tuple):
                     version = ".".join(str(n) for n in version)
-                installed_apps[app_config.name] = version
+            installed_apps[app_config.name] = version
         installed_apps = {k: v for k, v in sorted(installed_apps.items())}
 
         # Gather installed plugins
@@ -367,14 +423,66 @@ class StatusView(APIView):
         )
 
 
+class APIVersioningGetSchemaURLMixin:
+    """Mixin to override the way that Swagger/Redoc views request the schema JSON from the server."""
+
+    def _get_schema_url(self, request):
+        schema_url = self.url or get_relative_url(reverse(self.url_name, request=request))
+        return set_query_parameters(
+            url=schema_url,
+            lan=request.GET.get("lang"),
+            # Default in drf-spectacular here is `version=request.GET.get("version")`, which assumes that the
+            # query parameter to both views is called "version".
+            # 1. We should use `request.version` instead of `request.GET.get("version") as that also allows
+            # for accept-header versioning in the initial request, not just query-parameter versioning
+            # 2. We need to pass `api_version` rather than `version` as the query parameter since that's what
+            # Nautobot API versioning expects.
+            api_version=request.version,
+        )
+
+
+class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, SpectacularSwaggerView):
+    """
+    Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter and page styling.
+    """
+
+    class FakeOpenAPIRenderer(OpenApiJsonRenderer):
+        """For backwards-compatibility with drf-yasg, allow `?format=openapi` as a way to request the schema JSON."""
+
+        format = "openapi"
+
+    renderer_classes = SpectacularSwaggerView.renderer_classes + [FakeOpenAPIRenderer]
+
+    template_name = "swagger_ui.html"
+
+    @extend_schema(exclude=True)
+    def get(self, request, *args, **kwargs):
+        """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
+        # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
+        if request.GET.get("format") == "openapi":
+            return redirect("schema_json", permanent=True)
+
+        # drf-spectacular uses "settings" in the rendering context as a way to inject custom JavaScript if desired,
+        # which of course conflicts with Nautobot's use of "settings" as a representation of django.settings.
+        # So we need to intercept it and fix it up.
+        response = super().get(request, *args, **kwargs)
+        response.data["swagger_settings"] = response.data["settings"]
+        del response.data["settings"]
+        return response
+
+
+class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRedocView):
+    """Extend SpectacularRedocView to support Nautobot's ?api_version=<version> query parameter."""
+
+
 #
 # GraphQL
 #
 
 
-class GraphQLDRFAPIView(APIView):
+class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     """
-    API View for GraphQL to integrate properly with DRF authentication mecanism.
+    API View for GraphQL to integrate properly with DRF authentication mechanism.
     The code is a stripped down version of graphene-django default View
     https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
     """
@@ -422,15 +530,15 @@ class GraphQLDRFAPIView(APIView):
     def get_backend(self, request):
         return self.backend
 
-    @swagger_auto_schema(
-        request_body=serializers.GraphQLAPISerializer,
-        operation_description="Query the database using a GraphQL query",
+    @extend_schema(
+        request=serializers.GraphQLAPISerializer,
+        description="Query the database using a GraphQL query",
         responses={
-            200: Schema(type=TYPE_OBJECT, properties={"data": Schema(type=TYPE_OBJECT)}),
-            400: Schema(
-                type=TYPE_OBJECT,
-                properties={"errors": Schema(type=TYPE_ARRAY, items={"type": TYPE_OBJECT})},
-            ),
+            200: {"type": "object", "properties": {"data": {"type": "object"}}},
+            400: {
+                "type": "object",
+                "properties": {"errors": {"type": "array", "items": {"type": "object"}}},
+            },
         },
     )
     def post(self, request, *args, **kwargs):

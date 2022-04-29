@@ -59,7 +59,7 @@ These lookup expressions can be applied by adding a suffix to the desired field'
 
 ### Numeric Fields
 
-Numeric based fields (ASN, VLAN ID, etc) support these lookup expressions:
+Numeric-based fields (ASN, VLAN ID, etc.) support these lookup expressions:
 
 - `n` - not equal to (negation)
 - `lt` - less than
@@ -69,23 +69,26 @@ Numeric based fields (ASN, VLAN ID, etc) support these lookup expressions:
 
 ### String Fields
 
-String based (char) fields (Name, Address, etc) support these lookup expressions:
+String-based (char) fields (Name, Address, etc.) support these lookup expressions:
 
 - `n` - not equal to (negation)
-- `ic` - case insensitive contains
-- `nic` - negated case insensitive contains
-- `isw` - case insensitive starts with
-- `nisw` - negated case insensitive starts with
-- `iew` - case insensitive ends with
-- `niew` - negated case insensitive ends with
-- `ie` - case insensitive exact match
-- `nie` - negated case insensitive exact match
+- `ic` - case-insensitive contains
+- `nic` - negated case-insensitive contains
+- `isw` - case-insensitive starts-with
+- `nisw` - negated case-insensitive starts-with
+- `iew` - case-insensitive ends-with
+- `niew` - negated case-insensitive ends-with
+- `ie` - case-insensitive exact match
+- `nie` - negated case-insensitive exact match
+- `re` - case-sensitive regular expression match
+- `nre` - negated case-sensitive regular expression match
+- `ire` - case-insensitive regular expression match
+- `nire` - negated case-insensitive regular expression match
 
 ### Foreign Keys & Other Fields
 
 Certain other fields, namely foreign key relationships support just the negation
 expression: `n`.
-
 
 ### Network and Host Fields
 
@@ -101,8 +104,8 @@ Nautobot core or plugin data model.
 - `**` `istartswith` - Determine if IP or network starts with the value provided, e.g. `host__istartswith="10.0.0."`
 - `**` `endswith` - Determine if IP or network ends with the value provided, e.g. `host__endswith="0.1"`
 - `**` `iendswith` - Determine if IP or network ends with the value provided, e.g. `host__iendswith="0.1"`
-- `**` `regex` - Determine if IP or network matches the pattern provided, e.g.` host__regex=r"10\.(.*)\.1`
-- `**` `iregex` - Determine if IP or network matches the pattern provided, e.g.` host__iregex=r"10\.(.*)\.1`
+- `**` `regex` - Determine if IP or network matches the pattern provided, e.g. `host__regex=r"10\.(.*)\.1`
+- `**` `iregex` - Determine if IP or network matches the pattern provided, e.g. `host__iregex=r"10\.(.*)\.1`
 - `net_contained` - Given a network, determine which networks are contained within the provided e.g. `network__net_contained="192.0.0.0/8"` would include 192.168.0.0/24 in the result
 - `net_contained_or_equal` - Given a network, determine which networks are contained or is within the provided e.g. `network__net_contained_or_equal="192.0.0.0/8"` would include 192.168.0.0/24 and 192.0.0.0/8 in the result
 - `net_contains` - Given a network, determine which networks contain the provided network e.g. `network__net_contains="192.168.0.0/16"` would include 192.0.0.0/8 in the result
