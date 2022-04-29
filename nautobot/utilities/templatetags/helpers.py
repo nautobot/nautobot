@@ -5,7 +5,8 @@ import re
 import yaml
 from django import template
 from django.conf import settings
-from django.templatetags.static import StaticNode
+from django.contrib.staticfiles.finders import find
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
@@ -14,7 +15,11 @@ from django_jinja import library
 
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.utils import foreground_color
+from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
+
+HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
+HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+HTML_NONE = '<span class="text-muted">&mdash;</span>'
 
 register = template.Library()
 
@@ -43,8 +48,41 @@ def placeholder(value):
     """
     if value:
         return value
-    placeholder = '<span class="text-muted">&mdash;</span>'
-    return mark_safe(placeholder)
+    return mark_safe(HTML_NONE)
+
+
+@library.filter()
+@register.filter()
+def render_boolean(value):
+    """Render HTML from a computed boolean value.
+
+    Args:
+        value (any): Input value, can be any variable.
+        A truthy value (for example non-empty string / True / non-zero number) is considered True.
+        A falsey value other than None (for example "" or 0 or False) is considered False.
+        A value of None is considered neither True nor False.
+
+    Returns:
+        str: HTML
+        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
+        - or -
+        '<span class="text-muted">&mdash;</span>' if None value
+        - or -
+        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
+
+    Examples:
+        >>> render_boolean(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> render_boolean(True or "arbitrary string" or 1)
+        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
+        >>> render_boolean(False or "" or 0)
+        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+    """
+    if value is None:
+        return mark_safe(HTML_NONE)
+    if bool(value):
+        return mark_safe(HTML_TRUE)
+    return mark_safe(HTML_FALSE)
 
 
 @library.filter()
@@ -61,7 +99,7 @@ def render_markdown(value):
 
     # Sanitize Markdown links
     schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = fr"\[(.+)\]\((?!({schemes})).*:(.+)\)"
+    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
     value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
 
     # Render Markdown
@@ -121,11 +159,7 @@ def viewname(model, action):
         >>> viewname(Device, "list")
         "dcim:device_list"
     """
-    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
-    if model._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
-
-    return viewname
+    return get_route_for_model(model, action)
 
 
 @library.filter()
@@ -141,7 +175,7 @@ def validated_viewname(model, action):
     Returns:
         str or None: return the name of the view for the model/action provided if valid, or None if invalid.
     """
-    viewname_str = viewname(model, action)
+    viewname_str = get_route_for_model(model, action)
 
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
@@ -156,7 +190,7 @@ def validated_viewname(model, action):
 @register.filter()
 def bettertitle(value):
     """
-    Alternative to the builtin title(); uppercases words without replacing letters that are already uppercase.
+    Alternative to the builtin title(); capitalizes words without replacing letters that are already uppercase.
 
     Args:
         value (str): string to convert to Title Case
@@ -271,32 +305,33 @@ def percentage(x, y):
 
 @library.filter()
 @register.filter()
-def get_docs(model):
-    """Render and return documentation for the specified model.
+def get_docs_url(model):
+    """Return the documentation URL for the specified model.
+
+    Nautobot Core models have a path like docs/models/{app_label}/{model_name}
+    while plugins will have {app_label}/docs/models/{model_name}. If the html file
+    does not exist, this function will return None.
 
     Args:
         model (models.Model): Instance of a Django model
 
     Returns:
-        str: documentation for the specified model in Markdown format
+        str: static URL for the documentation of the object.
+        or
+        None
 
     Example:
-        >>> get_docs(obj)
-        "some text"
+        >>> get_docs_url(obj)
+        "static/docs/models/dcim/site.html"
     """
-    path = "{}/models/{}/{}.md".format(settings.DOCS_ROOT, model._meta.app_label, model._meta.model_name)
-    try:
-        with open(path, encoding="utf-8") as docfile:
-            content = docfile.read()
-    except FileNotFoundError:
-        return "Unable to load documentation, file not found: {}".format(path)
-    except IOError:
-        return "Unable to load documentation, error reading file: {}".format(path)
+    path = f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
+    if model._meta.app_label in settings.PLUGINS:
+        path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
 
-    # Render Markdown with the admonition extension
-    content = markdown(content, extensions=["admonition", "fenced_code", "tables"])
-
-    return mark_safe(content)
+    # Check to see if documentation exists in any of the static paths.
+    if find(path):
+        return static(path)
+    return None
 
 
 @library.filter()
@@ -451,6 +486,11 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
         dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
                 display
     """
+    # See https://github.com/nautobot/nautobot/issues/1169
+    # If `get_utilization()` threw an exception, utilization_data will be an empty string
+    # rather than a UtilizationData instance. Avoid a potentially confusing exception in that case.
+    if not isinstance(utilization_data, UtilizationData):
+        return {}
     return utilization_graph_raw_data(
         numerator=utilization_data.numerator,
         denominator=utilization_data.denominator,

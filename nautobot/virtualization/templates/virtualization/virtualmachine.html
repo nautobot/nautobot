@@ -10,21 +10,15 @@
         {% endif %}
 {% endblock extra_buttons %}
 
-{% block nav_tabs %}
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Virtual Machine</a>
-        </li>
+
+{% block extra_nav_tabs %}
         {% if perms.extras.view_configcontext %}
             <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
                 <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}">Config Context</a>
             </li>
-        {% endif %}
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'virtualization:virtualmachine_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-{% endblock nav_tabs %}
+        {% endif %} 
+{% endblock extra_nav_tabs %}
+
 
 {% block content_left_page %}
         <div class="panel panel-default">
@@ -82,8 +76,8 @@
                             <a href="{% url 'ipam:ipaddress' pk=object.primary_ip4.pk %}">{{ object.primary_ip4.address.ip }}</a>
                             {% if object.primary_ip4.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
-                            {% elif object.primary_ip4.nat_outside %}
-                                <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
+                            {% elif object.primary_ip4.nat_outside_list.exists %}
+                                <span>(NAT: {% for nat in object.primary_ip4.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
                             {% endif %}
                         {% else %}
                             <span class="text-muted">&mdash;</span>
@@ -97,8 +91,8 @@
                             <a href="{% url 'ipam:ipaddress' pk=object.primary_ip6.pk %}">{{ object.primary_ip6.address.ip }}</a>
                             {% if object.primary_ip6.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                            {% elif object.primary_ip6.nat_outside %}
-                                <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
+                            {% elif object.primary_ip6.nat_outside_list.exists %}
+                                <span>(NAT: {% for nat in object.primary_ip6.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
                             {% endif %}
                         {% else %}
                             <span class="text-muted">&mdash;</span>
@@ -248,4 +242,5 @@
 {% block javascript %}
     <script src="{% static 'js/interface_filtering.js' %}?v{{ settings.VERSION }}"></script>
     <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+    {{ block.super }}
 {% endblock javascript %}

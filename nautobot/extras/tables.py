@@ -1,9 +1,5 @@
-import inspect
-
 import django_tables2 as tables
-
 from django.conf import settings
-from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
@@ -20,18 +16,19 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.utilities.templatetags.helpers import render_markdown
+from nautobot.utilities.templatetags.helpers import render_boolean, render_markdown
 from .choices import LogLevelChoices
-from .jobs import Job
 from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
+    Job as JobModel,
     JobResult,
     JobLogEntry,
     ObjectChange,
@@ -70,6 +67,10 @@ GITREPOSITORY_BUTTONS = """
 <button data-url="{% url 'extras:gitrepository_sync' slug=record.slug %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
 
+JOB_BUTTONS = """
+<a href="{% url 'extras:job_run' slug=record.slug %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.enabled or not record.installed %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
+"""
+
 OBJECTCHANGE_OBJECT = """
 {% if record.changed_object and record.changed_object.get_absolute_url %}
     <a href="{{ record.changed_object.get_absolute_url }}">{{ record.object_repr }}</a>
@@ -89,19 +90,19 @@ WEBHOOK_CONTENT_TYPES = """
 
 SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_dry_run')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
         title="Dry Run"
         class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-play"></i>
 </button>
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_approve')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
         title="Approve"
         class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-check"></i>
 </button>
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_deny')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
         title="Deny"
         class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-close"></i>
@@ -193,10 +194,10 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
             self.validator.validate(data)
         except JSONSchemaValidationError as e:
             # Return a red x (like a boolean column) and the validation error message
-            return format_html(f'<span class="text-danger"><i class="mdi mdi-close-thick"></i>{e.message}</span>')
+            return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
 
         # Return a green check (like a boolean column)
-        return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
+        return render_boolean(True)
 
 
 class CustomFieldTable(BaseTable):
@@ -260,6 +261,34 @@ class CustomLinkTable(BaseTable):
             "group_name",
             "weight",
         )
+
+
+class DynamicGroupTable(BaseTable):
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug")
+
+    class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
+        """Resource Manager Meta."""
+
+        model = DynamicGroup
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "content_type",
+            "members",
+            "actions",
+        )
+
+    def render_members(self, value, record):
+        """Provide a filtered URL to the group members (if any)."""
+        # Only linkify if there are members.
+        if not value:
+            return value
+        return format_html('<a href="{}">{}</a>', record.get_group_members_url(), value)
 
 
 class ExportTemplateTable(BaseTable):
@@ -388,15 +417,81 @@ def log_entry_color_css(record):
     return record.log_level.lower()
 
 
+class JobTable(BaseTable):
+    # TODO pk = ToggleColumn()
+    source = tables.Column()
+    # grouping is used to, well, group the Jobs, so it isn't a column of its own.
+    name = tables.Column(linkify=True)
+    installed = BooleanColumn()
+    enabled = BooleanColumn()
+    description = tables.Column(accessor="description_first_line")
+    commit_default = BooleanColumn()
+    hidden = BooleanColumn()
+    read_only = BooleanColumn()
+    approval_required = BooleanColumn()
+    soft_time_limit = tables.Column()
+    time_limit = tables.Column()
+    actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
+    last_run = tables.TemplateColumn(
+        accessor="latest_result",
+        template_code="""
+            {% if value %}
+                {{ value.created }} by {{ value.user }}
+            {% else %}
+                <span class="text-muted">Never</span>
+            {% endif %}
+        """,
+        linkify=lambda value: value.get_absolute_url() if value else None,
+    )
+    last_status = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/job_label.html' with result=record.latest_result %}",
+    )
+    tags = TagColumn(url_name="extras:job_list")
+
+    def render_description(self, value):
+        return render_markdown(value)
+
+    class Meta(BaseTable.Meta):
+        model = JobModel
+        orderable = False
+        fields = (
+            "source",
+            "name",
+            "installed",
+            "enabled",
+            "description",
+            "commit_default",
+            "hidden",
+            "read_only",
+            "approval_required",
+            "soft_time_limit",
+            "time_limit",
+            "last_run",
+            "last_status",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "name",
+            "enabled",
+            "description",
+            "last_run",
+            "last_status",
+            "actions",
+        )
+
+
 class JobLogEntryTable(BaseTable):
-    created = tables.DateTimeColumn(verbose_name="Time", format=settings.SHORT_DATETIME_FORMAT)
+    created = tables.DateTimeColumn(verbose_name="Time", format="Y-m-d H:i:s.u")
     grouping = tables.Column()
     log_level = tables.Column(
         verbose_name="Level",
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
     log_object = tables.Column(verbose_name="Object", linkify=log_object_link)
-    message = tables.Column()
+    message = tables.Column(
+        attrs={"td": {"class": "rendered-markdown"}},
+    )
 
     def render_log_level(self, value):
         log_level = value.lower()
@@ -405,6 +500,9 @@ class JobLogEntryTable(BaseTable):
             log_level = "danger"
 
         return format_html('<label class="label label-{}">{}</label>', log_level, value)
+
+    def render_message(self, value):
+        return render_markdown(value)
 
     class Meta(BaseTable.Meta):
         model = JobLogEntry
@@ -420,22 +518,9 @@ class JobLogEntryTable(BaseTable):
         }
 
 
-def job_creator_link(value, record):
-    """
-    Get a link to the related object, if any, associated with the given JobResult record.
-    """
-    related_object = record.related_object
-    if inspect.isclass(related_object) and issubclass(related_object, Job):
-        return reverse("extras:job", kwargs={"class_path": related_object.class_path})
-    elif related_object:
-        return related_object.get_absolute_url()
-    return None
-
-
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
-    obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
+    linked_record = tables.Column(verbose_name="Job / Git Repository", linkify=True)
     name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
@@ -448,11 +533,20 @@ class JobResultTable(BaseTable):
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
 
+    def order_linked_record(self, queryset, is_descending):
+        return (
+            queryset.order_by(
+                ("-" if is_descending else "") + "job_model__name",
+                ("-" if is_descending else "") + "name",
+            ),
+            True,
+        )
+
     def render_summary(self, record):
         """
         Define custom rendering for the summary column.
         """
-        log_objects = JobLogEntry.objects.filter(job_result__pk=record.pk)
+        log_objects = record.logs.all()
         success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
         info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
         warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
@@ -474,15 +568,14 @@ class JobResultTable(BaseTable):
             "pk",
             "created",
             "name",
-            "obj_type",
-            "related_object",
+            "linked_record",
             "duration",
             "completed",
             "user",
             "status",
             "summary",
         )
-        default_columns = ("pk", "created", "related_object", "user", "status", "summary")
+        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
 
 
 #
@@ -493,7 +586,7 @@ class JobResultTable(BaseTable):
 class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    job_class = tables.Column(verbose_name="Job")
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="First Run")
     last_run_at = tables.Column(verbose_name="Most Recent Run")
@@ -501,12 +594,12 @@ class ScheduledJobTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
+        fields = ("pk", "name", "job_model", "interval", "start_time", "last_run_at")
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
     name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
-    job_class = tables.Column(verbose_name="Job")
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
     user = tables.Column(verbose_name="Requestor")
@@ -514,7 +607,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("name", "job_class", "interval", "user", "start_time", "actions")
+        fields = ("name", "job_model", "interval", "user", "start_time", "actions")
 
 
 class ObjectChangeTable(BaseTable):
@@ -563,10 +656,10 @@ class RelationshipAssociationTable(BaseTable):
     actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
 
     source_type = tables.Column()
-    source = tables.Column(linkify=True, orderable=False)
+    source = tables.Column(linkify=True, orderable=False, accessor="get_source")
 
     destination_type = tables.Column()
-    destination = tables.Column(linkify=True, orderable=False)
+    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination")
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
@@ -656,11 +749,12 @@ class TagTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
     color = ColorColumn()
+    content_types = ContentTypesColumn(truncate_words=15)
     actions = ButtonsColumn(Tag, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = Tag
-        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
+        fields = ("pk", "name", "items", "slug", "color", "content_types", "description", "actions")
 
 
 class TaggedItemTable(BaseTable):

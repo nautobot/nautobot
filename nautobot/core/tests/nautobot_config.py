@@ -23,9 +23,18 @@ DATABASES = {
     }
 }
 
+# Explicity set MySQL client encoding to use 4-byte unicode glyphs.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+
+JOBS_ROOT = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "tests", "example_jobs"
+)
+
 PLUGINS = [
-    "dummy_plugin",
+    "example_plugin",
 ]
+
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 

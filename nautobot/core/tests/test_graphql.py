@@ -1,4 +1,5 @@
 import types
+from unittest import skip
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -16,7 +17,7 @@ from graphql import get_default_backend
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from nautobot.circuits.models import Provider
+from nautobot.circuits.models import Provider, CircuitTermination
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_schema_type,
@@ -31,17 +32,23 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
-from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices
+from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import (
     Cable,
+    ConsolePort,
+    ConsoleServerPort,
     Device,
     DeviceRole,
     DeviceType,
     FrontPort,
     Interface,
     Manufacturer,
+    PowerFeed,
+    PowerPort,
+    PowerOutlet,
+    PowerPanel,
     Rack,
     RearPort,
     Region,
@@ -56,6 +63,7 @@ from nautobot.extras.models import (
     ConfigContext,
     GraphQLQuery,
     Relationship,
+    RelationshipAssociation,
     Status,
     Webhook,
 )
@@ -69,7 +77,6 @@ User = get_user_model()
 
 
 class GraphQLTestCase(TestCase):
-    @classmethod
     def setUp(self):
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
@@ -88,14 +95,14 @@ class GraphQLTestCase(TestCase):
         query = "{ query: sites {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEquals(len(resp["data"]["query"]), 3)
+        self.assertEqual(len(resp["data"]["query"]), 3)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: [String!]) { sites(name:$name) {name} }"
         resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
         self.assertFalse(resp.get("error"))
-        self.assertEquals(len(resp["data"]["sites"]), 1)
+        self.assertEqual(len(resp["data"]["sites"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"
@@ -369,11 +376,12 @@ class GraphQLSearchParameters(TestCase):
 
     def test_search_parameters(self):
 
-        fields = SiteFilterSet.get_filters().keys()
+        fields = SiteFilterSet().filters.keys()
         params = generate_list_search_parameters(self.schema)
         exclude_filters = ["type"]
 
         for field in fields:
+            field = str_to_var_name(field)
             if field not in exclude_filters:
                 self.assertIn(field, params.keys())
             else:
@@ -621,164 +629,233 @@ class GraphQLAPIPermissionTest(TestCase):
 
 
 class GraphQLQueryTest(TestCase):
-    def setUp(self):
+    """Execute various GraphQL queries and verify their correct responses."""
+
+    @classmethod
+    def setUpTestData(cls):
         """Initialize the Database with some datas."""
-        super().setUp()
-        self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
+        super().setUpTestData()
+        cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
         # Initialize fake request that will be required to execute GraphQL query
-        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
-        self.request.id = uuid.uuid4()
-        self.request.user = self.user
-
-        self.backend = get_default_backend()
-        self.schema = graphene_settings.SCHEMA
+        cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        cls.request.id = uuid.uuid4()
+        cls.request.user = cls.user
 
         # Populate Data
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        self.devicetype = DeviceType.objects.create(
+        cls.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        self.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
-        self.status1 = Status.objects.create(name="status1", slug="status1")
-        self.status2 = Status.objects.create(name="status2", slug="status2")
-        self.region1 = Region.objects.create(name="Region1", slug="region1")
-        self.region2 = Region.objects.create(name="Region2", slug="region2")
-        self.site1 = Site.objects.create(
-            name="Site-1", slug="site-1", asn=65000, status=self.status1, region=self.region1
+        cls.upsdevicetype = DeviceType.objects.create(
+            manufacturer=manufacturer, model="UPS Device Type 1", slug="ups-device-type-1"
         )
-        self.site2 = Site.objects.create(
-            name="Site-2", slug="site-2", asn=65099, status=self.status2, region=self.region2
+        cls.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        cls.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
+        cls.upsdevicerole = DeviceRole.objects.create(name="UPS Device Role 1", slug="ups-device-role-1")
+        cls.status1 = Status.objects.create(name="status1", slug="status1")
+        cls.status2 = Status.objects.create(name="status2", slug="status2")
+        cls.region1 = Region.objects.create(name="Region1", slug="region1")
+        cls.region2 = Region.objects.create(name="Region2", slug="region2")
+        cls.site1 = Site.objects.create(name="Site-1", slug="site-1", asn=65000, status=cls.status1, region=cls.region1)
+        cls.site2 = Site.objects.create(name="Site-2", slug="site-2", asn=65099, status=cls.status2, region=cls.region2)
+        cls.rack1 = Rack.objects.create(name="Rack 1", site=cls.site1)
+        cls.rack2 = Rack.objects.create(name="Rack 2", site=cls.site2)
+        cls.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
+        cls.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
+
+        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, site=cls.site1)
+        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, site=cls.site2)
+
+        cls.site1_power_panels = [
+            PowerPanel.objects.create(name="site1-powerpanel1", site=cls.site1),
+            PowerPanel.objects.create(name="site1-powerpanel2", site=cls.site1),
+            PowerPanel.objects.create(name="site1-powerpanel3", site=cls.site1),
+        ]
+        cls.site1_power_feeds = [
+            PowerFeed.objects.create(
+                name="site1-powerfeed1", status=Status.objects.get(name="Active"), power_panel=cls.site1_power_panels[0]
+            ),
+            PowerFeed.objects.create(
+                name="site1-powerfeed2", status=Status.objects.get(name="Active"), power_panel=cls.site1_power_panels[1]
+            ),
+        ]
+
+        cls.upsdevice1 = Device.objects.create(
+            name="UPS 1",
+            device_type=cls.upsdevicetype,
+            device_role=cls.upsdevicerole,
+            site=cls.site1,
+            status=cls.status1,
+            rack=cls.rack1,
+            tenant=cls.tenant1,
+            face="front",
+            comments="UPS Device",
         )
-        self.rack1 = Rack.objects.create(name="Rack 1", site=self.site1)
-        self.rack2 = Rack.objects.create(name="Rack 2", site=self.site2)
-        self.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
-        self.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
+        cls.upsdevice1_power_ports = [
+            PowerPort.objects.create(device=cls.upsdevice1, name="Power Port 1"),
+            PowerPort.objects.create(device=cls.upsdevice1, name="Power Port 2"),
+        ]
+        cls.upsdevice1_power_outlets = [
+            PowerOutlet.objects.create(name="Power Outlet 1", device=cls.upsdevice1),
+            PowerOutlet.objects.create(name="Power Outlet 2", device=cls.upsdevice1),
+        ]
 
-        self.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, site=self.site1)
-        self.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, site=self.site2)
-
-        self.device1 = Device.objects.create(
+        cls.device1 = Device.objects.create(
             name="Device 1",
-            device_type=self.devicetype,
-            device_role=self.devicerole1,
-            site=self.site1,
-            status=self.status1,
-            rack=self.rack1,
-            tenant=self.tenant1,
+            device_type=cls.devicetype,
+            device_role=cls.devicerole1,
+            site=cls.site1,
+            status=cls.status1,
+            rack=cls.rack1,
+            tenant=cls.tenant1,
             face="front",
             comments="First Device",
         )
 
-        self.device1_rear_ports = (
-            RearPort.objects.create(device=self.device1, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=self.device1, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=self.device1, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=self.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
+        cls.device1_rear_ports = (
+            RearPort.objects.create(device=cls.device1, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
         )
 
-        self.device1_frontports = [
+        cls.device1_console_ports = (
+            ConsolePort.objects.create(
+                device=cls.device1, name="Console Port 1", type=ConsolePortTypeChoices.TYPE_RJ45
+            ),
+            ConsolePort.objects.create(
+                device=cls.device1, name="Console Port 2", type=ConsolePortTypeChoices.TYPE_RJ45
+            ),
+        )
+
+        cls.device1_console_server_ports = (
+            ConsoleServerPort.objects.create(
+                device=cls.device1, name="Console Port 1", type=ConsolePortTypeChoices.TYPE_RJ45
+            ),
+            ConsoleServerPort.objects.create(
+                device=cls.device1, name="Console Port 2", type=ConsolePortTypeChoices.TYPE_RJ45
+            ),
+        )
+
+        cls.device1_power_ports = [
+            PowerPort.objects.create(device=cls.device1, name="Power Port 1"),
+            PowerPort.objects.create(device=cls.device1, name="Power Port 2"),
+        ]
+
+        cls.device1_frontports = [
             FrontPort.objects.create(
-                device=self.device1,
+                device=cls.device1,
                 name="Front Port 1",
                 type=PortTypeChoices.TYPE_8P8C,
-                rear_port=self.device1_rear_ports[0],
+                rear_port=cls.device1_rear_ports[0],
             ),
             FrontPort.objects.create(
-                device=self.device1,
+                device=cls.device1,
                 name="Front Port 2",
                 type=PortTypeChoices.TYPE_8P8C,
-                rear_port=self.device1_rear_ports[1],
+                rear_port=cls.device1_rear_ports[1],
             ),
             FrontPort.objects.create(
-                device=self.device1,
+                device=cls.device1,
                 name="Front Port 3",
                 type=PortTypeChoices.TYPE_8P8C,
-                rear_port=self.device1_rear_ports[2],
+                rear_port=cls.device1_rear_ports[2],
             ),
             FrontPort.objects.create(
-                device=self.device1,
+                device=cls.device1,
                 name="Front Port 4",
                 type=PortTypeChoices.TYPE_8P8C,
-                rear_port=self.device1_rear_ports[3],
+                rear_port=cls.device1_rear_ports[3],
             ),
         ]
 
-        self.interface11 = Interface.objects.create(
+        cls.interface11 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device1,
+            device=cls.device1,
             mac_address="00:11:11:11:11:11",
             mode=InterfaceModeChoices.MODE_ACCESS,
-            untagged_vlan=self.vlan1,
+            untagged_vlan=cls.vlan1,
         )
-        self.interface12 = Interface.objects.create(
+        cls.interface12 = Interface.objects.create(
             name="Int2",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device1,
+            device=cls.device1,
         )
-        self.ipaddr1 = IPAddress.objects.create(
-            address="10.0.1.1/24", status=self.status1, assigned_object=self.interface11
+        cls.ipaddr1 = IPAddress.objects.create(
+            address="10.0.1.1/24", status=cls.status1, assigned_object=cls.interface11
         )
 
-        self.device2 = Device.objects.create(
+        cls.device2 = Device.objects.create(
             name="Device 2",
-            device_type=self.devicetype,
-            device_role=self.devicerole2,
-            site=self.site1,
-            status=self.status2,
-            rack=self.rack2,
-            tenant=self.tenant2,
+            device_type=cls.devicetype,
+            device_role=cls.devicerole2,
+            site=cls.site1,
+            status=cls.status2,
+            rack=cls.rack2,
+            tenant=cls.tenant2,
             face="rear",
         )
 
-        self.interface21 = Interface.objects.create(
+        cls.interface21 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device2,
-            untagged_vlan=self.vlan2,
+            device=cls.device2,
+            untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
         )
-        self.interface22 = Interface.objects.create(
-            name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=self.device2, mac_address="00:12:12:12:12:12"
+        cls.interface22 = Interface.objects.create(
+            name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=cls.device2, mac_address="00:12:12:12:12:12"
         )
-        self.ipaddr2 = IPAddress.objects.create(
-            address="10.0.2.1/30", status=self.status2, assigned_object=self.interface12
+        cls.ipaddr2 = IPAddress.objects.create(
+            address="10.0.2.1/30", status=cls.status2, assigned_object=cls.interface12
         )
 
-        self.device3 = Device.objects.create(
+        cls.device3 = Device.objects.create(
             name="Device 3",
-            device_type=self.devicetype,
-            device_role=self.devicerole1,
-            site=self.site2,
-            status=self.status1,
+            device_type=cls.devicetype,
+            device_role=cls.devicerole1,
+            site=cls.site2,
+            status=cls.status1,
         )
 
-        self.interface31 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device3
+        cls.interface31 = Interface.objects.create(
+            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3
         )
-        self.interface31 = Interface.objects.create(
+        cls.interface31 = Interface.objects.create(
             name="Mgmt1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device3,
+            device=cls.device3,
             mgmt_only=True,
             enabled=False,
         )
 
-        self.cable1 = Cable.objects.create(
-            termination_a=self.interface11,
-            termination_b=self.interface12,
-            status=self.status1,
+        cls.cable1 = Cable.objects.create(
+            termination_a=cls.interface11,
+            termination_b=cls.interface12,
+            status=cls.status1,
         )
-        self.cable2 = Cable.objects.create(
-            termination_a=self.interface31,
-            termination_b=self.interface21,
-            status=self.status2,
+        cls.cable2 = Cable.objects.create(
+            termination_a=cls.interface31,
+            termination_b=cls.interface21,
+            status=cls.status2,
+        )
+
+        # Power Cables
+        cls.cable3 = Cable.objects.create(
+            termination_a=cls.device1_power_ports[0],
+            termination_b=cls.upsdevice1_power_outlets[0],
+            status=Status.objects.get(name="Active"),
+        )
+        cls.cable3 = Cable.objects.create(
+            termination_a=cls.upsdevice1_power_ports[0],
+            termination_b=cls.site1_power_feeds[0],
+            status=Status.objects.get(name="Active"),
         )
 
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        context1.regions.add(self.region1)
+        context1.regions.add(cls.region1)
 
         Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
         Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
@@ -790,18 +867,65 @@ class GraphQLQueryTest(TestCase):
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         cluster = Cluster.objects.create(name="Cluster 1", type=clustertype)
-        self.virtualmachine = VirtualMachine.objects.create(
+        cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=cluster,
-            status=self.status1,
+            status=cls.status1,
         )
-        self.vminterface = VMInterface.objects.create(
-            virtual_machine=self.virtualmachine,
+        cls.vminterface = VMInterface.objects.create(
+            virtual_machine=cls.virtualmachine,
             name="eth0",
         )
-        self.vmipaddr = IPAddress.objects.create(
-            address="1.1.1.1/32", status=self.status1, assigned_object=self.vminterface
+        cls.vmipaddr = IPAddress.objects.create(
+            address="1.1.1.1/32", status=cls.status1, assigned_object=cls.vminterface
         )
+
+        cls.relationship_o2o_1 = Relationship(
+            name="Device to VirtualMachine",
+            slug="device-to-vm",
+            source_type=ContentType.objects.get_for_model(Device),
+            destination_type=ContentType.objects.get_for_model(VirtualMachine),
+            type="one-to-one",
+        )
+        cls.relationship_o2o_1.validated_save()
+
+        cls.ro2o_assoc_1 = RelationshipAssociation(
+            relationship=cls.relationship_o2o_1,
+            source=cls.device1,
+            destination=cls.virtualmachine,
+        )
+        cls.ro2o_assoc_1.validated_save()
+
+        cls.relationship_m2ms_1 = Relationship(
+            name="Device Group",
+            slug="device-group",
+            source_type=ContentType.objects.get_for_model(Device),
+            destination_type=ContentType.objects.get_for_model(Device),
+            type="symmetric-many-to-many",
+        )
+        cls.relationship_m2ms_1.validated_save()
+
+        cls.rm2ms_assoc_1 = RelationshipAssociation(
+            relationship=cls.relationship_m2ms_1,
+            source=cls.device1,
+            destination=cls.device2,
+        )
+        cls.rm2ms_assoc_1.validated_save()
+        cls.rm2ms_assoc_2 = RelationshipAssociation(
+            relationship=cls.relationship_m2ms_1,
+            source=cls.device2,
+            destination=cls.device3,
+        )
+        cls.rm2ms_assoc_2.validated_save()
+        cls.rm2ms_assoc_3 = RelationshipAssociation(
+            relationship=cls.relationship_m2ms_1,
+            source=cls.device3,
+            destination=cls.device1,
+        )
+        cls.rm2ms_assoc_3.validated_save()
+
+        cls.backend = get_default_backend()
+        cls.schema = graphene_settings.SCHEMA
 
     def execute_query(self, query, variables=None):
 
@@ -810,6 +934,74 @@ class GraphQLQueryTest(TestCase):
             return document.execute(context_value=self.request, variable_values=variables)
         else:
             return document.execute(context_value=self.request)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_circuit_terminations_cable_peer(self):
+        """Test querying circuit terminations for their cable peers"""
+
+        query = """\
+query {
+    circuit_terminations {
+        id
+        cable_peer_circuit_termination { id }
+        cable_peer_front_port { id }
+        cable_peer_interface { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(CircuitTermination.objects.all()), len(result.data["circuit_terminations"]))
+        for circuit_term_entry in result.data["circuit_terminations"]:
+            circuit_term_obj = CircuitTermination.objects.get(id=circuit_term_entry["id"])
+            cable_peer = circuit_term_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_circuit_termination = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, CircuitTermination) else None
+            )
+            cable_peer_interface = {"id": str(cable_peer.id)} if isinstance(cable_peer, Interface) else None
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(circuit_term_entry["cable_peer_circuit_termination"], cable_peer_circuit_termination)
+            self.assertEqual(circuit_term_entry["cable_peer_interface"], cable_peer_interface)
+            self.assertEqual(circuit_term_entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(circuit_term_entry["cable_peer_rear_port"], cable_peer_rear_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_circuit_termination_connected_endpoint(self):
+        """Test querying circuit terminations for their connnected endpoints."""
+
+        query = """\
+query {
+    circuit_terminations {
+        id
+        connected_circuit_termination { id }
+        connected_interface { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(CircuitTermination.objects.all()), len(result.data["circuit_terminations"]))
+        for circuit_term_entry in result.data["circuit_terminations"]:
+            circuit_term_obj = CircuitTermination.objects.get(id=circuit_term_entry["id"])
+            connected_endpoint = circuit_term_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_circuit_termination = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, CircuitTermination) else None
+            )
+            connected_interface = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, Interface) else None
+            )
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(circuit_term_entry["connected_circuit_termination"], connected_circuit_termination)
+            self.assertEqual(circuit_term_entry["connected_interface"], connected_interface)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context_and_custom_field_data(self):
@@ -839,7 +1031,7 @@ class GraphQLQueryTest(TestCase):
         self.assertIsInstance(result.data["device"], dict)
 
         device_names = [item["name"] for item in result.data["devices"]]
-        self.assertEqual(sorted(device_names), ["Device 1", "Device 2", "Device 3"])
+        self.assertEqual(sorted(device_names), ["Device 1", "Device 2", "Device 3", "UPS 1"])
         self.assertEqual(result.data["device"]["name"], "Device 1")
 
         config_contexts = [item["config_context"] for item in result.data["devices"]]
@@ -851,6 +1043,156 @@ class GraphQLQueryTest(TestCase):
         self.assertIsInstance(custom_field_data[0], dict)
         self.assertEqual(custom_field_data[0], {})
         self.assertEqual(result.data["device"]["_custom_field_data"], {})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_console_ports_cable_peer(self):
+        """Test querying console port terminations for their cable peers"""
+
+        query = """\
+query {
+    console_ports {
+        id
+        cable_peer_console_server_port { id }
+        cable_peer_front_port { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(ConsolePort.objects.all()), len(result.data["console_ports"]))
+        for console_port_entry in result.data["console_ports"]:
+            console_port_obj = ConsolePort.objects.get(id=console_port_entry["id"])
+            cable_peer = console_port_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_console_server_port = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, ConsoleServerPort) else None
+            )
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(console_port_entry["cable_peer_console_server_port"], cable_peer_console_server_port)
+            self.assertEqual(console_port_entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(console_port_entry["cable_peer_rear_port"], cable_peer_rear_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_console_ports_connected_endpoint(self):
+        """Test querying console ports for their connnected endpoints."""
+
+        query = """\
+query {
+    console_ports {
+        id
+        connected_console_server_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(ConsolePort.objects.all()), len(result.data["console_ports"]))
+        for console_port_entry in result.data["console_ports"]:
+            console_port_obj = ConsolePort.objects.get(id=console_port_entry["id"])
+            connected_endpoint = console_port_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_console_server_port = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, ConsoleServerPort) else None
+            )
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(console_port_entry["connected_console_server_port"], connected_console_server_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_console_server_ports_cable_peer(self):
+        """Test querying console server port terminations for their cable peers"""
+
+        query = """\
+query {
+    console_server_ports {
+        id
+        cable_peer_console_port { id }
+        cable_peer_front_port { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(ConsoleServerPort.objects.all()), len(result.data["console_server_ports"]))
+        for console_server_port_entry in result.data["console_server_ports"]:
+            console_server_port_obj = ConsoleServerPort.objects.get(id=console_server_port_entry["id"])
+            cable_peer = console_server_port_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_console_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, ConsolePort) else None
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(console_server_port_entry["cable_peer_console_port"], cable_peer_console_port)
+            self.assertEqual(console_server_port_entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(console_server_port_entry["cable_peer_rear_port"], cable_peer_rear_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_console_server_ports_connected_endpoint(self):
+        """Test querying console server ports for their connnected endpoints."""
+
+        query = """\
+query {
+    console_server_ports {
+        id
+        connected_console_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(ConsoleServerPort.objects.all()), len(result.data["console_server_ports"]))
+        for console_server_port_entry in result.data["console_server_ports"]:
+            console_server_port_obj = ConsoleServerPort.objects.get(id=console_server_port_entry["id"])
+            connected_endpoint = console_server_port_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_console_port = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, ConsolePort) else None
+            )
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(console_server_port_entry["connected_console_port"], connected_console_port)
+
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_relationship_associations(self):
+        """Test queries involving relationship associations."""
+
+        # Query testing for https://github.com/nautobot/nautobot/issues/1228
+        query = """
+        query {
+            device (id: "%s") {
+                name
+                rel_device_to_vm {
+                    id
+                }
+                rel_device_group {
+                    id
+                }
+            }
+        }
+        """ % (
+            self.device1.id,
+        )
+        result = self.execute_query(query)
+
+        self.assertIsInstance(result.data, dict, result)
+        self.assertIsInstance(result.data["device"], dict, result)
+        self.assertEqual(result.data["device"]["name"], self.device1.name)
+        self.assertIsInstance(result.data["device"]["rel_device_to_vm"], dict, result)
+        self.assertEqual(result.data["device"]["rel_device_to_vm"]["id"], str(self.virtualmachine.id))
+        self.assertIsInstance(result.data["device"]["rel_device_group"], list, result)
+        self.assertIn(str(self.device2.id), set(item["id"] for item in result.data["device"]["rel_device_group"]))
+        self.assertIn(str(self.device3.id), set(item["id"] for item in result.data["device"]["rel_device_group"]))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_device_role_filter(self):
@@ -926,29 +1268,29 @@ class GraphQLQueryTest(TestCase):
             ('name: ["Device 1", "Device 2"]', 2),
             ('name__ic: "Device"', 3),
             ('name__ic: ["Device"]', 3),
-            ('name__nic: "Device"', 0),
-            ('name__nic: ["Device"]', 0),
+            ('name__nic: "Device"', 1),
+            ('name__nic: ["Device"]', 1),
             (f'id: "{self.device1.pk}"', 1),
             (f'id: ["{self.device1.pk}"]', 1),
             (f'id: ["{self.device1.pk}", "{self.device2.pk}"]', 2),
             ('role: "device-role-1"', 2),
             ('role: ["device-role-1"]', 2),
             ('role: ["device-role-1", "device-role-2"]', 3),
-            ('site: "site-1"', 2),
-            ('site: ["site-1"]', 2),
-            ('site: ["site-1", "site-2"]', 3),
-            ('region: "region1"', 2),
-            ('region: ["region1"]', 2),
-            ('region: ["region1", "region2"]', 3),
-            ('face: "front"', 1),
+            ('site: "site-1"', 3),
+            ('site: ["site-1"]', 3),
+            ('site: ["site-1", "site-2"]', 4),
+            ('region: "region1"', 3),
+            ('region: ["region1"]', 3),
+            ('region: ["region1", "region2"]', 4),
+            ('face: "front"', 2),
             ('face: "rear"', 1),
-            ('status: "status1"', 2),
+            ('status: "status1"', 3),
             ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 3),
-            ("is_full_depth: true", 3),
+            ('status: ["status1", "status2"]', 4),
+            ("is_full_depth: true", 4),
             ("is_full_depth: false", 0),
             ("has_primary_ip: true", 0),
-            ("has_primary_ip: false", 3),
+            ("has_primary_ip: false", 4),
             ('mac_address: "00:11:11:11:11:11"', 1),
             ('mac_address: ["00:12:12:12:12:12"]', 1),
             ('mac_address: ["00:11:11:11:11:11", "00:12:12:12:12:12"]', 2),
@@ -1039,18 +1381,18 @@ query {
     def test_query_cables_filter(self):
 
         filters = (
-            (f'device_id: "{self.device1.id}"', 1),
+            (f'device_id: "{self.device1.id}"', 2),
             ('device: "Device 3"', 1),
-            ('device: ["Device 1", "Device 3"]', 2),
-            (f'rack_id: "{self.rack1.id}"', 1),
+            ('device: ["Device 1", "Device 3"]', 3),
+            (f'rack_id: "{self.rack1.id}"', 3),
             ('rack: "Rack 2"', 1),
-            ('rack: ["Rack 1", "Rack 2"]', 2),
-            (f'site_id: "{self.site1.id}"', 2),
+            ('rack: ["Rack 1", "Rack 2"]', 4),
+            (f'site_id: "{self.site1.id}"', 4),
             ('site: "site-2"', 1),
-            ('site: ["site-1", "site-2"]', 2),
-            (f'tenant_id: "{self.tenant1.id}"', 1),
+            ('site: ["site-1", "site-2"]', 4),
+            (f'tenant_id: "{self.tenant1.id}"', 3),
             ('tenant: "tenant-2"', 1),
-            ('tenant: ["tenant-1", "tenant-2"]', 2),
+            ('tenant: ["tenant-1", "tenant-2"]', 4),
         )
 
         for filter, nbr_expected_results in filters:
@@ -1093,6 +1435,94 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_front_ports_cable_peer(self):
+        """Test querying front port terminations for their cable peers"""
+
+        query = """\
+query {
+    front_ports {
+        id
+        cable_peer_circuit_termination { id }
+        cable_peer_console_port { id }
+        cable_peer_console_server_port { id }
+        cable_peer_front_port { id }
+        cable_peer_interface { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(FrontPort.objects.all()), len(result.data["front_ports"]))
+        for entry in result.data["front_ports"]:
+            front_port_obj = FrontPort.objects.get(id=entry["id"])
+            cable_peer = front_port_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_circuit_termination = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, CircuitTermination) else None
+            )
+            cable_peer_console_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, ConsolePort) else None
+            cable_peer_console_server_port = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, ConsoleServerPort) else None
+            )
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_interface = {"id": str(cable_peer.id)} if isinstance(cable_peer, Interface) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["cable_peer_circuit_termination"], cable_peer_circuit_termination)
+            self.assertEqual(entry["cable_peer_console_port"], cable_peer_console_port)
+            self.assertEqual(entry["cable_peer_console_server_port"], cable_peer_console_server_port)
+            self.assertEqual(entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(entry["cable_peer_interface"], cable_peer_interface)
+            self.assertEqual(entry["cable_peer_rear_port"], cable_peer_rear_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_rear_ports_cable_peer(self):
+        """Test querying rear port terminations for their cable peers"""
+
+        query = """\
+query {
+    rear_ports {
+        id
+        cable_peer_circuit_termination { id }
+        cable_peer_console_port { id }
+        cable_peer_console_server_port { id }
+        cable_peer_front_port { id }
+        cable_peer_interface { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(RearPort.objects.all()), len(result.data["rear_ports"]))
+        for entry in result.data["rear_ports"]:
+            rear_port_obj = RearPort.objects.get(id=entry["id"])
+            cable_peer = rear_port_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_circuit_termination = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, CircuitTermination) else None
+            )
+            cable_peer_console_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, ConsolePort) else None
+            cable_peer_console_server_port = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, ConsoleServerPort) else None
+            )
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_interface = {"id": str(cable_peer.id)} if isinstance(cable_peer, Interface) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["cable_peer_circuit_termination"], cable_peer_circuit_termination)
+            self.assertEqual(entry["cable_peer_console_port"], cable_peer_console_port)
+            self.assertEqual(entry["cable_peer_console_server_port"], cable_peer_console_server_port)
+            self.assertEqual(entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(entry["cable_peer_interface"], cable_peer_interface)
+            self.assertEqual(entry["cable_peer_rear_port"], cable_peer_rear_port)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter(self):
@@ -1172,13 +1602,13 @@ query {
             name
             device { name }
         }
-        connected_console_server_port { id }
         connected_circuit_termination { id }
     }
 }"""
 
         result = self.execute_query(query)
         self.assertIsNone(result.errors)
+        self.assertEqual(len(Interface.objects.all()), len(result.data["interfaces"]))
         for interface_entry in result.data["interfaces"]:
             if interface_entry["connected_endpoint"] is None:
                 self.assertIsNone(interface_entry["connected_interface"])
@@ -1190,9 +1620,45 @@ query {
                     interface_entry["connected_endpoint"]["device"]["name"],
                     interface_entry["connected_interface"]["device"]["name"],
                 )
-            # TODO: it would be nice to have connections to console server ports and circuit terminations to test!
-            self.assertIsNone(interface_entry["connected_console_server_port"])
+            # TODO: it would be nice to have connections to circuit terminations to test!
             self.assertIsNone(interface_entry["connected_circuit_termination"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_cable_peer(self):
+        """Test querying interfaces for their cable peers"""
+
+        query = """\
+query {
+    interfaces {
+        id
+        cable_peer { __typename }
+        cable_peer_circuit_termination { id }
+        cable_peer_interface { id }
+        cable_peer_front_port { id }
+        cable_peer_rear_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(Interface.objects.all()), len(result.data["interfaces"]))
+        for interface_entry in result.data["interfaces"]:
+            intf_obj = Interface.objects.get(id=interface_entry["id"])
+            cable_peer = intf_obj.get_cable_peer()
+
+            # Extract Expected Properties from Interface object
+            cable_peer_circuit_termination = (
+                {"id": str(cable_peer.id)} if isinstance(cable_peer, CircuitTermination) else None
+            )
+            cable_peer_interface = {"id": str(cable_peer.id)} if isinstance(cable_peer, Interface) else None
+            cable_peer_front_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, FrontPort) else None
+            cable_peer_rear_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, RearPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(interface_entry["cable_peer_circuit_termination"], cable_peer_circuit_termination)
+            self.assertEqual(interface_entry["cable_peer_interface"], cable_peer_interface)
+            self.assertEqual(interface_entry["cable_peer_front_port"], cable_peer_front_port)
+            self.assertEqual(interface_entry["cable_peer_rear_port"], cable_peer_rear_port)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_mode(self):
@@ -1251,3 +1717,243 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["webhooks"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_device_types(self):
+        """Test querying of device types, specifically checking for issue #1203."""
+        query = """
+        query {
+            device_types {
+                model
+            }
+        }
+        """
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertIsInstance(result.data, dict, result)
+        self.assertIsInstance(result.data["device_types"], list, result)
+        self.assertEqual(result.data["device_types"][0]["model"], self.devicetype.model, result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interface_pagination(self):
+
+        query_pagination = """\
+query {
+    interfaces(limit: 2, offset: 3) {
+        id
+        name
+        device {
+          name
+        }
+    }
+}"""
+        query_all = """\
+query {
+    interfaces {
+        id
+        name
+        device {
+          name
+        }
+    }
+}"""
+
+        result_1 = self.execute_query(query_pagination)
+        self.assertEqual(len(result_1.data.get("interfaces", [])), 2)
+
+        # With the limit and skip implemented in the GQL query, this should return Device 2 (Int1) and
+        # Device 3 (Int2). This test will validate that the correct device/interface combinations are returned.
+        device_names = [item["device"]["name"] for item in result_1.data.get("interfaces", [])]
+        self.assertEqual(sorted(device_names), ["Device 2", "Device 3"])
+        interface_names = [item["name"] for item in result_1.data.get("interfaces", [])]
+        self.assertEqual(interface_names, ["Int2", "Int1"])
+
+        result_2 = self.execute_query(query_all)
+        self.assertEqual(len(result_2.data.get("interfaces", [])), 6)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_power_feeds_cable_peer(self):
+        """Test querying power feeds for their cable peers"""
+
+        query = """\
+query {
+    power_feeds {
+        id
+        cable_peer_power_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(PowerFeed.objects.all()), len(result.data["power_feeds"]))
+        for entry in result.data["power_feeds"]:
+            power_feed_obj = PowerFeed.objects.get(id=entry["id"])
+            cable_peer = power_feed_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_power_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, PowerPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["cable_peer_power_port"], cable_peer_power_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_power_feeds_connected_endpoint(self):
+        """Test querying power feeds for their connected endpoints"""
+
+        query = """\
+query {
+    power_feeds {
+        id
+        connected_power_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(PowerFeed.objects.all()), len(result.data["power_feeds"]))
+        for entry in result.data["power_feeds"]:
+            power_feed_obj = PowerFeed.objects.get(id=entry["id"])
+            connected_endpoint = power_feed_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_power_port = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, PowerPort) else None
+            )
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["connected_power_port"], connected_power_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_power_outlets_cable_peer(self):
+        """Test querying power outlets for their cable peers"""
+
+        query = """\
+query {
+    power_outlets {
+        id
+        cable_peer_power_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(PowerOutlet.objects.all()), len(result.data["power_outlets"]))
+        for entry in result.data["power_outlets"]:
+            power_outlet_obj = PowerOutlet.objects.get(id=entry["id"])
+            cable_peer = power_outlet_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_power_port = {"id": str(cable_peer.id)} if isinstance(cable_peer, PowerPort) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["cable_peer_power_port"], cable_peer_power_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_power_outlets_connected_endpoint(self):
+        """Test querying power outlets for their connected endpoints"""
+
+        query = """\
+query {
+    power_outlets {
+        id
+        connected_power_port { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(PowerOutlet.objects.all()), len(result.data["power_outlets"]))
+        for entry in result.data["power_outlets"]:
+            power_outlet_obj = PowerOutlet.objects.get(id=entry["id"])
+            connected_endpoint = power_outlet_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_power_port = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, PowerPort) else None
+            )
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["connected_power_port"], connected_power_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_power_ports_cable_peer(self):
+        """Test querying power ports for their cable peers"""
+
+        query = """\
+query {
+    power_ports {
+        id
+        cable_peer_power_feed { id }
+        cable_peer_power_outlet { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(PowerPort.objects.all()), len(result.data["power_ports"]))
+        for entry in result.data["power_ports"]:
+            power_port_obj = PowerPort.objects.get(id=entry["id"])
+            cable_peer = power_port_obj.get_cable_peer()
+
+            # Extract Expected Properties from CircuitTermination object
+            cable_peer_power_feed = {"id": str(cable_peer.id)} if isinstance(cable_peer, PowerFeed) else None
+            cable_peer_power_outlet = {"id": str(cable_peer.id)} if isinstance(cable_peer, PowerOutlet) else None
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["cable_peer_power_feed"], cable_peer_power_feed)
+            self.assertEqual(entry["cable_peer_power_outlet"], cable_peer_power_outlet)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_power_ports_connected_endpoint(self):
+        """Test querying power ports for their connected endpoints"""
+
+        query = """\
+query {
+    power_ports {
+        id
+        connected_power_feed { id }
+        connected_power_outlet { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(PowerPort.objects.all()), len(result.data["power_ports"]))
+        for entry in result.data["power_ports"]:
+            power_port_obj = PowerPort.objects.get(id=entry["id"])
+            connected_endpoint = power_port_obj.connected_endpoint
+
+            # Extract Expected Properties from CircuitTermination object
+            connected_power_feed = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, PowerFeed) else None
+            )
+            connected_power_outlet = (
+                {"id": str(connected_endpoint.id)} if isinstance(connected_endpoint, PowerOutlet) else None
+            )
+
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(entry["connected_power_feed"], connected_power_feed)
+            self.assertEqual(entry["connected_power_outlet"], connected_power_outlet)
+
+    def test_query_with_nested_onetoone(self):
+        """Test that querying a nested OneToOne field works as expected"""
+        query = """
+        query ($device_id: ID!) {
+            device(id: $device_id) {
+                interfaces {
+                    ip_addresses {
+                        primary_ip4_for {
+                            id
+                        }
+                    }
+                }
+            }
+        }
+        """
+        # set device1.primary_ip4
+        self.device1.primary_ip4 = self.ipaddr1
+        self.device1.save()
+        result = self.execute_query(query, variables={"device_id": str(self.device1.id)})
+        self.assertNotIn("error", str(result))
+        expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": {"id": str(self.device1.id)}}]}
+        self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)

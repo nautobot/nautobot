@@ -18,43 +18,43 @@ This is a `HomePagePanel` (defined in `nautobot/extras/homepage.py`) that uses a
 
 The position of a panel in the home page is defined by its `weight`. The lower the weight the closer to the start (top/left) of the home page the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
 
-In the below code example, you can see that the `Dummy Plugin` panel has a `weight` value of `150`. This means it will appear between `Organization` (weight `100`) and `DCIM` (weight `200`).
+In the below code example, you can see that the `Example Plugin` panel has a `weight` value of `150`. This means it will appear between `Organization` (weight `100`) and `DCIM` (weight `200`).
 
 !!! tip
     Weights for already existing items can be found in the Nautobot source code (in `nautobot/<app>/homepage.py`) or with a web session open to your Nautobot instance, you can inspect an element of the home page using the developer tools.
 
-Example of custom code being used in a panel can be seen in the `Custom Dummy Plugin` panel below. The attribute `custom_template` is used to refer to the filename of a template. Templates need to be stored in the templates `inc` folder for the plugin (`/dummy_plugin/templates/dummy_plugin/inc/`).
+Example of custom code being used in a panel can be seen in the `Custom Example Plugin` panel below. The attribute `custom_template` is used to refer to the filename of a template. Templates need to be stored in the templates `inc` folder for the plugin (`/example_plugin/templates/example_plugin/inc/`).
 
-If additional data is needed to render the custom template, callback functions can be used to collect this data. In the below example, the `Custom Dummy Plugin` panel is using the callback `get_dummy_data()` to dynamically populate the key `dummy_data` into the rendering context of this panel.
+If additional data is needed to render the custom template, callback functions can be used to collect this data. In the below example, the `Custom Example Plugin` panel is using the callback `get_example_data()` to dynamically populate the key `example_data` into the rendering context of this panel.
 
 ``` python
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from .models import DummyModel
+from .models import ExampleModel
 
 
-def get_dummy_data(request):
-    return DummyModel.objects.all()
+def get_example_data(request):
+    return ExampleModel.objects.all()
 
 
 layout = (
     HomePagePanel(
-        name="Dummy Plugin",
+        name="Example Plugin",
         weight=150,
         items=(
             HomePageItem(
-                name="Dummy Models",
-                link="plugins:dummy_plugin:dummymodel_list",
-                description="List dummy plugin models.",
-                permissions=["dummy_plugin.view_dummymodel"],
+                name="Example Models",
+                link="plugins:example_plugin:examplemodel_list",
+                description="List example plugin models.",
+                permissions=["example_plugin.view_examplemodel"],
                 weight=100,
             ),
         ),
     ),
     HomePagePanel(
-        name="Custom Dummy Plugin",
-        custom_template="panel_dummy_example.html",
-        custom_data={"dummy_data": get_dummy_data},
-        permissions=["dummy_plugin.view_dummymodel"],
+        name="Custom Example Plugin",
+        custom_template="panel_example_example.html",
+        custom_data={"example_data": get_example_data},
+        permissions=["example_plugin.view_examplemodel"],
         weight=350,
     ),
 )

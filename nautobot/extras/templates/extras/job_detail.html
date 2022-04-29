@@ -1,0 +1,239 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+{% load perms %}
+{% load plugins %}
+
+{% block extra_breadcrumbs %}
+    <li>{{ object.grouping }}</li>
+{% endblock extra_breadcrumbs %}
+
+{% block extra_buttons %}
+    {% if perms.extras.run_job %}
+        <a href="{% url 'extras:job_run' slug=object.slug %}" class="btn btn-primary"
+           {% if not object.installed or not object.enabled %}disabled="disabled"{% endif %}>
+            <i class="mdi mdi-play" aria-hidden="true"></i> Run/Schedule
+        </a>
+    {% endif %}
+{% endblock extra_buttons %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Source Code</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Source</td>
+                <td>{{ object.source | split:"." | first | bettertitle }}</td>
+            </tr>
+            {% if object.source == "git" %}
+                <tr>
+                    <td>Repository</td>
+                    {% if object.git_repository is not None %}
+                        <td><a href="{{ object.git_repository.get_absolute_url }}">{{ object.git_repository }}</a></td>
+                    {% else %}
+                        <td><span class="text-muted">&mdash;</span></td>
+                    {% endif %}
+                </tr>
+            {% endif %}
+            <tr>
+                <td>Module</td>
+                <td><code>{{ object.module_name }}</code></td>
+            </tr>
+            <tr>
+                <td>Job Class</td>
+                <td><code>{{ object.job_class_name }}</code></td>
+            </tr>
+            <tr>
+                <td>Installed</td>
+                <td>{{ object.installed | render_boolean }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Job</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Grouping</td>
+                <td>{{ object.grouping }}</td>
+                <td>
+                    {% if object.grouping_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                “{{ object.job_class.grouping }}”
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{ object.name }}</td>
+                <td>
+                    {% if object.name_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                “{{ object.job_class.name }}”
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description | render_markdown | placeholder }}</td>
+                <td>
+                    {% if object.description_override %}
+                        <div class="text-muted">
+                            overridden; default is:<br>
+                            {% if object.installed %}
+                                {{ object.job_class.description | render_markdown | placeholder }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Enabled</td>
+                <td>{{ object.enabled | render_boolean }}</td>
+                <td></td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Properties</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Approval Required to Execute</td>
+                <td>{{ object.approval_required | render_boolean }}</td>
+                <td>
+                    {% if object.approval_required_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.approval_required | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Default to Committing Changes</td>
+                <td>{{ object.commit_default | render_boolean }}</td>
+                <td>
+                    {% if object.commit_default_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.commit_default | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Hide from Default UI</td>
+                <td>{{ object.hidden | render_boolean }}</td>
+                <td>
+                    {% if object.hidden_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.hidden | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Read-Only Execution</td>
+                <td>{{ object.read_only | render_boolean }}</td>
+                <td>
+                    {% if object.read_only_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.read_only | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Execution Soft Time Limit</td>
+                <td>
+                    {% if object.soft_time_limit > 0 %}
+                        {{ object.soft_time_limit }} seconds
+                    {% else %}
+                        {{ "CELERY_TASK_SOFT_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                    {% endif %}
+                </td>
+                <td>
+                    {% if object.soft_time_limit_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {% if object.job_class.soft_time_limit > 0 %}
+                                    {{ object.job_class.soft_time_limit }} seconds
+                                {% else %}
+                                    {{ "CELERY_TASK_SOFT_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                                {% endif %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Execution Hard Time Limit</td>
+                <td>
+                    {% if object.time_limit > 0 %}
+                        {{ object.time_limit }} seconds
+                    {% else %}
+                        {{ "CELERY_TASK_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                    {% endif %}
+                </td>
+                <td>
+                    {% if object.time_limit_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {% if object.job_class.time_limit > 0 %}
+                                    {{ object.job_class.time_limit }} seconds
+                                {% else %}
+                                    {{ "CELERY_TASK_TIME_LIMIT" | settings_or_config }} seconds (system default)
+                                {% endif %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_right_page %}

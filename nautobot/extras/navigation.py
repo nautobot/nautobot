@@ -62,6 +62,28 @@ menu_items = (
                     ),
                 ),
             ),
+            NavMenuGroup(
+                name="Dynamic Groups",
+                weight=500,
+                items=(
+                    NavMenuItem(
+                        link="extras:dynamicgroup_list",
+                        name="Dynamic Groups",
+                        weight=100,
+                        permissions=[
+                            "extras.view_dynamicgroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:dynamicgroup_add",
+                                permissions=[
+                                    "extras.add_dynamicgroup",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         ),
     ),
     NavMenuTab(
@@ -96,8 +118,57 @@ menu_items = (
         ),
     ),
     NavMenuTab(
-        name="Extensibility",
+        name="Jobs",
         weight=800,
+        groups=(
+            NavMenuGroup(
+                name="Jobs",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="extras:job_list",
+                        name="Jobs",
+                        weight=100,
+                        permissions=[
+                            "extras.view_job",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="extras:scheduledjob_approval_queue_list",
+                        name="Job Approval Queue",
+                        weight=200,
+                        permissions=[
+                            "extras.view_job",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="extras:scheduledjob_list",
+                        name="Scheduled Jobs",
+                        weight=300,
+                        permissions=[
+                            "extras.view_job",
+                            "extras.view_scheduledjob",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="extras:jobresult_list",
+                        name="Job Results",
+                        weight=400,
+                        permissions=[
+                            "extras.view_jobresult",
+                        ],
+                        buttons=(),
+                    ),
+                ),
+            ),
+        ),
+    ),
+    NavMenuTab(
+        name="Extensibility",
+        weight=900,
         groups=(
             NavMenuGroup(
                 name="Logging",
@@ -177,49 +248,6 @@ menu_items = (
                                 ],
                             ),
                         ),
-                    ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Jobs",
-                weight=400,
-                items=(
-                    NavMenuItem(
-                        link="extras:job_list",
-                        name="Jobs",
-                        weight=100,
-                        permissions=[
-                            "extras.view_job",
-                        ],
-                        buttons=(),
-                    ),
-                    NavMenuItem(
-                        link="extras:scheduledjob_approval_queue_list",
-                        name="Job Approval Queue",
-                        weight=200,
-                        permissions=[
-                            "extras.view_job",
-                        ],
-                        buttons=(),
-                    ),
-                    NavMenuItem(
-                        link="extras:scheduledjob_list",
-                        name="Scheduled Jobs",
-                        weight=300,
-                        permissions=[
-                            "extras.view_job",
-                            "extras.view_scheduledjob",
-                        ],
-                        buttons=(),
-                    ),
-                    NavMenuItem(
-                        link="extras:jobresult_list",
-                        name="Job Results",
-                        weight=400,
-                        permissions=[
-                            "extras.view_jobresult",
-                        ],
-                        buttons=(),
                     ),
                 ),
             ),

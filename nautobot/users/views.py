@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
+    BACKEND_SESSION_KEY,
     login as auth_login,
     logout as auth_logout,
     update_session_auth_hash,
@@ -125,6 +126,10 @@ class LogoutView(View):
 #
 
 
+def is_django_auth_user(request):
+    return request.session.get(BACKEND_SESSION_KEY, None) == "nautobot.core.authentication.ObjectPermissionBackend"
+
+
 class ProfileView(LoginRequiredMixin, View):
     template_name = "users/profile.html"
 
@@ -134,6 +139,7 @@ class ProfileView(LoginRequiredMixin, View):
             request,
             self.template_name,
             {
+                "is_django_auth_user": is_django_auth_user(request),
                 "active_tab": "profile",
             },
         )
@@ -150,6 +156,7 @@ class UserConfigView(LoginRequiredMixin, View):
             {
                 "preferences": request.user.all_config(),
                 "active_tab": "preferences",
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
@@ -170,12 +177,14 @@ class UserConfigView(LoginRequiredMixin, View):
 class ChangePasswordView(LoginRequiredMixin, View):
     template_name = "users/change_password.html"
 
+    RESTRICTED_NOTICE = "Remotely authenticated user credentials cannot be changed within Nautobot."
+
     def get(self, request):
-        # LDAP users cannot change their password here
-        if getattr(request.user, "ldap_username", None):
+        # Non-Django authentication users cannot change their password here
+        if not is_django_auth_user(request):
             messages.warning(
                 request,
-                "LDAP-authenticated user credentials cannot be changed within Nautobot.",
+                self.RESTRICTED_NOTICE,
             )
             return redirect("user:profile")
 
@@ -187,10 +196,19 @@ class ChangePasswordView(LoginRequiredMixin, View):
             {
                 "form": form,
                 "active_tab": "change_password",
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
     def post(self, request):
+        # Non-Django authentication users cannot change their password here
+        if not is_django_auth_user(request):
+            messages.warning(
+                request,
+                self.RESTRICTED_NOTICE,
+            )
+            return redirect("user:profile")
+
         form = PasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
             form.save()
@@ -204,6 +222,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
             {
                 "form": form,
                 "active_tab": "change_password",
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
@@ -224,6 +243,7 @@ class TokenListView(LoginRequiredMixin, View):
             {
                 "tokens": tokens,
                 "active_tab": "api_tokens",
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
 

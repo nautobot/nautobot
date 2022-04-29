@@ -25,7 +25,6 @@ from nautobot.utilities.utils import to_meters
 from .devices import Device
 from .device_components import FrontPort, RearPort
 
-
 __all__ = (
     "Cable",
     "CablePath",
@@ -142,6 +141,9 @@ class Cable(PrimaryModel, StatusModel):
     def clean(self):
         super().clean()
 
+        # We import this in this method due to circular importing issues.
+        from nautobot.circuits.models import CircuitTermination
+
         # Validate that termination A exists
         if not hasattr(self, "termination_a_type"):
             raise ValidationError("Termination A type has not been specified")
@@ -226,6 +228,16 @@ class Cable(PrimaryModel, StatusModel):
             )
         ):
             raise ValidationError("A front port cannot be connected to it corresponding rear port")
+
+        # A CircuitTermination attached to a Provider Network cannot have a Cable
+        if isinstance(self.termination_a, CircuitTermination) and self.termination_a.provider_network is not None:
+            raise ValidationError(
+                {"termination_a_id": "Circuit terminations attached to a provider network may not be cabled."}
+            )
+        if isinstance(self.termination_b, CircuitTermination) and self.termination_b.provider_network is not None:
+            raise ValidationError(
+                {"termination_b_id": "Circuit terminations attached to a provider network may not be cabled."}
+            )
 
         # Check for an existing Cable connected to either termination object
         if self.termination_a.cable not in (None, self):

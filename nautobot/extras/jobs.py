@@ -4,19 +4,17 @@ import inspect
 import json
 import logging
 import os
-import pkgutil
-import sys
 import shutil
+from textwrap import dedent
 import traceback
 import warnings
 
 
-from cacheops import cached
+from cacheops import file_cache
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
@@ -33,8 +31,9 @@ from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import FileProxy, GitRepository, ScheduledJob
+from .models import FileProxy, GitRepository, Job as JobModel, ScheduledJob
 from .registry import registry
+from .utils import get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -92,9 +91,12 @@ class BaseJob:
         - name (str)
         - description (str)
         - commit_default (bool)
+        - hidden (bool)
         - field_order (list)
         - read_only (bool)
         - approval_required (bool)
+        - soft_time_limit (int)
+        - time_limit (int)
         """
 
         pass
@@ -170,12 +172,35 @@ class BaseJob:
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
+    def grouping(cls):
+        module = inspect.getmodule(cls)
+        return getattr(module, "name", module.__name__)
+
+    @classproperty
     def name(cls):
         return getattr(cls.Meta, "name", cls.__name__)
 
     @classproperty
     def description(cls):
-        return getattr(cls.Meta, "description", "")
+        return dedent(getattr(cls.Meta, "description", "")).strip()
+
+    @classproperty
+    def description_first_line(cls):
+        if cls.description:
+            return cls.description.splitlines()[0]
+        return ""
+
+    @classproperty
+    def commit_default(cls):
+        return getattr(cls.Meta, "commit_default", True)
+
+    @classproperty
+    def hidden(cls):
+        return getattr(cls.Meta, "hidden", False)
+
+    @classproperty
+    def field_order(cls):
+        return getattr(cls.Meta, "field_order", None)
 
     @classproperty
     def read_only(cls):
@@ -184,6 +209,33 @@ class BaseJob:
     @classproperty
     def approval_required(cls):
         return getattr(cls.Meta, "approval_required", False)
+
+    @classproperty
+    def soft_time_limit(cls):
+        return getattr(cls.Meta, "soft_time_limit", 0)
+
+    @classproperty
+    def time_limit(cls):
+        return getattr(cls.Meta, "time_limit", 0)
+
+    @classproperty
+    def properties_dict(cls):
+        """
+        Return all relevant classproperties as a dict.
+
+        Used for convenient rendering into job_edit.html via the `json_script` template tag.
+        """
+        return {
+            "name": cls.name,
+            "grouping": cls.grouping,
+            "description": cls.description,
+            "approval_required": cls.approval_required,
+            "commit_default": cls.commit_default,
+            "hidden": cls.hidden,
+            "read_only": cls.read_only,
+            "soft_time_limit": cls.soft_time_limit,
+            "time_limit": cls.time_limit,
+        }
 
     @classmethod
     def _get_vars(cls):
@@ -244,18 +296,26 @@ class BaseJob:
 
         form = FormClass(data, files, initial=initial)
 
-        if self.read_only:
+        try:
+            job_model = JobModel.objects.get_for_class_path(self.class_path)
+            read_only = job_model.read_only if job_model.read_only_override else self.read_only
+            commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
+        except JobModel.DoesNotExist:
+            # 2.0 TODO: remove this fallback, Job records should always exist.
+            logger.error("No Job instance found in the database corresponding to %s", self.class_path)
+            read_only = self.read_only
+            commit_default = self.commit_default
+
+        if read_only:
             # Hide the commit field for read only jobs
             form.fields["_commit"].widget = forms.HiddenInput()
             form.fields["_commit"].initial = False
         else:
             # Set initial "commit" checkbox state based on the Meta parameter
-            form.fields["_commit"].initial = getattr(self.Meta, "commit_default", True)
+            form.fields["_commit"].initial = commit_default
 
-        field_order = getattr(self.Meta, "field_order", None)
-
-        if field_order:
-            form.order_fields(field_order)
+        if self.field_order:
+            form.order_fields(self.field_order)
 
         if approval_view:
             # Set `disabled=True` on all fields
@@ -322,6 +382,13 @@ class BaseJob:
                 var = vars[field_name]
             except KeyError:
                 continue
+
+            if value is None:
+                if var.field_attrs.get("required"):
+                    raise ValidationError(f"{field_name} is a required field")
+                else:
+                    return_data[field_name] = value
+                    continue
 
             if isinstance(var, MultiObjectVar):
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)
@@ -453,26 +520,42 @@ class BaseJob:
     def log_success(self, obj=None, message=None):
         """
         Record a successful test against an object. Logging a message is optional.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_SUCCESS)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
 
     def log_info(self, obj=None, message=None):
         """
         Log an informational message.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_INFO)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
 
     def log_warning(self, obj=None, message=None):
         """
         Log a warning.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_WARNING)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
 
     def log_failure(self, obj=None, message=None):
         """
         Log a failure. Calling this method will automatically mark the overall job as failed.
+        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
+        if isinstance(obj, str) and message is None:
+            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
+        else:
+            self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
         self.failed = True
 
     # Convenience functions
@@ -796,56 +879,36 @@ def get_jobs():
 
     paths = _get_job_source_paths()
 
-    # Iterate over all groupings (local, git.<slug1>, git.<slug2>, etc.)
-    for grouping, path_list in paths.items():
-        # Iterate over all modules (Python files) found in any of the directory paths identified for the given grouping
-        for importer, module_name, _ in pkgutil.iter_modules(path_list):
-            try:
-                # Remove cached module to ensure consistency with filesystem
-                if module_name in sys.modules:
-                    del sys.modules[module_name]
-
-                # Dynamically import this module to make its contents (job(s)) available to Python
-                module = importer.find_module(module_name).load_module(module_name)
-            except Exception as exc:
-                logger.error(f"Unable to load job {module_name}: {exc}")
-                continue
-
-            # For each module, we construct a dict {"name": module_name, "jobs": {"job_name": job_class, ...}}
-            human_readable_name = module.name if hasattr(module, "name") else module_name
-            module_jobs = {"name": human_readable_name, "jobs": OrderedDict()}
-            # Get all Job subclasses (which includes Script and Report subclasses as well) in this module,
-            # and add them to the dict
-            for name, cls in inspect.getmembers(module, is_job):
-                module_jobs["jobs"][name] = cls
-
-            # If there were any Job subclasses found, add the module_jobs dict to the overall jobs dict
-            # (otherwise skip it since there aren't any jobs in this module to report)
-            if module_jobs["jobs"]:
-                jobs.setdefault(grouping, {})[module_name] = module_jobs
+    # Iterate over all filesystem sources (local, git.<slug1>, git.<slug2>, etc.)
+    for source, path in paths.items():
+        for job_info in jobs_in_directory(path):
+            jobs.setdefault(source, {})
+            if job_info.module_name not in jobs[source]:
+                jobs[source][job_info.module_name] = {"name": job_info.job_class.grouping, "jobs": OrderedDict()}
+            jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
 
     # Add jobs from plugins (which were already imported at startup)
     for cls in registry["plugin_jobs"]:
         module = inspect.getmodule(cls)
-        human_readable_name = module.name if hasattr(module, "name") else module.__name__
-        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": human_readable_name, "jobs": OrderedDict()})
+        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
         jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
 
     return jobs
 
 
+@file_cache.cached(timeout=60)
 def _get_job_source_paths():
     """
     Helper function to get_jobs().
 
-    Constructs a dict of {"grouping": [filesystem_path, ...]}.
+    Constructs a dict of {"grouping": filesystem_path, ...}.
     Current groupings are "local", "git.<repository_slug>".
     Plugin jobs aren't loaded dynamically from a source_path and so are not included in this function
     """
     paths = {}
     # Locally installed jobs
     if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
-        paths.setdefault("local", []).append(settings.JOBS_ROOT)
+        paths["local"] = settings.JOBS_ROOT
 
     # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
@@ -869,7 +932,7 @@ def _get_job_source_paths():
 
             jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
             if os.path.isdir(jobs_path):
-                paths[f"git.{repository_record.slug}"] = [jobs_path]
+                paths[f"git.{repository_record.slug}"] = jobs_path
             else:
                 logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
 
@@ -892,7 +955,7 @@ def _get_job_source_paths():
     return paths
 
 
-@cached(timeout=60)
+@file_cache.cached(timeout=60)
 def get_job_classpaths():
     """
     Get a list of all known Job class_path strings.
@@ -947,10 +1010,28 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         logger.error(e)
         return False
 
-    job_class = get_job(job_result.name)
-    if not job_class:
+    job_model = job_result.job_model
+    initialization_failure = None
+    if not job_model:
+        # 2.0 TODO: remove this fallback logic
+        try:
+            job_model = JobModel.objects.get_for_class_path(job_result.name)
+        except JobModel.DoesNotExist:
+            initialization_failure = f'Unable to locate Job database record for "{job_result.name}" to run it!'
+
+    if not initialization_failure:
+        if not job_model.enabled:
+            initialization_failure = f"Job {job_model} is not enabled to be run!"
+        else:
+            job_class = job_model.job_class
+
+            if not job_model.installed or not job_class:
+                initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
+
+    if initialization_failure:
         job_result.log(
-            f'Unable to locate job "{job_result.name}" to run it!',
+            message=initialization_failure,
+            obj=job_model,
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="initialization",
             logger=logger,
@@ -973,6 +1054,18 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         return False
+
+    soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+    time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
+    if time_limit <= soft_time_limit:
+        job_result.log(
+            f"The hard time limit of {time_limit} seconds is less than "
+            f"or equal to the soft time limit of {soft_time_limit} seconds. "
+            f"This job will fail silently after {time_limit} seconds.",
+            level_choice=LogLevelChoices.LOG_WARNING,
+            grouping="initialization",
+            logger=logger,
+        )
 
     try:
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.
@@ -1001,7 +1094,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job.delete_files(*file_ids)  # Cleanup FileProxy objects
         return False
 
-    if job.read_only:
+    if job_model.read_only:
         # Force commit to false for read only jobs.
         commit = False
 
@@ -1053,13 +1146,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                     raise AbortTransaction()
 
         except AbortTransaction:
-            if not job.read_only:
+            if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted automatically.")
 
         except Exception as exc:
             stacktrace = traceback.format_exc()
             job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
-            if not job.read_only:
+            if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted due to error.")
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
@@ -1109,5 +1202,5 @@ def scheduled_job_handler(*args, **kwargs):
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
-    job_content_type = ContentType.objects.get(app_label="extras", model="job")
+    job_content_type = get_job_content_type()
     JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)

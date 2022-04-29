@@ -40,6 +40,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     family = graphene.Int()
     interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
     vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
+    nat_outside = graphene.Field(lambda: IPAddressType)
 
     class Meta:
         model = models.IPAddress
@@ -73,7 +74,11 @@ class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Prefix model."""
 
     prefix = graphene.String()
+    family = graphene.Int()
 
     class Meta:
         model = models.Prefix
         filterset_class = filters.PrefixFilterSet
+
+    def resolve_family(self, args):
+        return self.family

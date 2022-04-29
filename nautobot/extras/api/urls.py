@@ -24,6 +24,9 @@ router.register("custom-field-choices", views.CustomFieldChoiceViewSet)
 # Custom Links
 router.register("custom-links", views.CustomLinkViewSet)
 
+# Dynamic Groups
+router.register("dynamic-groups", views.DynamicGroupViewSet)
+
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
 
@@ -37,7 +40,10 @@ router.register("graphql-queries", views.GraphQLQueryViewSet)
 router.register("image-attachments", views.ImageAttachmentViewSet)
 
 # Jobs
-router.register("jobs", views.JobViewSet, basename="job")
+router.register("jobs", views.JobViewSet)
+
+# Job Log Entries
+router.register("job-logs", views.JobLogEntryViewSet)
 
 # Job Results
 router.register("job-results", views.JobResultViewSet)

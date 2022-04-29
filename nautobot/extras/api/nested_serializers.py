@@ -10,10 +10,13 @@ __all__ = [
     "NestedConfigContextSchemaSerializer",
     "NestedCustomFieldSerializer",
     "NestedCustomLinkSerializer",
+    "NestedDynamicGroupSerializer",
     "NestedExportTemplateSerializer",
     "NestedGitRepositorySerializer",
     "NestedGraphQLQuerySerializer",
     "NestedImageAttachmentSerializer",
+    "NestedJobSerializer",
+    "NestedJobLogEntrySerializer",
     "NestedJobResultSerializer",
     "NestedRelationshipSerializer",
     "NestedRelationshipAssociationSerializer",
@@ -61,6 +64,17 @@ class NestedCustomLinkSerializer(WritableNestedSerializer):
         fields = ["content_type", "id", "name", "url"]
 
 
+class NestedDynamicGroupSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.all(),
+    )
+
+    class Meta:
+        model = models.DynamicGroup
+        fields = ["id", "url", "name", "slug", "content_type"]
+
+
 class NestedExportTemplateSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:exporttemplate-detail")
 
@@ -91,6 +105,31 @@ class NestedImageAttachmentSerializer(WritableNestedSerializer):
     class Meta:
         model = models.ImageAttachment
         fields = ["id", "url", "name", "image"]
+
+
+class NestedJobSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
+
+    class Meta:
+        model = models.Job
+        fields = ["id", "url", "source", "module_name", "job_class_name", "grouping", "name", "slug"]
+
+
+class NestedJobLogEntrySerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
+
+    class Meta:
+        model = models.JobLogEntry
+        fields = [
+            "id",
+            "url",
+            "absolute_url",
+            "created",
+            "grouping",
+            "log_level",
+            "log_object",
+            "message",
+        ]
 
 
 class NestedJobResultSerializer(serializers.ModelSerializer):

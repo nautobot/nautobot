@@ -1,6 +1,6 @@
 """Git data source functionality."""
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import logging
 import mimetypes
 import os
@@ -17,6 +17,7 @@ import yaml
 from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import (
+    JobSourceChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
@@ -27,11 +28,13 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    Job,
     JobLogEntry,
     JobResult,
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
+from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.git import GitRepo
 from nautobot.utilities.utils import copy_safe_request
@@ -42,14 +45,20 @@ from .utils import files_from_contenttype_directories
 
 logger = logging.getLogger("nautobot.datasources.git")
 
+# namedtuple takes a job_result(JobResult instance) and a repository_record(GitRepository instance).
+GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
 
-def enqueue_pull_git_repository_and_refresh_data(repository, request):
+# namedtuple takes from_url(remote git repository url), to_path(local path of git repo), from_branch(git branch)
+GitRepoInfo = namedtuple("GitRepoInfo", ["from_url", "to_path", "from_branch"])
+
+
+def enqueue_git_repository_helper(repository, request, func, **kwargs):
     """
-    Convenience wrapper for JobResult.enqueue_job() to enqueue the pull_git_repository_and_refresh_data job.
+    Wrapper for JobResult.enqueue_job() to enqueue one of several possible Git repository functions.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
     JobResult.enqueue_job(
-        pull_git_repository_and_refresh_data,
+        func,
         repository.name,
         git_repository_content_type,
         request.user,
@@ -58,11 +67,29 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
     )
 
 
-@nautobot_task
-def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
+def enqueue_git_repository_diff_origin_and_local(repository, request):
+    """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
+    enqueue_git_repository_helper(repository, request, git_repository_diff_origin_and_local)
+
+
+def enqueue_pull_git_repository_and_refresh_data(repository, request):
     """
-    Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
+    Convenience wrapper for JobResult.enqueue_job() to enqueue the pull_git_repository_and_refresh_data job.
     """
+    enqueue_git_repository_helper(repository, request, pull_git_repository_and_refresh_data)
+
+
+def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):
+    """
+    Get JobResult instance and GitRepository instance
+
+    Returns:
+        namedtuple (GitJobResult): (
+            job_result: JobResult object,
+            repository_record: GitRepository object
+        )
+    """
+
     job_result = JobResult.objects.get(pk=job_result_pk)
     repository_record = GitRepository.objects.get(pk=repository_pk)
     if not repository_record:
@@ -73,12 +100,45 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         )
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.save()
-        return
+        return GitJobResult(job_result=job_result, repository_record=None)
 
+    return GitJobResult(job_result=job_result, repository_record=repository_record)
+
+
+def log_job_result_final_status(job_result, job_type):
+    """Check Job status and save log to DB
+    Args:
+        job_result (JobResult): JobResult Instance
+        job_type (str): job type which is used in log message, e.g dry run/synchronization etc.
+    """
+    if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+        if JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE).exists():
+            job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
+        else:
+            job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
     job_result.log(
-        f'Creating/refreshing local copy of Git repository "{repository_record.name}"...',
+        f"Repository {job_type} completed in {job_result.duration}",
+        level_choice=LogLevelChoices.LOG_INFO,
         logger=logger,
     )
+    job_result.save()
+
+
+@nautobot_task
+def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
+    """
+    Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
+    """
+    job_result, repository_record = get_job_result_and_repository_record(
+        repository_pk=repository_pk,
+        job_result_pk=job_result_pk,
+        logger=logger,
+    )
+
+    if not repository_record:
+        return
+
+    job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
 
@@ -108,30 +168,50 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
     finally:
-        if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-            if JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE).exists():
-                job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
-            else:
-                job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+        log_job_result_final_status(job_result, "synchronization")
+
+
+@nautobot_task
+def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, **kwargs):
+    """
+    Worker function to run a dry run on a Git repository.
+    """
+    job_result, repository_record = get_job_result_and_repository_record(
+        repository_pk,
+        job_result_pk,
+        logger=logger,
+    )
+    if not repository_record:
+        return
+
+    job_result.log(f'Running a Dry Run on Git repository "{repository_record.name}"...', logger=logger)
+    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.save()
+    try:
+        if not os.path.exists(settings.GIT_ROOT):
+            os.makedirs(settings.GIT_ROOT)
+
+        git_repository_dry_run(repository_record, job_result=job_result, logger=logger)
+
+    except Exception as exc:
         job_result.log(
-            f"Repository synchronization completed in {job_result.duration}",
-            level_choice=LogLevelChoices.LOG_INFO,
-            logger=logger,
+            f"Error while running a dry run on {repository_record.name}: {exc}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
         )
-        job_result.save()
+        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+
+    finally:
+        log_job_result_final_status(job_result, "dry run")
 
 
-def ensure_git_repository(repository_record, job_result=None, logger=None, head=None):
-    """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-
-    Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
-    such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
-
-    Args:
-      repository_record (GitRepository)
-      job_result (JobResult): Optional JobResult to store results into.
-      logger (logging.Logger): Optional Logger to additionally log results to.
-      head (str): Optional Git commit hash to check out instead of pulling branch latest.
+def get_repo_from_url_to_path_and_from_branch(repository_record):
+    """Returns the from_url, to_path and from_branch of a Git Repo
+    Returns:
+        namedtuple (GitRepoInfo): (
+        from_url: git repo url with token or user if available,
+        to_path: path to location of git repo on local machine
+        from_branch: current git repo branch
+    )
     """
 
     # Inject username and/or token into source URL if necessary
@@ -176,6 +256,22 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch
 
+    return GitRepoInfo(from_url=from_url, to_path=to_path, from_branch=from_branch)
+
+
+def ensure_git_repository(repository_record, job_result=None, logger=None, head=None):
+    """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
+    Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
+    such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
+    Args:
+      repository_record (GitRepository)
+      job_result (JobResult): Optional JobResult to store results into.
+      logger (logging.Logger): Optional Logger to additionally log results to.
+      head (str): Optional Git commit hash to check out instead of pulling branch latest.
+    """
+
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+
     try:
         repo_helper = GitRepo(to_path, from_url)
         head = repo_helper.checkout(from_branch, head)
@@ -202,6 +298,42 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
         job_result.save()
     elif logger:
         logger.info("Repository successfully refreshed")
+
+
+def git_repository_dry_run(repository_record, job_result=None, logger=None):
+    """Log the difference between local branch and remote branch files.
+    Args:
+        repository_record (GitRepository)
+        job_result (JobResult): Optional JobResult to store results into.
+        logger (logging.Logger): Optional Logger to additionally log results to.
+    """
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+
+    try:
+        repo_helper = GitRepo(to_path, from_url, clone_initially=False)
+        logger.info("Fetching from origin")
+        modified_files = repo_helper.diff_remote(from_branch)
+        if modified_files:
+            # Log each modified files
+            for item in modified_files:
+                log_message = f"{item.status} - `{item.text}`"
+                job_result.log(log_message, level_choice=LogLevelChoices.LOG_INFO, logger=logger)
+        else:
+            job_result.log("Repository has no changes", level_choice=LogLevelChoices.LOG_INFO, logger=logger)
+
+    except Exception as exc:
+        if job_result:
+            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
+            job_result.save()
+        elif logger:
+            logger.error(str(exc))
+        raise
+
+    if job_result:
+        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
+    elif logger:
+        logger.info("Repository dry run successful")
 
 
 #
@@ -779,7 +911,58 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
-    # No-op as jobs are not currently stored in the DB but are instead refreshed on-request.
+    installed_jobs = []
+    if not delete:
+        jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
+        if os.path.isdir(jobs_path):
+            for job_info in jobs_in_directory(jobs_path):
+                job_model, created = refresh_job_model_from_job_class(
+                    Job,
+                    JobSourceChoices.SOURCE_GIT,
+                    job_info.job_class,
+                    git_repository=repository_record,
+                )
+
+                if job_model is None:
+                    job_result.log(
+                        message="Failed to create Job record; check Nautobot logs for details",
+                        grouping="jobs",
+                        level_choice=LogLevelChoices.LOG_FAILURE,
+                        logger=logger,
+                    )
+                    continue
+
+                if created:
+                    message = "Created Job record"
+                else:
+                    message = "Refreshed Job record"
+                job_result.log(
+                    message=message,
+                    obj=job_model,
+                    grouping="jobs",
+                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    logger=logger,
+                )
+                installed_jobs.append(job_model)
+        else:
+            job_result.log(
+                "No `jobs` subdirectory found in Git repository",
+                grouping="jobs",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                logger=logger,
+            )
+
+    for job_model in Job.objects.filter(source=JobSourceChoices.SOURCE_GIT, git_repository=repository_record):
+        if job_model.installed and job_model not in installed_jobs:
+            job_result.log(
+                message="Marking Job record as no longer installed",
+                obj=job_model,
+                grouping="jobs",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                logger=logger,
+            )
+            job_model.installed = False
+            job_model.save()
 
 
 #

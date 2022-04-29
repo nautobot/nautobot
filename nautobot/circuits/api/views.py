@@ -1,8 +1,7 @@
-from django.db.models import Prefetch
 from rest_framework.routers import APIRootView
 
 from nautobot.circuits import filters
-from nautobot.circuits.models import Provider, CircuitTermination, CircuitType, Circuit
+from nautobot.circuits.models import Provider, CircuitTermination, CircuitType, Circuit, ProviderNetwork
 from nautobot.core.api.views import ModelViewSet
 from nautobot.dcim.api.views import PathEndpointMixin
 from nautobot.extras.api.views import CustomFieldModelViewSet, StatusViewSetMixin
@@ -48,11 +47,7 @@ class CircuitTypeViewSet(CustomFieldModelViewSet):
 
 class CircuitViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = Circuit.objects.prefetch_related(
-        Prefetch("terminations", queryset=CircuitTermination.objects.prefetch_related("site")),
-        "status",
-        "type",
-        "tenant",
-        "provider",
+        "status", "type", "tenant", "provider", "termination_a", "termination_z"
     ).prefetch_related("tags")
     serializer_class = serializers.CircuitSerializer
     filterset_class = filters.CircuitFilterSet
@@ -68,3 +63,14 @@ class CircuitTerminationViewSet(PathEndpointMixin, ModelViewSet):
     serializer_class = serializers.CircuitTerminationSerializer
     filterset_class = filters.CircuitTerminationFilterSet
     brief_prefetch_fields = ["circuit"]
+
+
+#
+# Provider Networks
+#
+
+
+class ProviderNetworkViewSet(CustomFieldModelViewSet):
+    queryset = ProviderNetwork.objects.prefetch_related("tags")
+    serializer_class = serializers.ProviderNetworkSerializer
+    filterset_class = filters.ProviderNetworkFilterSet

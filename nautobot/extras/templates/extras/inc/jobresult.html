@@ -1,6 +1,7 @@
 {% load helpers %}
 {% load custom_links %}
 {% load form_helpers %}
+{% load ajax_table %}
 {% load render_table from django_tables2 %}
 {% load log_levels %}
 {% load plugins %}
@@ -25,41 +26,31 @@
         </tr>
         <tr>
             <td>Duration</td>
+            <td id="pending-result-loader">
             {% if result.completed %}
-                <td>{{ result.duration }}</td>
+                {{ result.duration }}
             {% else %}
-                <td><img id="pending-result-loader" src="{% static 'img/ajax-loader.gif' %}"></td>
+                <img src="{% static 'img/ajax-loader.gif' %}">
             {% endif %}
+            </td>
         </tr>
     </table>
 </div>
 {% plugin_left_page result %}
 <div class="col-md-6">
-{% include 'inc/custom_fields_panel.html' %}
+{% include 'inc/custom_fields_panel.html' with custom_fields=object.get_custom_fields %}
 {% plugin_right_page result %}
 </div>
 
-{% if log_table %}
-    <form method="post">
+<form method="post">
     {% csrf_token %}
     <div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Logs</strong>
-        <div class="pull-right noprint">
-            {% if request.user.is_authenticated %}
-                <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#JobLogEntryTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
-            {% endif %}
+        <div class="panel-heading">
+            <strong>Logs</strong>
+            <div class="pull-right col-md-2 noprint">
+                <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
+            </div>
         </div>
-        <div class="pull-right col-md-2 noprint">
-            <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
-        </div>
+        {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
     </div>
-    {% render_table log_table 'inc/table.html' %}
-    </div>
-    </form>
-    {% table_config_form log_table %}
-{% else %}
-    <div class="alert alert-danger" role="alert">
-        No table of job logs was provided, perhaps you are using an out-of-date plugin?
-    </div>
-{% endif %}
+</form>

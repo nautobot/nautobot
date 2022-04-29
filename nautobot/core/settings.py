@@ -57,8 +57,6 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
-DOCS_ROOT = os.path.join(BASE_DIR, "docs")
-
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
 # table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
 # ENFORCE_GLOBAL_UNIQUE to True.
@@ -142,8 +140,15 @@ FILTERS_NULL_CHOICE_VALUE = "null"
 #
 
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
+current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
+# We support all major.minor API versions from 1.2 to the present latest version.
+# This will need to be elaborated upon when we move to version 2.0
+# Similar logic exists in tasks.py, please keep them in sync!
+assert current_major == "1", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
+REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+
 REST_FRAMEWORK = {
-    "ALLOWED_VERSIONS": [REST_FRAMEWORK_VERSION],
+    "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
@@ -156,8 +161,11 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
-    "DEFAULT_VERSION": REST_FRAMEWORK_VERSION,
-    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
+    "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
+    # Version to use if the client doesn't request otherwise.
+    # This should only change (if at all) with Nautobot major (breaking) releases.
+    "DEFAULT_VERSION": "1.2",
+    "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings
@@ -171,46 +179,40 @@ REST_FRAMEWORK = {
 
 
 #
-# drf_yasg (OpenAPI/Swagger)
+# drf_spectacular (OpenAPI/Swagger)
 #
 
-SWAGGER_SETTINGS = {
-    "DEFAULT_AUTO_SCHEMA_CLASS": "nautobot.utilities.custom_inspectors.NautobotSwaggerAutoSchema",
-    "DEFAULT_FIELD_INSPECTORS": [
-        "nautobot.utilities.custom_inspectors.StatusFieldInspector",
-        "nautobot.utilities.custom_inspectors.CustomFieldsDataFieldInspector",
-        "nautobot.utilities.custom_inspectors.JSONFieldInspector",
-        "nautobot.utilities.custom_inspectors.NullableBooleanFieldInspector",
-        "nautobot.utilities.custom_inspectors.ChoiceFieldInspector",
-        "nautobot.utilities.custom_inspectors.SerializedPKRelatedFieldInspector",
-        "drf_yasg.inspectors.CamelCaseJSONFilter",
-        "drf_yasg.inspectors.ReferencingSerializerInspector",
-        "drf_yasg.inspectors.RelatedFieldInspector",
-        "drf_yasg.inspectors.ChoiceFieldInspector",
-        "drf_yasg.inspectors.FileFieldInspector",
-        "drf_yasg.inspectors.DictFieldInspector",
-        "drf_yasg.inspectors.SerializerMethodFieldInspector",
-        "drf_yasg.inspectors.SimpleFieldInspector",
-        "drf_yasg.inspectors.StringDefaultFieldInspector",
-    ],
-    "DEFAULT_FILTER_INSPECTORS": [
-        "drf_yasg.inspectors.CoreAPICompatInspector",
-    ],
-    "DEFAULT_INFO": "nautobot.core.urls.openapi_info",
-    "DEFAULT_MODEL_DEPTH": 1,
-    "DEFAULT_PAGINATOR_INSPECTORS": [
-        "nautobot.utilities.custom_inspectors.NullablePaginatorInspector",
-        "drf_yasg.inspectors.DjangoRestResponsePagination",
-        "drf_yasg.inspectors.CoreAPICompatInspector",
-    ],
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-        }
+SPECTACULAR_SETTINGS = {
+    "TITLE": "API Documentation",
+    "DESCRIPTION": "Source of truth and network automation platform",
+    "LICENSE": {"name": "Apache v2 License"},
+    "VERSION": VERSION,
+    # For a semblance of backwards-compatibility with drf-yasg / OpenAPI 2.0, where "/api" was a common "basePath"
+    # in the schema.
+    # OpenAPI 3.0 removes "basePath" in favor of "servers", so we now declare "/api" as the server relative URL and
+    # trim it from all of the individual paths correspondingly.
+    # See also https://github.com/nautobot/nautobot-ansible/pull/135 for an example of why this is desirable.
+    "SERVERS": [{"url": "/api"}],
+    "SCHEMA_PATH_PREFIX_TRIM": True,
+    # use sidecar - locally packaged UI files, not CDN
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "ENUM_NAME_OVERRIDES": {
+        # These choice enums need to be overridden because they get assigned to the `type` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "type".
+        "CableTypeChoices": "nautobot.dcim.choices.CableTypeChoices",
+        "ConsolePortTypeChoices": "nautobot.dcim.choices.ConsolePortTypeChoices",
+        "CustomFieldTypeChoices": "nautobot.extras.choices.CustomFieldTypeChoices",
+        "InterfaceTypeChoices": "nautobot.dcim.choices.InterfaceTypeChoices",
+        "PortTypeChoices": "nautobot.dcim.choices.PortTypeChoices",
+        "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
+        "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
+        "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
+        "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
+        "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
     },
-    "VALIDATOR_URL": None,
 }
 
 
@@ -273,7 +275,7 @@ INSTALLED_APPS = [
     "social_django",
     "taggit",
     "timezone_field",
-    "nautobot.core.apps.NautobotServerConfig",  # overridden form of "constance" AppConfig
+    "nautobot.core.apps.NautobotConstanceConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
     "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
     "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
@@ -287,13 +289,14 @@ INSTALLED_APPS = [
     "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
-    "drf_yasg",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "graphene_django",
     "health_check",
-    "health_check.cache",
     "health_check.storage",
     "django_extensions",
-    "constance.backends.database",
+    "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
+    "django_ajax_tables",
 ]
 
 # Middleware
@@ -310,7 +313,6 @@ MIDDLEWARE = [
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
-    "nautobot.core.middleware.APIVersionMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
@@ -461,7 +463,7 @@ CONSTANCE_CONFIG = {
     ],
     "PAGINATE_COUNT": [
         50,
-        "Default number of objects to display per page when listing objects.",
+        "Default number of objects to display per page when listing objects in the UI and/or REST API.",
     ],
     "PER_PAGE_DEFAULTS": [
         [25, 50, 100, 250, 500, 1000],
@@ -655,9 +657,16 @@ BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
 # Branding URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
-    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", None),
     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 }
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
 BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
+
+#
+# Django extensions settings
+#
+
+# Dont load the 'taggit' app, since we have our own custom `Tag` and `TaggedItem` models
+SHELL_PLUS_DONT_LOAD = ["taggit"]

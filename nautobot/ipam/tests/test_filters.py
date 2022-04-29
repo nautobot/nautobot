@@ -1095,7 +1095,7 @@ class VLANTestCase(TestCase):
         params = {"name": ["VLAN 101", "VLAN 102"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_rd(self):
+    def test_vid(self):
         params = {"vid": ["101", "201", "301"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 

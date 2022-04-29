@@ -5,15 +5,11 @@ from django.db.models import Q
 from netaddr.core import AddrFormatError
 
 from nautobot.dcim.models import Device, Interface, Region, Site
-from nautobot.extras.filters import (
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-    StatusModelFilterSetMixin,
-)
+from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
-    BaseFilterSet,
     MultiValueCharFilter,
+    MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     NumericArrayFilter,
     TagFilter,
@@ -49,7 +45,7 @@ __all__ = (
 )
 
 
-class VRFFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -88,7 +84,7 @@ class VRFFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, C
         fields = ["id", "name", "rd", "enforce_unique"]
 
 
-class RouteTargetFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -127,18 +123,13 @@ class RouteTargetFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilt
         fields = ["id", "name"]
 
 
-class RIRFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = RIR
         fields = ["id", "name", "slug", "is_private", "description"]
 
 
-class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class AggregateFilterSet(NautobotFilterSet, TenancyFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -187,12 +178,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         return queryset.ip_family(value)
 
 
-class RoleFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -203,13 +189,7 @@ class RoleFilterSet(
         fields = ["id", "name", "slug"]
 
 
-class PrefixFilterSet(
-    BaseFilterSet,
-    TenancyFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -248,9 +228,13 @@ class PrefixFilterSet(
         label="VRF (RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF"
+        field_name="vrf",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        label="VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
+        field_name="vrf__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
@@ -369,22 +353,16 @@ class PrefixFilterSet(
         except (AddrFormatError, ValueError):
             return queryset.none()
 
-    def filter_present_in_vrf(self, queryset, name, vrf):
-        if vrf is None:
+    def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
         return queryset.ip_family(value)
 
 
-class IPAddressFilterSet(
-    BaseFilterSet,
-    TenancyFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -416,9 +394,13 @@ class IPAddressFilterSet(
         label="VRF (RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        queryset=VRF.objects.all(), method="filter_present_in_vrf", label="VRF"
+        field_name="vrf",
+        queryset=VRF.objects.all(),
+        method="filter_present_in_vrf",
+        label="VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
+        field_name="vrf__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
@@ -429,7 +411,7 @@ class IPAddressFilterSet(
         field_name="name",
         label="Device (name)",
     )
-    device_id = MultiValueCharFilter(
+    device_id = MultiValueUUIDFilter(
         method="filter_device",
         field_name="pk",
         label="Device (ID)",
@@ -439,7 +421,7 @@ class IPAddressFilterSet(
         field_name="name",
         label="Virtual machine (name)",
     )
-    virtual_machine_id = MultiValueCharFilter(
+    virtual_machine_id = MultiValueUUIDFilter(
         method="filter_virtual_machine",
         field_name="pk",
         label="Virtual machine (ID)",
@@ -506,10 +488,10 @@ class IPAddressFilterSet(
             return queryset
         return queryset.filter(prefix_length=value)
 
-    def filter_present_in_vrf(self, queryset, name, vrf):
-        if vrf is None:
+    def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
         return queryset.ip_family(value)
@@ -536,12 +518,7 @@ class IPAddressFilterSet(
         return queryset.exclude(assigned_object_id__isnull=value)
 
 
-class VLANGroupFilterSet(
-    BaseFilterSet,
-    NameSlugSearchFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class VLANGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
@@ -571,13 +548,7 @@ class VLANGroupFilterSet(
         fields = ["id", "name", "slug", "description"]
 
 
-class VLANFilterSet(
-    BaseFilterSet,
-    TenancyFilterSet,
-    StatusModelFilterSetMixin,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
-):
+class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -642,7 +613,7 @@ class VLANFilterSet(
         return queryset.filter(qs_filter)
 
 
-class ServiceFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class ServiceFilterSet(NautobotFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

@@ -15,6 +15,7 @@ from django_prometheus.models import model_deletes, model_inserts, model_updates
 from prometheus_client import Counter
 
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
+from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.utilities.config import get_settings_or_config
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, GitRepository, JobResult, ObjectChange
@@ -176,8 +177,12 @@ def git_repository_pre_delete(instance, **kwargs):
         status=JobResultStatusChoices.STATUS_RUNNING,
     )
 
-    # Use the default DB for storing job log entries since this occurs outside of an atomic transaction.
-    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True, use_default_db=True)
+    # This isn't running in the context of a Job execution transaction,
+    # so there's no need to use the "job_logs" proxy DB.
+    # In fact, attempting to do so would cause database IntegrityErrors!
+    job_result.use_job_logs_db = False
+
+    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
     if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
@@ -189,3 +194,54 @@ def git_repository_pre_delete(instance, **kwargs):
     # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
+
+
+#
+# Jobs
+#
+
+
+def refresh_job_models(sender, *, apps, **kwargs):
+    """
+    Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
+    """
+    Job = apps.get_model("extras", "Job")
+    GitRepository = apps.get_model("extras", "GitRepository")
+
+    # To make reverse migrations safe
+    if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):
+        logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
+        return
+
+    from nautobot.extras.jobs import get_jobs
+
+    # TODO: eventually this should be inverted so that get_jobs() relies on the database models...
+    job_classes = get_jobs()
+    job_models = []
+    for source, modules in job_classes.items():
+        git_repository = None
+        if source.startswith("git."):
+            try:
+                git_repository = GitRepository.objects.get(slug=source[4:])
+            except GitRepository.DoesNotExist:
+                logger.warning('GitRepository "%s" not found?', source[4:])
+            source = "git"
+
+        for module_name, module_details in modules.items():
+            for job_class_name, job_class in module_details["jobs"].items():
+                # TODO: catch DB error in case where multiple Jobs have the same grouping + name
+                job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
+                if job_model is not None:
+                    job_models.append(job_model)
+
+    for job_model in Job.objects.all():
+        if job_model.installed and job_model not in job_models:
+            logger.info(
+                "Job %s%s/%s/%s is no longer installed",
+                job_model.source,
+                f"/{job_model.git_repository.slug}" if job_model.git_repository is not None else "",
+                job_model.module_name,
+                job_model.job_class_name,
+            )
+            job_model.installed = False
+            job_model.save()

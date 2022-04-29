@@ -1,9 +1,11 @@
 from django.test import TestCase
+from django.templatetags.static import static
 from django.conf import settings
 from unittest import skipIf
 
 from nautobot.utilities.templatetags.helpers import (
     placeholder,
+    render_boolean,
     render_json,
     render_yaml,
     render_markdown,
@@ -16,7 +18,7 @@ from nautobot.utilities.templatetags.helpers import (
     fgcolor,
     divide,
     percentage,
-    get_docs,
+    get_docs_url,
     has_perms,
     has_one_or_more_perms,
     split,
@@ -26,12 +28,12 @@ from nautobot.utilities.templatetags.helpers import (
 )
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
-from dummy_plugin.models import DummyModel
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
 class NautobotTemplatetagsHelperTest(TestCase):
     def test_placeholder(self):
@@ -59,7 +61,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(meta(Site, "app_label"), "dcim")
         self.assertEqual(meta(site, "not_present"), "")
 
-        self.assertEqual(meta(DummyModel, "app_label"), "dummy_plugin")
+        self.assertEqual(meta(ExampleModel, "app_label"), "example_plugin")
 
     def test_viewname(self):
         status = Status.objects.get_for_model(Site).first()
@@ -68,7 +70,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(viewname(site, "edit"), "dcim:site_edit")
         self.assertEqual(viewname(Site, "test"), "dcim:site_test")
 
-        self.assertEqual(viewname(DummyModel, "edit"), "plugins:dummy_plugin:dummymodel_edit")
+        self.assertEqual(viewname(ExampleModel, "edit"), "plugins:example_plugin:examplemodel_edit")
 
     def test_validated_viewname(self):
         status = Status.objects.get_for_model(Site).first()
@@ -77,8 +79,8 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(validated_viewname(site, "list"), "dcim:site_list")
         self.assertIsNone(validated_viewname(Site, "notvalid"))
 
-        self.assertEqual(validated_viewname(DummyModel, "list"), "plugins:dummy_plugin:dummymodel_list")
-        self.assertIsNone(validated_viewname(DummyModel, "notvalid"))
+        self.assertEqual(validated_viewname(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+        self.assertIsNone(validated_viewname(ExampleModel, "notvalid"))
 
     def test_bettertitle(self):
         self.assertEqual(bettertitle("myTITle"), "MyTITle")
@@ -109,9 +111,16 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(percentage(2, 10), 20)
         self.assertEqual(percentage(10, 3), 333)
 
-    def test_get_docs(self):
-        self.assertTrue(callable(get_docs))
-        # TODO add unit tests for get_docs
+    def test_get_docs_url(self):
+        self.assertTrue(callable(get_docs_url))
+        status = Status.objects.get_for_model(Site).first()
+        site = Site.objects.create(name="test", slug="test", status=status)
+        self.assertEqual(get_docs_url(site), static("docs/models/dcim/site.html"))
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        self.assertEqual(get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))
+        # AnotherExampleModel does not have documentation.
+        another_model = AnotherExampleModel.objects.create(name="test", number=1)
+        self.assertIsNone(get_docs_url(another_model))
 
     def test_has_perms(self):
         self.assertTrue(callable(has_perms))
@@ -140,3 +149,15 @@ class NautobotTemplatetagsHelperTest(TestCase):
         data = {"first": "1st", "second": "2nd"}
         self.assertEqual(get_item(data, "first"), "1st")
         self.assertEqual(get_item(data, "second"), "2nd")
+
+    def test_render_boolean(self):
+        for value in [True, "arbitrary string", 1]:
+            self.assertEqual(
+                render_boolean(value),
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+            )
+        for value in [False, "", 0]:
+            self.assertEqual(
+                render_boolean(value), '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+            )
+        self.assertEqual(render_boolean(None), '<span class="text-muted">&mdash;</span>')

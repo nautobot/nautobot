@@ -29,6 +29,7 @@ plugin_name/
     - banner.py             # Banners
     - custom_validators.py  # Custom Validators
     - datasources.py        # Loading Data from a Git Repository
+    - filter_extensions.py  # Extending Filters
     - graphql/
       - types.py            # GraphQL Type Objects
     - homepage.py           # Home Page Content
@@ -70,7 +71,7 @@ The plugin source directory contains all of the actual Python code and other res
 
 To get started with a project using [Python Poetry](https://python-poetry.org/) you use the `poetry init` command. This will guide you through the prompts necessary to generate a pyproject.toml with details required for packaging.
 
-```
+```no-highlight
 This command will guide you through creating your pyproject.toml config.
 
 Package name [tmp]:  nautobot-animal-sounds
@@ -78,7 +79,7 @@ Version [0.1.0]:
 Description []:  An example Nautobot plugin
 Author [, n to skip]:  Bob Jones
 License []:  Apache 2.0
-Compatible Python versions [^3.8]:  ^3.6
+Compatible Python versions [^3.8]:  ^3.7
 
 Would you like to define your main dependencies interactively? (yes/no) [yes] no
 Would you like to define your development dependencies interactively? (yes/no) [yes] no
@@ -92,7 +93,7 @@ authors = ["Bob Jones"]
 license = "Apache 2.0"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 
 [tool.poetry.dev-dependencies]
 
@@ -149,6 +150,7 @@ Nautobot looks for the `config` variable within a plugin's `__init__.py` to load
 | `config_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "configuration" view defined by this plugin |
 | `default_settings` | `{}` | A dictionary of configuration parameters and their default values |
 | `home_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "home" or "dashboard" view defined by this plugin |
+| `docs_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "documentation" view defined by this plugin |
 | `installed_apps` | `[]` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
 | `max_version` | `None` | Maximum version of Nautobot with which the plugin is compatible |
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
@@ -339,7 +341,7 @@ config = AnimalSoundsConfig
 
 and now the "Configuration" button that appears in the Installed Plugins table next to "Animal Sounds" will be a link to your configuration view.
 
-Similarly, if your plugin provides a "plugin home" or "dashboard" view, you can provide a link for the "Home" button in the Installed Plugins table by defining `home_view_name` on your `PluginConfig` class.
+Similarly, if your plugin provides a "plugin home" or "dashboard" view, you can provide a link for the "Home" button in the Installed Plugins table by defining `home_view_name` on your `PluginConfig` class. This can also be done for documentation by defining `docs_view_name` on your `PluginConfig` class.
 
 ## Extending Existing Functionality
 
@@ -364,9 +366,10 @@ def leet_speak(input_str):
 
 This filter will then be available for use in computed field templates like so:
 
-```
+```jinja2
 {{ "HELLO WORLD" | leet_speak }}
 ```
+
 The output of this template results in the string `"H3110 W0R1D"`.
 
 ### Including Jobs
@@ -399,7 +402,7 @@ jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]
 
 Plugins can register custom validator classes which implement model validation logic to be executed during a model's `clean()` method. Like template extensions, custom validators are registered to a single model and offer a method which plugin authors override to implement their validation logic. This is accomplished by subclassing `PluginCustomValidator` and implementing the `clean()` method.
 
-Plugin authors must raise `django.core.exceptions.ValidationError` within the `clean()` method to trigger validation error messages which are propgated to the user and prevent saving of the model instance. A convenience method `validation_error()` may be used to simplify this process. Raising a `ValidationError` is no different than vanilla Django, and the convenience method will simply pass the provided message through to the exception.
+Plugin authors must raise `django.core.exceptions.ValidationError` within the `clean()` method to trigger validation error messages which are propagated to the user and prevent saving of the model instance. A convenience method `validation_error()` may be used to simplify this process. Raising a `ValidationError` is no different than vanilla Django, and the convenience method will simply pass the provided message through to the exception.
 
 When a PluginCustomValidator is instantiated, the model instance is assigned to context dictionary using the `object` key, much like PluginTemplateExtensions. E.g. `self.context['object']`.
 
@@ -553,10 +556,10 @@ A plugin can define and register additional providers (sources) for [Secrets](..
 
 To define a new `SecretsProvider` subclass, we must specify the following:
 
-- A unique `slug` string identifying this provider
-- A human-readable `name` string (optional; the `slug` will be used if this is not specified)
-- A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
-- An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
+* A unique `slug` string identifying this provider
+* A human-readable `name` string (optional; the `slug` will be used if this is not specified)
+* A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
+* An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
 
 For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
 
@@ -607,6 +610,54 @@ secrets_providers = [ConstantValueSecretsProvider]
 ```
 
 After installing and enabling your plugin, you should now be able to navigate to `Secrets > Secrets` and create a new Secret, at which point `"constant-value"` should now be available as a new secrets provider to use.
+
+### Extending Filters
+
+Plugins can extend any model-based `FilterSet` and `FilterForm` classes that are provided by the Nautobot core.
+
+The requirements to extend a filter set or a filter form (or both) are:
+
+* The file must be named `filter_extensions.py`
+* The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
+* The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted pair format (`{app_label}.{model}`, e.g. `tenant.tenant` or `dcim.device`)
+
+Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with *not* `icontains` using the `ic` and `nic` expressions respectively.
+
+The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../../rest-api/filtering/#lookup-expressions) for more information.
+
+!!! tip
+    For developers of plugins that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.utilities.filters.BaseFilterSet`.
+
+However, that does not cover every possible use case, to list a few examples:
+
+* Usage of a custom `method` argument on a filter that points to a `FilterSet` method, which would allow arbitrary filtering using custom logic. This is how the `q` field search logic is currently performed.
+* Creation of a filter on a field that does not currently have filtering support
+* Convenience methods for highly nested fields
+
+There are several conditions that must be met in order to extend a filter:
+
+* The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
+* The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name` + `_`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
+
+Nautobot will dynamically generate the additional relevant lookup expressions of a plugin's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
+
+Similar to `FilterSet` fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
+
+* The base filter form does not include a custom filter defined by the plugin as described above
+* The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
+
+There are several conditions that must be met in order to extend a filter:
+
+* The original `FilterForm` must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
+* The `filterform_fields` attribute must be a valid dictionary of Django form fields
+
+!!! note
+    A plugin is not required to define both `filterset_fields` and `filterform_fields`.
+
+You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_plugin/example_plugin/filter_extensions.py) with the Example Plugin.
+
+!!! tip
+    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../additional-features/dynamic-groups.md).
 
 ## Adding Database Models
 
@@ -684,13 +735,13 @@ Plugins can optionally expose their models via Django's built-in [administrative
 
 ```python
 # admin.py
-from django.contrib import admin
+from nautobot.core.admin import NautobotModelAdmin
 
 from .models import Animal
 
 
 @admin.register(Animal)
-class AnimalAdmin(admin.ModelAdmin):
+class AnimalAdmin(NautobotModelAdmin):
     list_display = ('name', 'sound')
 ```
 
@@ -813,6 +864,12 @@ class RandomAnimalView(View):
 ```
 
 This view retrieves a random animal from the database and and passes it as a context variable when rendering a template named `animal.html`, which doesn't exist yet. To create this template, first create a directory named `templates/nautobot_animal_sounds/` within the plugin source directory. (We use the plugin's name as a subdirectory to guard against naming collisions with other plugins.) Then, create a template named `animal.html` as described below.
+
+### Utilizing Nautobot Generic Views
+
+Starting in Nautobot 1.1.0 via [PR](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in plugin development.  These views have some requirements that must be in place in order to work.  These can be used by importing them from `from nautobot.core.views import generic`.
+
+More documentation and examples can be found in [Generic Views](../development/generic-views.md) guide.
 
 ### Extending the Base Template
 
@@ -938,3 +995,17 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 
 !!! warning
     This example is provided as a minimal reference implementation only. It does not address authentication, performance, or the myriad of other concerns that plugin authors should have.
+
+## Adding Help Documentation
+
+If you are using the `generic.ObjectEditView` from Nautobot for your object, the form can automatically include a help icon with a link to that object's documentation. For this to happen, Nautobot must be able to find the documentation for this object in a specific directory tree within your plugin:
+
+```no-highlight
+plugin_name/                   # "nautobot_animal_sounds"
+  - static/
+    - plugin_name/             # "nautobot_animal_sounds"
+      - docs/
+        - index.html
+        - models/
+          - object_model.html  # "animal.html"
+```

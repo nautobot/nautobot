@@ -6,9 +6,11 @@ from datetime import datetime, date
 from django import forms
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
+from django.forms.widgets import TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
@@ -22,6 +24,7 @@ from nautobot.utilities.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
+    JSONField,
     LaxURLField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -31,7 +34,6 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.templatetags.helpers import render_markdown
 from nautobot.utilities.utils import render_jinja2
 from nautobot.utilities.validators import validate_regex
-
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,12 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. "
+        'It will appear in the "Advanced" tab instead.',
+    )
 
     objects = ComputedFieldManager()
 
@@ -124,11 +132,27 @@ class CustomFieldModel(models.Model):
         """
         return self._custom_field_data
 
-    def get_custom_fields(self):
+    def get_custom_fields_basic(self):
+        """
+        Return a dictionary of custom fields for a single object in the form {<field>: value}
+        which have advanced_ui set to False
+        """
+        return self.get_custom_fields(advanced_ui=False)
+
+    def get_custom_fields_advanced(self):
+        """
+        Return a dictionary of custom fields for a single object in the form {<field>: value}
+        which have advanced_ui set to True
+        """
+        return self.get_custom_fields(advanced_ui=True)
+
+    def get_custom_fields(self, advanced_ui=None):
         """
         Return a dictionary of custom fields for a single object in the form {<field>: value}.
         """
         fields = CustomField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            fields = fields.filter(advanced_ui=advanced_ui)
         return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
     def clean(self):
@@ -139,7 +163,9 @@ class CustomFieldModel(models.Model):
         # Validate all field values
         for field_name, value in self._custom_field_data.items():
             if field_name not in custom_fields:
-                raise ValidationError(f"Unknown field name '{field_name}' in custom field data.")
+                # log a warning instead of raising a ValidationError so as not to break the UI
+                logger.warning(f"Unknown field name '{field_name}' in custom field data for {self} ({self.pk}).")
+                continue
             try:
                 custom_fields[field_name].validate(value)
             except ValidationError as e:
@@ -151,11 +177,21 @@ class CustomFieldModel(models.Model):
                 raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
     # Computed Field Methods
-    def has_computed_fields(self):
+    def has_computed_fields(self, advanced_ui=None):
         """
         Return a boolean indicating whether or not this content type has computed fields associated with it.
+        This can also check whether the advanced_ui attribute is True or False for UI display purposes.
         """
-        return ComputedField.objects.get_for_model(self).exists()
+        computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
+        return computed_fields.exists()
+
+    def has_computed_fields_basic(self):
+        return self.has_computed_fields(advanced_ui=False)
+
+    def has_computed_fields_advanced(self):
+        return self.has_computed_fields(advanced_ui=True)
 
     def get_computed_field(self, slug, render=True):
         """
@@ -171,13 +207,15 @@ class CustomFieldModel(models.Model):
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
-    def get_computed_fields(self, label_as_key=False):
+    def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """
         Return a dictionary of all computed fields and their rendered values for this model.
         Keys are the `slug` value of each field. If label_as_key is True, `label` values of each field are used as keys.
         """
         computed_fields_dict = {}
         computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
         if not computed_fields:
             return {}
         for cf in computed_fields:
@@ -197,7 +235,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel):
+class CustomField(BaseModel, ChangeLoggedModel):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
@@ -261,6 +299,12 @@ class CustomField(BaseModel):
         help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
         "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters. Regular "
         "expression on select and multi-select will be applied at <code>Custom Field Choices</code> definition.",
+    )
+    advanced_ui = models.BooleanField(
+        default=False,
+        verbose_name="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. "
+        'It will appear in the "Advanced" tab instead.',
     )
 
     objects = CustomFieldManager()
@@ -331,13 +375,14 @@ class CustomField(BaseModel):
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
-    def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False):
+    def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
         """
         Return a form field suitable for setting a CustomField's value for an object.
 
         set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
         enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
         for_csv_import: Return a form field suitable for bulk import of objects in CSV format.
+        simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False
@@ -383,6 +428,14 @@ class CustomField(BaseModel):
                     )
                 ]
 
+        # JSON
+        elif self.type == CustomFieldTypeChoices.TYPE_JSON:
+
+            if simple_json_filter:
+                field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
+            else:
+                field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=initial)
+
         # Select or Multi-select
         else:
             choices = [(cfc.value, cfc.value) for cfc in self.choices.all()]
@@ -423,8 +476,12 @@ class CustomField(BaseModel):
         if value not in [None, "", []]:
 
             # Validate text field
-            if self.type == CustomFieldTypeChoices.TYPE_TEXT and self.validation_regex:
-                if not re.match(self.validation_regex, value):
+            if self.type == CustomFieldTypeChoices.TYPE_TEXT:
+
+                if not isinstance(value, str):
+                    raise ValidationError("Value must be a string")
+
+                if self.validation_regex and not re.match(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
             # Validate integer
@@ -449,7 +506,7 @@ class CustomField(BaseModel):
 
             # Validate date
             if self.type == CustomFieldTypeChoices.TYPE_DATE:
-                if type(value) is not date:
+                if not isinstance(value, date):
                     try:
                         datetime.strptime(value, "%Y-%m-%d")
                     except ValueError:
@@ -489,7 +546,7 @@ class CustomField(BaseModel):
     "graphql",
     "webhooks",
 )
-class CustomFieldChoice(BaseModel):
+class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field
     """
@@ -565,3 +622,13 @@ class CustomFieldChoice(BaseModel):
                     raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
 
         super().delete(*args, **kwargs)
+
+    def to_objectchange(self, action):
+        # Annotate the parent field
+        try:
+            field = self.field
+        except ObjectDoesNotExist:
+            # The parent field has already been deleted
+            field = None
+
+        return super().to_objectchange(action, related_object=field)

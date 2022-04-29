@@ -5,10 +5,13 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
+    Job,
     Secret,
     SecretsGroup,
     Status,
@@ -156,6 +159,12 @@ urlpatterns = [
         views.CustomFieldDeleteView.as_view(),
         name="customfield_delete",
     ),
+    path(
+        "custom-fields/<str:name>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="customfield_changelog",
+        kwargs={"model": CustomField},
+    ),
     # Custom links
     path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
     path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
@@ -180,6 +189,23 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="customlink_changelog",
         kwargs={"model": CustomLink},
+    ),
+    # Dynamic Groups
+    path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
+    path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
+    path(
+        "dynamic-groups/delete/",
+        views.DynamicGroupBulkDeleteView.as_view(),
+        name="dynamicgroup_bulk_delete",
+    ),
+    path("dynamic-groups/<str:slug>/", views.DynamicGroupView.as_view(), name="dynamicgroup"),
+    path("dynamic-groups/<str:slug>/edit/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_edit"),
+    path("dynamic-groups/<str:slug>/delete/", views.DynamicGroupDeleteView.as_view(), name="dynamicgroup_delete"),
+    path(
+        "dynamic-groups/<str:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="dynamicgroup_changelog",
+        kwargs={"model": DynamicGroup},
     ),
     # Export Templates
     path(
@@ -275,6 +301,11 @@ urlpatterns = [
         views.GitRepositorySyncView.as_view(),
         name="gitrepository_sync",
     ),
+    path(
+        "git-repositories/<str:slug>/dry-run/",
+        views.GitRepositoryDryRunView.as_view(),
+        name="gitrepository_dryrun",
+    ),
     # GraphQL Queries
     path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
     path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
@@ -332,14 +363,31 @@ urlpatterns = [
         name="scheduledjob_approval_queue_list",
     ),
     path(
-        "jobs/scheduled-jobs/approval-queue/<uuid:scheduled_job>/",
+        "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",
         views.JobApprovalRequestView.as_view(),
         name="scheduledjob_approval_request_view",
     ),
+    # 2.0 TODO: JobDetailView should be just JobView, but see below
+    path(
+        "jobs/<slug:slug>/",
+        views.JobDetailView.as_view(),
+        name="job_detail",  # 2.0 TODO: name="job",
+    ),
+    path("jobs/<slug:slug>/edit/", views.JobEditView.as_view(), name="job_edit"),
+    path("jobs/<slug:slug>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
+    path(
+        "jobs/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="job_changelog",
+        kwargs={"model": Job},
+    ),
+    # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
+    path("jobs/<slug:slug>/run/", views.JobView.as_view(), name="job_run"),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
+    path("job-results/<uuid:pk>/log-table/", views.JobLogEntryTableView.as_view(), name="jobresult_log-table"),
     path(
         "job-results/delete/",
         views.JobResultBulkDeleteView.as_view(),
