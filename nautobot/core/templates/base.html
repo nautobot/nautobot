@@ -10,20 +10,20 @@
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
     <link rel="stylesheet"
-          href="{% static 'materialdesignicons-5.4.55/css/materialdesignicons.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-5.4.55/css/materialdesignicons.min.css'">
+          href="{% static 'materialdesignicons-6.5.95/css/materialdesignicons.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-6.5.95/css/materialdesignicons.min.css'">
     <link rel="stylesheet"
-          href="{% static 'jquery-ui-1.12.1/jquery-ui.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.css'">
+          href="{% static 'jquery-ui-1.13.1/jquery-ui.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.css'">
     <link rel="stylesheet"
-          href="{% static 'select2-4.0.13/dist/css/select2.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/dist/css/select2.min.css'">
+          href="{% static 'select2-4.0.13/select2.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.css'">
     <link rel="stylesheet"
           href="{% static 'select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css'">
     <link rel="stylesheet"
-          href="{% static 'flatpickr-4.6.3/themes/light.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.3/themes/light.css'">
+          href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
     <link rel="stylesheet"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
@@ -85,7 +85,13 @@
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i> <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a> &middot;
+                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
+                        {% if settings.BRANDING_URLS.docs %}
+                             <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>
+                        {% else %}
+                            <a href="{% static 'docs/index.html' %}">Docs</a>
+                        {% endif %}
+                        &middot;
                         <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
                         <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
@@ -97,16 +103,16 @@
     </footer>
 <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
-<script src="{% static 'jquery-ui-1.12.1/jquery-ui.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.min.js'"></script>
+<script src="{% static 'jquery-ui-1.13.1/jquery-ui.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.js'"></script>
 <script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
-<script src="{% static 'select2-4.0.13/dist/js/select2.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/dist/js/select2.min.js'"></script>
-<script src="{% static 'clipboard.js/clipboard-2.0.6.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'"></script>
-<script src="{% static 'flatpickr-4.6.3/flatpickr.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.3/flatpickr.min.js'"></script>
+<script src="{% static 'select2-4.0.13/select2.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.js'"></script>
+<script src="{% static 'clipboard.js-2.0.9/clipboard.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js-2.0.9/clipboard.min.js'"></script>
+<script src="{% static 'flatpickr-4.6.9/flatpickr.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/flatpickr.min.js'"></script>
 <script src="{% static 'js/forms.js' %}?v{{ settings.VERSION }}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
 <script type="text/javascript">
@@ -118,6 +124,15 @@
     }).ajaxStop(function() {
         loading.hide();
     });
+    /*
+    this fixes the navbar blocking the main UI from being seen
+    https://github.com/nautobot/nautobot/issues/1467
+    */
+    let setBodyPaddingTop = () => {
+        document.querySelector('body').style.paddingTop = `${parseInt(window.getComputedStyle(document.querySelector('.navbar')).height)+10}px`
+    }
+    window.addEventListener("resize", setBodyPaddingTop);
+    window.addEventListener("load", setBodyPaddingTop);
 </script>
 {% block javascript %}{% endblock %}
 </body>

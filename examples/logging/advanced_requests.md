@@ -1,8 +1,20 @@
-# Add User information for error requests (4xx and 5xx)
+# Advanced Logging Examples
 
-By default django logs [4xx and 5xx requests](https://docs.djangoproject.com/en/3.2/topics/logging/#django-request) 
-but is missing details such as the request user name.  This can be helpful in debugging. This example 
+## Add User Information for Error Requests (4xx and 5xx)
+
+By default django logs [4xx and 5xx requests](https://docs.djangoproject.com/en/3.2/topics/logging/#django-request)
+but is missing details such as the request user name.  This can be helpful in debugging. This example
 shows how the request user can be added to the logs for 4xx and 5xx responses.
+
+Using the django-request-logging module can lead to password leaks if not configured correctly. If using in production, make sure that you capture all passwords and mask them in logs. The example below uses defines a function, `mask_password`, to manipulate the message before logged. This is just one way to mask a password. Be mindful that other places are captured as well. Here is the "before/after" example of the function `mask_password`:
+
+Before:
+
+> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=mysecretpassword
+
+After:
+
+> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=***
 
 ```python
 def add_username(record):
@@ -12,6 +24,9 @@ def add_username(record):
         record.username = ""
     return True
 
+def mask_password(record):
+    record.msg = re.sub(r"password=(.*?)($|&|\n)", r"password=*****\g<2>", record.msg)
+    return True
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING = {
@@ -37,13 +52,17 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "request",
-            "filters": ["add_username"],
+            "filters": ["add_username", "mask_password"],
         },
     },
     "filters": {
         "add_username": {
             "()": "django.utils.log.CallbackFilter",
             "callback": add_username,
+        },
+        "mask_password": {
+            "()": "django.utils.log.CallbackFilter",
+            "callback": mask_password,
         }
     },
     "loggers": {
@@ -64,7 +83,7 @@ LOGGING = {
 }
 ```
 
-## Example Logs
+### Example Logs Showing User Information on Errors
 
 ```no-highlight
 20:50:57.972 INFO    django.server:  "GET /health/ HTTP/1.1" 200 11743
@@ -79,10 +98,10 @@ LOGGING = {
 
 ---
 
-# Add user information for ALL requests
+## Add User Information to ALL Requests
 
 Unfortunately, when running Nautobot behind uWSGI only failed requests are logged through the django.request logger.  We can get more information
-from all requests by installing the [`django-request-logging`]((https://github.com/Rhumbix/django-request-logging)) package.  
+from all requests by installing the [`django-request-logging`]((https://github.com/Rhumbix/django-request-logging)) package.
 
 ```no-highlight
 $ sudo -u nautobot pip install django-request-logging
@@ -94,7 +113,7 @@ Add the following to `nautobot_config.py`:
 EXTRA_MIDDLEWARE = ["request_logging.middleware.LoggingMiddleware"]
 ```
 
-## Example Logs
+### Example Logs Showing User Information on All Requests
 
 ```no-highlight
 20:15:56.177 INFO    django.request: user= GET /health/

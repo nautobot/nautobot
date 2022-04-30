@@ -41,6 +41,7 @@ With SELinux in `permissive` mode, test the application stack and ensure everyth
 SELinux status:                 enabled
 Current mode:                   enforcing
 ```
+
 ## Troubleshoot SELinux
 
 Troubleshooting SELinux in most instances is straightforward. Using the `sealert` command to parse `/var/log/audit/audit.log` is the fastest way to pin-point SELinux specific issues. In many cases, `sealert` will also provide guidance as to how to resolve the issue.

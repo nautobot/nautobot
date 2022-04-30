@@ -2,7 +2,7 @@ from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -31,16 +31,16 @@ def rebuild_paths_circuits(obj):
             create_cablepath(cp.origin, rebuild=False)
 
 
-@receiver((post_save, post_delete), sender=CircuitTermination)
+@receiver(post_save, sender=CircuitTermination)
 def update_circuit(instance, **kwargs):
     """
-    When a CircuitTermination has been modified, update the last_updated time of its parent Circuit.
+    When a CircuitTermination has been modified, update its parent Circuit.
     """
-    circuits = Circuit.objects.filter(pk=instance.circuit_id)
-    time = timezone.now()
-    for circuit in circuits:
-        circuit.last_updated = time
-        circuit.save()
+    fields = {
+        "last_updated": timezone.now(),
+        f"termination_{instance.term_side.lower()}": instance.pk,
+    }
+    Circuit.objects.filter(pk=instance.circuit_id).update(**fields)
 
 
 @receiver(post_save, sender=CircuitTermination)

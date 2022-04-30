@@ -13,9 +13,11 @@
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
             {% block breadcrumbs %}
+                {% if list_url %}
                 <li><a href="{% url list_url %}">
                     {{ verbose_name_plural|bettertitle }}
                 </a></li>
+                {% endif %}
                 {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
                 {% if object.name %}
                     <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
@@ -25,6 +27,7 @@
             {% endblock breadcrumbs %}
             </ol>
         </div>
+        {% if list_url %}
         <div class="col-sm-4 col-md-3">
             <form action="{% url list_url %}" method="get">
                 <div class="input-group">
@@ -37,6 +40,7 @@
                 </div>
             </form>
         </div>
+        {% endif%}
         {% endwith %}
     </div>
 
@@ -65,7 +69,7 @@
         {% block panel_buttons %}{% endblock panel_buttons %}
     </div>
 
-    <ul class="nav nav-tabs">
+    <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
         <li role="presentation"{% if not active_tab and not request.GET.tab or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
@@ -78,11 +82,18 @@
             </a>
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
+        {% if perms.extras.view_dynamicgroup and object.dynamic_groups %}
+            <li role="presentation"{% if request.GET.tab == 'dynamic-groups' %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#dynamic-groups" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+                    Dynamic Groups
+                </a>
+            </li>
+        {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and changelog_url or active_tab == 'changelog' %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{{ changelog_url }}">Change Log</a>
-            </li>
+                <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                    <a href="{{ changelog_url }}">Change Log</a>
+                </li>
             {% endif %}
         {% endif %}
     {% endblock nav_tabs %}
@@ -95,7 +106,7 @@
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
-                    {% include 'inc/custom_fields_panel.html' %}
+                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_fields_basic computed_fields_advanced_ui=False %}
                     {% include 'inc/relationships_panel.html' %}
                     {% include 'extras/inc/tags_panel.html' %}
                     {% plugin_left_page object %}
@@ -127,28 +138,65 @@
                 </div>
             </div>
         </div>
+        <div id="dynamic-groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic-groups' %}active{% else %}fade{% endif %}">
+            <div class="row">
+                <div class="col-md-6">
+                    {% include 'inc/dynamic_groups_panel.html' %}
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock content %}
 
 
 {% block javascript %}
-<script src="{% static 'clipboard.js/clipboard-2.0.6.min.js' %}"
-    onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'">
-</script>
 <script>
-    url = window.location.href.split("?")[0];
-    window.history.pushState({}, document.title, url);
     var clipboard = new ClipboardJS('.btn');
 
     clipboard.on('success', function (e) {});
 
     clipboard.on('error', function (e) {});
 
-    function switch_tab(tab_href) {
-        if (location.pathname != "{{ object.get_absolute_url }}") {
-            tab_location = tab_href.split("#");
-            window.location.href = `${tab_location[0]}?tab=${tab_location[1]}`;
-        };
+    
+    // Set initial history state
+    if (location.pathname == "{{ object.get_absolute_url }}"){
+        var tab_id = "main";
+        var tab_url = location.origin + location.pathname
+        var query_string = location.search.replace("?", "")
+
+        if(query_string.includes("tab")){
+            query_params = query_string.split("&")
+
+            tab_query_string = query_params.find(params => params.startsWith("tab"))
+            tab_id = tab_query_string.split("=")[1]
+
+            query_string_excluding_tab = query_params.filter(params => !params.startsWith("tab"))
+            query_string = query_string_excluding_tab.join("&")
+        }
+
+        final_query_string = query_string ? "&" + query_string : ""
+
+        window.history.replaceState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}${final_query_string}`);
+        $(`#tabs a[href="{{ object.get_absolute_url }}#${tab_id}"]`).tab('show');
+
     }
+
+
+    function switch_tab(tab_href) {
+
+        let [tab_url, tab_id] = tab_href.split("#")
+
+        if (location.pathname != "{{ object.get_absolute_url }}")
+            window.location.href = `${tab_url}?tab=${tab_id}`;
+        else if (window.history.state["id"] != tab_id){
+            window.history.pushState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}`);
+        }
+    }
+
+    window.onpopstate = function(event) {
+        if(event)
+            $(`#tabs a[href="{{ object.get_absolute_url }}#${event.state.id}"]`).tab('show');
+    }
+
 </script>
 {% endblock javascript %}

@@ -21,53 +21,19 @@
                 <tr>
                     <td>Call On:</td>
                     <td>
-                        {% if object.type_create %}
-                            <span class="text-success">
-                                <i class="mdi mdi-check-bold"></i>
-                            </span>
-                        {% else %}
-                            <span class="text-danger">
-                                <i class="mdi mdi-close"></i>
-                            </span>
-                        {% endif %}
+                        {{ object.type_create | render_boolean }}
                         <span>Create</span>
 
-                        {% if object.type_update %}
-                            <span style="margin-left: 1rem;" class="text-success">
-                                <i class="mdi mdi-check-bold"></i>
-                            </span>
-                        {% else %}
-                            <span style="margin-left: 1rem;" class="text-danger">
-                                <i class="mdi mdi-close"></i>
-                            </span>
-                        {% endif %}
+                        <span style="margin-left: 2rem;">{{ object.type_update | render_boolean }}</span>
                         <span>Update</span>
 
-                        {% if object.type_delete %}
-                            <span style="margin-left: 1rem;" class="text-success">
-                                <i class="mdi mdi-check-bold"></i>
-                            </span>
-                        {% else %}
-                            <span style="margin-left: 1rem;" class="text-danger">
-                                <i class="mdi mdi-close"></i>
-                            </span>
-                        {% endif %}
+                        <span style="margin-left: 2rem;">{{ object.type_delete | render_boolean }}</span>
                         <span>Delete </span>
                     </td>
                 </tr>
                 <tr>
                     <td>Enabled</td>
-                    <td>
-                        {% if object.enabled %}
-                            <span class="text-success">
-                                <i class="mdi mdi-check-bold"></i>
-                            </span>
-                        {% else %}
-                            <span class="text-danger">
-                                <i class="mdi mdi-close"></i>
-                            </span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.enabled | render_boolean }}</td>
                 </tr>
             </table>
 
@@ -108,17 +74,7 @@
                 </tr>
                 <tr>
                     <td>SSL Verification</td>
-                    <td>
-                        {% if object.ssl_verification %}
-                            <span class="text-success">
-                                <i class="mdi mdi-check-bold"></i>
-                            </span>
-                        {% else %}
-                            <span class="text-danger">
-                                <i class="mdi mdi-close"></i>
-                            </span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.ssl_verification | render_boolean }}</td>
                 </tr>
                 <tr>
                     <td>CA File Path</td>

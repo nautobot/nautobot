@@ -14,6 +14,7 @@ services:
     depends_on:
       - redis
       - selenium
+      - db
     env_file:
       - dev.env
     tty: true
@@ -85,7 +86,7 @@ services:
     env_file:
       - dev.env
   selenium:
-    image: selenium/standalone-firefox:latest
+    image: selenium/standalone-firefox:4.1.2
     ports:
         - "4444:4444"
     shm_size: 2g

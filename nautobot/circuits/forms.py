@@ -5,14 +5,12 @@ from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
     CustomFieldFilterForm,
-    CustomFieldModelForm,
     CustomFieldModelCSVForm,
-    RelationshipModelForm,
+    NautobotModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
@@ -26,7 +24,7 @@ from nautobot.utilities.forms import (
     SlugField,
     TagFilterField,
 )
-from .models import Circuit, CircuitTermination, CircuitType, Provider
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
 #
@@ -34,10 +32,9 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider
 #
 
 
-class ProviderForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class ProviderForm(NautobotModelForm):
     slug = SlugField()
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Provider
@@ -74,7 +71,7 @@ class ProviderCSVForm(CustomFieldModelCSVForm):
 class ProviderBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Provider.objects.all(), widget=forms.MultipleHiddenInput)
     asn = forms.IntegerField(required=False, label="ASN")
-    account = forms.CharField(max_length=30, required=False, label="Account number")
+    account = forms.CharField(max_length=100, required=False, label="Account number")
     portal_url = forms.URLField(required=False, label="Portal")
     noc_contact = forms.CharField(required=False, widget=SmallTextarea, label="NOC contact")
     admin_contact = forms.CharField(required=False, widget=SmallTextarea, label="Admin contact")
@@ -106,11 +103,69 @@ class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
 
 #
+# Provider Networks
+#
+
+
+class ProviderNetworkForm(NautobotModelForm):
+    slug = SlugField()
+    provider = DynamicModelChoiceField(queryset=Provider.objects.all())
+    comments = CommentField(label="Comments")
+
+    class Meta:
+        model = ProviderNetwork
+        fields = [
+            "provider",
+            "name",
+            "slug",
+            "description",
+            "comments",
+            "tags",
+        ]
+        fieldsets = (("Provider Network", ("provider", "name", "slug", "description", "comments", "tags")),)
+
+
+class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
+    provider = CSVModelChoiceField(queryset=Provider.objects.all(), to_field_name="name", help_text="Assigned provider")
+
+    class Meta:
+        model = ProviderNetwork
+        fields = [
+            "provider",
+            "name",
+            "slug",
+            "description",
+            "comments",
+        ]
+
+
+class ProviderNetworkBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ProviderNetwork.objects.all(), widget=forms.MultipleHiddenInput)
+    provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
+    description = forms.CharField(max_length=100, required=False)
+    comments = CommentField(widget=SmallTextarea, label="Comments")
+
+    class Meta:
+        nullable_fields = [
+            "description",
+            "comments",
+        ]
+
+
+class ProviderNetworkFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = ProviderNetwork
+    field_order = ["q", "provider_id"]
+    q = forms.CharField(required=False, label="Search")
+    provider_id = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), required=False, label="Provider")
+    tag = TagFilterField(model)
+
+
+#
 # Circuit types
 #
 
 
-class CircuitTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+class CircuitTypeForm(NautobotModelForm):
     slug = SlugField()
 
     class Meta:
@@ -136,11 +191,10 @@ class CircuitTypeCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class CircuitForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class CircuitForm(NautobotModelForm, TenancyForm):
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
     type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Circuit
@@ -223,6 +277,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
         "q",
         "type",
         "provider",
+        "provider_network",
         "status",
         "region",
         "site",
@@ -233,6 +288,12 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
     q = forms.CharField(required=False, label="Search")
     type = DynamicModelMultipleChoiceField(queryset=CircuitType.objects.all(), to_field_name="slug", required=False)
     provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="slug", required=False)
+    provider_network = DynamicModelMultipleChoiceField(
+        queryset=ProviderNetwork.objects.all(),
+        required=False,
+        query_params={"provider_id": "$provider"},
+        label="Provider Network",
+    )
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(
         queryset=Site.objects.all(),
@@ -249,9 +310,12 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
 #
 
 
-class CircuitTerminationForm(BootstrapMixin, RelationshipModelForm):
+class CircuitTerminationForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region_id": "$region"})
+    provider_network = DynamicModelChoiceField(
+        queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"
+    )
 
     class Meta:
         model = CircuitTermination
@@ -259,11 +323,13 @@ class CircuitTerminationForm(BootstrapMixin, RelationshipModelForm):
             "term_side",
             "region",
             "site",
+            "provider_network",
             "port_speed",
             "upstream_speed",
             "xconnect_id",
             "pp_info",
             "description",
+            "tags",
         ]
         help_texts = {
             "port_speed": "Physical circuit speed",

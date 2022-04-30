@@ -42,7 +42,7 @@ Note that in the case where many devices in your network share common credential
 
 The NAPALM credentials specified by either of the above methods can be overridden for an individual REST API call by specifying the `X-NAPALM-Username` and `X-NAPALM-Password` headers.
 
-```
+```bash
 $ curl "http://localhost/api/dcim/devices/1/napalm/?method=get_environment" \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
@@ -76,7 +76,7 @@ GET /api/dcim/devices/1/napalm/?method=get_ntp_servers&method=get_ntp_peers
 
 The behavior of NAPALM drivers can be adjusted according to the [optional arguments](https://napalm.readthedocs.io/en/latest/support/index.html#optional-arguments). Nautobot exposes those arguments using headers prefixed with `X-NAPALM-`. For example, the SSH port is changed to 2222 in this API call:
 
-```
+```bash
 $ curl "http://localhost/api/dcim/devices/1/napalm/?method=get_environment" \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \

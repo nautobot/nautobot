@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Nautobot v1.1
 
 This document describes all new features and changes in Nautobot 1.1.
@@ -34,7 +35,7 @@ Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-s
 
 #### Plugin Defined Jinja2 Filters
 
-Plugins can now define custom Jinja2 filters to be used when rendering templates defined within computed fields or custom links. To register your own filters, you may add a `jinja_filters.py` to your plugin and any filters defined there will be automatically registered and globally usable. 
+Plugins can now define custom Jinja2 filters to be used when rendering templates defined within computed fields or custom links. To register your own filters, you may add a `jinja_filters.py` to your plugin and any filters defined there will be automatically registered and globally usable.
 
 Please see the [plugin development documentation on including Jinja2 filters](../plugins/development.md#including-jinja2-filters) to get started.
 
@@ -57,7 +58,7 @@ Additionally, two new [GraphQL utility functions](../plugins/development.md#usin
 
 #### Background Tasks now use Celery ([#223](https://github.com/nautobot/nautobot/issues/223))
 
-Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery. 
+Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery.
 
 !!! note
     Custom background tasks implemented by plugins are not part of Nautobot core functions

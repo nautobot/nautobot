@@ -438,7 +438,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "status": statuses.get(slug="planned").pk,
             "role": rackroles[1].pk,
-            "serial": "123456",
+            "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "asset_tag": "ABCDEF",
             "type": RackTypeChoices.TYPE_CABINET,
             "width": RackWidthChoices.WIDTH_19IN,
@@ -466,7 +466,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "status": statuses.get(slug="deprecated").pk,
             "role": rackroles[1].pk,
-            "serial": "654321",
+            "serial": "654321-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "type": RackTypeChoices.TYPE_4POST,
             "width": RackWidthChoices.WIDTH_23IN,
             "u_height": 49,
@@ -776,6 +776,41 @@ device-bays:
         self.assertEqual(len(data), 4)
         self.assertEqual(data[0]["manufacturer"], "Manufacturer 1")
         self.assertEqual(data[0]["model"], "Device Type 1")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rack_height_bulk_edit_set_zero(self):
+        """Test that rack height can be set to "0" in bulk_edit."""
+        self.add_permissions("dcim.change_devicetype")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "u_height": 0,
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+
+        response = self.client.post(url, data)
+        self.assertHttpStatus(response, 302)
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertEqual(instance.u_height, data["u_height"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rack_height_bulk_edit_invalid(self):
+        """Test that a rack height cannot be set to an invalid value in bulk_edit."""
+        self.add_permissions("dcim.change_devicetype")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "u_height": -1,  # Invalid rack height
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+
+        response = self.client.post(url, data)
+        self.assertHttpStatus(response, 200)
+        self.assertIn("failed validation", response.content.decode(response.charset))
 
 
 #
@@ -1100,7 +1135,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         DeviceRole.objects.create(name="Device Role 8")
 
         cls.form_data = {
-            "name": "Devie Role X",
+            "name": "Device Role X",
             "slug": "device-role-x",
             "color": "c0c0c0",
             "vm_role": False,
@@ -1268,7 +1303,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "platform": platforms[1].pk,
             "name": "Device X",
-            "serial": "123456",
+            "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "asset_tag": "ABCDEF",
             "site": sites[1].pk,
             "rack": racks[1].pk,
@@ -1301,7 +1336,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "device_role": deviceroles[1].pk,
             "tenant": None,
             "platform": platforms[1].pk,
-            "serial": "123456",
+            "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "status": statuses.get(slug="decommissioning").pk,
             "site": sites[1].pk,
             "rack": racks[1].pk,
@@ -1924,7 +1959,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "parent": None,
             "discovered": False,
             "part_id": "123456",
-            "serial": "123ABC",
+            "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX ABC",
             "asset_tag": "ABC123",
             "description": "An inventory item",
             "tags": [t.pk for t in tags],
@@ -1937,7 +1972,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "parent": None,
             "discovered": False,
             "part_id": "123456",
-            "serial": "123ABC",
+            "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX ABC",
             "description": "An inventory item",
             "tags": [t.pk for t in tags],
         }

@@ -8,9 +8,13 @@ In your existing installation of Nautobot with PostgreSQL, run the following com
 
 ```no-highlight
 (nautobot-postgres) $ nautobot-server dumpdata \
-    --natural-foreign --natural-primary \
-    --exclude contenttypes --exclude auth.permission --exclude extras.job \
-    --format json --indent 2 --traceback \
+    --natural-foreign \
+    --natural-primary \
+    --exclude contenttypes \
+    --exclude auth.permission \
+    --format json \
+    --indent 2 \
+    --traceback \
     > nautobot_dump.json
 ```
 
@@ -18,7 +22,24 @@ This will result in a file named `nautobot_dump.json`.
 
 ## Create the MySQL database
 
-Create the MySQL database for Nautobot, ensuring that it has the correct character set (`utf8mb4`) and collation (`utf8mb4_bin`) settings for case-sensitivity (MySQL will otherwise be case-insensitive by default, which may cause problems when importing your data from the case-sensitive PostgreSQL database dump). Refer to the instructions for [CentOS/RHEL](./centos.md) or [Ubuntu](./ubuntu.md) as necessary if you are unsure how to set up MySQL and create the Nautobot database.
+Create the MySQL database for Nautobot, ensuring that it is utilizing the default character set (`utf8mb4`) and default collation (`utf8mb4_0900_ai_ci`) settings for case-insensitivity. It is required that MySQL will be case-insensitive. Because these encodings are the defaults, if your MySQL installation has not been modified, there will be nothing for you to do other than make sure.
+
+In very rare cases, there may problems when importing your data from the case-sensitive PostgreSQL database dump that will need to be handled on a case-by-case basis. Please refer to the instructions for [CentOS/RHEL](./centos.md) or [Ubuntu](./ubuntu.md) as necessary if you are unsure how to set up MySQL and create the Nautobot database.
+
+### Confirming database encoding
+
+To confirm that your MySQL database has the correct encoding, you may start up a database shell using `nautobot-server dbshell` and run the following command:
+
+```no-highlight
+(nautobot-mysql) $ nautobot-server dbshell
+mysql> SELECT @@character_set_database, @@collation_database;
++--------------------------+----------------------+
+| @@character_set_database | @@collation_database |
++--------------------------+----------------------+
+| utf8mb4                  | utf8mb4_0900_ai_ci   |
++--------------------------+----------------------+
+1 row in set (0.00 sec)
+```
 
 ## Apply database migrations to the MySQL database
 
@@ -42,7 +63,7 @@ A side effect of the `nautobot-server migrate` command is that it will populate 
 >>>
 ```
 
-Press Control-D to exit the nbshell when you are finished.
+Press Control-D to exit the `nbshell` when you are finished.
 
 ## Import the database dump into MySQL
 

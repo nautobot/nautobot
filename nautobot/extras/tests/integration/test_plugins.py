@@ -11,16 +11,16 @@ from django.urls import reverse
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
-from nautobot.utilities.testing.integration import SplinterTestCase
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
-from dummy_plugin.models import DummyModel
+from example_plugin.models import ExampleModel
 
 
 @skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
 )
-class PluginWebhookTest(SplinterTestCase):
+class PluginWebhookTest(SeleniumTestCase):
     """
     This test case proves that plugins can use the webhook functions when making changes on a model.
 
@@ -37,10 +37,10 @@ class PluginWebhookTest(SplinterTestCase):
                 os.remove(os.path.join("/tmp", f))
 
         self.url = f"http://localhost:{self.server_thread.port}" + reverse(
-            "plugins-api:dummy_plugin-api:dummymodel_webhook"
+            "plugins-api:example_plugin-api:examplemodel_webhook"
         )
         self.webhook = Webhook.objects.create(
-            name="DummyModel",
+            name="ExampleModel",
             type_create=True,
             type_update=True,
             type_delete=True,
@@ -48,8 +48,8 @@ class PluginWebhookTest(SplinterTestCase):
             http_method=WebhookHttpMethodChoices.METHOD_GET,
             http_content_type="application/json",
         )
-        self.dummy_ct = ContentType.objects.get_for_model(DummyModel)
-        self.webhook.content_types.set([self.dummy_ct])
+        self.example_ct = ContentType.objects.get_for_model(ExampleModel)
+        self.webhook.content_types.set([self.example_ct])
 
     def update_headers(self, new_header):
         """
@@ -67,7 +67,7 @@ class PluginWebhookTest(SplinterTestCase):
         self.update_headers("test_plugin_webhook_create")
         # Make change to model
         with web_request_context(self.user):
-            DummyModel.objects.create(name="foo", number=100)
+            ExampleModel.objects.create(name="foo", number=100)
         self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create"))
@@ -78,7 +78,7 @@ class PluginWebhookTest(SplinterTestCase):
         """
         self.clear_worker()
         self.update_headers("test_plugin_webhook_update")
-        obj = DummyModel.objects.create(name="foo", number=100)
+        obj = ExampleModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
@@ -94,7 +94,7 @@ class PluginWebhookTest(SplinterTestCase):
         """
         self.clear_worker()
         self.update_headers(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
-        obj = DummyModel.objects.create(name="foo", number=100)
+        obj = ExampleModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
@@ -115,10 +115,62 @@ class PluginWebhookTest(SplinterTestCase):
 
         # Make change to model
         with web_request_context(self.user):
-            DummyModel.objects.create(name="bar", number=100)
+            ExampleModel.objects.create(name="bar", number=100)
 
         self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body")))
         with open(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"), "r") as f:
             self.assertEqual(json.loads(f.read()), {"message": "created"})
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"))
+
+
+class PluginDocumentationTest(SeleniumTestCase):
+    """
+    Integration tests for ensuring plugin provided docs are supported.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+    def tearDown(self):
+        self.logout()
+        super().tearDown()
+
+    def test_object_edit_help_provided(self):
+        """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_add")}')
+
+        self.assertTrue(self.browser.links.find_by_partial_href("example_plugin/docs/models/examplemodel.html"))
+
+    def test_object_edit_help_not_provided(self):
+        """The AnotherExampleModel object doesn't provide model documentation, this test ensures no help link is provided."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:anotherexamplemodel_add")}')
+
+        self.assertFalse(self.browser.links.find_by_partial_href("example_plugin/docs/models/anotherexamplemodel.html"))
+
+
+class PluginReturnUrlTestCase(SeleniumTestCase):
+    """
+    Integration tests for reversing plugin return urls.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+    def test_plugin_return_url(self):
+        """This test ensures that plugins return url for new objects is the list view."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_add")}')
+
+        form = self.browser.find_by_tag("form")
+
+        # Check that the Cancel button is a link to the examplemodel_list view.
+        element = form.first.links.find_by_text("Cancel").first
+        self.assertEqual(
+            element["href"], f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_list")}'
+        )

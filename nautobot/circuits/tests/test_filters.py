@@ -5,8 +5,9 @@ from nautobot.circuits.filters import (
     CircuitTerminationFilterSet,
     CircuitTypeFilterSet,
     ProviderFilterSet,
+    ProviderNetworkFilterSet,
 )
-from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -25,6 +26,12 @@ class ProviderTestCase(TestCase):
             Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003, account="3456"),
             Provider.objects.create(name="Provider 4", slug="provider-4", asn=65004, account="4567"),
             Provider.objects.create(name="Provider 5", slug="provider-5", asn=65005, account="5678"),
+            Provider.objects.create(
+                name="Provider 6 (long account)",
+                slug="provider-6",
+                asn=65006,
+                account="this-is-a-long-account-number-012345678901234567890123456789",
+            ),
         )
 
         regions = (
@@ -150,6 +157,13 @@ class CircuitTestCase(TestCase):
             Provider.objects.create(name="Provider 2", slug="provider-2"),
         )
 
+        provider_network = (
+            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[1]),
+        )
+        ProviderNetwork.objects.bulk_create(provider_network)
+
         circ_statuses = Status.objects.get_for_model(Circuit)
         circ_status_map = {s.slug: s for s in circ_statuses.all()}
 
@@ -213,6 +227,9 @@ class CircuitTestCase(TestCase):
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[2], site=sites[2], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[3], provider_network=provider_network[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[4], provider_network=provider_network[1], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[5], provider_network=provider_network[2], term_side="A")
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -236,6 +253,11 @@ class CircuitTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"provider": [provider.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_provider_network(self):
+        provider_network = ProviderNetwork.objects.all()[:2]
+        params = {"provider_network_id": [provider_network[0].pk, provider_network[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
         circuit_type = CircuitType.objects.first()
@@ -285,9 +307,9 @@ class CircuitTerminationTestCase(TestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1"),
-            Site.objects.create(name="Test Site 2", slug="test-site-2"),
-            Site.objects.create(name="Test Site 3", slug="test-site-3"),
+            Site.objects.create(name="Site 1", slug="site-1"),
+            Site.objects.create(name="Site 2", slug="site-2"),
+            Site.objects.create(name="Site 3", slug="site-3"),
         )
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
@@ -314,15 +336,30 @@ class CircuitTerminationTestCase(TestCase):
         interface1 = Interface.objects.create(device=device1, name="eth0")
         interface2 = Interface.objects.create(device=device2, name="eth0")
 
-        circuit_types = (CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1"),)
+        circuit_types = (CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1"),)
 
-        providers = (Provider.objects.create(name="Provider 1", slug="provider-1"),)
+        providers = (
+            Provider.objects.create(name="Provider 1", slug="provider-1"),
+            Provider.objects.create(name="Provider 2", slug="provider-2"),
+        )
+
+        provider_networks = (
+            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[1]),
+        )
+        ProviderNetwork.objects.bulk_create(provider_networks)
 
         circuits = (
-            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid="Test Circuit 1"),
-            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid="Test Circuit 2"),
-            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid="Test Circuit 3"),
+            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 1"),
+            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 2"),
+            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 3"),
+            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 4"),
+            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 5"),
+            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 6"),
         )
+
+        Circuit.objects.bulk_create(circuits)
 
         circuit_terminations = (
             CircuitTermination.objects.create(
@@ -373,6 +410,15 @@ class CircuitTerminationTestCase(TestCase):
                 upstream_speed=3000,
                 xconnect_id="PQR",
             ),
+            CircuitTermination.objects.create(
+                circuit=circuits[3], provider_network=provider_networks[0], term_side="A"
+            ),
+            CircuitTermination.objects.create(
+                circuit=circuits[4], provider_network=provider_networks[1], term_side="A"
+            ),
+            CircuitTermination.objects.create(
+                circuit=circuits[5], provider_network=provider_networks[2], term_side="A"
+            ),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -391,7 +437,7 @@ class CircuitTerminationTestCase(TestCase):
 
     def test_term_side(self):
         params = {"term_side": "A"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
 
     def test_port_speed(self):
         params = {"port_speed": ["1000", "2000"]}
@@ -410,6 +456,11 @@ class CircuitTerminationTestCase(TestCase):
         params = {"circuit_id": [circuits[0].pk, circuits[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
+    def test_provider_network(self):
+        provider_networks = ProviderNetwork.objects.all()[:2]
+        params = {"provider_network_id": [provider_networks[0].pk, provider_networks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
     def test_site(self):
         sites = Site.objects.all()[:2]
         params = {"site_id": [sites[0].pk, sites[1].pk]}
@@ -425,4 +476,41 @@ class CircuitTerminationTestCase(TestCase):
         params = {"connected": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"connected": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
+
+
+class ProviderNetworkTestCase(TestCase):
+    queryset = ProviderNetwork.objects.all()
+    filterset = ProviderNetworkFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+
+        providers = (
+            Provider(name="Provider 1", slug="provider-1"),
+            Provider(name="Provider 2", slug="provider-2"),
+            Provider(name="Provider 3", slug="provider-3"),
+        )
+        Provider.objects.bulk_create(providers)
+
+        provider_networks = (
+            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
+            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
+            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[2]),
+        )
+        ProviderNetwork.objects.bulk_create(provider_networks)
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Provider Network 1", "Provider Network 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_provider(self):
+        providers = Provider.objects.all()[:2]
+        params = {"provider_id": [providers[0].pk, providers[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"provider": [providers[0].slug, providers[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)

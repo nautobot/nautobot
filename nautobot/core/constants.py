@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
-from nautobot.circuits.filters import CircuitFilterSet, ProviderFilterSet
-from nautobot.circuits.models import Circuit, Provider
-from nautobot.circuits.tables import CircuitTable, ProviderTable
+from nautobot.circuits.filters import CircuitFilterSet, ProviderFilterSet, ProviderNetworkFilterSet
+from nautobot.circuits.models import Circuit, Provider, ProviderNetwork
+from nautobot.circuits.tables import CircuitTable, ProviderTable, ProviderNetworkTable
 from nautobot.dcim.filters import (
     CableFilterSet,
     DeviceFilterSet,
@@ -72,12 +72,19 @@ SEARCH_TYPES = OrderedDict(
         (
             "circuit",
             {
-                "queryset": Circuit.objects.prefetch_related(
-                    "type", "provider", "tenant", "terminations__site"
-                ).annotate_sites(),
+                "queryset": Circuit.objects.prefetch_related("type", "provider", "tenant", "terminations__site"),
                 "filterset": CircuitFilterSet,
                 "table": CircuitTable,
                 "url": "circuits:circuit_list",
+            },
+        ),
+        (
+            "providernetwork",
+            {
+                "queryset": ProviderNetwork.objects.prefetch_related("provider"),
+                "filterset": ProviderNetworkFilterSet,
+                "table": ProviderNetworkTable,
+                "url": "circuits:providernetwork_list",
             },
         ),
         # DCIM

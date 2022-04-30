@@ -14,7 +14,7 @@ from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, R
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import ObjectChange, StatusModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -22,7 +22,7 @@ from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
+from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -54,9 +54,9 @@ class RackGroup(MPTTModel, OrganizationalModel):
     campus. If a Site instead represents a single building, a RackGroup might represent a single room or floor.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None)
+    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     parent = TreeForeignKey(
         to="self",
@@ -100,12 +100,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
     def to_objectchange(self, action):
         # Remove MPTT-internal fields
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self, exclude=["level", "lft", "rght", "tree_id"]),
-        )
+        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
 
     def clean(self):
         super().clean()
@@ -170,8 +165,8 @@ class Rack(PrimaryModel, StatusModel):
     Each Rack is assigned to a Site and (optionally) a RackGroup.
     """
 
-    name = models.CharField(max_length=100)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
+    name = models.CharField(max_length=100, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     facility_id = models.CharField(
         max_length=50,
         blank=True,
@@ -203,7 +198,7 @@ class Rack(PrimaryModel, StatusModel):
         null=True,
         help_text="Functional role",
     )
-    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
+    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
         max_length=50,
         blank=True,

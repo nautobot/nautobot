@@ -84,10 +84,10 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
         """
 
         request = self.get_serializer_context()["request"]
-        if request.query_params.get("brief", False):
+        if request is not None and request.query_params.get("brief", False):
             return serializers.NestedVirtualMachineSerializer
 
-        elif "config_context" in request.query_params.get("exclude", []):
+        elif request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.VirtualMachineSerializer
 
         return serializers.VirtualMachineWithConfigContextSerializer
