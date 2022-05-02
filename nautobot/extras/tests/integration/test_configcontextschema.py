@@ -139,8 +139,8 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//tbody/tr")), 3
-        )  # 3 rows (config context, device, virtual machine)
+            len(self.browser.find_by_xpath("//tbody/tr")), 4
+        )  # 3 rows (config context, device, virtual machine) + 1 for theme modal
         for row in self.browser.find_by_xpath("//tbody/tr"):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
