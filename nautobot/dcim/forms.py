@@ -2850,6 +2850,18 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
         help_text="IEEE 802.1Q operational mode (for L2 interfaces)",
     )
 
+    def __init__(self, data=None, *args, **kwargs):
+        super().__init__(data, *args, **kwargs)
+
+        if data:
+            # Limit choices for parent, bridge, and LAG interfaces to the assigned device
+            device = data.get("device")
+            if device is not None:
+                params = {f"device__{self.fields['device'].to_field_name}": device}
+                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.filter(**params)
+                self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(**params)
+                self.fields["lag"].queryset = self.fields["lag"].queryset.filter(**params)
+
     class Meta:
         model = Interface
         fields = Interface.csv_headers
