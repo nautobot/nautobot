@@ -6,6 +6,7 @@ import logging
 import pkgutil
 import sys
 
+from cacheops import file_cache
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -26,6 +27,12 @@ from nautobot.extras.registry import registry
 
 
 logger = logging.getLogger(__name__)
+
+
+@file_cache.cached(timeout=60)
+def get_job_content_type():
+    """Return a cached instance of the `ContentType` for `extras.Job`."""
+    return ContentType.objects.get(app_label="extras", model="job")
 
 
 def is_taggable(obj):

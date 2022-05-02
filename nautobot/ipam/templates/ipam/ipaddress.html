@@ -138,5 +138,5 @@
                 {% render_table duplicate_ips_table 'inc/table.html' %}
             </div>
         {% endif %}
-        {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default noprint' %}
+        {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default' %}
 {% endblock content_full_width_page %}

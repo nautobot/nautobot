@@ -26,3 +26,5 @@ geckodriver.log
 uwsgi.ini
 jobs/*
 htmlcov/*
+/nautobot/project-static/docs/
+/examples/example_plugin/example_plugin/static/example_plugin/docs/

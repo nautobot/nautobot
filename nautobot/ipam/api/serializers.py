@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from django.contrib.contenttypes.models import ContentType
-from nautobot.third_party.drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 

@@ -3,7 +3,7 @@ from django.views.generic import View
 
 from nautobot.core.views import generic
 
-from example_plugin.models import ExampleModel
+from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
 
 
@@ -55,20 +55,20 @@ class ExampleModelBulkEditView(generic.BulkEditView):
 
 
 class ExampleModelBulkDeleteView(generic.BulkDeleteView):
-    """Delete multiple `ExampleModek` objects."""
+    """Delete multiple `ExampleModel` objects."""
 
     queryset = ExampleModel.objects.all()
     table = tables.ExampleModelTable
 
 
 class ExampleModelDeleteView(generic.ObjectDeleteView):
-    """Delete a single `Example` object."""
+    """Delete a single `ExampleModel` object."""
 
     queryset = ExampleModel.objects.all()
 
 
 class ExampleModelBulkImportView(generic.BulkImportView):
-    """Bulk CSV import of multiple `Example` objects."""
+    """Bulk CSV import of multiple `ExampleModel` objects."""
 
     queryset = ExampleModel.objects.all()
     model_form = forms.ExampleModelCSVForm
@@ -76,6 +76,49 @@ class ExampleModelBulkImportView(generic.BulkImportView):
 
 
 class ExampleModelView(generic.ObjectView):
-    """Detail view for a single `Example` object."""
+    """Detail view for a single `ExampleModel` object."""
 
     queryset = ExampleModel.objects.all()
+
+
+class AnotherExampleModelListView(generic.ObjectListView):
+    """List `AnotherExampleModel` objects."""
+
+    queryset = AnotherExampleModel.objects.all()
+    filterset = filters.AnotherExampleModelFilterSet
+    filterset_form = forms.AnotherExampleModelFilterForm
+    table = tables.AnotherExampleModelTable
+
+
+class AnotherExampleModelEditView(generic.ObjectEditView):
+    """Edit a single `AnotherExampleModel` object."""
+
+    queryset = AnotherExampleModel.objects.all()
+    model_form = forms.AnotherExampleModelForm
+
+
+class AnotherExampleModelBulkEditView(generic.BulkEditView):
+    """Edit multiple `AnotherExampleModel` objects."""
+
+    queryset = AnotherExampleModel.objects.all()
+    table = tables.AnotherExampleModelTable
+    form = forms.AnotherExampleModelBulkEditForm
+
+
+class AnotherExampleModelBulkDeleteView(generic.BulkDeleteView):
+    """Delete multiple `AnotherExampleModel` objects."""
+
+    queryset = AnotherExampleModel.objects.all()
+    table = tables.AnotherExampleModelTable
+
+
+class AnotherExampleModelDeleteView(generic.ObjectDeleteView):
+    """Delete a single `AnotherExampleModel` object."""
+
+    queryset = AnotherExampleModel.objects.all()
+
+
+class AnotherExampleModelView(generic.ObjectView):
+    """Detail view for a single `AnotherExampleModel` object."""
+
+    queryset = AnotherExampleModel.objects.all()

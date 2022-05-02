@@ -30,9 +30,20 @@ menu_items = (
         ),
     ),
     PluginMenuItem(
-        link="plugins:example_plugin:examplemodel_add",
+        link="plugins:example_plugin:anotherexamplemodel_list",
         link_text="Other Models",
-        permissions=["example_plugin.view_examplemodel"],
+        permissions=["example_plugin.view_anotherexamplemodel"],
+        buttons=(
+            PluginMenuButton(
+                link="plugins:example_plugin:anotherexamplemodel_add",
+                title="Add a new another example model",
+                icon_class="mdi mdi-plus-thick",
+                color=ButtonColorChoices.GREEN,
+                permissions=[
+                    "example_plugin.add_anotherexamplemodel",
+                ],
+            ),
+        ),
     ),
     NavMenuTab(
         name="Example Menu",

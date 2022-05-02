@@ -153,6 +153,9 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True):
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
     docker_compose(context, command)
 
+    # Build the docs so they are available.
+    build_nautobot_docs(context)
+
 
 @task(
     help={
@@ -393,6 +396,31 @@ def loaddata(context, file_name):
     run_command(context, command)
 
 
+@task()
+def build_and_check_docs(context):
+    """Build docs for use within Nautobot."""
+    build_nautobot_docs(context)
+    build_example_plugin_docs(context)
+
+
+def build_nautobot_docs(context):
+    "Build Nautobot docs."
+    command = "mkdocs build --no-directory-urls --strict"
+    run_command(context, command)
+
+
+def build_example_plugin_docs(context):
+    """Build Example Plugin docs."""
+    command = "mkdocs build --no-directory-urls --strict"
+    if is_truthy(context.nautobot.local):
+        local_command = f"cd examples/example_plugin && {command}"
+        print(f'Running command "{local_command}"')
+        context.run(local_command, pty=True)
+    else:
+        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_compose(context, docker_command, pty=True)
+
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
@@ -488,6 +516,8 @@ def unittest(
     append=False,
 ):
     """Run Nautobot unit tests."""
+    # First build the docs so they are available.
+    build_and_check_docs(context)
 
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
@@ -576,5 +606,6 @@ def tests(context, lint_only=False, keepdb=False):
     markdownlint(context)
     check_migrations(context)
     check_schema(context)
+    build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
