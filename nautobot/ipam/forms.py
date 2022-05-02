@@ -685,7 +685,7 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
 
         # Initialize primary_for_parent if IP address is already assigned
         if self.instance.present_in_database and self.instance.assigned_object:
-            parent = self.instance.assigned_object.parent_object
+            parent = self.instance.assigned_object.parent
             if (
                 self.instance.address.version == 4
                 and parent.primary_ip4_id == self.instance.pk
@@ -736,13 +736,13 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
 
         # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
         if interface and self.cleaned_data["primary_for_parent"]:
-            setattr(interface.parent_object, primary_ip_attr, ipaddress)
-            interface.parent_object.save()
+            setattr(interface.parent, primary_ip_attr, ipaddress)
+            interface.parent.save()
 
         # Or clear it as the primary, saving the `original_assigned_object.parent` if
         # `_primary_ip_unset_by_form` was set in `clean()`
         elif primary_ip_unset_by_form:
-            parent = ipaddress._original_assigned_object.parent_object
+            parent = ipaddress._original_assigned_object.parent
             setattr(parent, primary_ip_attr, None)
             parent.save()
 

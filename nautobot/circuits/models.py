@@ -346,7 +346,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         )
 
     @property
-    def parent_object(self):
+    def parent(self):
         return self.circuit
 
     def get_peer_termination(self):

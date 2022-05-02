@@ -95,7 +95,7 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
         )
 
     @property
-    def parent_object(self):
+    def parent(self):
         return getattr(self, "device", None)
 
 
@@ -145,8 +145,8 @@ class CableTermination(models.Model):
         return self._cable_peer
 
     @property
-    def parent_object(self):
-        raise NotImplementedError("CableTermination models must implement parent_object()")
+    def parent(self):
+        raise NotImplementedError("CableTermination models must implement parent()")
 
 
 class PathEndpoint(models.Model):
@@ -499,7 +499,7 @@ class BaseInterface(RelationshipModel):
         verbose_name="MTU",
     )
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
-    parent = models.ForeignKey(
+    parent_interface = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
         related_name="child_interfaces",
@@ -686,7 +686,7 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
 
         # Validate untagged VLAN
         if self.untagged_vlan and self.untagged_vlan.site not in [
-            self.parent_object.site,
+            self.parent.site,
             None,
         ]:
             raise ValidationError(

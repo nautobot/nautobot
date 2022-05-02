@@ -1,6 +1,6 @@
 CABLETERMINATION = """
 {% if value %}
-    <a href="{{ value.parent_object.get_absolute_url }}">{{ value.parent_object }}</a>
+    <a href="{{ value.parent.get_absolute_url }}">{{ value.parent }}</a>
     <i class="mdi mdi-chevron-right"></i>
     <a href="{{ value.get_absolute_url }}">{{ value }}</a>
 {% else %}
@@ -94,7 +94,7 @@ POWERFEED_CABLE = """
 """
 
 POWERFEED_CABLETERMINATION = """
-<a href="{{ value.parent_object.get_absolute_url }}">{{ value.parent_object }}</a>
+<a href="{{ value.parent.get_absolute_url }}">{{ value.parent }}</a>
 <i class="mdi mdi-chevron-right"></i>
 <a href="{{ value.get_absolute_url }}">{{ value }}</a>
 """

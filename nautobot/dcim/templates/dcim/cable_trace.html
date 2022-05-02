@@ -102,12 +102,12 @@
                             <tr{% if cablepath.pk == path.pk %} class="info"{% endif %}>
                                 <td>
                                     <a href="?cablepath_id={{ cablepath.pk }}">
-                                        {{ cablepath.origin.parent_object }} / {{ cablepath.origin }}
+                                        {{ cablepath.origin.parent }} / {{ cablepath.origin }}
                                     </a>
                                 </td>
                                 <td>
                                     {% if cablepath.destination %}
-                                        {{ cablepath.destination }} ({{ cablepath.destination.parent_object }})
+                                        {{ cablepath.destination }} ({{ cablepath.destination.parent }})
                                     {% else %}
                                         <span class="text-muted">Incomplete</span>
                                     {% endif %}

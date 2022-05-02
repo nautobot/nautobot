@@ -201,7 +201,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
         super().save(*args, **kwargs)
 
     @property
-    def parent_object(self):
+    def parent(self):
         return self.power_panel
 
     def get_type_class(self):
