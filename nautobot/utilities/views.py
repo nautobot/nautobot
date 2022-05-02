@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
@@ -124,7 +125,8 @@ class GetReturnURLMixin:
         if hasattr(self, "queryset"):
             model_opts = self.queryset.model._meta
             try:
-                return reverse(f"{model_opts.app_label}:{model_opts.model_name}_list")
+                prefix = "plugins:" if model_opts.app_label in settings.PLUGINS else ""
+                return reverse(f"{prefix}{model_opts.app_label}:{model_opts.model_name}_list")
             except NoReverseMatch:
                 pass
 

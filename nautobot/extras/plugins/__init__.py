@@ -77,9 +77,10 @@ class PluginConfig(NautobotConfig):
         "*": {"ops": "all"},
     }
 
-    # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure"
+    # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure", "plugins:myplugin:docs"
     home_view_name = None
     config_view_name = None
+    docs_view_name = None
 
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.

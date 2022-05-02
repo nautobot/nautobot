@@ -1,4 +1,4 @@
-from nautobot.third_party.drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from nautobot.core.api import (

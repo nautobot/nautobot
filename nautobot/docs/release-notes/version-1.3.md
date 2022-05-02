@@ -140,9 +140,37 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.3 (2022-05-02)
+
+### Added
+
+- [#1481](https://github.com/nautobot/nautobot/issues/1481) - Pre-Generate Docs, Add Support for Plugin-Provided Docs
+- [#1617](https://github.com/nautobot/nautobot/pull/1617) - Added `run_job_for_testing` helper method for testing Jobs in plugins, internally.
+
+### Changed
+
+- [#1481](https://github.com/nautobot/nautobot/issues/1481) - Docs link in footer now opens link to bundled documentation instead of Read the Docs.
+- [#1680](https://github.com/nautobot/nautobot/pull/1680) - Bump netutils dependency to 1.1.0.
+- [#1700](https://github.com/nautobot/nautobot/pull/1700) - Revert vendoring `drf-spectacular`.
+
+### Fixed
+
+- [#473](https://github.com/nautobot/nautobot/issues/473) - Fix `get_return_url` for plugin reverse URLs.
+- [#1430](https://github.com/nautobot/nautobot/issues/1430) - Fix not being able to print Job results, related IPs.
+- [#1503](https://github.com/nautobot/nautobot/issues/1503) - SSO users can no longer interact with or see the change password form.
+- [#1515](https://github.com/nautobot/nautobot/issues/1515) - Further fixes for slow/unresponsive jobs results display.
+- [#1538](https://github.com/nautobot/nautobot/issues/1538) - Fix incorrect page title alignment on the "Device Type Import" page.
+- [#1678](https://github.com/nautobot/nautobot/issues/1678) - Custom fields with 'json' type no longer raise TypeError when filtering on an object list URL
+- [#1679](https://github.com/nautobot/nautobot/issues/1679) - Fix a data migration error when upgrading to 1.3.x with pre-existing JobResults that reference Jobs with names exceeding 100 characters in length.
+- [#1685](https://github.com/nautobot/nautobot/issues/1685) - Fix Hadolint issue of `docker/Dockerfile`.
+- [#1692](https://github.com/nautobot/nautobot/issues/1692) - Fix duplicate tags in search list results.
+- [#1697](https://github.com/nautobot/nautobot/pull/1697) - Fix docs incorrectly stating Celerey Redis URLs defaulting from CACHES.
+- [#1701](https://github.com/nautobot/nautobot/pull/1701) - Fix static file serving of drf-spectacular-sidecar assets when using alternative `STATICFILES_STORAGE` settings.
+- [#1705](https://github.com/nautobot/nautobot/pull/1705) - Fix `NestedVMInterfaceSerializer` referencing the wrong model.
+
 ## v1.3.2 (2022-04-22)
 
-## Added
+### Added
 
 - [#1219](https://github.com/nautobot/nautobot/pull/1219) - Add ARM64 support (alpha).
 - [#1426](https://github.com/nautobot/nautobot/issues/1426) - Added plugin development documentation around using ObjectListView.

@@ -37,7 +37,7 @@ class NautobotJinjaFilterTest(TestCase):
             "fgcolor",
             "divide",
             "percentage",
-            "get_docs",
+            "get_docs_url",
             "has_perms",
             "has_one_or_more_perms",
             "split",

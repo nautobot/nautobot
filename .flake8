@@ -8,5 +8,3 @@ ignore =
     W503,
     # W504 line break after binary operator (per Black, this is actually correct in some cases)
     W504
-
-exclude = nautobot/third_party

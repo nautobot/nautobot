@@ -2,7 +2,6 @@ import time
 import uuid
 
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand, CommandError
 from django.test.client import RequestFactory
 from django.utils import timezone
@@ -10,6 +9,7 @@ from django.utils import timezone
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import JobLogEntry, JobResult
 from nautobot.extras.jobs import get_job, run_job
+from nautobot.extras.utils import get_job_content_type
 from nautobot.utilities.utils import copy_safe_request
 
 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
             request.id = uuid.uuid4()
             request.user = user
 
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        job_content_type = get_job_content_type()
 
         # Run the job and create a new JobResult
         self.stdout.write("[{:%H:%M:%S}] Running {}...".format(timezone.now(), job_class.class_path))

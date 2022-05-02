@@ -6,12 +6,23 @@ from nautobot.core.fields import slugify_dots_to_dashes
 def _create_job_model(job_model_class, class_path):
     try:
         source, module_name, job_class_name = class_path.split("/")
+        # At this point in the migrations, source = "git.RepositoryName" not just "git", so not JOB_MAX_SOURCE_LENGTH
+        if len(source) > 110:
+            print(f'Skipping Job model creation from "{class_path}" as the source is too long')
+            return None
+        if len(module_name) > 100:
+            print(f'Skipping Job model creation from "{class_path}" as the module_name is too long')
+            return None
+        if len(job_class_name) > 100:
+            print(f'Skipping Job model creation from "{class_path}" as the job_class_name is too long')
+            return None
+
         job_model, created = job_model_class.objects.get_or_create(
             source=source,
             module_name=module_name,
             job_class_name=job_class_name,
             # AutoSlugField.slugify_function isn't applied during migrations, need to manually generate slug
-            slug=slugify_dots_to_dashes(f"{source}-{module_name}-{job_class_name}"),
+            slug=slugify_dots_to_dashes(f"{source}-{module_name}-{job_class_name}")[:320],
             defaults={
                 "grouping": module_name,
                 "name": job_class_name,
