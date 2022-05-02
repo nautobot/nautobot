@@ -13,12 +13,23 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="vminterface",
-            name="parent",
+            name="parent_interface",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="child_interfaces",
+                to="virtualization.vminterface",
+            ),
+        ),
+        migrations.AddField(
+            model_name="vminterface",
+            name="bridge",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="bridge_interfaces",
                 to="virtualization.vminterface",
             ),
         ),

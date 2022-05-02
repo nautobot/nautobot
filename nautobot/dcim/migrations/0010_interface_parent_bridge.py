@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="interface",
-            name="parent",
+            name="parent_interface",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
