@@ -25,7 +25,7 @@
                      <td>Parent</td>
                      <td>
                          {% if object.parent %}
-                             <a href="{{ object.parent.get_absolute_url }}">{{ object.parent }}</a>
+                             <a href="{{ object.parent_interface.get_absolute_url }}">{{ object.parent_interface }}</a>
                          {% else %}
                              <span class="text-muted">None</span>
                          {% endif %}

@@ -325,7 +325,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 6",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "parent": interfaces[1].pk,
+                "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },

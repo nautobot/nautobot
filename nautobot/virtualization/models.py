@@ -422,7 +422,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
     csv_headers = [
         "virtual_machine",
         "name",
-        "parent",
+        "parent_interface",
         "bridge",
         "enabled",
         "mac_address",
@@ -447,7 +447,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.virtual_machine.name,
             self.name,
             self.enabled,
-            self.parent.name if self.parent else None,
+            self.parent_interface.name if self.parent_interface else None,
             self.mac_address,
             self.mtu,
             self.description,
@@ -460,15 +460,15 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         # Parent validation
 
         # An interface cannot be its own parent
-        if self.pk and self.parent_id == self.pk:
-            raise ValidationError({"parent": "An interface cannot be its own parent."})
+        if self.pk and self.parent_interface_id == self.pk:
+            raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
 
         # An interface's parent must belong to the same virtual machine
-        if self.parent and self.parent.virtual_machine != self.virtual_machine:
+        if self.parent_interface and self.parent_interface.virtual_machine != self.virtual_machine:
             raise ValidationError(
                 {
-                    "parent": f"The selected parent interface ({self.parent}) belongs to a different virtual machine "
-                    f"({self.parent.virtual_machine})."
+                    "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different virtual machine "
+                    f"({self.parent_interface.virtual_machine})."
                 }
             )
 

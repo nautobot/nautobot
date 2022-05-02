@@ -94,7 +94,9 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
 
 
 class VMInterfaceViewSet(ModelViewSet):
-    queryset = VMInterface.objects.prefetch_related("virtual_machine", "parent", "bridge", "tags", "tagged_vlans")
+    queryset = VMInterface.objects.prefetch_related(
+        "virtual_machine", "parent_interface", "bridge", "tags", "tagged_vlans"
+    )
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
     brief_prefetch_fields = ["virtual_machine"]

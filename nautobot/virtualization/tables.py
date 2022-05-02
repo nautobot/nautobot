@@ -211,7 +211,7 @@ class VMInterfaceTable(BaseInterfaceTable):
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):
-    parent = tables.Column(linkify=True)
+    parent_interface = tables.Column(linkify=True)
     bridge = tables.Column(linkify=True)
     actions = ButtonsColumn(
         model=VMInterface,
@@ -225,7 +225,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "pk",
             "name",
             "enabled",
-            "parent",
+            "parent_interface",
             "bridge",
             "mac_address",
             "mtu",

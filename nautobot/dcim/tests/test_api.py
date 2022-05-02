@@ -1487,7 +1487,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
                 "name": "Interface 6",
                 "type": "virtual",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "parent": interfaces[1].pk,
+                "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },

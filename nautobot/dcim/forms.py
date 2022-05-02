@@ -2508,7 +2508,7 @@ class InterfaceFilterForm(DeviceComponentFilterForm):
 
 
 class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Parent interface",
@@ -2554,7 +2554,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "label",
             "type",
             "enabled",
-            "parent",
+            "parent_interface",
             "bridge",
             "lag",
             "mac_address",
@@ -2587,12 +2587,12 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             device = self.instance.device
 
         # Restrict parent/bridge/LAG interface assignment by device
-        self.fields["parent"].widget.add_query_param("device_id", device.pk)
+        self.fields["parent_interface"].widget.add_query_param("device_id", device.pk)
         self.fields["bridge"].widget.add_query_param("device_id", device.pk)
         self.fields["lag"].widget.add_query_param("device_id", device.pk)
 
         if device.virtual_chassis and device.virtual_chassis.master:
-            self.fields["parent"].widget.add_query_param("device_id", device.virtual_chassis.master.pk)
+            self.fields["parent_interface"].widget.add_query_param("device_id", device.virtual_chassis.master.pk)
             self.fields["bridge"].widget.add_query_param("device_id", device.virtual_chassis.master.pk)
             self.fields["lag"].widget.add_query_param("device_id", device.virtual_chassis.master.pk)
 
@@ -2671,7 +2671,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "label_pattern",
         "type",
         "enabled",
-        "parent",
+        "parent_interface",
         "bridge",
         "lag",
         "mtu",
@@ -2713,7 +2713,7 @@ class InterfaceBulkCreateForm(
 
 class InterfaceBulkEditForm(
     form_from_model(
-        Interface, ["label", "type", "parent", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
+        Interface, ["label", "type", "parent_interface", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
     ),
     BootstrapMixin,
     AddRemoveTagsForm,
@@ -2765,7 +2765,7 @@ class InterfaceBulkEditForm(
     class Meta:
         nullable_fields = [
             "label",
-            "parent",
+            "parent_interface",
             "bridge",
             "lag",
             "mac_address",
@@ -2784,7 +2784,7 @@ class InterfaceBulkEditForm(
             device = Device.objects.filter(pk=self.initial["device"]).first()
 
             # Restrict parent/bridge/LAG interface assignment by device
-            self.fields["parent"].widget.add_query_param("device_id", device.pk)
+            self.fields["parent_interface"].widget.add_query_param("device_id", device.pk)
             self.fields["bridge"].widget.add_query_param("device_id", device.pk)
             self.fields["lag"].widget.add_query_param("device_id", device.pk)
 
@@ -2810,8 +2810,8 @@ class InterfaceBulkEditForm(
                     self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
                     self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
-            self.fields["parent"].choices = ()
-            self.fields["parent"].widget.attrs["disabled"] = True
+            self.fields["parent_interface"].choices = ()
+            self.fields["parent_interface"].widget.attrs["disabled"] = True
             self.fields["bridge"].choices = ()
             self.fields["bridge"].widget.attrs["disabled"] = True
             self.fields["lag"].choices = ()
@@ -2831,7 +2831,7 @@ class InterfaceBulkEditForm(
 
 class InterfaceCSVForm(CustomFieldModelCSVForm):
     device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    parent = CSVModelChoiceField(
+    parent_interface = CSVModelChoiceField(
         queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
     )
     bridge = CSVModelChoiceField(

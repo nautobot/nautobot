@@ -227,8 +227,8 @@ class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         to_field_name="name",
         label="Virtual machine",
     )
-    parent_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="parent",
+    parent_interface_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="parent_interface",
         queryset=VMInterface.objects.all(),
         label="Parent interface (ID)",
     )

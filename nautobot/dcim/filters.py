@@ -882,8 +882,8 @@ class InterfaceFilterSet(
         method="filter_kind",
         label="Kind of interface",
     )
-    parent_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="parent",
+    parent_interface_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="parent_interface",
         queryset=Interface.objects.all(),
         label="Parent interface (ID)",
     )

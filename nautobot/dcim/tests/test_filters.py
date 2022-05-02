@@ -2546,25 +2546,25 @@ class InterfaceTestCase(TestCase):
             Interface(
                 device=parent_interface.device,
                 name="Child 1",
-                parent=parent_interface,
+                parent_interface=parent_interface,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
             ),
             Interface(
                 device=parent_interface.device,
                 name="Child 2",
-                parent=parent_interface,
+                parent_interface=parent_interface,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
             ),
             Interface(
                 device=parent_interface.device,
                 name="Child 3",
-                parent=parent_interface,
+                parent_interface=parent_interface,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
             ),
         )
         Interface.objects.bulk_create(child_interfaces)
 
-        params = {"parent_id": [parent_interface.pk]}
+        params = {"parent_interface_id": [parent_interface.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_bridge(self):

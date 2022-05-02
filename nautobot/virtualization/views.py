@@ -395,7 +395,7 @@ class VMInterfaceView(generic.ObjectView):
         )
 
         # Get child interfaces
-        child_interfaces = VMInterface.objects.restrict(request.user, "view").filter(parent=instance)
+        child_interfaces = VMInterface.objects.restrict(request.user, "view").filter(parent_interface=instance)
         child_interfaces_tables = tables.VMInterfaceTable(child_interfaces, orderable=False)
         child_interfaces_tables.columns.hide("virtual_machine")
 
