@@ -147,19 +147,27 @@ $ invoke --list
 Available tasks:
 
   black               Check Python code style with Black.
-  build               Build all docker images.
-  cli                 Launch a bash shell inside the running Nautobot container.
+  build               Build Nautobot docker image.
+  buildx              Build Nautobot docker image using the experimental buildx docker functionality (multi-arch
+                      capablility).
+  check-migrations    Check for missing migrations.
+  check-schema        Render the REST API schema and check for problems.
+  cli                 Launch a bash shell inside the running Nautobot (or other) Docker container.
   createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
-  dumpdata            Dump database data into file, only for development environment use.
   debug               Start Nautobot and its dependencies in debug mode.
   destroy             Destroy all containers and volumes.
+  docker-push         Tags and pushes docker images to the appropriate repos, intended for release use only.
+  dumpdata            Dump data from database to db_output file.
   flake8              Check for PEP8 compliance and other style issues.
-  loaddata            Load data from file into database, only for development environment use.
+  hadolint            Check Dockerfile for hadolint compliance and other style issues.
+  integration-test    Run Nautobot integration tests.
+  loaddata            Load data from file.
   makemigrations      Perform makemigrations operation in Django.
+  markdownlint        Lint Markdown files.
   migrate             Perform migrate operation in Django.
   nbshell             Launch an interactive nbshell session.
   post-upgrade        Performs Nautobot common post-upgrade operations using a single entrypoint.
-  restart             Gracefully restart all containers.
+  restart             Gracefully restart containers.
   start               Start Nautobot and its dependencies in detached mode.
   stop                Stop Nautobot and its dependencies.
   tests               Run all tests and linters.
@@ -179,8 +187,9 @@ A development environment can be easily started up from the root of the project 
 
 Additional useful commands for the development environment:
 
-* `invoke start` - Starts all Docker containers to run in the background with debug disabled
-* `invoke stop` - Stops all containers created by `invoke start`
+* `invoke start [-s servicename]` - Starts all Docker containers (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
@@ -558,6 +567,14 @@ The following environment variables can be provided when running tests to custom
 * `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
 * `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
 
+### Verifying the REST API Schema
+
+If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "1.2", "1.3")
+
+| Docker Compose Workflow | Virtual Environment Workflow                                                               |
+|-------------------------|--------------------------------------------------------------------------------------------|
+| `invoke check-schema`   | `nautobot-server spectacular --api-version 1.2 --validate --fail-on-warn --file /dev/null` |
+
 ### Verifying Code Style
 
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). You should run both of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
@@ -568,6 +585,12 @@ To enforce best practices around consistent [coding style](style-guide.md), Naut
 | `invoke black`          | `black`                      |
 
 ### Handling Migrations
+
+If you're unsure whether a database schema migration is needed based on your changes, you can run the following command:
+
+| Docker Compose Workflow   | Virtual Environment Workflow                                                                       |
+|---------------------------|----------------------------------------------------------------------------------------------------|
+| `invoke check-migrations` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check` |
 
 If your branch modifies a Django model (and as a result requires a database schema modification), please be sure to provide a meaningful name to the migration before pushing.
 
@@ -598,6 +621,14 @@ Once the `mkdocs` command has been installed, you can preview the documentation
 using `mkdocs serve`,  which should start a web server at `http://localhost:8001`.
 
 Documentation is written in Markdown. If you need to add additional pages or sections to the documentation, you can add them to `mkdocs.yml` at the root of the repository.
+
+### Verifying Documentation
+
+Nautobot uses [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint-cli) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
+
+| Docker Compose Workflow | Virtual Environment Workflow                                                               |
+|-------------------------|--------------------------------------------------------------------------------------------|
+| `invoke markdownlint`   | `markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md` |
 
 ## Submitting Pull Requests
 

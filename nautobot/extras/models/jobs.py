@@ -29,11 +29,15 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_MAX_GROUPING_LENGTH,
+    JOB_MAX_NAME_LENGTH,
+    JOB_MAX_SLUG_LENGTH,
+    JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
-from nautobot.extras.utils import extras_features, FeatureQuery, jobs_in_directory
+from nautobot.extras.utils import get_job_content_type, extras_features, FeatureQuery, jobs_in_directory
 
 from .customfields import CustomFieldModel
 
@@ -64,7 +68,7 @@ class Job(PrimaryModel):
 
     # Information used to locate the Job source code
     source = models.CharField(
-        max_length=16,
+        max_length=JOB_MAX_SOURCE_LENGTH,
         choices=JobSourceChoices,
         editable=False,
         db_index=True,
@@ -81,20 +85,20 @@ class Job(PrimaryModel):
         help_text="Git repository that provides this job",
     )
     module_name = models.CharField(
-        max_length=100,
+        max_length=JOB_MAX_NAME_LENGTH,
         editable=False,
         db_index=True,
         help_text="Dotted name of the Python module providing this job",
     )
     job_class_name = models.CharField(
-        max_length=100,
+        max_length=JOB_MAX_NAME_LENGTH,
         editable=False,
         db_index=True,
         help_text="Name of the Python class providing this job",
     )
 
     slug = AutoSlugField(
-        max_length=320,
+        max_length=JOB_MAX_SLUG_LENGTH,
         populate_from=["class_path"],
         slugify_function=slugify_dots_to_dashes,
     )
@@ -102,9 +106,15 @@ class Job(PrimaryModel):
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     grouping = models.CharField(
-        max_length=255, help_text="Human-readable grouping that this job belongs to", db_index=True
+        max_length=JOB_MAX_GROUPING_LENGTH,
+        help_text="Human-readable grouping that this job belongs to",
+        db_index=True,
     )
-    name = models.CharField(max_length=100, help_text="Human-readable name of this job", db_index=True)
+    name = models.CharField(
+        max_length=JOB_MAX_NAME_LENGTH,
+        help_text="Human-readable name of this job",
+        db_index=True,
+    )
     description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
     # Control flags
@@ -303,14 +313,18 @@ class Job(PrimaryModel):
             raise ValidationError('A Git repository may only be specified when the source is "git"')
 
         # Protect against invalid input when auto-creating Job records
-        if len(self.module_name) > 100:
-            raise ValidationError("Module name may not exceed 100 characters in length")
-        if len(self.job_class_name) > 100:
-            raise ValidationError("Job class name may not exceed 100 characters in length")
-        if len(self.grouping) > 255:
-            raise ValidationError("Grouping may not exceed 255 characters in length")
-        if len(self.name) > 100:
-            raise ValidationError("Name may not exceed 100 characters in length")
+        if len(self.source) > JOB_MAX_SOURCE_LENGTH:
+            raise ValidationError(f"Source may not exceed {JOB_MAX_SOURCE_LENGTH} characters in length")
+        if len(self.module_name) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Module name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
+            raise ValidationError("Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+        if len(self.name) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.slug) > JOB_MAX_SLUG_LENGTH:
+            raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
 
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})
@@ -438,10 +452,13 @@ class JobResult(BaseModel, CustomFieldModel):
         instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
         but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
         to plugin model instances.
+
+        This method is potentially rather slow as get_job() may need to actually load the Job class from disk;
+        consider carefully whether you actually need to use it.
         """
         from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
 
-        if self.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+        if self.obj_type == get_job_content_type():
             # Related object is an extras.Job subclass, our `name` matches its `class_path`
             return get_job(self.name)
 
@@ -467,6 +484,8 @@ class JobResult(BaseModel, CustomFieldModel):
     def related_name(self):
         """
         Similar to self.name, but if there's an appropriate `related_object`, use its name instead.
+
+        Since this calls related_object, the same potential performance concerns exist. Use with caution.
         """
         related_object = self.related_object
         if not related_object:
@@ -474,6 +493,27 @@ class JobResult(BaseModel, CustomFieldModel):
         if hasattr(related_object, "name"):
             return related_object.name
         return str(related_object)
+
+    @property
+    def linked_record(self):
+        """
+        A newer alternative to self.related_object that looks up an extras.models.Job instead of an extras.jobs.Job.
+        """
+        if self.job_model is not None:
+            return self.job_model
+        model_class = self.obj_type.model_class()
+        if model_class is not None:
+            if hasattr(model_class, "name"):
+                try:
+                    return model_class.objects.get(name=self.name)
+                except model_class.DoesNotExist:
+                    pass
+            if hasattr(model_class, "class_path"):
+                try:
+                    return model_class.objects.get(class_path=self.name)
+                except model_class.DoesNotExist:
+                    pass
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})

@@ -177,6 +177,7 @@ class ImportForm(BootstrapMixin, forms.Form):
     data = forms.CharField(
         widget=forms.Textarea,
         help_text="Enter object data in JSON or YAML format. Note: Only a single object/document is supported.",
+        label="",
     )
     format = forms.ChoiceField(choices=(("json", "JSON"), ("yaml", "YAML")), initial="yaml")
 

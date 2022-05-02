@@ -132,9 +132,10 @@ def run_command(context, command, **kwargs):
     help={
         "force_rm": "Always remove intermediate containers.",
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
     }
 )
-def build(context, force_rm=False, cache=True):
+def build(context, force_rm=False, cache=True, poetry_parallel=True):
     """Build Nautobot docker image."""
     command = (
         "build"
@@ -146,9 +147,14 @@ def build(context, force_rm=False, cache=True):
         command += " --no-cache"
     if force_rm:
         command += " --force-rm"
+    if poetry_parallel:
+        command += " --build-arg POETRY_PARALLEL=true"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
     docker_compose(context, command)
+
+    # Build the docs so they are available.
+    build_nautobot_docs(context)
 
 
 @task(
@@ -158,6 +164,7 @@ def build(context, force_rm=False, cache=True):
         "platforms": "Comma-separated list of strings for which to build. (Default: linux/amd64)",
         "tag": "Tags to be applied to the built image. (Default: networktocode/nautobot-dev:local)",
         "target": "Build target from the Dockerfile. (Default: dev)",
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: False)",
     }
 )
 def buildx(
@@ -167,6 +174,7 @@ def buildx(
     platforms="linux/amd64",
     tag="networktocode/nautobot-dev-py3.7:local",
     target="dev",
+    poetry_parallel=False,
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
     print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
@@ -183,6 +191,8 @@ def buildx(
             f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver}"
             f" --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
         )
+    if poetry_parallel:
+        command += " --build-arg POETRY_PARALLEL=true"
 
     context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
@@ -316,10 +326,10 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task(help={"container": "Name of the container to shell into"})
-def cli(context, container="nautobot"):
-    """Launch a bash shell inside the running Nautobot container."""
-    docker_compose(context, f"exec {container} bash", pty=True)
+@task(help={"service": "Name of the service to shell into"})
+def cli(context, service="nautobot"):
+    """Launch a bash shell inside the running Nautobot (or other) Docker container."""
+    docker_compose(context, f"exec {service} bash", pty=True)
 
 
 @task(
@@ -386,6 +396,31 @@ def loaddata(context, file_name):
     run_command(context, command)
 
 
+@task()
+def build_and_check_docs(context):
+    """Build docs for use within Nautobot."""
+    build_nautobot_docs(context)
+    build_example_plugin_docs(context)
+
+
+def build_nautobot_docs(context):
+    "Build Nautobot docs."
+    command = "mkdocs build --no-directory-urls --strict"
+    run_command(context, command)
+
+
+def build_example_plugin_docs(context):
+    """Build Example Plugin docs."""
+    command = "mkdocs build --no-directory-urls --strict"
+    if is_truthy(context.nautobot.local):
+        local_command = f"cd examples/example_plugin && {command}"
+        print(f'Running command "{local_command}"')
+        context.run(local_command, pty=True)
+    else:
+        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_compose(context, docker_command, pty=True)
+
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
@@ -441,6 +476,7 @@ def check_migrations(context):
     },
 )
 def check_schema(context, api_version=None):
+    """Render the REST API schema and check for problems."""
     if api_version is not None:
         api_versions = [api_version]
     else:
@@ -480,6 +516,8 @@ def unittest(
     append=False,
 ):
     """Run Nautobot unit tests."""
+    # First build the docs so they are available.
+    build_and_check_docs(context)
 
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
@@ -568,5 +606,6 @@ def tests(context, lint_only=False, keepdb=False):
     markdownlint(context)
     check_migrations(context)
     check_schema(context)
+    build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)

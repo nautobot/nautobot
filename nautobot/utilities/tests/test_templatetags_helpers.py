@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.templatetags.static import static
 from django.conf import settings
 from unittest import skipIf
 
@@ -17,7 +18,7 @@ from nautobot.utilities.templatetags.helpers import (
     fgcolor,
     divide,
     percentage,
-    get_docs,
+    get_docs_url,
     has_perms,
     has_one_or_more_perms,
     split,
@@ -27,7 +28,7 @@ from nautobot.utilities.templatetags.helpers import (
 )
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
-from example_plugin.models import ExampleModel
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 @skipIf(
@@ -110,9 +111,16 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(percentage(2, 10), 20)
         self.assertEqual(percentage(10, 3), 333)
 
-    def test_get_docs(self):
-        self.assertTrue(callable(get_docs))
-        # TODO add unit tests for get_docs
+    def test_get_docs_url(self):
+        self.assertTrue(callable(get_docs_url))
+        status = Status.objects.get_for_model(Site).first()
+        site = Site.objects.create(name="test", slug="test", status=status)
+        self.assertEqual(get_docs_url(site), static("docs/models/dcim/site.html"))
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        self.assertEqual(get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))
+        # AnotherExampleModel does not have documentation.
+        another_model = AnotherExampleModel.objects.create(name="test", number=1)
+        self.assertIsNone(get_docs_url(another_model))
 
     def test_has_perms(self):
         self.assertTrue(callable(has_perms))

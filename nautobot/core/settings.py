@@ -57,8 +57,6 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
-DOCS_ROOT = os.path.join(BASE_DIR, "docs")
-
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
 # table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
 # ENFORCE_GLOBAL_UNIQUE to True.
@@ -189,6 +187,13 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Source of truth and network automation platform",
     "LICENSE": {"name": "Apache v2 License"},
     "VERSION": VERSION,
+    # For a semblance of backwards-compatibility with drf-yasg / OpenAPI 2.0, where "/api" was a common "basePath"
+    # in the schema.
+    # OpenAPI 3.0 removes "basePath" in favor of "servers", so we now declare "/api" as the server relative URL and
+    # trim it from all of the individual paths correspondingly.
+    # See also https://github.com/nautobot/nautobot-ansible/pull/135 for an example of why this is desirable.
+    "SERVERS": [{"url": "/api"}],
+    "SCHEMA_PATH_PREFIX_TRIM": True,
     # use sidecar - locally packaged UI files, not CDN
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
@@ -284,7 +289,7 @@ INSTALLED_APPS = [
     "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
-    "nautobot.third_party.drf_spectacular",
+    "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
     "health_check",
@@ -652,7 +657,7 @@ BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
 # Branding URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
-    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", None),
     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 }
 
