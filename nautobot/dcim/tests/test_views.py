@@ -1733,7 +1733,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             Interface.objects.create(device=device, name="Interface 2"),
             Interface.objects.create(device=device, name="Interface 3"),
             Interface.objects.create(device=device, name="LAG", type=InterfaceTypeChoices.TYPE_LAG),
-            Interface.objects.create(device=device, name="BRIDGE", type=InterfaceTypeChoices.TYPE_VIRTUAL),
+            Interface.objects.create(device=device, name="BRIDGE", type=InterfaceTypeChoices.TYPE_BRIDGE),
         )
 
         vlans = (

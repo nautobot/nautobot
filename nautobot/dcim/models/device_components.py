@@ -725,6 +725,10 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
                     }
                 )
 
+        # A bridged interface can only be assigned to an interface with type = bridge
+        if self.bridge and self.bridge.type != InterfaceTypeChoices.TYPE_BRIDGE:
+            raise ValidationError({"bridge": f"The selected interface ({self.bridge}) is not a bridge interface."})
+
     @property
     def is_connectable(self):
         return self.type not in NONCONNECTABLE_IFACE_TYPES

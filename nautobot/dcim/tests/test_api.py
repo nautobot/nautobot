@@ -1455,7 +1455,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
         interfaces = (
             Interface.objects.create(device=device, name="Interface 1", type="1000base-t"),
             Interface.objects.create(device=device, name="Interface 2", type="1000base-t"),
-            Interface.objects.create(device=device, name="Interface 3", type="1000base-t"),
+            Interface.objects.create(device=device, name="Interface 3", type=InterfaceTypeChoices.TYPE_BRIDGE),
         )
 
         vlans = (
@@ -1478,7 +1478,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
                 "name": "Interface 5",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "bridge": interfaces[0].pk,
+                "bridge": interfaces[2].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
