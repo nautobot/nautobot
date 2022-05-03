@@ -2621,6 +2621,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         required=False,
         query_params={
             "device_id": "$device",
+            "type": InterfaceTypeChoices.TYPE_BRIDGE,
         },
     )
     lag = DynamicModelChoiceField(
