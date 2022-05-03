@@ -66,6 +66,7 @@ class TenantFilterSet(NautobotFilterSet):
             | Q(slug__icontains=value)
             | Q(description__icontains=value)
             | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         )
 
 

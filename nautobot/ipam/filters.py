@@ -605,7 +605,7 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(name__icontains=value) | Q(description__icontains=value)
+        qs_filter = Q(name__icontains=value) | Q(description__icontains=value) | Q(id__iexact=value)
         try:
             qs_filter |= Q(vid=int(value.strip()))
         except ValueError:
@@ -648,5 +648,5 @@ class ServiceFilterSet(NautobotFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(name__icontains=value) | Q(description__icontains=value)
+        qs_filter = Q(name__icontains=value) | Q(description__icontains=value) | Q(id__iexact=value)
         return queryset.filter(qs_filter)

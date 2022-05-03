@@ -175,6 +175,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             | Q(contact_phone__icontains=value)
             | Q(contact_email__icontains=value)
             | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         )
         try:
             qs_filter |= Q(asn=int(value.strip()))
@@ -308,6 +309,7 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             | Q(serial__icontains=value.strip())
             | Q(asset_tag__icontains=value.strip())
             | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -368,6 +370,7 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
             | Q(rack__facility_id__icontains=value)
             | Q(user__username__icontains=value)
             | Q(description__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -442,6 +445,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             | Q(model__icontains=value)
             | Q(part_number__icontains=value)
             | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         )
 
     def _console_ports(self, queryset, name, value):
@@ -730,6 +734,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
             | Q(inventoryitems__serial__icontains=value.strip())
             | Q(asset_tag__icontains=value.strip())
             | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         ).distinct()
 
     def _has_primary_ip(self, queryset, name, value):
@@ -1033,6 +1038,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
             | Q(serial__icontains=value)
             | Q(asset_tag__icontains=value)
             | Q(description__icontains=value)
+            | Q(id__iexact=value)
         )
         return queryset.filter(qs_filter)
 
@@ -1096,7 +1102,12 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(name__icontains=value) | Q(members__name__icontains=value) | Q(domain__icontains=value)
+        qs_filter = (
+            Q(name__icontains=value)
+            | Q(members__name__icontains=value)
+            | Q(domain__icontains=value)
+            | Q(id__iexact=value)
+        )
         return queryset.filter(qs_filter)
 
 
@@ -1124,7 +1135,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(label__icontains=value)
+        return queryset.filter(Q(label__icontains=value) | Q(id__iexact=value))
 
     def filter_device(self, queryset, name, value):
         queryset = queryset.filter(
@@ -1227,7 +1238,7 @@ class PowerPanelFilterSet(NautobotFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(name__icontains=value)
+        qs_filter = Q(name__icontains=value) | Q(id__iexact=value)
         return queryset.filter(qs_filter)
 
 
@@ -1290,5 +1301,5 @@ class PowerFeedFilterSet(
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(name__icontains=value) | Q(comments__icontains=value)
+        qs_filter = Q(name__icontains=value) | Q(comments__icontains=value) | Q(id__iexact=value)
         return queryset.filter(qs_filter)

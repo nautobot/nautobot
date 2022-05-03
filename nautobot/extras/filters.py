@@ -248,7 +248,9 @@ class ConfigContextFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value) | Q(data__icontains=value))
+        return queryset.filter(
+            Q(name__icontains=value) | Q(description__icontains=value) | Q(data__icontains=value) | Q(id__iexact=value)
+        )
 
 
 #
@@ -275,7 +277,10 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) | Q(description__icontains=value) | Q(data_schema__icontains=value)
+            Q(name__icontains=value)
+            | Q(description__icontains=value)
+            | Q(data_schema__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -370,7 +375,9 @@ class CustomFieldFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(label__icontains=value) | Q(description__icontains=value))
+        return queryset.filter(
+            Q(name__icontains=value) | Q(label__icontains=value) | Q(description__icontains=value) | Q(id__iexact=value)
+        )
 
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
@@ -397,7 +404,7 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(value__icontains=value))
+        return queryset.filter(Q(value__icontains=value) | Q(id__iexact=value))
 
 
 #
@@ -472,6 +479,7 @@ class DynamicGroupFilterSet(NautobotFilterSet):
             | Q(description__icontains=value)
             | Q(content_type__app_label__icontains=value)
             | Q(content_type__model__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -501,6 +509,7 @@ class ExportTemplateFilterSet(BaseFilterSet):
             | Q(content_type__app_label__icontains=value)
             | Q(content_type__model__icontains=value)
             | Q(description__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -534,7 +543,9 @@ class GitRepositoryFilterSet(NautobotFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(name__icontains=value) | Q(remote_url__icontains=value) | Q(branch__icontains=value)
+        qs_filter = (
+            Q(name__icontains=value) | Q(remote_url__icontains=value) | Q(branch__icontains=value | Q(id__iexact=value))
+        )
         try:
             qs_filter |= Q(asn=int(value.strip()))
         except ValueError:
@@ -628,6 +639,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             | Q(slug__icontains=value)
             | Q(grouping__icontains=value)
             | Q(description__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -659,7 +671,10 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(job_model__name__icontains=value) | Q(name__icontains=value) | Q(user__username__icontains=value)
+            Q(job_model__name__icontains=value)
+            | Q(name__icontains=value)
+            | Q(user__username__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -708,7 +723,10 @@ class ScheduledJobFilterSet(BaseFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) | Q(job_class__icontains=value) | Q(description__icontains=value)
+            Q(name__icontains=value)
+            | Q(job_class__icontains=value)
+            | Q(description__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -771,7 +789,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(user_name__icontains=value) | Q(object_repr__icontains=value))
+        return queryset.filter(Q(user_name__icontains=value) | Q(object_repr__icontains=value) | Q(id__iexact=value))
 
 
 #
@@ -832,7 +850,7 @@ class SecretFilterSet(
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value) | Q(id__iexact=value))
 
 
 class SecretsGroupFilterSet(
@@ -851,7 +869,7 @@ class SecretsGroupFilterSet(
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value) | Q(id__iexact=value))
 
 
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
@@ -942,7 +960,9 @@ class StatusFilterSet(NautobotFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) | Q(slug__icontains=value) | Q(content_types__model__icontains=value)
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(content_types__model__icontains=value | Q(id__iexact=value))
         ).distinct()
 
 
@@ -976,7 +996,9 @@ class TagFilterSet(NautobotFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) | Q(slug__icontains=value) | Q(content_types__model__icontains=value)
+            Q(name__icontains=value)
+            | Q(slug__icontains=value)
+            | Q(content_types__model__icontains=value | Q(id__iexact=value))
         ).distinct()
 
 
@@ -1014,4 +1036,5 @@ class WebhookFilterSet(BaseFilterSet):
             | Q(payload_url__icontains=value)
             | Q(additional_headers__icontains=value)
             | Q(body_template__icontains=value)
+            | Q(id__iexact=value)
         )

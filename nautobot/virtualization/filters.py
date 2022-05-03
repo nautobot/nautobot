@@ -96,7 +96,7 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(comments__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(comments__icontains=value) | Q(id__iexact=value))
 
 
 class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
@@ -191,7 +191,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(comments__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(comments__icontains=value) | Q(id__iexact=value))
 
     def _has_primary_ip(self, queryset, name, value):
         params = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
@@ -239,4 +239,4 @@ class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(id__iexact=value))

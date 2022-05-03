@@ -66,6 +66,7 @@ class ProviderFilterSet(NautobotFilterSet):
             | Q(noc_contact__icontains=value)
             | Q(admin_contact__icontains=value)
             | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -94,7 +95,10 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) | Q(description__icontains=value) | Q(comments__icontains=value)
+            Q(name__icontains=value)
+            | Q(description__icontains=value)
+            | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         ).distinct()
 
 
@@ -174,6 +178,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
             | Q(terminations__description__icontains=value)
             | Q(description__icontains=value)
             | Q(comments__icontains=value)
+            | Q(id__iexact=value)
         ).distinct()
 
 

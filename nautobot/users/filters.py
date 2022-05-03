@@ -26,7 +26,7 @@ class GroupFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(name__icontains=value)
+        return queryset.filter(Q(name__icontains=value) | Q(id__iexact=value))
 
 
 class UserFilterSet(BaseFilterSet):
@@ -66,6 +66,7 @@ class UserFilterSet(BaseFilterSet):
             | Q(first_name__icontains=value)
             | Q(last_name__icontains=value)
             | Q(email__icontains=value)
+            | Q(id__iexact=value)
         )
 
 
@@ -82,7 +83,7 @@ class TokenFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(description__icontains=value))
+        return queryset.filter(Q(description__icontains=value) | Q(id__iexact=value))
 
 
 class ObjectPermissionFilterSet(BaseFilterSet):
