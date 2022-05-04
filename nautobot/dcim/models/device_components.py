@@ -32,6 +32,7 @@ from nautobot.extras.models import (
     ObjectChange,
     RelationshipModel,
     TaggedItem,
+    StatusModel,
 )
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
@@ -481,7 +482,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-class BaseInterface(RelationshipModel):
+class BaseInterface(RelationshipModel, StatusModel):
     """
     Abstract base class for fields shared by dcim.Interface and virtualization.VMInterface.
     """
@@ -519,6 +520,7 @@ class BaseInterface(RelationshipModel):
     "graphql",
     "relationships",
     "webhooks",
+    "statuses",
 )
 class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     """
@@ -576,6 +578,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         "mgmt_only",
         "description",
         "mode",
+        "status",
     ]
 
     class Meta:
@@ -598,6 +601,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.mgmt_only,
             self.description,
             self.get_mode_display(),
+            self.get_status_display(),
         )
 
     def clean(self):
