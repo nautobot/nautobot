@@ -91,6 +91,11 @@ class ProviderTestCase(TestCase):
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class CircuitTypeTestCase(TestCase):
     queryset = CircuitType.objects.all()
@@ -297,6 +302,11 @@ class CircuitTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class CircuitTerminationTestCase(TestCase):

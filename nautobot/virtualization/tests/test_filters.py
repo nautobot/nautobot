@@ -191,6 +191,11 @@ class ClusterTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class VirtualMachineTestCase(TestCase):
     queryset = VirtualMachine.objects.all()
@@ -438,6 +443,11 @@ class VirtualMachineTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class VMInterfaceTestCase(TestCase):

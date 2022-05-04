@@ -544,7 +544,7 @@ class GitRepositoryFilterSet(NautobotFilterSet):
         if not value.strip():
             return queryset
         qs_filter = (
-            Q(name__icontains=value) | Q(remote_url__icontains=value) | Q(branch__icontains=value | Q(id__iexact=value))
+            Q(name__icontains=value) | Q(remote_url__icontains=value) | Q(branch__icontains=value) | Q(id__iexact=value)
         )
         try:
             qs_filter |= Q(asn=int(value.strip()))
@@ -999,7 +999,8 @@ class TagFilterSet(NautobotFilterSet):
         return queryset.filter(
             Q(name__icontains=value)
             | Q(slug__icontains=value)
-            | Q(content_types__model__icontains=value | Q(id__iexact=value))
+            | Q(content_types__model__icontains=value)
+            | Q(id__iexact=value)
         ).distinct()
 
 

@@ -77,7 +77,12 @@ class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(rd__icontains=value) | Q(description__icontains=value))
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(rd__icontains=value)
+            | Q(description__icontains=value)
+            | Q(id__iexact=value)
+        )
 
     class Meta:
         model = VRF
@@ -116,7 +121,7 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value) | Q(id__iexact=value))
 
     class Meta:
         model = RouteTarget

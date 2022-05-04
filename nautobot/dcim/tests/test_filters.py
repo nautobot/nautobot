@@ -276,6 +276,11 @@ class SiteTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class RackGroupTestCase(TestCase):
     queryset = RackGroup.objects.all()
@@ -590,6 +595,11 @@ class RackTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class RackReservationTestCase(TestCase):
     queryset = RackReservation.objects.all()
@@ -871,6 +881,11 @@ class DeviceTypeTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"device_bays": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConsolePortTemplateTestCase(TestCase):
@@ -1816,6 +1831,11 @@ class DeviceTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConsolePortTestCase(TestCase):
@@ -3304,6 +3324,11 @@ class VirtualChassisTestCase(TestCase):
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class CableTestCase(TestCase):
     queryset = Cable.objects.all()
@@ -3808,5 +3833,10 @@ class PowerFeedTestCase(TestCase):
         params = {"connected": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_search(self):
+        for value in self.queryset.values_list("pk", flat=True):
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            
 
 # TODO: Connection filters
