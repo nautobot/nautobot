@@ -88,6 +88,7 @@
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
+                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><span class="mdi mdi-theme-light-dark text-primary">Theme</span></a> &middot;
                         <i class="mdi mdi-book-open-page-variant text-primary"></i>
                         {% if settings.BRANDING_URLS.docs %}
                             <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>
@@ -95,8 +96,6 @@
                             <a href="{% static 'docs/index.html' %}">Docs</a>
                         {% endif %}
                         &middot;
-                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><span class="mdi mdi-theme-light-dark text-primary">Theme</span></a> &middot;
-                        <span class="mdi mdi-book-open-page-variant text-primary"></span> <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a> &middot;
                         <span class="mdi mdi-cloud-braces text-primary"></span> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <span class="mdi mdi-graphql text-primary"></span> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
                         <span class="mdi mdi-xml text-primary"></span> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
