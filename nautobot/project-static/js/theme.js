@@ -4,6 +4,7 @@ const tdLightTheme = document.getElementById('td-light-theme');
 const tdDarkTheme = document.getElementById('td-dark-theme');
 const tdSystemTheme = document.getElementById('td-system-theme');
 
+// CSS file in base.html
 var darkElement = document.getElementById("dark-theme");
 
 // CurrentTheme overrides auto-detection when specified by manually clicking theme button
