@@ -124,7 +124,7 @@ class UserFilter(NautobotFilterSet):
 
 - Filters **must not** be set to be required using `required=True`
 
-- Filter methods defined using the [`method=`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#method) keyword argument **may only be used as a last resort** (see below) when correct usage of `lookup_expr`, `exclude`, or other filter keyword arguments do not suffice. In other words: filter methods should used as the exception and not the rule.
+- Filter methods defined using the [`method=`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#method) keyword argument **may only be used as a last resort** (see below) when correct usage of `field_name`, `lookup_expr`, `exclude`, or other filter keyword arguments do not suffice. In other words: filter methods should used as the exception and not the rule.
 
 - Use of [`filter_overrides`](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#filter-overrides) **must be considered** in cases where more-specific class-local overrides. The need may ocassionally arise to change certain filter-level arguments used for filter generation, such such as changing a filter class, or customizing a UI widget. Any `extra` arguments are sent to the filter as keyword arguments at instance creation time. (Hint: `extra` must be a callable)
 
@@ -163,21 +163,20 @@ class ProductFilter(NautobotFilterSet):
 
 Filters on a filterset can reference a `method` (either a callable, or the name of a method on the filterset) to perform custom business logic for that filter field. However, many uses of filter methods in Nautobot are problematic because they break the ability for such filter fields to be properly reversible.
 
-Consider this example from `nautobot.dcim.filters.DeviceFilterSet`:
+Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_ports`:
 
 ```python
-  # Filter field definition is a BooleanFilter, for which an "isnull" lookup_expr 
-  # is the only valid filter expression
-  console_ports = django_filters.BooleanFilter(
-      method="_console_ports",
-      label="Has console ports",
-  )
-  
-  # Method definition loses context and further the field's lookup_expr 
-  # falls back to the default of "exact".
-  def _console_ports(self, queryset, name, value):
-      breakpoint()  # This is where we'll illustrate pdb below
-      return queryset.exclude(consoleports__isnull=value)
+    # Filter field definition is a BooleanFilter, for which an "isnull" lookup_expr
+    # is the only valid filter expression
+    pass_through_ports = django_filters.BooleanFilter(
+        method="_pass_through_ports",
+        label="Has pass-through ports",
+    )
+
+    # Method definition loses context and further the field's lookup_expr
+    # falls back to the default of "exact" and the `name` value is irrelevant here.
+    def _pass_through_ports(self, queryset, name, value):
+        return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 ```
 
 The default `lookup_expr` unless otherwise specified is “exact”, as seen in [django_filters.conf](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10):
@@ -189,78 +188,74 @@ The default `lookup_expr` unless otherwise specified is “exact”, as seen in 
 When this method is called, the internal state is default, making reverse introspection impossible, because the `lookup_expr` is defaulting to “exact”:
 
 ```python
-(Pdb) field = self.filters["console_ports"]
+(Pdb) field = self.filters[name]
 (Pdb) field.exclude
 False
 (Pdb) field.lookup_expr
-'exact' 
+'exact'
 ```
 
-This means that the arguments for the field are being completely ignored and the hard-coded queryset `queryset.exclude(consoleports__isnull=value)` is all that is being run when this method is called. This hard-coding is impossible to introspect and therefore reverse.
+This means that the arguments for the field are being completely ignored and the hard-coded queryset `queryset.exclude(frontports__isnull=value, rearports__isnull=value)` is all that is being run when this method is called.
 
-In fact, this method is completely unnecessary, because it could be replaced with options on the filter field itself:
+Additionally, `name` variable that gets passed to the method cannot be used here because there are two field names at play (`frontports` and `rearports`). This hard-coding is impossible to introspect and therefore impossible to reverse.
+
+So while this filter definition coudl be improved like so, there is still no way to know what is going on in the method body:
 
 ```python
-    console_ports = django_filters.BooleanFilter(
-        field_name="consoleports",  # The actual related field name
-        exclude=True,               # Perform an `.exclude()` vs. `.filter()``
-        lookup_expr="isnull",       # Perform `isnull` vs. `exact``
-        label="Has console ports",
+    pass_through_ports = django_filters.BooleanFilter(
+        method="_pass_through_ports",  # The method that is called
+        exclude=True,                  # Perform an `.exclude()` vs. `.filter()``
+        lookup_expr="isnull",          # Perform `isnull` vs. `exact``
+        label="Has pass-through ports",
     )
 ```
 
-Now, if we use another breakpoint (this time inside of the `DeviceListView.get()` since there’s no method we can break into), you can see that the filter field now has the correct attributes that can be used to accurately reverse this query:
+For illustration,, if we use another breakpoint (this time inside of the `DeviceListView.get()` since there’s no method we can break into), you can see that the filter field now has the correct attributes that can be used to accurately reverse this query:
 
 ```python
 (Pdb) filterset = self.filterset(request.GET, self.queryset)
-(Pdb) field = filterset.filters["console_ports"]
-(Pdb) field.field_name
-'consoleports'
+(Pdb) field = filterset.filters[name]
 (Pdb) field.exclude
 True
 (Pdb) field.lookup_expr
 'isnull'
 ```
 
+It stops there. Here are the problems:
+
+- There's no way to identify either of the field names required here
+- The `name` that is incoming to the method is the filter name as defined (`pass_through_ports` in this case)
+- So the filter can be introspected for `lookup_expr` value using `self.filters[name].lookup_expr`, but it would have to be assumed that applies to both.
+- Same with `exclude` (`self.filters[name].exclude`)
+
+It would be better to just eliminate `pass_through_ports=True` entirely in exchange for `front_ports=True&rear_ports=True` (current) or `has_frontports=True&has_rearports=True` (future).
+
 #### Generating Reversible Q Objects
 
-These field values could be used to construct a `Q()` query that looks something like:
+With consistent and proper use of filter field arguments when defining them on a fitlerset, a query could be constructed using the `field_name` and `lookup_expr` values. For example:
 
 ```python
-def generate_query(self, field_name, lookup_expr, value):
-    query = Q()
-    predicate = {f"{field_name}__{lookup_expr}": value}
-    if field.exclude:
-        query |= ~Q(**predicate)
-    else:
-        query |= Q(**predicate)
-    return query
-    
+    def generate_query(self, field, value):
+        query = Q()
+        predicate = {f"{field.field_name}__{field.lookup_expr}": value}
+        if field.exclude:
+            query |= ~Q(**predicate)
+        else:
+            query |= Q(**predicate)
+        return query
+
+
 ## Somewhere else in business logic:
 field = filterset.filters[name]
 value = filterset.data[name]
-query = generate_query(field.field_name, field.lookup_expr, value)
+query = generate_query(field, value)
 filterset.qs.filter(query).count()  # 339
-```
-
-But furthermore, this also becomes unnecessary for the common case, because we can **just trust the filterset itself to do the proper filtering and completely obviate the need to reverse the query at all.**
-
-Consider this input filter:
-
-```python
-filter_params = {"console_ports": True}
-```
-
-With properly configured filter fields, this will just work:
-
-```python
-DeviceFilterSet(filter_params).qs.count()  # 339
 ```
 
 ### Summary
 
 - For the vast majority of cases where we have method filters, it’s for Boolean filters
-- I am asserting for the common case **method filters are unnecessary technical debt and should be eliminated where better suited by proper use of filter field arguments**
-- Reversibility may not necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
+- For the common case **method filters are unnecessary technical debt and should be eliminated where better suited by proper use of filter field arguments**
+- Reversibility may not always necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
 - For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
