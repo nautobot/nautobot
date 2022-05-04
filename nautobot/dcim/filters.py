@@ -861,6 +861,7 @@ class InterfaceFilterSet(
     DeviceComponentFilterSet,
     CableTerminationFilterSet,
     PathEndpointFilterSet,
+    StatusModelFilterSetMixin,
 ):
     q = django_filters.CharFilter(
         method="search",

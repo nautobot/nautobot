@@ -27,7 +27,7 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import SecretsGroup
+from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -2498,7 +2498,7 @@ class PowerOutletCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class InterfaceFilterForm(DeviceComponentFilterForm):
+class InterfaceFilterForm(DeviceComponentFilterForm, StatusFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -2544,6 +2544,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "untagged_vlan",
             "tagged_vlans",
             "tags",
+            "status",
         ]
         widgets = {
             "device": forms.HiddenInput(),
@@ -2583,6 +2584,12 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={
+            "content_types": Interface._meta.label_lower,
+        },
     )
     enabled = forms.BooleanField(required=False, initial=True)
     lag = forms.ModelChoiceField(
@@ -2629,6 +2636,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "name_pattern",
         "label_pattern",
         "type",
+        "status",
         "enabled",
         "lag",
         "mtu",
