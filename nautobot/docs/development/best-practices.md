@@ -176,6 +176,7 @@ Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_p
     # Method definition loses context and further the field's lookup_expr
     # falls back to the default of "exact" and the `name` value is irrelevant here.
     def _pass_through_ports(self, queryset, name, value):
+        breakpoint()  # This was added to illustrate debugging with pdb below
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 ```
 
@@ -210,22 +211,21 @@ So while this filter definition coudl be improved like so, there is still no way
     )
 ```
 
-For illustration,, if we use another breakpoint (this time inside of the `DeviceListView.get()` since there’s no method we can break into), you can see that the filter field now has the correct attributes that can be used to accurately reverse this query:
+For illustration, if we use another breakpoint, you can see that the filter field now has the correct attributes that can be used to help reverse this query:
 
 ```python
-(Pdb) filterset = self.filterset(request.GET, self.queryset)
-(Pdb) field = filterset.filters[name]
+(Pdb) field = self.filters[name]
 (Pdb) field.exclude
 True
 (Pdb) field.lookup_expr
 'isnull'
 ```
 
-It stops there. Here are the problems:
+Except that it stops there becuse of the method body. Here are the problems:
 
 - There's no way to identify either of the field names required here
-- The `name` that is incoming to the method is the filter name as defined (`pass_through_ports` in this case)
-- So the filter can be introspected for `lookup_expr` value using `self.filters[name].lookup_expr`, but it would have to be assumed that applies to both.
+- The `name` that is incoming to the method is the filter name as defined (`pass_through_ports` in this case) does not map to an actual model field
+- So the filter can be introspected for `lookup_expr` value using `self.filters[name].lookup_expr`, but it would have to be assumed that applies to both fields.
 - Same with `exclude` (`self.filters[name].exclude`)
 
 It would be better to just eliminate `pass_through_ports=True` entirely in exchange for `front_ports=True&rear_ports=True` (current) or `has_frontports=True&has_rearports=True` (future).
