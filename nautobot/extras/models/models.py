@@ -738,12 +738,12 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
     def render_body(self, context):
         """
-        Render the body template, if defined. Otherwise, jump the context as a JSON object.
+        Render the body template, if defined. Otherwise, dump the context as a JSON object.
         """
         if self.body_template:
             return render_jinja2(self.body_template, context)
         else:
-            return json.dumps(context, cls=JSONEncoder)
+            return json.dumps(context, cls=JSONEncoder, ensure_ascii=False)
 
     def get_absolute_url(self):
         return reverse("extras:webhook", kwargs={"pk": self.pk})
