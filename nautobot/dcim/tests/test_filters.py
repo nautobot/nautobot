@@ -3837,6 +3837,6 @@ class PowerFeedTestCase(TestCase):
         for value in self.queryset.values_list("pk", flat=True):
             params = {"q": value}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-            
+
 
 # TODO: Connection filters

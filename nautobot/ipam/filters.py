@@ -78,10 +78,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value)
-            | Q(rd__icontains=value)
-            | Q(description__icontains=value)
-            | Q(id__iexact=value)
+            Q(name__icontains=value) | Q(rd__icontains=value) | Q(description__icontains=value) | Q(id__iexact=value)
         )
 
     class Meta:
