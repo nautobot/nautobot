@@ -40,7 +40,7 @@ $ curl http://nautobot/api/dcim/sites/
 
 ## Initial Token Provisioning
 
-Ideally, each user should provision his or her own REST API token(s) via the web UI. However, you may encounter where a token must be created by a user via the REST API itself. A special endpoint was created in Nautobot v1.3 to enable the provisioning of tokens using a valid username and password combination.
+Ideally, each user should provision his or her own REST API token(s) via the web UI. However, you may encounter where a token must be created by a user via the REST API itself. Starting in version 1.3, Nautobot provides a special endpoint to provision tokens using a valid username and password combination.
 
 To provision a token via the REST API, make a `POST` request to the `/api/users/tokens/` endpoint:
 
