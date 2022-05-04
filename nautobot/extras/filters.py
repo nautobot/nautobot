@@ -962,7 +962,8 @@ class StatusFilterSet(NautobotFilterSet):
         return queryset.filter(
             Q(name__icontains=value)
             | Q(slug__icontains=value)
-            | Q(content_types__model__icontains=value | Q(id__iexact=value))
+            | Q(content_types__model__icontains=value)
+            | Q(id__iexact=value)
         ).distinct()
 
 

@@ -117,6 +117,7 @@ class SearchView(View):
                 obj_types = SEARCH_TYPES.keys()
 
             for obj_type in obj_types:
+
                 queryset = SEARCH_TYPES[obj_type]["queryset"].restrict(request.user, "view")
                 filterset = SEARCH_TYPES[obj_type]["filterset"]
                 table = SEARCH_TYPES[obj_type]["table"]
