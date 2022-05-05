@@ -30,7 +30,7 @@ def check_sanitizer_patterns(app_configs, **kwargs):
         except re.error as exc:
             errors.append(
                 Error(
-                    f"Entry in settings.SANITIZER_PATTERNS not usable for sanitization",
+                    "Entry in settings.SANITIZER_PATTERNS not usable for sanitization",
                     hint=str(exc),
                     obj=entry,
                     id="nautobot.utilities.E002",

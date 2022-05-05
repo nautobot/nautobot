@@ -23,7 +23,7 @@ def sanitize(string, replacement="(redacted)"):
     for sanitizer, repl in settings.SANITIZER_PATTERNS:
         try:
             string = sanitizer.sub(repl.format(replacement=replacement), string)
-        except re.error as exc:
+        except re.error:
             logger.error('Error in string sanitization using "%s"', sanitizer)
 
     return string

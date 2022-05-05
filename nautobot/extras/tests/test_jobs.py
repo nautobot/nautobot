@@ -249,9 +249,7 @@ class JobTest(TransactionTestCase):
         self.assertEqual(form_data, job_result_data)
 
     @override_settings(
-        SANITIZER_PATTERNS=(
-            (re.compile(r"secret is \S+"), "secret is {replacement}"),
-        ),
+        SANITIZER_PATTERNS=((re.compile(r"secret is \S+"), "secret is {replacement}"),),
     )
     def test_log_redaction(self):
         """
