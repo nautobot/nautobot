@@ -123,7 +123,7 @@ def render_yaml(value):
     """
     Render a dictionary as formatted YAML.
     """
-    return yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    return yaml.safe_dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
 
 
 @library.filter()

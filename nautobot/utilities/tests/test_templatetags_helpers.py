@@ -52,8 +52,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual('"I am UTF-8! 💩"', render_json("I am UTF-8! 💩"))
 
     def test_render_yaml(self):
-        self.assertEqual(render_yaml({"first": [1, 2, 3]}), "first:\n- 1\n- 2\n- 3\n")
-        self.assertEqual("I am UTF-8! 💩\n...\n", render_yaml("I am UTF-8! 💩"))
+        self.assertEqual("utf8:\n- 💩💩\n- 💩\n", render_yaml({"utf8": ["💩💩", "💩"]}))
 
     def test_meta(self):
         status = Status.objects.get_for_model(Site).first()
