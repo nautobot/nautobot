@@ -2630,7 +2630,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         display_field="display",
         query_params={
             "device_id": "$device",
-            "type": "lag",
+            "type": InterfaceTypeChoices.TYPE_LAG,
         },
     )
     mtu = forms.IntegerField(
@@ -2788,6 +2788,11 @@ class InterfaceBulkEditForm(
             self.fields["parent_interface"].widget.add_query_param("device_id", device.pk)
             self.fields["bridge"].widget.add_query_param("device_id", device.pk)
             self.fields["lag"].widget.add_query_param("device_id", device.pk)
+
+            if device.virtual_chassis and device.virtual_chassis.master:
+                self.fields["parent_interface"].widget.add_query_param("device_id", device.virtual_chassis.master.pk)
+                self.fields["bridge"].widget.add_query_param("device_id", device.virtual_chassis.master.pk)
+                self.fields["lag"].widget.add_query_param("device_id", device.virtual_chassis.master.pk)
 
             # Add current site to VLANs query params
             self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
