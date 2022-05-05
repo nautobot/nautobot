@@ -1728,6 +1728,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
+        statuses = Status.objects.get_for_model(Interface)
+        status_active = statuses.get(slug="active")
+
         interfaces = (
             Interface.objects.create(device=device, name="Interface 1"),
             Interface.objects.create(device=device, name="Interface 2"),
@@ -1750,6 +1753,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name": "Interface X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
+            "status": status_active.pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1775,6 +1779,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in tags],
+            "status": status_active.pk,
         }
 
         cls.bulk_edit_data = {
@@ -1788,13 +1793,14 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "status": status_active.pk,
         }
 
         cls.csv_data = (
-            "device,name,type",
-            "Device 1,Interface 4,1000base-t",
-            "Device 1,Interface 5,1000base-t",
-            "Device 1,Interface 6,1000base-t",
+            "device,name,type,status",
+            "Device 1,Interface 4,1000base-t,active",
+            "Device 1,Interface 5,1000base-t,active",
+            "Device 1,Interface 6,1000base-t,active",
         )
 
 

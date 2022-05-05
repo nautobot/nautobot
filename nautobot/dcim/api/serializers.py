@@ -17,6 +17,7 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -73,6 +74,7 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
+from nautobot.extras.models import Status
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -1068,6 +1070,10 @@ class InterfaceSerializer(
         opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
+
+        # set interface status to active if status not provided
+        if not data.get("status"):
+            data["status"] = Status.objects.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
 
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")

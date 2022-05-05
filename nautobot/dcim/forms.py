@@ -2684,6 +2684,7 @@ class InterfaceBulkEditForm(
     form_from_model(Interface, ["label", "type", "lag", "mac_address", "mtu", "description", "mode"]),
     BootstrapMixin,
     AddRemoveTagsForm,
+    StatusBulkEditFormMixin,
     CustomFieldBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
@@ -2772,7 +2773,7 @@ class InterfaceBulkEditForm(
             self.cleaned_data["tagged_vlans"] = []
 
 
-class InterfaceCSVForm(CustomFieldModelCSVForm):
+class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
     lag = CSVModelChoiceField(
         queryset=Interface.objects.all(),

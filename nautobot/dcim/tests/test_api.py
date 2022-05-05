@@ -1435,7 +1435,7 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
         ]
 
 
-class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = Interface
     brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
@@ -1486,6 +1486,58 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
+            },
+        ]
+
+
+class InterfaceTestVersion13(InterfaceTestVersion12):
+    api_version = "1.3"
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+
+        Interface.objects.create(device=device, name="Interface 1", type="1000base-t")
+        Interface.objects.create(device=device, name="Interface 2", type="1000base-t")
+        Interface.objects.create(device=device, name="Interface 3", type="1000base-t")
+
+        vlans = (
+            VLAN.objects.create(name="VLAN 1", vid=1),
+            VLAN.objects.create(name="VLAN 2", vid=2),
+            VLAN.objects.create(name="VLAN 3", vid=3),
+        )
+
+        cls.create_data = [
+            {
+                "device": device.pk,
+                "name": "Interface 4",
+                "type": "1000base-t",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
+            },
+            {
+                "device": device.pk,
+                "name": "Interface 5",
+                "type": "1000base-t",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
+            },
+            {
+                "device": device.pk,
+                "name": "Interface 6",
+                "type": "1000base-t",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
             },
         ]
 
