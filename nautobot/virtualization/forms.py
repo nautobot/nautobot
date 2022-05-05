@@ -472,7 +472,14 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
     parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(), required=False, label="Parent interface"
     )
-    bridge = DynamicModelChoiceField(queryset=VMInterface.objects.all(), required=False, label="Bridged interface")
+    bridge = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        label="Bridged interface",
+        query_params={
+            "type": "bridge",
+        },
+    )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -552,6 +559,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         required=False,
         query_params={
             "virtual_machine_id": "$virtual_machine",
+            "type": "bridge",
         },
     )
     mtu = forms.IntegerField(
@@ -639,7 +647,13 @@ class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulk
     parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(), required=False, display_field="display_name"
     )
-    bridge = DynamicModelChoiceField(queryset=VMInterface.objects.all(), required=False)
+    bridge = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        query_params={
+            "type": "bridge",
+        },
+    )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
     mtu = forms.IntegerField(
         required=False,

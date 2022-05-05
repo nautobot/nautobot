@@ -2517,14 +2517,21 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "kind": "physical",
         },
     )
-    bridge = DynamicModelChoiceField(queryset=Interface.objects.all(), required=False, label="Bridged interface")
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Bridged interface",
+        query_params={
+            "type": InterfaceTypeChoices.TYPE_BRIDGE,
+        },
+    )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="LAG interface",
         display_field="display",
         query_params={
-            "type": "lag",
+            "type": InterfaceTypeChoices.TYPE_LAG,
         },
     )
     untagged_vlan = DynamicModelChoiceField(
@@ -2736,13 +2743,19 @@ class InterfaceBulkEditForm(
             "kind": "physical",
         },
     )
-    bridge = DynamicModelChoiceField(queryset=Interface.objects.all(), required=False)
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "type": InterfaceTypeChoices.TYPE_BRIDGE,
+        },
+    )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         display_field="display",
         query_params={
-            "type": "lag",
+            "type": InterfaceTypeChoices.TYPE_LAG,
         },
     )
     mgmt_only = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Management only")
