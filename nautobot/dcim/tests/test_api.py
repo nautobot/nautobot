@@ -1519,7 +1519,7 @@ class InterfaceTestVersion13(InterfaceTestVersion12):
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
-                "status": "active",
+                "status": "failed",
             },
             {
                 "device": device.pk,

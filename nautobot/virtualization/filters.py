@@ -200,7 +200,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         return queryset.exclude(params)
 
 
-class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",

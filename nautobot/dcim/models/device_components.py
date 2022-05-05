@@ -519,8 +519,8 @@ class BaseInterface(RelationshipModel, StatusModel):
     "export_templates",
     "graphql",
     "relationships",
-    "webhooks",
     "statuses",
+    "webhooks",
 )
 class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     """
