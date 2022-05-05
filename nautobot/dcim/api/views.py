@@ -602,9 +602,9 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
     retrieve=extend_schema(responses={"200": serializers.InterfaceSerializer}, versions=["1.2"]),
     update=extend_schema(responses={"200": serializers.InterfaceSerializer}, versions=["1.2"]),
 )
-class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet):
+class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):
     queryset = Interface.objects.prefetch_related(
-        "device", "_path__destination", "cable", "_cable_peer", "ip_addresses", "tags"
+        "device", "status", "_path__destination", "cable", "_cable_peer", "ip_addresses", "tags"
     )
     serializer_class = serializers.InterfaceSerializerVersion13
     filterset_class = filters.InterfaceFilterSet
