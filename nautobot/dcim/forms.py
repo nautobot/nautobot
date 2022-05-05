@@ -2607,7 +2607,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         widget=StaticSelect2(),
     )
     enabled = forms.BooleanField(required=False, initial=True)
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         display_field="display",
@@ -2728,7 +2728,7 @@ class InterfaceBulkEditForm(
         widget=forms.HiddenInput(),
     )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         display_field="display",
