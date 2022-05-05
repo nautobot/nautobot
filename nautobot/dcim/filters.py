@@ -889,12 +889,12 @@ class InterfaceFilterSet(
     )
     bridge_id = django_filters.ModelMultipleChoiceFilter(
         field_name="bridge",
-        queryset=Interface.objects.all(),
+        queryset=Interface.objects.filter(type=InterfaceTypeChoices.TYPE_BRIDGE),
         label="Bridged interface (ID)",
     )
     lag_id = django_filters.ModelMultipleChoiceFilter(
         field_name="lag",
-        queryset=Interface.objects.all(),
+        queryset=Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG),
         label="LAG interface (ID)",
     )
     mac_address = MultiValueMACAddressFilter()
