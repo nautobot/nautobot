@@ -3327,7 +3327,7 @@ class VirtualChassisTestCase(TestCase):
     def test_search(self):
         for value in self.queryset.values_list("pk", flat=True):
             params = {"q": value}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class CableTestCase(TestCase):
