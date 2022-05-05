@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.routers import APIRootView
 
 from nautobot.dcim.models import Device
@@ -93,8 +94,34 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
         return serializers.VirtualMachineWithConfigContextSerializer
 
 
-class VMInterfaceViewSet(ModelViewSet):
-    queryset = VMInterface.objects.prefetch_related("virtual_machine", "tags", "tagged_vlans")
-    serializer_class = serializers.VMInterfaceSerializer
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]
+    ),
+    create=extend_schema(responses={"201": serializers.VMInterfaceSerializer}, versions=["1.2"]),
+    list=extend_schema(responses={"200": serializers.VMInterfaceSerializer(many=True)}, versions=["1.2"]),
+    partial_update=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
+    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
+    update=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
+)
+class VMInterfaceViewSet(ModelViewSet, StatusViewSetMixin):
+    queryset = VMInterface.objects.prefetch_related("virtual_machine", "status", "tags", "tagged_vlans")
+    serializer_class = serializers.VMInterfaceSerializerVersion13
     filterset_class = filters.VMInterfaceFilterSet
     brief_prefetch_fields = ["virtual_machine"]
+
+    def get_serializer_class(self):
+        if (
+            not self.brief
+            and not getattr(self, "swagger_fake_view", False)
+            and (
+                not hasattr(self.request, "major_version")
+                or self.request.major_version > 1
+                or (self.request.major_version == 1 and self.request.minor_version < 3)
+            )
+        ):
+            # API version 1.2 or earlier - use the legacy serializer
+            # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
+            return serializers.VMInterfaceSerializer
+        return super().get_serializer_class()

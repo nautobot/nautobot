@@ -22,8 +22,10 @@ from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
 )
+from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
+from nautobot.virtualization.choices import VMInterfaceStatusChoices
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -240,6 +242,10 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
 
     def validate(self, data):
 
+        # set vminterface status to active if status not provided
+        if not data.get("status"):
+            data["status"] = Status.objects.get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+
         # Validate many-to-many VLAN assignments
         virtual_machine = self.instance.virtual_machine if self.instance else data.get("virtual_machine")
         for vlan in data.get("tagged_vlans", []):
@@ -252,3 +258,34 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
                 )
 
         return super().validate(data)
+
+
+class VMInterfaceSerializerVersion13(TaggedObjectSerializer, ValidatedModelSerializer, StatusModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
+    virtual_machine = NestedVirtualMachineSerializer()
+    mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
+    untagged_vlan = NestedVLANSerializer(required=False, allow_null=True)
+    tagged_vlans = SerializedPKRelatedField(
+        queryset=VLAN.objects.all(),
+        serializer=NestedVLANSerializer,
+        required=False,
+        many=True,
+    )
+
+    class Meta:
+        model = VMInterface
+        fields = [
+            "id",
+            "url",
+            "virtual_machine",
+            "name",
+            "status",
+            "enabled",
+            "mtu",
+            "mac_address",
+            "description",
+            "mode",
+            "untagged_vlan",
+            "tagged_vlans",
+            "tags",
+        ]
