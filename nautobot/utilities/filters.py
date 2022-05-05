@@ -342,6 +342,9 @@ class MappedPredicatesFilterMixin:
             predicate = {f"{field_name}__{lookup_expr}": value}
             query |= models.Q(**predicate)
 
+        # Stash this for later use (such as introspection or debugging)
+        self.query = query
+
         if self.distinct:
             qs = qs.distinct()
         qs = self.get_method(qs)(query)
