@@ -105,7 +105,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
     retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
     update=extend_schema(responses={"200": serializers.VMInterfaceSerializer}, versions=["1.2"]),
 )
-class VMInterfaceViewSet(ModelViewSet, StatusViewSetMixin):
+class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
     queryset = VMInterface.objects.prefetch_related("virtual_machine", "status", "tags", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializerVersion13
     filterset_class = filters.VMInterfaceFilterSet
