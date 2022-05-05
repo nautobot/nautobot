@@ -11,6 +11,7 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    SearchFilter,
     TagFilter,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -102,9 +103,14 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
 
 
 class ComputedFieldFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "target_url": "icontains",
+            "text": "icontains",
+            "content_type__app_label": "icontains",
+            "content_type__model": "icontains",
+        },
     )
     content_type = ContentTypeFilter()
 
@@ -118,17 +124,6 @@ class ComputedFieldFilterSet(BaseFilterSet):
             "weight",
         )
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(target_url__icontains=value)
-            | Q(text__icontains=value)
-            | Q(content_type__app_label__icontains=value)
-            | Q(content_type__model__icontains=value)
-        )
-
 
 #
 # Config Contexts
@@ -136,9 +131,12 @@ class ComputedFieldFilterSet(BaseFilterSet):
 
 
 class ConfigContextFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "data": "icontains",
+        },
     )
     owner_content_type = ContentTypeFilter()
     region_id = django_filters.ModelMultipleChoiceFilter(
@@ -245,11 +243,6 @@ class ConfigContextFilterSet(BaseFilterSet):
         model = ConfigContext
         fields = ["id", "name", "is_active", "owner_content_type", "owner_object_id"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value) | Q(data__icontains=value))
-
 
 #
 # Filter for config context schema
@@ -257,9 +250,12 @@ class ConfigContextFilterSet(BaseFilterSet):
 
 
 class ConfigContextSchemaFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "data_schema": "icontains",
+        },
     )
     owner_content_type = ContentTypeFilter()
 
@@ -270,13 +266,6 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
             "name",
             "description",
         ]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value) | Q(description__icontains=value) | Q(data_schema__icontains=value)
-        )
 
 
 #
@@ -355,9 +344,12 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
 
 
 class CustomFieldFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "label": "icontains",
+            "description": "icontains",
+        },
     )
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("custom_fields").get_choices,
@@ -367,17 +359,9 @@ class CustomFieldFilterSet(BaseFilterSet):
         model = CustomField
         fields = ["id", "content_types", "name", "required", "filter_logic", "weight"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(label__icontains=value) | Q(description__icontains=value))
-
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
+    q = SearchFilter(filter_predicates={"value": "icontains"})
     field_id = django_filters.ModelMultipleChoiceFilter(
         field_name="field",
         queryset=CustomField.objects.all(),
@@ -393,11 +377,6 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
     class Meta:
         model = CustomFieldChoice
         fields = ["id", "value", "weight"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(value__icontains=value))
 
 
 #
@@ -419,9 +398,14 @@ class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModel
 
 
 class CustomLinkFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "target_url": "icontains",
+            "text": "icontains",
+            "content_type__app_label": "icontains",
+            "content_type__model": "icontains",
+        },
     )
     content_type = ContentTypeFilter()
 
@@ -438,17 +422,6 @@ class CustomLinkFilterSet(BaseFilterSet):
             "new_window",
         )
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(target_url__icontains=value)
-            | Q(text__icontains=value)
-            | Q(content_type__app_label__icontains=value)
-            | Q(content_type__model__icontains=value)
-        )
-
 
 #
 # Dynamic Groups
@@ -456,23 +429,20 @@ class CustomLinkFilterSet(BaseFilterSet):
 
 
 class DynamicGroupFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(method="search", label="Search")
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "description": "icontains",
+            "content_type__app_label": "icontains",
+            "content_type__model": "icontains",
+        },
+    )
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
 
     class Meta:
         model = DynamicGroup
         fields = ("id", "name", "slug", "description")
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(slug__icontains=value)
-            | Q(description__icontains=value)
-            | Q(content_type__app_label__icontains=value)
-            | Q(content_type__model__icontains=value)
-        )
 
 
 #
@@ -481,27 +451,21 @@ class DynamicGroupFilterSet(NautobotFilterSet):
 
 
 class ExportTemplateFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "owner_content_type__app_label": "icontains",
+            "owner_content_type__model": "icontains",
+            "content_type__app_label": "icontains",
+            "content_type__model": "icontains",
+            "description": "icontains",
+        },
     )
     owner_content_type = ContentTypeFilter()
 
     class Meta:
         model = ExportTemplate
         fields = ["id", "content_type", "owner_content_type", "owner_object_id", "name"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(owner_content_type__app_label__icontains=value)
-            | Q(owner_content_type__model__icontains=value)
-            | Q(content_type__app_label__icontains=value)
-            | Q(content_type__model__icontains=value)
-            | Q(description__icontains=value)
-        )
 
 
 #
@@ -510,9 +474,12 @@ class ExportTemplateFilterSet(BaseFilterSet):
 
 
 class GitRepositoryFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "remote_url": "icontains",
+            "branch": "icontains",
+        },
     )
     secrets_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="secrets_group",
@@ -531,16 +498,6 @@ class GitRepositoryFilterSet(NautobotFilterSet):
         model = GitRepository
         fields = ["id", "name", "slug", "remote_url", "branch"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = Q(name__icontains=value) | Q(remote_url__icontains=value) | Q(branch__icontains=value)
-        try:
-            qs_filter |= Q(asn=int(value.strip()))
-        except ValueError:
-            pass
-        return queryset.filter(qs_filter)
-
 
 #
 # GraphQL Queries
@@ -548,22 +505,17 @@ class GitRepositoryFilterSet(NautobotFilterSet):
 
 
 class GraphQLQueryFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "query": "icontains",
+        },
     )
 
     class Meta:
         model = GraphQLQuery
-        fields = (
-            "name",
-            "slug",
-        )
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value) | Q(query__icontains=value))
+        fields = ["name", "slug"]
 
 
 #
@@ -585,9 +537,13 @@ class ImageAttachmentFilterSet(BaseFilterSet):
 
 
 class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "grouping": "icontains",
+            "description": "icontains",
+        },
     )
     tag = TagFilter()
 
@@ -620,21 +576,14 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "time_limit_override",
         ]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(slug__icontains=value)
-            | Q(grouping__icontains=value)
-            | Q(description__icontains=value)
-        )
-
 
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "job_model__name": "icontains",
+            "name": "icontains",
+            "user__username": "icontains",
+        },
     )
     job_model = django_filters.ModelMultipleChoiceFilter(
         field_name="job_model__slug",
@@ -655,36 +604,28 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         model = JobResult
         fields = ["id", "created", "completed", "status", "user", "obj_type", "name"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(job_model__name__icontains=value) | Q(name__icontains=value) | Q(user__username__icontains=value)
-        )
-
 
 class JobLogEntryFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "grouping": "icontains",
+            "message": "icontains",
+            "log_level": "icontains",
+        },
     )
 
     class Meta:
         model = JobLogEntry
         exclude = []
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(grouping__icontains=value) | Q(message__icontains=value) | Q(log_level__icontains=value)
-        )
-
 
 class ScheduledJobFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "job_class": "icontains",
+            "description": "icontains",
+        },
     )
     job_model = django_filters.ModelMultipleChoiceFilter(
         field_name="job_model__slug",
@@ -703,13 +644,6 @@ class ScheduledJobFilterSet(BaseFilterSet):
     class Meta:
         model = ScheduledJob
         fields = ["id", "name", "total_run_count"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value) | Q(job_class__icontains=value) | Q(description__icontains=value)
-        )
 
 
 #
@@ -738,9 +672,11 @@ class LocalContextFilterSet(django_filters.FilterSet):
 
 
 class ObjectChangeFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "user_name": "icontains",
+            "object_repr": "icontains",
+        },
     )
     changed_object_type = ContentTypeFilter()
     user_id = django_filters.ModelMultipleChoiceFilter(
@@ -767,11 +703,6 @@ class ObjectChangeFilterSet(BaseFilterSet):
             "object_repr",
             "time",
         ]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(user_name__icontains=value) | Q(object_repr__icontains=value))
 
 
 #
@@ -821,18 +752,18 @@ class SecretFilterSet(
 ):
     """Filterset for the Secret model."""
 
-    q = django_filters.CharFilter(method="search", label="Search")
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+        },
+    )
     # TODO dynamic choices needed
     # provider = django_filters.MultipleChoiceFilter(choices=..., null_value=None)
 
     class Meta:
         model = Secret
         fields = ("id", "name", "slug", "provider", "created", "last_updated")
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
 
 
 class SecretsGroupFilterSet(
@@ -842,16 +773,16 @@ class SecretsGroupFilterSet(
 ):
     """Filterset for the SecretsGroup model."""
 
-    q = django_filters.CharFilter(method="search", label="Search")
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+        },
+    )
 
     class Meta:
         model = SecretsGroup
         fields = ("id", "name", "slug", "created", "last_updated")
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
 
 
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
@@ -918,9 +849,12 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
 class StatusFilterSet(NautobotFilterSet):
     """API filter for filtering custom status object fields."""
 
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "content_types__model": "icontains",
+        },
     )
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("statuses").get_choices,
@@ -938,13 +872,6 @@ class StatusFilterSet(NautobotFilterSet):
             "last_updated",
         ]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value) | Q(slug__icontains=value) | Q(content_types__model__icontains=value)
-        ).distinct()
-
 
 class StatusModelFilterSetMixin(django_filters.FilterSet):
     """
@@ -960,9 +887,12 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 
 
 class TagFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "content_types__model": "icontains",
+        },
     )
     content_types = ContentTypeMultipleChoiceFilter(
         choices=TaggableClassesQuery().get_choices,
@@ -972,13 +902,6 @@ class TagFilterSet(NautobotFilterSet):
         model = Tag
         fields = ["id", "name", "slug", "color", "content_types"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value) | Q(slug__icontains=value) | Q(content_types__model__icontains=value)
-        ).distinct()
-
 
 #
 # Webhooks
@@ -986,9 +909,13 @@ class TagFilterSet(NautobotFilterSet):
 
 
 class WebhookFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "payload_url": "icontains",
+            "additional_headers": "icontains",
+            "body_template": "icontains",
+        },
     )
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("webhooks").get_choices,
@@ -1005,13 +932,3 @@ class WebhookFilterSet(BaseFilterSet):
             "type_update",
             "type_delete",
         ]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(payload_url__icontains=value)
-            | Q(additional_headers__icontains=value)
-            | Q(body_template__icontains=value)
-        )

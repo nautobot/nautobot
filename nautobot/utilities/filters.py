@@ -1,3 +1,4 @@
+import builtins
 from copy import deepcopy
 
 from django import forms
@@ -286,6 +287,105 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         return qs
 
 
+class MappedPredicatesFilterMixin:
+    """
+    A filter mixin to provide the ability to specify fields and lookup
+    expressions to use for filtering.
+
+    A mapping of filter predicates (field_name: lookup_expr) must be provided to
+    the filter when declared on a filterset. This mapping is used to construct a
+    `Q` query to filter based on the provided predicates.
+    """
+
+    label = None
+
+    def __init__(self, filter_predicates=None, distinct=True, label=None, *args, **kwargs):
+        if not isinstance(filter_predicates, dict):
+            raise TypeError("filter_predicates must be a dict")
+
+        # Format: field_name: lookup_expr
+        self.filter_predicates = filter_predicates
+
+        # Try to use the label from the class if it is defined.
+        if label is None:
+            kwargs.setdefault("label", self.label)
+
+        kwargs.setdefault("distinct", distinct)
+        super().__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
+        query = models.Q()
+        value = value.strip()
+        for field_name, lookup_expr in self.filter_predicates.items():
+            # Try to capture the optional type (otherwise we assume str)
+            if ":" in field_name:
+                field_name, field_type = field_name.split(":")
+            else:
+                field_type = None
+
+            # Try to cast value to the specified type, or skip creating a
+            # predicate for it.
+            if field_type is not None:
+                try:
+                    type_constructor = getattr(builtins, field_type)
+                except AttributeError as err:
+                    raise TypeError(f"Invalid type {field_type} for {field_name}") from err
+
+                try:
+                    value = type_constructor(value)
+                except (TypeError, ValueError):
+                    continue
+
+            predicate = {f"{field_name}__{lookup_expr}": value}
+            query |= models.Q(**predicate)
+
+        if self.distinct:
+            qs = qs.distinct()
+        qs = self.get_method(qs)(query)
+        return qs
+
+
+class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
+    """
+    Provide a search filter for use on filtersets as the `q=` parameter.
+
+    A mapping of filter predicates (field_name: lookup_expr) must be provided to
+    the filter when declared on a filterset. This mapping is used to construct a
+    `Q` query to filter based on the provided predicates.
+
+    This filter should be used instead of declaring a `q` filter and pointing it
+    to a `search()` method on a filterset.
+
+    Example:
+
+        q = SearchFilter(
+            filter_predicates={
+                "comments": "icontains",
+                "name": "icontains",
+                "id": "iexact",
+            },
+        )
+
+    Optionally you may also provide a built-in type for the filter predicate by
+    including the name of the type following a colon in the filter name. For
+    example:
+
+        q = SearchFilter(
+            filter_predicates={
+                "asn:int": "exact",
+            },
+        )
+
+    This tells the filter to try to cast `asn` to an `int`. If it fails, this
+    predicate will be skipped.
+    """
+
+    label = "Search"
+
+
 #
 # FilterSets
 #
@@ -389,6 +489,10 @@ class BaseFilterSet(django_filters.FilterSet):
         field_name = filter_field.field_name
         field = get_model_field(cls._meta.model, field_name)
 
+        # If there isn't a model field, return.
+        if field is None:
+            return magic_filters
+
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = "{}__{}".format(filter_name, lookup_name)
@@ -466,12 +570,4 @@ class NameSlugSearchFilterSet(django_filters.FilterSet):
     A base class for adding the search method to models which only expose the `name` and `slug` fields
     """
 
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(models.Q(name__icontains=value) | models.Q(slug__icontains=value))
+    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
