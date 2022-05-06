@@ -20,6 +20,7 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
+from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -48,7 +49,6 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 #
 # Cluster types
 #
-from ..extras.models import Status
 
 
 class ClusterTypeForm(NautobotModelForm):
