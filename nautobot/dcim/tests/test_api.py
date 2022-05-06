@@ -9,6 +9,7 @@ from constance.test import override_config
 
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
@@ -1501,9 +1502,11 @@ class InterfaceTestVersion13(InterfaceTestVersion12):
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t")
+        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+
+        Interface.objects.create(device=device, name="Interface 1", type="1000base-t", status=status_active)
+        Interface.objects.create(device=device, name="Interface 2", type="1000base-t", status=status_active)
+        Interface.objects.create(device=device, name="Interface 3", type="1000base-t", status=status_active)
 
         vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
