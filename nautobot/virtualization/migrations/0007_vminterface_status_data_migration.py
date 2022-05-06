@@ -48,7 +48,7 @@ def reverse_populate_vminterface_status(app, schema_editor):
         interface.save()
 
     for status in Status.objects.filter(content_types__in=[vminterface_content_type]):
-        status.content_types.clear()
+        status.content_types.remove(vminterface_content_type)
 
 
 class Migration(migrations.Migration):

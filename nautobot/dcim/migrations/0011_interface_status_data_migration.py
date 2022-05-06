@@ -47,7 +47,7 @@ def reverse_populate_interface_status(app, schema_editor):
         interface.save()
 
     for status in Status.objects.filter(content_types__in=[interface_content_type]):
-        status.content_types.clear()
+        status.content_types.remove(interface_content_type)
 
 
 class Migration(migrations.Migration):
