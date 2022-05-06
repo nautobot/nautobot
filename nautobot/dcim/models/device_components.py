@@ -613,6 +613,7 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
             self.name,
             self.label,
             self.parent_interface.name if self.parent_interface else None,
+            self.bridge.name if self.bridge else None,
             self.lag.name if self.lag else None,
             self.get_type_display(),
             self.enabled,
