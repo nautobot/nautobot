@@ -8,7 +8,7 @@ from nautobot.extras.api.views import (
     ModelViewSet,
     StatusViewSetMixin,
 )
-from nautobot.utilities.utils import count_related
+from nautobot.utilities.utils import count_related, versioned_serializer_selector
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
     Cluster,
@@ -114,16 +114,8 @@ class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
     brief_prefetch_fields = ["virtual_machine"]
 
     def get_serializer_class(self):
-        if (
-            not self.brief
-            and not getattr(self, "swagger_fake_view", False)
-            and (
-                not hasattr(self.request, "major_version")
-                or self.request.major_version > 1
-                or (self.request.major_version == 1 and self.request.minor_version < 3)
-            )
-        ):
-            # API version 1.2 or earlier - use the legacy serializer
-            # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
-            return serializers.VMInterfaceSerializerVersion12
-        return super().get_serializer_class()
+        return versioned_serializer_selector(
+            obj=self,
+            legacy_serializer=serializers.VMInterfaceSerializerVersion12,
+            serializer=super().get_serializer_class(),
+        )

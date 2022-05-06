@@ -22,7 +22,7 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import count_related
+from nautobot.utilities.utils import count_related, versioned_serializer_selector
 from . import serializers
 
 
@@ -324,19 +324,9 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         default_code = "precondition_failed"
 
     def get_serializer_class(self):
-        if (
-            not self.brief
-            and not getattr(self, "swagger_fake_view", False)
-            and (
-                not hasattr(self.request, "major_version")
-                or self.request.major_version > 1
-                or (self.request.major_version == 1 and self.request.minor_version < 3)
-            )
-        ):
-            # API version 1.2 or earlier - use the legacy serializer
-            # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
-            return serializers.IPAddressSerializerLegacy
-        return super().get_serializer_class()
+        return versioned_serializer_selector(
+            obj=self, legacy_serializer=serializers.IPAddressSerializerLegacy, serializer=super().get_serializer_class()
+        )
 
     def retrieve(self, request, pk=None):
         try:

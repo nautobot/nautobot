@@ -530,3 +530,26 @@ def get_table_for_model(model):
 
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
+
+
+def versioned_serializer_selector(obj, legacy_serializer, serializer):
+    """Returns either legacy_serializer or serializer depending on request api_version, brief and swagger_fake_view
+
+    Args:
+        obj (ViewSet instance):
+        legacy_serializer (Serializer class): Legacy Serializer class
+        serializer (Serializer class): Current Serializer class
+    """
+    if (
+        not obj.brief
+        and not getattr(obj, "swagger_fake_view", False)
+        and (
+            not hasattr(obj.request, "major_version")
+            or obj.request.major_version > 1
+            or (obj.request.major_version == 1 and obj.request.minor_version < 3)
+        )
+    ):
+        # API version 1.2 or earlier - use the legacy serializer
+        # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
+        return legacy_serializer
+    return serializer
