@@ -140,6 +140,11 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.4 (2022-??-??)
+
+### Fixed
+- [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
+
 ## v1.3.3 (2022-05-02)
 
 ### Added
@@ -159,7 +164,6 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1503](https://github.com/nautobot/nautobot/issues/1503) - SSO users can no longer interact with or see the change password form.
 - [#1515](https://github.com/nautobot/nautobot/issues/1515) - Further fixes for slow/unresponsive jobs results display.
 - [#1538](https://github.com/nautobot/nautobot/issues/1538) - Fix incorrect page title alignment on the "Device Type Import" page.
-- [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
 - [#1678](https://github.com/nautobot/nautobot/issues/1678) - Custom fields with 'json' type no longer raise TypeError when filtering on an object list URL.
 - [#1679](https://github.com/nautobot/nautobot/issues/1679) - Fix a data migration error when upgrading to 1.3.x with pre-existing JobResults that reference Jobs with names exceeding 100 characters in length.
 - [#1685](https://github.com/nautobot/nautobot/issues/1685) - Fix Hadolint issue of `docker/Dockerfile`.
