@@ -1017,6 +1017,7 @@ class PowerPortSerializer(
         opt_in_fields = ["computed_fields"]
 
 
+# TODO: collapse this with InterfaceSerializer in 2.0.
 class InterfaceSerializerVersion12(
     TaggedObjectSerializer,
     CableTerminationSerializer,

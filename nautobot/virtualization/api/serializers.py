@@ -211,6 +211,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 #
 
 
+# TODO: collapse this with VMInterfaceSerializer in 2.0.
 class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()
