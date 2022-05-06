@@ -49,10 +49,10 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(
             render_json({"first": [1, 2, 3]}), '{\n    "first": [\n        1,\n        2,\n        3\n    ]\n}'
         )
-        self.assertEqual('"I am UTF-8! 💩"', render_json("I am UTF-8! 💩"))
+        self.assertEqual('"I am UTF-8! 😀"', render_json("I am UTF-8! 😀"))
 
     def test_render_yaml(self):
-        self.assertEqual("utf8:\n- 💩💩\n- 💩\n", render_yaml({"utf8": ["💩💩", "💩"]}))
+        self.assertEqual("utf8:\n- 😀😀\n- 😀\n", render_yaml({"utf8": ["😀😀", "😀"]}))
 
     def test_meta(self):
         status = Status.objects.get_for_model(Site).first()

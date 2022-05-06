@@ -283,4 +283,4 @@ class WebhookTest(APITestCase):
                 )
 
     def test_webhook_render_body_with_utf8(self):
-        self.assertEqual(Webhook().render_body({"utf8": "I am UTF-8! 💩"}), '{"utf8": "I am UTF-8! 💩"}')
+        self.assertEqual(Webhook().render_body({"utf8": "I am UTF-8! 😀"}), '{"utf8": "I am UTF-8! 😀"}')
