@@ -1493,6 +1493,7 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
 
 class InterfaceTestVersion13(InterfaceTestVersion12):
     api_version = "1.3"
+    validation_excluded_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):

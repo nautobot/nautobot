@@ -337,6 +337,7 @@ class VMInterfaceTestVersion13(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["mode"]
+    validation_excluded_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
