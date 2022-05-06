@@ -594,19 +594,21 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
 
 
 @extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.InterfaceSerializer(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(responses={"200": serializers.InterfaceSerializer(many=True)}, versions=["1.2"]),
-    create=extend_schema(responses={"201": serializers.InterfaceSerializer}, versions=["1.2"]),
-    list=extend_schema(responses={"200": serializers.InterfaceSerializer(many=True)}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.InterfaceSerializer}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.InterfaceSerializer}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.InterfaceSerializer}, versions=["1.2"]),
+    bulk_update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2"]
+    ),
+    create=extend_schema(responses={"201": serializers.InterfaceSerializerVersion12}, versions=["1.2"]),
+    list=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2"]),
+    partial_update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2"]),
+    retrieve=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2"]),
+    update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2"]),
 )
 class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):
     queryset = Interface.objects.prefetch_related(
         "device", "status", "_path__destination", "cable", "_cable_peer", "ip_addresses", "tags"
     )
-    serializer_class = serializers.InterfaceSerializerVersion13
+    serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
     brief_prefetch_fields = ["device"]
 
@@ -622,7 +624,7 @@ class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSet
         ):
             # API version 1.2 or earlier - use the legacy serializer
             # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
-            return serializers.InterfaceSerializer
+            return serializers.InterfaceSerializerVersion12
         return super().get_serializer_class()
 
 

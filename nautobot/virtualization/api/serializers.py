@@ -209,7 +209,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 #
 
 
-class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
+class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
@@ -254,18 +254,7 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
         return super().validate(data)
 
 
-class VMInterfaceSerializerVersion13(TaggedObjectSerializer, ValidatedModelSerializer, StatusModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
-    virtual_machine = NestedVirtualMachineSerializer()
-    mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
-    untagged_vlan = NestedVLANSerializer(required=False, allow_null=True)
-    tagged_vlans = SerializedPKRelatedField(
-        queryset=VLAN.objects.all(),
-        serializer=NestedVLANSerializer,
-        required=False,
-        many=True,
-    )
-
+class VMInterfaceSerializer(VMInterfaceSerializerVersion12, StatusModelSerializerMixin):
     class Meta:
         model = VMInterface
         fields = [

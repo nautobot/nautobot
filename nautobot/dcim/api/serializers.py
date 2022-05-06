@@ -1015,7 +1015,7 @@ class PowerPortSerializer(
         opt_in_fields = ["computed_fields"]
 
 
-class InterfaceSerializer(
+class InterfaceSerializerVersion12(
     TaggedObjectSerializer,
     CableTerminationSerializer,
     ConnectedEndpointSerializer,
@@ -1083,7 +1083,7 @@ class InterfaceSerializer(
         return super().validate(data)
 
 
-class InterfaceSerializerVersion13(InterfaceSerializer, StatusModelSerializerMixin):
+class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
     class Meta:
         model = Interface
         fields = [
