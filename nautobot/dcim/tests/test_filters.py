@@ -2572,7 +2572,7 @@ class InterfaceTestCase(TestCase):
         device = Interface.objects.first().device
         bridge_interface = Interface.objects.create(
             device=device,
-            name="Bridged Interface",
+            name="Bridge 1",
             type=InterfaceTypeChoices.TYPE_BRIDGE,
         )
         bridged_interfaces = (
