@@ -146,7 +146,11 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#1751](https://github.com/nautobot/nautobot/pull/1751) - Updated secrets documentation advisory notes.
+
 ### Fixed
+
+- [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
 
 ### Security
 
