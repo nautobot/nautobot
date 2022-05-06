@@ -574,12 +574,12 @@ class JSONFieldTest(NautobotTestCase):
         response = self.client.get(f'{reverse("dcim:device_list")}?name=Foo%20Device')
         self.assertIn("Foo Device", str(response.content))
 
-    def test_prepare_value(self):
+    def test_prepare_value_with_utf8(self):
         self.assertEqual('"I am UTF-8! 💩"', JSONField().prepare_value("I am UTF-8! 💩"))
 
 
 class WidgetsTest(TestCase):
-    def test_api_select_add_query_param(self):
+    def test_api_select_add_query_param_with_utf8(self):
         widget = APISelect()
         widget.add_query_param("utf8", "I am UTF-8! 💩")
         self.assertEqual('["I am UTF-8! 💩"]', widget.attrs["data-query-param-utf8"])
