@@ -242,10 +242,6 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
 
     def validate(self, data):
 
-        # set vminterface status to active if status not provided
-        if not data.get("status"):
-            data["status"] = Status.objects.get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
-
         # Validate many-to-many VLAN assignments
         virtual_machine = self.instance.virtual_machine if self.instance else data.get("virtual_machine")
         for vlan in data.get("tagged_vlans", []):

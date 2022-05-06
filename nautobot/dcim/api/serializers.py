@@ -1071,10 +1071,6 @@ class InterfaceSerializer(
 
     def validate(self, data):
 
-        # set interface status to active if status not provided
-        if not data.get("status"):
-            data["status"] = Status.objects.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
         for vlan in data.get("tagged_vlans", []):

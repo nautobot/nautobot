@@ -17,6 +17,7 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
+    InterfaceStatusChoices,
 )
 from nautobot.dcim.constants import (
     NONCONNECTABLE_IFACE_TYPES,
@@ -33,6 +34,7 @@ from nautobot.extras.models import (
     RelationshipModel,
     TaggedItem,
     StatusModel,
+    Status,
 )
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
@@ -501,6 +503,10 @@ class BaseInterface(RelationshipModel, StatusModel):
         abstract = True
 
     def save(self, *args, **kwargs):
+
+        # set interface status to active if status not provided
+        if not self.status:
+            self.status = Status.objects.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
 
         # Remove untagged VLAN assignment for non-802.1Q interfaces
         if not self.mode:
