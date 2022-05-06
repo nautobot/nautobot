@@ -98,7 +98,7 @@ class AnotherExampleModelEditView(generic.ObjectEditView):
 
 
 class AnotherExampleModelBulkEditView(generic.BulkEditView):
-    """Edit multiple `ExampleModel` objects."""
+    """Edit multiple `AnotherExampleModel` objects."""
 
     queryset = AnotherExampleModel.objects.all()
     table = tables.AnotherExampleModelTable
