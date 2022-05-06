@@ -17,7 +17,6 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceModeChoices,
-    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -74,7 +73,6 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
-from nautobot.extras.models import Status
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
