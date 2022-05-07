@@ -546,7 +546,6 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
-        display_field="display",
         query_params={
             "virtual_machine_id": "$virtual_machine",
         },

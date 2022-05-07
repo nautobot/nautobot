@@ -2512,7 +2512,6 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         label="Parent interface",
-        display_field="display",
         query_params={
             "kind": "physical",
         },
@@ -2529,7 +2528,6 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         label="LAG interface",
-        display_field="display",
         query_params={
             "type": InterfaceTypeChoices.TYPE_LAG,
         },
@@ -2617,7 +2615,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display",
         query_params={
             "device_id": "$device",
             "kind": "physical",
@@ -2634,7 +2631,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display",
         query_params={
             "device_id": "$device",
             "type": InterfaceTypeChoices.TYPE_LAG,
@@ -2738,7 +2734,6 @@ class InterfaceBulkEditForm(
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display",
         query_params={
             "kind": "physical",
         },
@@ -2753,7 +2748,6 @@ class InterfaceBulkEditForm(
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        display_field="display",
         query_params={
             "type": InterfaceTypeChoices.TYPE_LAG,
         },
