@@ -2618,7 +2618,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         query_params={
-            "device_id": ["$device"],
+            "device_id": "$device",
             "kind": "physical",
         },
     )
