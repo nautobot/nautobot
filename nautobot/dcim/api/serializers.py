@@ -1074,7 +1074,11 @@ class InterfaceSerializerVersion12(
 
         # set interface status to active if status not provided
         if not data.get("status"):
-            data["status"] = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            # status is currently required in the Interface model but not required in api_version < 1.3 serializers
+            # which raises an error when validating except status is explicitly set here
+            data["status"] = (
+                Status.objects.get_for_model(Interface).filter(slug=InterfaceStatusChoices.STATUS_ACTIVE).first()
+            )
 
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
