@@ -1811,6 +1811,7 @@ class InterfaceEditView(generic.ObjectEditView):
 
 class InterfaceDeleteView(generic.ObjectDeleteView):
     queryset = Interface.objects.all()
+    template_name = "dcim/device_interface_delete.html"
 
 
 class InterfaceBulkImportView(generic.BulkImportView):
@@ -1838,6 +1839,7 @@ class InterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = Interface.objects.all()
     filterset = filters.InterfaceFilterSet
     table = tables.InterfaceTable
+    template_name = "dcim/interface_bulk_delete.html"
 
 
 #

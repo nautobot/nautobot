@@ -501,7 +501,7 @@ class BaseInterface(RelationshipModel):
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
     parent_interface = models.ForeignKey(
         to="self",
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="child_interfaces",
         null=True,
         blank=True,

@@ -432,6 +432,7 @@ class VMInterfaceEditView(generic.ObjectEditView):
 
 class VMInterfaceDeleteView(generic.ObjectDeleteView):
     queryset = VMInterface.objects.all()
+    template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
 class VMInterfaceBulkImportView(generic.BulkImportView):
@@ -454,6 +455,7 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
+    template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
 #
