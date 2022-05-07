@@ -1,6 +1,6 @@
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -22,7 +22,11 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import count_related, versioned_serializer_selector
+from nautobot.utilities.utils import (
+    count_related,
+    SerializerVersions,
+    versioned_serializer,
+)
 from . import serializers
 
 
@@ -292,16 +296,8 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 #
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]
-    ),
-    create=extend_schema(responses={"201": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    list=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+@versioned_serializer(
+    serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),)
 )
 class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = IPAddress.objects.prefetch_related(
@@ -322,11 +318,6 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         status_code = 412
         default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
         default_code = "precondition_failed"
-
-    def get_serializer_class(self):
-        return versioned_serializer_selector(
-            obj=self, legacy_serializer=serializers.IPAddressSerializerLegacy, serializer=super().get_serializer_class()
-        )
 
     def retrieve(self, request, pk=None):
         try:

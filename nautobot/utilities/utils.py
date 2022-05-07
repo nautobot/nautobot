@@ -12,6 +12,7 @@ from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.template import engines
 from django.utils.module_loading import import_string
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
@@ -531,25 +532,93 @@ def get_table_for_model(model):
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
 
+# namedtuple accepts versions(list of API versions) and serializer(Appropriate Serializer class for versions).
+SerializerVersions = namedtuple("SerializersVersions", ("versions", "serializer"))
 
-def versioned_serializer_selector(obj, legacy_serializer, serializer):
-    """Returns either legacy_serializer or serializer depending on request api_version, brief and swagger_fake_view
+
+def get_api_version_serializer(serializer_choices, api_version):
+    """Returns the serializer of an api_version
+
+    Args:
+        serializer_choices (SerializerVersions): list of SerializerVersions
+        api_version (str): Request API version
+
+    Returns:
+        returns the serializer for the api_version if found in serializer_choices else None
+    """
+    for versions, serializer in serializer_choices:
+        if api_version in versions:
+            return serializer
+    return None
+
+
+def versioned_serializer_selector(obj, serializer_choices, current_serializer):
+    """Returns either appropriate serializer class depending on request api_version, brief and swagger_fake_view
 
     Args:
         obj (ViewSet instance):
-        legacy_serializer (Serializer class): Legacy Serializer class
-        serializer (Serializer class): Current Serializer class
+        current_serializer (Serializer class): Current Serializer class
+        serializer_choices (list): List of SerializerVersions
     """
     if (
         not obj.brief
         and not getattr(obj, "swagger_fake_view", False)
-        and (
-            not hasattr(obj.request, "major_version")
-            or obj.request.major_version > 1
-            or (obj.request.major_version == 1 and obj.request.minor_version < 3)
-        )
+        and hasattr(obj.request, "major_version")
     ):
-        # API version 1.2 or earlier - use the legacy serializer
-        # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
-        return legacy_serializer
-    return serializer
+        api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
+        serializer = get_api_version_serializer(serializer_choices, api_version)
+        if serializer is not None:
+            return serializer
+    return current_serializer
+
+
+def versioned_serializer(serializer_choices):
+    """
+    Convenience decorator for versioned API views.
+
+    It helps wrap view with extend_schema_view and passes relevant serializer methods for all request
+    methods(bulk_update, bulk_partial_update, create, list) which generates the right schema depending
+    on the api_version.
+
+    This decorator also takes care of returning the right serializer class depending on request api_version
+    """
+
+    def inner(cls):
+        @extend_schema_view(
+            bulk_update=extend_schema(
+                responses={"200": serializer_choices[0].serializer(many=True)},
+                versions=serializer_choices[0].versions,
+            ),
+            bulk_partial_update=extend_schema(
+                responses={"200": serializer_choices[0].serializer(many=True)},
+                versions=serializer_choices[0].versions,
+            ),
+            create=extend_schema(
+                responses={"201": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
+            ),
+            list=extend_schema(
+                responses={"200": serializer_choices[0].serializer(many=True)},
+                versions=serializer_choices[0].versions,
+            ),
+            partial_update=extend_schema(
+                responses={"200": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
+            ),
+            retrieve=extend_schema(
+                responses={"200": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
+            ),
+            update=extend_schema(
+                responses={"200": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
+            ),
+        )
+        class ViewWrapper(cls):
+
+            def get_serializer_class(self):
+                return versioned_serializer_selector(
+                    obj=self,
+                    current_serializer=super().get_serializer_class(),
+                    serializer_choices=serializer_choices,
+                )
+
+        return ViewWrapper
+
+    return inner

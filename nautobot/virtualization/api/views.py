@@ -1,4 +1,3 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.routers import APIRootView
 
 from nautobot.dcim.models import Device
@@ -8,7 +7,7 @@ from nautobot.extras.api.views import (
     ModelViewSet,
     StatusViewSetMixin,
 )
-from nautobot.utilities.utils import count_related, versioned_serializer_selector
+from nautobot.utilities.utils import count_related, SerializerVersions, versioned_serializer
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
     Cluster,
@@ -94,28 +93,11 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
         return serializers.VirtualMachineWithConfigContextSerializer
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2"]
-    ),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2"]
-    ),
-    create=extend_schema(responses={"201": serializers.VMInterfaceSerializerVersion12}, versions=["1.2"]),
-    list=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2"]),
+@versioned_serializer(
+    serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.VMInterfaceSerializerVersion12),)
 )
 class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
     queryset = VMInterface.objects.prefetch_related("virtual_machine", "status", "tags", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
     brief_prefetch_fields = ["virtual_machine"]
-
-    def get_serializer_class(self):
-        return versioned_serializer_selector(
-            obj=self,
-            legacy_serializer=serializers.VMInterfaceSerializerVersion12,
-            serializer=super().get_serializer_class(),
-        )
