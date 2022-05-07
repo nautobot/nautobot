@@ -746,6 +746,10 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
     def count_ipaddresses(self):
         return self.ip_addresses.count()
 
+    @property
+    def parent(self):
+        return self.device
+
 
 #
 # Pass-through ports
