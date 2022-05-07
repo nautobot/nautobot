@@ -577,9 +577,20 @@ def versioned_viewset(serializer_choices):
     on the api_version.
 
     This decorator also takes care of returning the right serializer class depending on request api_version
+
+    NOTE: Only the first item(index 0) on serializer_choices would be utilized for extend_schema_view due to the
+    limitation of extend_schema_view not been able to use different serializer class for different api views per
+    request method(create, list, retrieve, etc.)
     """
 
     def inner(cls):
+        # only first item in serializer_choices can be utilized currently because of the limitation on extend_schema:
+        # currently not possible to define different serializer for different versions
+        # e.g. extend_schema(
+        #           responses={"200": SerializerVersion12(many=True)}, versions=["1.2"],
+        #           responses={"200": SerializerVersion13(many=True)}, versions=["1.3"],
+        #           responses={"200": SerializerVersion14(many=True)}, versions=["1.4"],
+        #           )
         @extend_schema_view(
             bulk_update=extend_schema(
                 responses={"200": serializer_choices[0].serializer(many=True)},
