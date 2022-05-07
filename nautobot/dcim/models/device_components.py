@@ -659,6 +659,10 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
         if self.parent_interface is not None and self.parent_interface.type == InterfaceTypeChoices.TYPE_VIRTUAL:
             raise ValidationError({"parent_interface": "Virtual interfaces may not be parents of other interfaces."})
 
+        # An interface cannot be its own parent
+        if self.pk and self.parent_interface_id == self.pk:
+            raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
+
         # An interface's LAG must belong to the same device or virtual chassis
         if self.lag and self.lag.device != self.device:
             if self.device.virtual_chassis is None:
@@ -694,12 +698,6 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
                     "device, or it must be global".format(self.untagged_vlan)
                 }
             )
-
-        # Parent validation
-
-        # An interface cannot be its own parent
-        if self.pk and self.parent_interface_id == self.pk:
-            raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
 
         # An interface cannot be bridged to itself
         if self.pk and self.bridge_id == self.pk:
