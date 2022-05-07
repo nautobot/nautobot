@@ -11,13 +11,13 @@ from taggit.managers import TaggableManager
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
-    InterfaceStatusChoices,
 )
 from nautobot.dcim.constants import (
     NONCONNECTABLE_IFACE_TYPES,
@@ -32,9 +32,9 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
-    TaggedItem,
-    StatusModel,
     Status,
+    StatusModel,
+    TaggedItem,
 )
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel

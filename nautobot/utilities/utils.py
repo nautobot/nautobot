@@ -540,7 +540,7 @@ def get_api_version_serializer(serializer_choices, api_version):
     """Returns the serializer of an api_version
 
     Args:
-        serializer_choices (SerializerVersions): list of SerializerVersions
+        serializer_choices (list): list of SerializerVersions
         api_version (str): Request API version
 
     Returns:
@@ -553,11 +553,11 @@ def get_api_version_serializer(serializer_choices, api_version):
 
 
 def versioned_serializer_selector(obj, serializer_choices, current_serializer):
-    """Returns either appropriate serializer class depending on request api_version, brief and swagger_fake_view
+    """Returns appropriate serializer class depending on request api_version, brief and swagger_fake_view
 
     Args:
         obj (ViewSet instance):
-        current_serializer (Serializer class): Current Serializer class
+        current_serializer (Serializer): Current Serializer class
         serializer_choices (list): List of SerializerVersions
     """
     if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
@@ -573,7 +573,7 @@ def versioned_viewset(serializer_choices):
     Convenience decorator for versioned API views.
 
     It helps wrap view with extend_schema_view and passes relevant serializer methods for all request
-    methods(bulk_update, bulk_partial_update, create, list) which generates the right schema depending
+    methods(bulk_update, bulk_partial_update, create, list, etc.) which generates the right schema depending
     on the api_version.
 
     This decorator also takes care of returning the right serializer class depending on request api_version
