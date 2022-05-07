@@ -144,10 +144,6 @@ class CableTermination(models.Model):
     def get_cable_peer(self):
         return self._cable_peer
 
-    @property
-    def parent(self):
-        raise NotImplementedError("CableTermination models must implement parent()")
-
 
 class PathEndpoint(models.Model):
     """
