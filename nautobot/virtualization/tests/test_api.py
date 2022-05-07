@@ -285,7 +285,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = ["mode"]
+    choices_fields = ["mode", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -329,14 +329,8 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class VMInterfaceTestVersion13(APIViewTestCases.APIViewTestCase):
+class VMInterfaceTestVersion13(VMInterfaceTestVersion12):
     api_version = "1.3"
-    model = VMInterface
-    brief_fields = ["display", "id", "name", "url", "virtual_machine"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["mode"]
     validation_excluded_fields = ["status"]
 
     @classmethod

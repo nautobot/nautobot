@@ -560,11 +560,7 @@ def versioned_serializer_selector(obj, serializer_choices, current_serializer):
         current_serializer (Serializer class): Current Serializer class
         serializer_choices (list): List of SerializerVersions
     """
-    if (
-        not obj.brief
-        and not getattr(obj, "swagger_fake_view", False)
-        and hasattr(obj.request, "major_version")
-    ):
+    if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
         api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
         serializer = get_api_version_serializer(serializer_choices, api_version)
         if serializer is not None:
@@ -611,7 +607,6 @@ def versioned_serializer(serializer_choices):
             ),
         )
         class ViewWrapper(cls):
-
             def get_serializer_class(self):
                 return versioned_serializer_selector(
                     obj=self,

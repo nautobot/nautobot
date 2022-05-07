@@ -1443,7 +1443,7 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         "description": "New description",
     }
     peer_termination_type = Interface
-    choices_fields = ["mode", "type"]
+    choices_fields = ["mode", "type", "status"]
 
     @classmethod
     def setUpTestData(cls):
