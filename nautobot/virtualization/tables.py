@@ -241,6 +241,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "pk",
             "name",
             "enabled",
+            "parent_interface",
             "mac_address",
             "mtu",
             "mode",

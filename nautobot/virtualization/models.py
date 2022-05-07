@@ -448,6 +448,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.name,
             self.enabled,
             self.parent_interface.name if self.parent_interface else None,
+            self.bridge.name if self.bridge else None,
             self.mac_address,
             self.mtu,
             self.description,

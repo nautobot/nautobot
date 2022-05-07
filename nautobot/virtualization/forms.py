@@ -593,6 +593,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
 
         # Restrict parent interface assignment by VM
         self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         virtual_machine = VirtualMachine.objects.get(
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
