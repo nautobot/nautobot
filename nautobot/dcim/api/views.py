@@ -64,7 +64,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import count_related, SerializerVersions, versioned_serializer
+from nautobot.utilities.utils import count_related, SerializerVersions, versioned_viewset
 from nautobot.virtualization.models import VirtualMachine
 from . import serializers
 from .exceptions import MissingFilterException
@@ -593,7 +593,7 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
     brief_prefetch_fields = ["device"]
 
 
-@versioned_serializer(
+@versioned_viewset(
     serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.InterfaceSerializerVersion12),)
 )
 class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):

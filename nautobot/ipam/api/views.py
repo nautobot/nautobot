@@ -25,7 +25,7 @@ from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
     count_related,
     SerializerVersions,
-    versioned_serializer,
+    versioned_viewset,
 )
 from . import serializers
 
@@ -296,7 +296,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 #
 
 
-@versioned_serializer(
+@versioned_viewset(
     serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),)
 )
 class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):

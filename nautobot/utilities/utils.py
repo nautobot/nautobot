@@ -568,7 +568,7 @@ def versioned_serializer_selector(obj, serializer_choices, current_serializer):
     return current_serializer
 
 
-def versioned_serializer(serializer_choices):
+def versioned_viewset(serializer_choices):
     """
     Convenience decorator for versioned API views.
 
