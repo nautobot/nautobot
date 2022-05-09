@@ -2872,14 +2872,16 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
 
         if data:
             # Limit choices for parent, bridge, and LAG interfaces to the assigned device (or VC master)
-            device = data.get("device")
-            if device is not None:
+            device_name = data.get("device")
+            if device_name is not None:
                 params = {}
                 field_name = f"device__{self.fields['device'].to_field_name}"
-                params[field_name].setdefault([device])
+                params.setdefault(field_name, [device_name])
 
-                if device.virtual_chassis and device.virtual_chassis.master:
-                    params[field_name].append(device.virtual_chassis.master)
+                device = Device.objects.filter(name=device_name).first()
+
+                if device and device.virtual_chassis and device.virtual_chassis.master:
+                    params[field_name].append(device.virtual_chassis.master.name)
 
                 self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.filter(**params)
                 self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(**params)
