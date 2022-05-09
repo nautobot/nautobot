@@ -138,7 +138,7 @@ class VRFTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -224,7 +224,7 @@ class RouteTargetTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 8)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -1156,7 +1156,7 @@ class VLANTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -1271,7 +1271,7 @@ class ServiceTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 

@@ -216,7 +216,7 @@ class ConfigContextTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -561,7 +561,7 @@ class JobFilterSetTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -704,7 +704,7 @@ class ObjectChangeTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -901,7 +901,7 @@ class SecretTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -929,7 +929,7 @@ class SecretsGroupTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -1057,7 +1057,7 @@ class StatusTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -1102,7 +1102,7 @@ class TagTestCase(TestCase):
         self.assertEqual(filtered_data[0], self.tags[0])
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
@@ -1162,6 +1162,6 @@ class WebhookTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

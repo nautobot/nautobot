@@ -92,7 +92,6 @@ class ProviderTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-
 class CircuitTypeTestCase(TestCase):
     queryset = CircuitType.objects.all()
     filterset = CircuitTypeFilterSet
@@ -300,7 +299,7 @@ class CircuitTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_search(self):
-        value =self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
