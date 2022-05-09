@@ -156,6 +156,14 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ---
 
+## BRANDING_PREPENDED_FILENAME
+
+Default: `"nautobot_"`
+
+Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
+
+Defines the initial pre-pended portion of a filename for for export to CSV/YAML or export templates.
+
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)

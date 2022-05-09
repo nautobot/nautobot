@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -403,7 +404,8 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
 
         # Build the response
         response = HttpResponse(output, content_type=mime_type)
-        filename = "nautobot_{}{}".format(
+        filename = "{}{}{}".format(
+            settings.BRANDING_PREPENDED_FILENAME,
             queryset.model._meta.verbose_name_plural,
             ".{}".format(self.file_extension) if self.file_extension else "",
         )
