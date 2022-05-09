@@ -13,7 +13,12 @@ __all__ = (
 
 
 class GroupFilterSet(BaseFilterSet):
-    q = SearchFilter(filter_predicates={"name": "icontains"})
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "id": "iexact",
+        }
+    )
 
     class Meta:
         model = Group
@@ -27,6 +32,7 @@ class UserFilterSet(BaseFilterSet):
             "first_name": "icontains",
             "last_name": "icontains",
             "email": "icontains",
+            "id": "iexact",
         },
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
@@ -55,7 +61,12 @@ class UserFilterSet(BaseFilterSet):
 
 
 class TokenFilterSet(BaseFilterSet):
-    q = SearchFilter(filter_predicates={"description": "icontains"})
+    q = SearchFilter(
+        filter_predicates={
+            "description": "icontains",
+            "id": "iexact",
+        }
+    )
 
     class Meta:
         model = Token

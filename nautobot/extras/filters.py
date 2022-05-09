@@ -136,6 +136,7 @@ class ConfigContextFilterSet(BaseFilterSet):
             "name": "icontains",
             "description": "icontains",
             "data": "icontains",
+            "id": "iexact",
         },
     )
     owner_content_type = ContentTypeFilter()
@@ -255,6 +256,7 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
             "name": "icontains",
             "description": "icontains",
             "data_schema": "icontains",
+            "id": "iexact",
         },
     )
     owner_content_type = ContentTypeFilter()
@@ -349,6 +351,7 @@ class CustomFieldFilterSet(BaseFilterSet):
             "name": "icontains",
             "label": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
@@ -361,7 +364,12 @@ class CustomFieldFilterSet(BaseFilterSet):
 
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
-    q = SearchFilter(filter_predicates={"value": "icontains"})
+    q = SearchFilter(
+        filter_predicates={
+            "value": "icontains",
+            "id": "iexact",
+        }
+    )
     field_id = django_filters.ModelMultipleChoiceFilter(
         field_name="field",
         queryset=CustomField.objects.all(),
@@ -436,6 +444,7 @@ class DynamicGroupFilterSet(NautobotFilterSet):
             "description": "icontains",
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
+            "id": "iexact",
         },
     )
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
@@ -459,6 +468,7 @@ class ExportTemplateFilterSet(BaseFilterSet):
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     owner_content_type = ContentTypeFilter()
@@ -479,6 +489,7 @@ class GitRepositoryFilterSet(NautobotFilterSet):
             "name": "icontains",
             "remote_url": "icontains",
             "branch": "icontains",
+            "id": "iexact",
         },
     )
     secrets_group_id = django_filters.ModelMultipleChoiceFilter(
@@ -543,6 +554,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "slug": "icontains",
             "grouping": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     tag = TagFilter()
@@ -583,6 +595,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "job_model__name": "icontains",
             "name": "icontains",
             "user__username": "icontains",
+            "id": "iexact",
         },
     )
     job_model = django_filters.ModelMultipleChoiceFilter(
@@ -625,6 +638,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
             "name": "icontains",
             "job_class": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     job_model = django_filters.ModelMultipleChoiceFilter(
@@ -676,6 +690,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
         filter_predicates={
             "user_name": "icontains",
             "object_repr": "icontains",
+            "id": "iexact",
         },
     )
     changed_object_type = ContentTypeFilter()
@@ -756,6 +771,7 @@ class SecretFilterSet(
         filter_predicates={
             "name": "icontains",
             "slug": "icontains",
+            "id": "iexact",
         },
     )
     # TODO dynamic choices needed
@@ -777,6 +793,7 @@ class SecretsGroupFilterSet(
         filter_predicates={
             "name": "icontains",
             "slug": "icontains",
+            "id": "iexact",
         },
     )
 
@@ -854,6 +871,7 @@ class StatusFilterSet(NautobotFilterSet):
             "name": "icontains",
             "slug": "icontains",
             "content_types__model": "icontains",
+            "id": "iexact",
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
@@ -892,6 +910,7 @@ class TagFilterSet(NautobotFilterSet):
             "name": "icontains",
             "slug": "icontains",
             "content_types__model": "icontains",
+            "id": "iexact",
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
@@ -915,6 +934,7 @@ class WebhookFilterSet(BaseFilterSet):
             "payload_url": "icontains",
             "additional_headers": "icontains",
             "body_template": "icontains",
+            "id": "iexact",
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(

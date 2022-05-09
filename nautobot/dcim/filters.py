@@ -141,6 +141,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "contact_email": "icontains",
             "comments": "icontains",
             "asn:int": "exact",  # asn expects an int
+            "id": "iexact",
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(
@@ -228,6 +229,7 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "serial": "icontains",
             "asset_tag": "icontains",
             "comments": "icontains",
+            "id": "iexact",
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(
@@ -303,6 +305,7 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
             "rack__facility_id": "icontains",
             "user__username": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     rack_id = django_filters.ModelMultipleChoiceFilter(
@@ -363,6 +366,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "model": "icontains",
             "part_number": "icontains",
             "comments": "icontains",
+            "id": "iexact",
         },
     )
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
@@ -527,6 +531,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
             "inventoryitems__serial": "icontains",
             "asset_tag": "icontains",
             "comments": "icontains",
+            "id": "iexact",
         },
     )
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
@@ -935,6 +940,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
             "serial": "icontains",
             "asset_tag": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(
@@ -997,6 +1003,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
             "name": "icontains",
             "members__name": "icontains",
             "domain": "icontains",
+            "id": "iexact",
         },
     )
     master_id = django_filters.ModelMultipleChoiceFilter(
@@ -1052,7 +1059,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
 
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
-    q = SearchFilter(filter_predicates={"label": "icontains"})
+    q = SearchFilter(filter_predicates={"label": "icontains", "id": "iexact"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
@@ -1128,7 +1135,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
 
 
 class PowerPanelFilterSet(NautobotFilterSet):
-    q = SearchFilter(filter_predicates={"name": "icontains"})
+    q = SearchFilter(filter_predicates={"name": "icontains", "id": "iexact"})
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
@@ -1168,7 +1175,7 @@ class PowerPanelFilterSet(NautobotFilterSet):
 class PowerFeedFilterSet(
     NautobotFilterSet, CableTerminationFilterSet, PathEndpointFilterSet, StatusModelFilterSetMixin
 ):
-    q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
+    q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains", "id": "iexact"})
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="power_panel__site__region",

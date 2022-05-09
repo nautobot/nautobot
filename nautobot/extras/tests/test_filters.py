@@ -215,6 +215,11 @@ class ConfigContextTestCase(TestCase):
         params = {"tenant": [tenants[0].slug, tenants[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
 
 class CustomLinkTestCase(TestCase):
     queryset = CustomLink.objects.all()
@@ -556,8 +561,9 @@ class JobFilterSetTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_search(self):
-        params = {"q": "file"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class JobLogEntryTestCase(TestCase):
@@ -696,6 +702,11 @@ class ObjectChangeTestCase(TestCase):
     def test_changed_object_type_id(self):
         params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="site").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_search(self):
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class RelationshipTestCase(TestCase):
@@ -889,6 +900,11 @@ class SecretTestCase(TestCase):
         params = {"provider": ["environment-variable"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
 
 class SecretsGroupTestCase(TestCase):
     queryset = SecretsGroup.objects.all()
@@ -911,6 +927,11 @@ class SecretsGroupTestCase(TestCase):
     def test_slug(self):
         params = {"slug": ["group-1", "group-2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class SecretsGroupAssociationTestCase(TestCase):
@@ -1036,8 +1057,9 @@ class StatusTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
 
     def test_search(self):
-        params = {"q": "active"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class TagTestCase(TestCase):
@@ -1080,8 +1102,9 @@ class TagTestCase(TestCase):
         self.assertEqual(filtered_data[0], self.tags[0])
 
     def test_search(self):
-        params = {"q": "tag-1"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class WebhookTestCase(TestCase):
@@ -1139,5 +1162,6 @@ class WebhookTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):
-        params = {"q": "webhook"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        value =self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

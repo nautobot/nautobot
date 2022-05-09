@@ -52,6 +52,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
             "name": "icontains",
             "rd": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     import_target_id = django_filters.ModelMultipleChoiceFilter(
@@ -88,6 +89,7 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     importing_vrf_id = django_filters.ModelMultipleChoiceFilter(
@@ -512,6 +514,7 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "name": "icontains",
             "description": "icontains",
             "vid:int": "exact",  # vid expects an int
+            "id": "iexact",
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(
@@ -569,6 +572,7 @@ class ServiceFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
+            "id": "iexact",
         },
     )
     device_id = django_filters.ModelMultipleChoiceFilter(
