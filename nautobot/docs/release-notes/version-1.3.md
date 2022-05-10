@@ -144,14 +144,19 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#1766](https://github.com/nautobot/nautobot/pull/1766) - Added configuration for downloaded filename branding.
+
 ### Changed
 
+- [#1744](https://github.com/nautobot/nautobot/issues/1744) - Updated REST API token provisioning docs to include added in version.
 - [#1751](https://github.com/nautobot/nautobot/pull/1751) - Updated secrets documentation advisory notes.
 
 ### Fixed
 
 - [#1263](https://github.com/nautobot/nautobot/issues/1263) - Rack device image toggle added back to detail UI.
 - [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
+- [#1755](https://github.com/nautobot/nautobot/issues/1755) - Fixed "Select All" helper widget from taking full UI height.
+- [#1761](https://github.com/nautobot/nautobot/pull/1761) - Fixed typo in upgrading documentation.
 
 ## v1.3.3 (2022-05-02)
 
