@@ -150,6 +150,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Fixed
 
+- [#1263](https://github.com/nautobot/nautobot/issues/1263) - Rack device image toggle added back to detail UI.
 - [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
 
 ## v1.3.3 (2022-05-02)
