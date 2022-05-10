@@ -654,6 +654,9 @@ BRANDING_FILEPATHS = {
 # Title to use in place of "Nautobot"
 BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
 
+# Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
+BRANDING_PREPENDED_FILENAME = os.getenv("NAUTOBOT_BRANDING_PREPENDED_FILENAME", "nautobot_")
+
 # Branding URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
