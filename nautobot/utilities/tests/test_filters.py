@@ -832,7 +832,7 @@ class SearchFilterTest(TestCase):
             q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
         params = {"q": "1234"}
-        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), Site.objects.count())
+        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet2), Site.objects.count())
 
     def test_typed_invalid(self):
         """Test that incorrectly-typed predicate mappings are handled correctly."""
