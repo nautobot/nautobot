@@ -295,45 +295,79 @@ class MappedPredicatesFilterMixin:
     A mapping of filter predicates (field_name: lookup_expr) must be provided to
     the filter when declared on a filterset. This mapping is used to construct a
     `Q` query to filter based on the provided predicates.
+
+    Example:
+
+        q = SearchFilter(
+            filter_predicates={
+                "comments": "icontains",
+                "name": "icontains",
+                "id": "iexact",
+            },
+        )
+
+    Optionally you may also provide a built-in type for the filter predicate by
+    including the name of the type following a colon in the filter name. For
+    example:
+
+        q = SearchFilter(
+            filter_predicates={
+                "asn:int": "exact",
+            },
+        )
+
+    This tells the filter to try to cast `asn` to an `int`. If it fails, this
+    predicate will be skipped.
     """
 
+    # Optional label for the form element generated for this filter
     label = None
 
-    def __init__(self, filter_predicates=None, distinct=True, label=None, *args, **kwargs):
+    # List of lookup expressions for which incoming filter value will not be stripped.
+    preserve_whitespace = ["icontains"]
+
+    def __init__(self, filter_predicates=None, label=None, *args, **kwargs):
         if not isinstance(filter_predicates, dict):
             raise TypeError("filter_predicates must be a dict")
 
-        # Format: field_name: lookup_expr
+        # Format: {field_name: lookup_expr, ...}
         self.filter_predicates = filter_predicates
 
         # Try to use the label from the class if it is defined.
         if label is None:
             kwargs.setdefault("label", self.label)
 
-        kwargs.setdefault("distinct", distinct)
         super().__init__(*args, **kwargs)
 
-    def filter(self, qs, value):
-        if value in EMPTY_VALUES:
-            return qs
+        # Generate the query with a sentinel value to validate it and surface parse errors.
+        self.generate_query(self.filter_predicates, value="")
 
+    def generate_query(self, filter_predicates, value):
+        """
+        Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
+        predicate=value.
+        """
         query = models.Q()
-        value = value.strip()
-        for field_name, lookup_expr in self.filter_predicates.items():
-            # Try to capture the optional type (otherwise we assume str)
+        for field_name, lookup_expr in filter_predicates.items():
+            # Try to capture the optional type (otherwise we assume no casting)
             if ":" in field_name:
                 field_name, field_type = field_name.split(":")
             else:
                 field_type = None
 
-            # Try to cast value to the specified type, or skip creating a
-            # predicate for it.
+            # If the lookup_expr is not in the list for preserving whitespace, strip the value.
+            if isinstance(value, str) and lookup_expr not in self.preserve_whitespace:
+                value = value.strip()
+
+            # Try to cast value to the specified type, or skip creating a predicate for it.
             if field_type is not None:
                 try:
                     type_constructor = getattr(builtins, field_type)
                 except AttributeError as err:
                     raise TypeError(f"Invalid type {field_type} for {field_name}") from err
 
+                # In the event we try to cast a value to an invalid type (e.g. `int("foo")`
+                # or `dict(42)`), ensure this predicate is not included in the query.
                 try:
                     value = type_constructor(value)
                 except (TypeError, ValueError):
@@ -342,13 +376,18 @@ class MappedPredicatesFilterMixin:
             predicate = {f"{field_name}__{lookup_expr}": value}
             query |= models.Q(**predicate)
 
-        # Stash this for later use (such as introspection or debugging)
-        self.query = query
+        # Return this for later use (such as introspection or debugging)
+        return query
 
-        if self.distinct:
-            qs = qs.distinct()
-        qs = self.get_method(qs)(query)
-        return qs
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
+        # Evaluate the query and stash it for later use (such as introspection or debugging)
+        self.query = self.generate_query(self.filter_predicates, value)
+
+        qs = self.get_method(qs)(self.query)
+        return qs.distinct()
 
 
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):

@@ -149,7 +149,7 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
         return qs.ip_family(value)
 
 
-class AggregateFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet):
+class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -185,7 +185,7 @@ class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug"]
 
 
-class PrefixFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -339,7 +339,7 @@ class PrefixFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet, S
         return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
 
-class IPAddressFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",

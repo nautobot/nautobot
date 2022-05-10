@@ -28,6 +28,7 @@ from nautobot.utilities.filters import (
     MultiValueDateTimeFilter,
     MultiValueNumberFilter,
     MultiValueTimeFilter,
+    SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -769,3 +770,70 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_device_comments_multiple_value_charfield_iregex_negation(self):
         params = {"comments__nire": ["^device"]}
         self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 0)
+
+
+class SearchFilterTest(TestCase):
+    """Tests for the `SearchFilter` filter class."""
+
+    filterset_class = SiteFilterSet
+
+    def setUp(self):
+
+        super().setUp()
+
+        self.region1 = Region.objects.create(name="Test Region 1", slug="test-region-1")
+        self.region2 = Region.objects.create(name="Test Region 2", slug="test-region-2")
+        self.site1 = Site.objects.create(region=self.region1, name="Test Site 1", slug="test-site1", asn=1234)
+        self.site2 = Site.objects.create(region=self.region2, name="Test Site 2", slug="test-site2", asn=12345)
+        self.site3 = Site.objects.create(region=None, name="Test Site 3", slug="test-site3")
+
+        self.queryset = Site.objects.all()
+
+    def get_filterset_count(self, params):
+        return self.filterset_class(params, self.queryset).qs.count()
+
+    def test_default_icontains(self):
+        params = {"q": "Test Site"}
+        self.assertEqual(self.get_filterset_count(params), 3)
+        params = {"q": "Test Site 3"}
+        self.assertEqual(self.get_filterset_count(params), 1)
+        # Trailing space should also match all
+        params = {"q": "Test Site "}
+        self.assertEqual(self.get_filterset_count(params), 3)
+
+    def test_default_exact(self):
+        params = {"q": "1234"}
+        self.assertEqual(self.get_filterset_count(params), 1)
+        params = {"q": "123"}
+        self.assertEqual(self.get_filterset_count(params), 0)
+
+    def test_typed_valid(self):
+        class MySiteFilterSet(SiteFilterSet):
+            """Overload the default just to illustrate that it's all we're testing for here."""
+
+            q = SearchFilter(filter_predicates={"asn:int": "exact"})
+
+        params = {"q": "1234"}
+        self.assertEqual(MySiteFilterSet(params, self.queryset).qs.count(), 1)
+        params = {"q": "123"}
+        self.assertEqual(MySiteFilterSet(params, self.queryset).qs.count(), 0)
+
+        # Further an invalid type (e.g. dict) will just result in the query
+        # failing open.
+        class MySiteFilterSet2(SiteFilterSet):
+            """Overload the default just to illustrate that it's all we're testing for here."""
+
+            q = SearchFilter(filter_predicates={"asn:dict": "exact"})  # dict bad
+
+        params = {"q": "1234"}
+        self.assertEqual(MySiteFilterSet2(params, self.queryset).qs.count(), Site.objects.count())
+
+    def test_typed_invalid(self):
+        with self.assertRaises(TypeError):
+
+            class MySiteFilterSet(SiteFilterSet):
+                q = SearchFilter(
+                    filter_predicates={
+                        "asn:barf": "exact",  # barf is not a valid builtin
+                    },
+                )
