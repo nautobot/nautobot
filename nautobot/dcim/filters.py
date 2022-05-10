@@ -140,7 +140,10 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "contact_phone": "icontains",
             "contact_email": "icontains",
             "comments": "icontains",
-            "asn:int": "exact",  # asn expects an int
+            "asn": {
+                "lookup_expr": "exact",
+                "preprocessor": int,  # asn expects an int
+            },
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(

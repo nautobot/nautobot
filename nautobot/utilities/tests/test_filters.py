@@ -811,7 +811,7 @@ class SearchFilterTest(TestCase):
         class MySiteFilterSet(SiteFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
-            q = SearchFilter(filter_predicates={"asn:int": "exact"})
+            q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
         params = {"q": "1234"}
         self.assertEqual(MySiteFilterSet(params, self.queryset).qs.count(), 1)
@@ -823,17 +823,18 @@ class SearchFilterTest(TestCase):
         class MySiteFilterSet2(SiteFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
-            q = SearchFilter(filter_predicates={"asn:dict": "exact"})  # dict bad
+            q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
         params = {"q": "1234"}
         self.assertEqual(MySiteFilterSet2(params, self.queryset).qs.count(), Site.objects.count())
 
     def test_typed_invalid(self):
         with self.assertRaises(TypeError):
+            barf = None
 
             class MySiteFilterSet(SiteFilterSet):
                 q = SearchFilter(
                     filter_predicates={
-                        "asn:barf": "exact",  # barf is not a valid builtin
+                        "asn": {"preprocessor": barf, "lookup_expr": "exact"},
                     },
                 )

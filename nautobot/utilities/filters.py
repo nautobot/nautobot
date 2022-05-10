@@ -1,4 +1,3 @@
-import builtins
 from copy import deepcopy
 
 from django import forms
@@ -306,13 +305,15 @@ class MappedPredicatesFilterMixin:
             },
         )
 
-    Optionally you may also provide a built-in type for the filter predicate by
-    including the name of the type following a colon in the filter name. For
-    example:
+    Optionally you may also provide a callable to use a a preprocessor for the filter predicate by
+    providing the value as a nested dict with "lookup_expr" and "preprocessor"
+    keys. For example:
 
         q = SearchFilter(
             filter_predicates={
-                "asn:int": "exact",
+                "asn": {
+                    "lookup_expr": "exact",
+                    "preprocessor": int,
             },
         )
 
@@ -322,9 +323,6 @@ class MappedPredicatesFilterMixin:
 
     # Optional label for the form element generated for this filter
     label = None
-
-    # List of lookup expressions for which incoming filter value will not be stripped.
-    preserve_whitespace = ["icontains"]
 
     def __init__(self, filter_predicates=None, label=None, *args, **kwargs):
         if not isinstance(filter_predicates, dict):
@@ -348,28 +346,24 @@ class MappedPredicatesFilterMixin:
         predicate=value.
         """
         query = models.Q()
-        for field_name, lookup_expr in filter_predicates.items():
-            # Try to capture the optional type (otherwise we assume no casting)
-            if ":" in field_name:
-                field_name, field_type = field_name.split(":")
+        for field_name, lookup_info in filter_predicates.items():
+            if isinstance(lookup_info, str):
+                lookup_expr = lookup_info
+                preprocessor = str.strip
+            elif isinstance(lookup_info, dict):
+                lookup_expr = lookup_info["lookup_expr"]
+                preprocessor = lookup_info.get("preprocessor")
+                if not callable(preprocessor):
+                    raise TypeError("Preprocessor {preprocessor} must be callable!")
             else:
-                field_type = None
+                raise TypeError(f"Predicate value must be a str or a dict! Got: {type(lookup_expr)}")
 
-            # If the lookup_expr is not in the list for preserving whitespace, strip the value.
-            if isinstance(value, str) and lookup_expr not in self.preserve_whitespace:
-                value = value.strip()
-
-            # Try to cast value to the specified type, or skip creating a predicate for it.
-            if field_type is not None:
-                try:
-                    type_constructor = getattr(builtins, field_type)
-                except AttributeError as err:
-                    raise TypeError(f"Invalid type {field_type} for {field_name}") from err
-
+            # Try to preprocess the value or skip creating a predicate for it.
+            if preprocessor is not None:
                 # In the event we try to cast a value to an invalid type (e.g. `int("foo")`
                 # or `dict(42)`), ensure this predicate is not included in the query.
                 try:
-                    value = type_constructor(value)
+                    value = preprocessor(value)
                 except (TypeError, ValueError):
                     continue
 
@@ -411,13 +405,15 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
             },
         )
 
-    Optionally you may also provide a built-in type for the filter predicate by
-    including the name of the type following a colon in the filter name. For
-    example:
+    Optionally you may also provide a callable to use a a preprocessor for the filter predicate by
+    providing the value as a nested dict with "lookup_expr" and "preprocessor"
+    keys. For example:
 
         q = SearchFilter(
             filter_predicates={
-                "asn:int": "exact",
+                "asn": {
+                    "lookup_expr": "exact",
+                    "preprocessor": int,
             },
         )
 

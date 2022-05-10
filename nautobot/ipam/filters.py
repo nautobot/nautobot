@@ -511,7 +511,10 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
-            "vid:int": "exact",  # vid expects an int
+            "vid": {
+                "lookup_expr": "exact",
+                "preprocessor": int,  # vid expects an int
+            },
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(
