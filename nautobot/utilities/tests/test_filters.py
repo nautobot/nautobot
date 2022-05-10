@@ -789,10 +789,14 @@ class SearchFilterTest(TestCase):
 
         self.queryset = Site.objects.all()
 
-    def get_filterset_count(self, params):
-        return self.filterset_class(params, self.queryset).qs.count()
+    def get_filterset_count(self, params, klass=None):
+        """To save ourselves some boilerplate."""
+        if klass is None:
+            klass = self.filterset_class
+        return klass(params, self.queryset).qs.count()
 
     def test_default_icontains(self):
+        """Test a default search for an "icontains" value."""
         params = {"q": "Test Site"}
         self.assertEqual(self.get_filterset_count(params), 3)
         params = {"q": "Test Site 3"}
@@ -802,39 +806,53 @@ class SearchFilterTest(TestCase):
         self.assertEqual(self.get_filterset_count(params), 3)
 
     def test_default_exact(self):
+        """Test a default search for an "exact" value."""
         params = {"q": "1234"}
         self.assertEqual(self.get_filterset_count(params), 1)
         params = {"q": "123"}
         self.assertEqual(self.get_filterset_count(params), 0)
 
     def test_typed_valid(self):
+        """Test that validly-typed predicate mappings are handled correctly."""
+
         class MySiteFilterSet(SiteFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
             q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
         params = {"q": "1234"}
-        self.assertEqual(MySiteFilterSet(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 1)
         params = {"q": "123"}
-        self.assertEqual(MySiteFilterSet(params, self.queryset).qs.count(), 0)
+        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 0)
 
-        # Further an invalid type (e.g. dict) will just result in the query
-        # failing open.
+        # Further an invalid type (e.g. dict) will just result in the query failing open.
         class MySiteFilterSet2(SiteFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
             q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
         params = {"q": "1234"}
-        self.assertEqual(MySiteFilterSet2(params, self.queryset).qs.count(), Site.objects.count())
+        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), Site.objects.count())
 
     def test_typed_invalid(self):
+        """Test that incorrectly-typed predicate mappings are handled correctly."""
+        # Bad callable
         with self.assertRaises(TypeError):
             barf = None
 
-            class MySiteFilterSet(SiteFilterSet):
+            class BarfSiteFilterSet(SiteFilterSet):
                 q = SearchFilter(
                     filter_predicates={
                         "asn": {"preprocessor": barf, "lookup_expr": "exact"},
+                    },
+                )
+
+        # Incorrect lookup_info type (must be str or dict)
+        with self.assertRaises(TypeError):
+
+            class InvalidSiteFilterSet(SiteFilterSet):
+                q = SearchFilter(
+                    filter_predicates={
+                        "asn": ["icontains"],
                     },
                 )

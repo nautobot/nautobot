@@ -288,12 +288,12 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
 
 class MappedPredicatesFilterMixin:
     """
-    A filter mixin to provide the ability to specify fields and lookup
-    expressions to use for filtering.
+    A filter mixin to provide the ability to specify fields and lookup expressions to use for
+    filtering.
 
-    A mapping of filter predicates (field_name: lookup_expr) must be provided to
-    the filter when declared on a filterset. This mapping is used to construct a
-    `Q` query to filter based on the provided predicates.
+    A mapping of filter predicates (field_name: lookup_expr) must be provided to the filter when
+    declared on a filterset. This mapping is used to construct a `Q` query to filter based on the
+    provided predicates.
 
     Example:
 
@@ -305,9 +305,8 @@ class MappedPredicatesFilterMixin:
             },
         )
 
-    Optionally you may also provide a callable to use a a preprocessor for the filter predicate by
-    providing the value as a nested dict with "lookup_expr" and "preprocessor"
-    keys. For example:
+    Optionally you may also provide a callable to use as a preprocessor for the filter predicate by
+    providing the value as a nested dict with "lookup_expr" and "preprocessor" keys. For example:
 
         q = SearchFilter(
             filter_predicates={
@@ -317,8 +316,8 @@ class MappedPredicatesFilterMixin:
             },
         )
 
-    This tells the filter to try to cast `asn` to an `int`. If it fails, this
-    predicate will be skipped.
+    This tells the filter to try to cast `asn` to an `int`. If it fails, this predicate will be
+    skipped.
     """
 
     # Optional label for the form element generated for this filter
@@ -356,16 +355,15 @@ class MappedPredicatesFilterMixin:
                 if not callable(preprocessor):
                     raise TypeError("Preprocessor {preprocessor} must be callable!")
             else:
-                raise TypeError(f"Predicate value must be a str or a dict! Got: {type(lookup_expr)}")
+                raise TypeError(f"Predicate value must be a str or a dict! Got: {type(lookup_info)}")
 
-            # Try to preprocess the value or skip creating a predicate for it.
-            if preprocessor is not None:
-                # In the event we try to cast a value to an invalid type (e.g. `int("foo")`
-                # or `dict(42)`), ensure this predicate is not included in the query.
-                try:
-                    value = preprocessor(value)
-                except (TypeError, ValueError):
-                    continue
+            # Try to preprocess the value or skip creating a predicate for it. In the event we try
+            # to cast a value to an invalid type (e.g. `int("foo")` or `dict(42)`), ensure this
+            # predicate is not included in the query.
+            try:
+                value = preprocessor(value)
+            except (TypeError, ValueError):
+                continue
 
             predicate = {f"{field_name}__{lookup_expr}": value}
             query |= models.Q(**predicate)
@@ -388,12 +386,12 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
     Provide a search filter for use on filtersets as the `q=` parameter.
 
-    A mapping of filter predicates (field_name: lookup_expr) must be provided to
-    the filter when declared on a filterset. This mapping is used to construct a
-    `Q` query to filter based on the provided predicates.
+    A mapping of filter predicates (field_name: lookup_expr) must be provided to the filter when
+    declared on a filterset. This mapping is used to construct a `Q` query to filter based on the
+    provided predicates.
 
-    This filter should be used instead of declaring a `q` filter and pointing it
-    to a `search()` method on a filterset.
+    This filter should be used instead of declaring a `q` filter and pointing it to a `search()`
+    method on a filterset.
 
     Example:
 
@@ -406,8 +404,7 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
         )
 
     Optionally you may also provide a callable to use a a preprocessor for the filter predicate by
-    providing the value as a nested dict with "lookup_expr" and "preprocessor"
-    keys. For example:
+    providing the value as a nested dict with "lookup_expr" and "preprocessor" keys. For example:
 
         q = SearchFilter(
             filter_predicates={
