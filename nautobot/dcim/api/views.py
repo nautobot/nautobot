@@ -8,7 +8,7 @@ from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -64,7 +64,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import count_related, SerializerVersions, versioned_viewset
+from nautobot.utilities.utils import count_related, SerializerVersions, versioned_serializer_selector
 from nautobot.virtualization.models import VirtualMachine
 from . import serializers
 from .exceptions import MissingFilterException
@@ -593,10 +593,18 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
     brief_prefetch_fields = ["device"]
 
 
-@versioned_viewset(
-    serializer_choices=(
-        SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion13),
-    )
+@extend_schema_view(
+    bulk_update=extend_schema(
+        responses={"200": serializers.InterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]
+    ),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.InterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]
+    ),
+    create=extend_schema(responses={"201": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
+    list=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]),
+    partial_update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
+    retrieve=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
+    update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
 )
 class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):
     queryset = Interface.objects.prefetch_related(
@@ -605,6 +613,16 @@ class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSet
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
     brief_prefetch_fields = ["device"]
+
+    def get_serializer_class(self):
+        serializer_choices = (
+            SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion13),
+        )
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            current_serializer=super().get_serializer_class(),
+        )
 
 
 class FrontPortViewSet(PassThroughPortMixin, CustomFieldModelViewSet):

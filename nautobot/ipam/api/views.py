@@ -1,6 +1,6 @@
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -25,7 +25,7 @@ from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
     count_related,
     SerializerVersions,
-    versioned_viewset,
+    versioned_serializer_selector,
 )
 from . import serializers
 
@@ -296,8 +296,16 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 #
 
 
-@versioned_viewset(
-    serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),)
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]
+    ),
+    create=extend_schema(responses={"201": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+    list=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
+    partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+    retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
+    update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
 )
 class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = IPAddress.objects.prefetch_related(
@@ -311,6 +319,14 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     )
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
+
+    def get_serializer_class(self):
+        serializer_choices = (SerializerVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),)
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            current_serializer=super().get_serializer_class(),
+        )
 
     # 2.0 TODO: Remove exception class and overloaded methods below
     # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded

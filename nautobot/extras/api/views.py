@@ -5,7 +5,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -57,7 +57,7 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import copy_safe_request, count_related, SerializerVersions, versioned_viewset
+from nautobot.utilities.utils import copy_safe_request, count_related, SerializerVersions, versioned_serializer_selector
 from . import nested_serializers, serializers
 
 
@@ -900,11 +900,27 @@ class StatusViewSetMixin(ModelViewSet):
 #
 
 
-@versioned_viewset(serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.TagSerializer),))
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    bulk_partial_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    create=extend_schema(responses={"201": serializers.TagSerializer}, versions=["1.2"]),
+    partial_update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
+    retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+)
 class TagViewSet(CustomFieldModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
     serializer_class = serializers.TagSerializerVersion13
     filterset_class = filters.TagFilterSet
+
+    def get_serializer_class(self):
+        serializer_choices = (SerializerVersions(versions=["1.2"], serializer=serializers.TagSerializer),)
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            current_serializer=super().get_serializer_class(),
+        )
 
 
 #

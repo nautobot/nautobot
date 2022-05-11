@@ -12,7 +12,6 @@ from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.template import engines
 from django.utils.module_loading import import_string
-from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
@@ -540,7 +539,7 @@ def get_api_version_serializer(serializer_choices, api_version):
     """Returns the serializer of an api_version
 
     Args:
-        serializer_choices (list): list of SerializerVersions
+        serializer_choices (tuple): list of SerializerVersions
         api_version (str): Request API version
 
     Returns:
@@ -558,7 +557,7 @@ def versioned_serializer_selector(obj, serializer_choices, current_serializer):
     Args:
         obj (ViewSet instance):
         current_serializer (Serializer): Current Serializer class
-        serializer_choices (list): List of SerializerVersions
+        serializer_choices (tuple): Tuple of SerializerVersions
     """
     if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
         api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
@@ -566,65 +565,3 @@ def versioned_serializer_selector(obj, serializer_choices, current_serializer):
         if serializer is not None:
             return serializer
     return current_serializer
-
-
-def versioned_viewset(serializer_choices):
-    """
-    Convenience decorator for versioned API views.
-
-    It helps wrap view with extend_schema_view and passes relevant serializer methods for all request
-    methods(bulk_update, bulk_partial_update, create, list, etc.) which generates the right schema depending
-    on the api_version.
-
-    This decorator also takes care of returning the right serializer class depending on request api_version
-
-    NOTE: Only the first item(index 0) on serializer_choices would be utilized for extend_schema_view due to the
-    limitation of extend_schema_view not been able to use different serializer class for different api views per
-    request method(create, list, retrieve, etc.)
-    """
-
-    def inner(cls):
-        # only first item in serializer_choices can be utilized currently because of the limitation on extend_schema:
-        # currently not possible to define different serializer for different versions
-        # e.g. extend_schema(
-        #           responses={"200": SerializerVersion12(many=True)}, versions=["1.2"],
-        #           responses={"200": SerializerVersion13(many=True)}, versions=["1.3"],
-        #           responses={"200": SerializerVersion14(many=True)}, versions=["1.4"],
-        #           )
-        @extend_schema_view(
-            bulk_update=extend_schema(
-                responses={"200": serializer_choices[0].serializer(many=True)},
-                versions=serializer_choices[0].versions,
-            ),
-            bulk_partial_update=extend_schema(
-                responses={"200": serializer_choices[0].serializer(many=True)},
-                versions=serializer_choices[0].versions,
-            ),
-            create=extend_schema(
-                responses={"201": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
-            ),
-            list=extend_schema(
-                responses={"200": serializer_choices[0].serializer(many=True)},
-                versions=serializer_choices[0].versions,
-            ),
-            partial_update=extend_schema(
-                responses={"200": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
-            ),
-            retrieve=extend_schema(
-                responses={"200": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
-            ),
-            update=extend_schema(
-                responses={"200": serializer_choices[0].serializer}, versions=serializer_choices[0].versions
-            ),
-        )
-        class ViewWrapper(cls):
-            def get_serializer_class(self):
-                return versioned_serializer_selector(
-                    obj=self,
-                    current_serializer=super().get_serializer_class(),
-                    serializer_choices=serializer_choices,
-                )
-
-        return ViewWrapper
-
-    return inner
