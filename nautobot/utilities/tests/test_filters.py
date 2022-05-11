@@ -812,6 +812,15 @@ class SearchFilterTest(TestCase):
         params = {"q": "123"}
         self.assertEqual(self.get_filterset_count(params), 0)
 
+    def test_default_id(self):
+        """Test default search on "id" field."""
+        # Search is iexact so UUID search for lower/upper return the same result.
+        obj_pk = str(self.site1.pk)
+        params = {"q": obj_pk.lower()}
+        self.assertEqual(self.get_filterset_count(params), 1)
+        params = {"q": obj_pk.upper()}
+        self.assertEqual(self.get_filterset_count(params), 1)
+
     def test_typed_valid(self):
         """Test that validly-typed predicate mappings are handled correctly."""
 
@@ -825,14 +834,14 @@ class SearchFilterTest(TestCase):
         params = {"q": "123"}
         self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 0)
 
-        # Further an invalid type (e.g. dict) will just result in the query failing open.
+        # Further an invalid type (e.g. dict) will just result in the predicate for ASN to be skipped
         class MySiteFilterSet2(SiteFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
             q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
         params = {"q": "1234"}
-        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet2), Site.objects.count())
+        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet2), 0)
 
     def test_typed_invalid(self):
         """Test that incorrectly-typed predicate mappings are handled correctly."""

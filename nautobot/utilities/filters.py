@@ -295,13 +295,14 @@ class MappedPredicatesFilterMixin:
     declared on a filterset. This mapping is used to construct a `Q` query to filter based on the
     provided predicates.
 
+    By default a predicate for `{"id": "iexact"}` (`id__exact`) will always be included.
+
     Example:
 
         q = SearchFilter(
             filter_predicates={
                 "comments": "icontains",
                 "name": "icontains",
-                "id": "iexact",
             },
         )
 
@@ -323,12 +324,20 @@ class MappedPredicatesFilterMixin:
     # Optional label for the form element generated for this filter
     label = None
 
+    # Filter predicates that will always be included if not otherwise specified.
+    default_filter_predicates = {"id": "iexact"}
+
     def __init__(self, filter_predicates=None, label=None, *args, **kwargs):
         if not isinstance(filter_predicates, dict):
             raise TypeError("filter_predicates must be a dict")
 
+        # Layer incoming filter_predicates on top of the defaults so that any overrides take
+        # precedence.
+        defaults = deepcopy(self.default_filter_predicates)
+        defaults.update(filter_predicates)
+
         # Format: {field_name: lookup_expr, ...}
-        self.filter_predicates = filter_predicates
+        self.filter_predicates = defaults
 
         # Try to use the label from the class if it is defined.
         if label is None:
@@ -393,13 +402,14 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     This filter should be used instead of declaring a `q` filter and pointing it to a `search()`
     method on a filterset.
 
+    By default a predicate for `{"id": "iexact"}` (`id__exact`) will always be included.
+
     Example:
 
         q = SearchFilter(
             filter_predicates={
                 "comments": "icontains",
                 "name": "icontains",
-                "id": "iexact",
             },
         )
 
@@ -414,8 +424,8 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
             },
         )
 
-    This tells the filter to try to cast `asn` to an `int`. If it fails, this
-    predicate will be skipped.
+    This tells the filter to try to cast `asn` to an `int`. If it fails, this predicate will be
+    skipped.
     """
 
     label = "Search"
