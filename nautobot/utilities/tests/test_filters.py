@@ -786,6 +786,7 @@ class SearchFilterTest(TestCase):
         self.site1 = Site.objects.create(region=self.region1, name="Test Site 1", slug="test-site1", asn=1234)
         self.site2 = Site.objects.create(region=self.region2, name="Test Site 2", slug="test-site2", asn=12345)
         self.site3 = Site.objects.create(region=None, name="Test Site 3", slug="test-site3")
+        self.site4 = Site.objects.create(region=None, name="Test Site4", slug="test-site4")
 
         self.queryset = Site.objects.all()
 
@@ -798,10 +799,10 @@ class SearchFilterTest(TestCase):
     def test_default_icontains(self):
         """Test a default search for an "icontains" value."""
         params = {"q": "Test Site"}
-        self.assertEqual(self.get_filterset_count(params), 3)
+        self.assertEqual(self.get_filterset_count(params), 4)
         params = {"q": "Test Site 3"}
         self.assertEqual(self.get_filterset_count(params), 1)
-        # Trailing space should also match all
+        # Trailing space should only match the first 3.
         params = {"q": "Test Site "}
         self.assertEqual(self.get_filterset_count(params), 3)
 
@@ -843,9 +844,23 @@ class SearchFilterTest(TestCase):
         params = {"q": "1234"}
         self.assertEqual(self.get_filterset_count(params, MySiteFilterSet2), 0)
 
+    def test_typed_icontains(self):
+        """Test a preprocessor to strip icontains (which wouldn't be by default)."""
+
+        class MySiteFilterSet(SiteFilterSet):
+            """Overload the default just to illustrate that it's all we're testing for here."""
+
+            q = SearchFilter(filter_predicates={"name": {"lookup_expr": "icontains", "preprocessor": str.strip}})
+
+        # Both searches should return the same results.
+        params = {"q": "Test Site"}
+        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 4)
+        params = {"q": "Test Site "}
+        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 4)
+
     def test_typed_invalid(self):
         """Test that incorrectly-typed predicate mappings are handled correctly."""
-        # Bad callable
+        # Bad preprocessor callable in expanded form
         with self.assertRaises(TypeError):
             barf = None
 
@@ -856,12 +871,14 @@ class SearchFilterTest(TestCase):
                     },
                 )
 
+        # Missing preprocessor callable in expanded form should also fail
+        with self.assertRaises(TypeError):
+
+            class MissingSiteFilterSet(SiteFilterSet):
+                q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact"}})
+
         # Incorrect lookup_info type (must be str or dict)
         with self.assertRaises(TypeError):
 
             class InvalidSiteFilterSet(SiteFilterSet):
-                q = SearchFilter(
-                    filter_predicates={
-                        "asn": ["icontains"],
-                    },
-                )
+                q = SearchFilter(filter_predicates={"asn": ["icontains"]})

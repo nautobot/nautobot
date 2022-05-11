@@ -328,7 +328,10 @@ class MappedPredicatesFilterMixin:
     # Filter predicates that will always be included if not otherwise specified.
     default_filter_predicates = {"id": "iexact"}
 
-    def __init__(self, filter_predicates=None, *args, **kwargs):
+    # Lookup expressions for which whitespace should be preserved.
+    preserve_whitespace = ["icontains"]
+
+    def __init__(self, filter_predicates=None, strip=False, *args, **kwargs):
         if not isinstance(filter_predicates, dict):
             raise TypeError("filter_predicates must be a dict")
 
@@ -343,6 +346,9 @@ class MappedPredicatesFilterMixin:
         # Try to use the label from the class if it is defined.
         kwargs.setdefault("label", self.label)
 
+        # Whether to strip whtespace in the inner CharField form (default: False)
+        kwargs.setdefault("strip", strip)
+
         super().__init__(*args, **kwargs)
 
         # Generate the query with a sentinel value to validate it and surface parse errors.
@@ -353,11 +359,22 @@ class MappedPredicatesFilterMixin:
         Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
         predicate=value.
         """
+
+        def noop(v):
+            """Pass through the value."""
+            return v
+
         query = models.Q()
         for field_name, lookup_info in filter_predicates.items():
+            # Unless otherwise specified, set the default prepreprocssor
             if isinstance(lookup_info, str):
                 lookup_expr = lookup_info
-                preprocessor = str.strip
+                if lookup_expr in self.preserve_whitespace:
+                    preprocessor = noop
+                else:
+                    preprocessor = str.strip
+
+            # Or set it to what was defined by caller
             elif isinstance(lookup_info, dict):
                 lookup_expr = lookup_info["lookup_expr"]
                 preprocessor = lookup_info.get("preprocessor")
@@ -370,11 +387,11 @@ class MappedPredicatesFilterMixin:
             # to cast a value to an invalid type (e.g. `int("foo")` or `dict(42)`), ensure this
             # predicate is not included in the query.
             try:
-                value = preprocessor(value)
+                new_value = preprocessor(value)
             except (TypeError, ValueError):
                 continue
 
-            predicate = {f"{field_name}__{lookup_expr}": value}
+            predicate = {f"{field_name}__{lookup_expr}": new_value}
             query |= models.Q(**predicate)
 
         # Return this for later use (such as introspection or debugging)
@@ -424,7 +441,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.FloatField: {"filter_class": MultiValueNumberFilter},
             models.IntegerField: {"filter_class": MultiValueNumberFilter},
             # Ref: https://github.com/carltongibson/django-filter/issues/1107
-            models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": ["icontains"]}},
+            models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": "icontains"}},
             models.PositiveIntegerField: {"filter_class": MultiValueNumberFilter},
             models.PositiveSmallIntegerField: {"filter_class": MultiValueNumberFilter},
             models.SlugField: {"filter_class": MultiValueCharFilter},
