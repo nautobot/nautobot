@@ -235,7 +235,7 @@ class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     bridge_id = django_filters.ModelMultipleChoiceFilter(
         field_name="bridge",
         queryset=VMInterface.objects.all(),
-        label="Bridged interface (ID)",
+        label="Bridged interface",
     )
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
