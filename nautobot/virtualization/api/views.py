@@ -94,7 +94,9 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
 
 
 @versioned_viewset(
-    serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.VMInterfaceSerializerVersion12),)
+    serializer_choices=(
+        SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion13),
+    )
 )
 class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
     queryset = VMInterface.objects.prefetch_related("virtual_machine", "status", "tags", "tagged_vlans")

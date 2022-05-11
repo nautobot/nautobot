@@ -279,7 +279,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
-class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
+class VMInterfaceTestVersion13(APIViewTestCases.APIViewTestCase):
     model = VMInterface
     brief_fields = ["display", "id", "name", "url", "virtual_machine"]
     bulk_update_data = {
@@ -329,8 +329,8 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class VMInterfaceTestVersion13(VMInterfaceTestVersion12):
-    api_version = "1.3"
+class VMInterfaceTestVersion14(VMInterfaceTestVersion13):
+    api_version = "1.4"
     validation_excluded_fields = ["status"]
 
     @classmethod

@@ -1436,7 +1436,7 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
         ]
 
 
-class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class InterfaceTestVersion13(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = Interface
     brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
@@ -1491,8 +1491,8 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         ]
 
 
-class InterfaceTestVersion13(InterfaceTestVersion12):
-    api_version = "1.3"
+class InterfaceTestVersion14(InterfaceTestVersion13):
+    api_version = "1.4"
     validation_excluded_fields = ["status"]
 
     @classmethod

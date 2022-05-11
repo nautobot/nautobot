@@ -594,7 +594,9 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
 
 
 @versioned_viewset(
-    serializer_choices=(SerializerVersions(versions=["1.2"], serializer=serializers.InterfaceSerializerVersion12),)
+    serializer_choices=(
+        SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion13),
+    )
 )
 class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):
     queryset = Interface.objects.prefetch_related(
