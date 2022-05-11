@@ -2519,7 +2519,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
     bridge = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        label="Bridged interface",
+        label="Bridge interface",
         query_params={
             "type": InterfaceTypeChoices.TYPE_BRIDGE,
         },
