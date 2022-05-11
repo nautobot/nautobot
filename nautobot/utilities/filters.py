@@ -314,6 +314,7 @@ class MappedPredicatesFilterMixin:
                 "asn": {
                     "lookup_expr": "exact",
                     "preprocessor": int,
+                },
             },
         )
 
@@ -327,7 +328,7 @@ class MappedPredicatesFilterMixin:
     # Filter predicates that will always be included if not otherwise specified.
     default_filter_predicates = {"id": "iexact"}
 
-    def __init__(self, filter_predicates=None, label=None, *args, **kwargs):
+    def __init__(self, filter_predicates=None, *args, **kwargs):
         if not isinstance(filter_predicates, dict):
             raise TypeError("filter_predicates must be a dict")
 
@@ -340,8 +341,7 @@ class MappedPredicatesFilterMixin:
         self.filter_predicates = defaults
 
         # Try to use the label from the class if it is defined.
-        if label is None:
-            kwargs.setdefault("label", self.label)
+        kwargs.setdefault("label", self.label)
 
         super().__init__(*args, **kwargs)
 
@@ -385,9 +385,9 @@ class MappedPredicatesFilterMixin:
             return qs
 
         # Evaluate the query and stash it for later use (such as introspection or debugging)
-        self.query = self.generate_query(self.filter_predicates, value)
-
-        qs = self.get_method(qs)(self.query)
+        query = self.generate_query(self.filter_predicates, value)
+        qs = self.get_method(qs)(query)
+        self._most_recent_query = query
         return qs.distinct()
 
 
@@ -395,37 +395,7 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
     Provide a search filter for use on filtersets as the `q=` parameter.
 
-    A mapping of filter predicates (field_name: lookup_expr) must be provided to the filter when
-    declared on a filterset. This mapping is used to construct a `Q` query to filter based on the
-    provided predicates.
-
-    This filter should be used instead of declaring a `q` filter and pointing it to a `search()`
-    method on a filterset.
-
-    By default a predicate for `{"id": "iexact"}` (`id__exact`) will always be included.
-
-    Example:
-
-        q = SearchFilter(
-            filter_predicates={
-                "comments": "icontains",
-                "name": "icontains",
-            },
-        )
-
-    Optionally you may also provide a callable to use a a preprocessor for the filter predicate by
-    providing the value as a nested dict with "lookup_expr" and "preprocessor" keys. For example:
-
-        q = SearchFilter(
-            filter_predicates={
-                "asn": {
-                    "lookup_expr": "exact",
-                    "preprocessor": int,
-            },
-        )
-
-    This tells the filter to try to cast `asn` to an `int`. If it fails, this predicate will be
-    skipped.
+    See the docstring for `nautobot.utilities.filters.MappedPredicatesFilterMixin` for usage.
     """
 
     label = "Search"
