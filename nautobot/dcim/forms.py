@@ -2519,7 +2519,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
     bridge = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        label="Bridged interface",
+        label="Bridge interface",
     )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2845,7 +2845,7 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
         queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
     )
     bridge = CSVModelChoiceField(
-        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Bridged interface"
+        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Bridge interface"
     )
     lag = CSVModelChoiceField(
         queryset=Interface.objects.all(),

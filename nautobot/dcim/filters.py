@@ -890,7 +890,7 @@ class InterfaceFilterSet(
     bridge_id = django_filters.ModelMultipleChoiceFilter(
         field_name="bridge",
         queryset=Interface.objects.all(),
-        label="Bridged interface",
+        label="Bridge interface",
     )
     lag_id = django_filters.ModelMultipleChoiceFilter(
         field_name="lag",
