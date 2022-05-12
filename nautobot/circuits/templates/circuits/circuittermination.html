@@ -53,7 +53,7 @@
                                 ({{ peer }})
                             {% endwith %}
                         {% else %}
-                            {% if perms.dcim.add_cable %}
+                            {% if perms.dcim.add_cable and object.site %}
                                 <div class="pull-right">
                                     <span class="dropdown">
                                         <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
