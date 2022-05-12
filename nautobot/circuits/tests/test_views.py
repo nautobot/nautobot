@@ -217,7 +217,7 @@ class CircuitTerminationTestCase(NautobotTestCase):
     def test_circuit_termination_detail_200(self):
         """
         This tests that a circuit termination's detail page (with a provider
-        network instead of a site) returns a 200 response
+        network instead of a site) returns a 200 response and doesn't contain the connect menu button.
         """
 
         # Set up the required objects:
@@ -243,3 +243,4 @@ class CircuitTerminationTestCase(NautobotTestCase):
         response = self.client.get(reverse("circuits:circuittermination", kwargs={"pk": termination.pk}))
         self.assertEqual(200, response.status_code)
         self.assertIn("Test Provider Network", str(response.content))
+        self.assertNotIn("</span> Connect", str(response.content))
