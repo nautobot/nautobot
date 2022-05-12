@@ -561,6 +561,8 @@ class JobFilterSetTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_search(self):
+        params = {"q": "file"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
@@ -1057,6 +1059,8 @@ class StatusTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
 
     def test_search(self):
+        params = {"q": "active"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
@@ -1102,6 +1106,8 @@ class TagTestCase(TestCase):
         self.assertEqual(filtered_data[0], self.tags[0])
 
     def test_search(self):
+        params = {"q": "tag-1"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
@@ -1162,6 +1168,8 @@ class WebhookTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):
+        params = {"q": "webhook"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
