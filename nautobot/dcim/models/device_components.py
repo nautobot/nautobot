@@ -506,11 +506,12 @@ class BaseInterface(RelationshipModel, StatusModel):
 
         # set interface status to active if status not provided
         if not self.status:
-            status = Status.objects.get_for_model(self).filter(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-            if status.exists():
-                self.status = status.first()
-            else:
-                self.status = Status.objects.get_for_model(self).first()
+            query = Status.objects.get_for_model(self)
+            try:
+                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                status = query.first()
+            self.status = status
 
         # Remove untagged VLAN assignment for non-802.1Q interfaces
         if not self.mode:
