@@ -2520,9 +2520,6 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         label="Bridged interface",
-        query_params={
-            "type": InterfaceTypeChoices.TYPE_BRIDGE,
-        },
     )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2627,7 +2624,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         required=False,
         query_params={
             "device_id": "$device",
-            "type": InterfaceTypeChoices.TYPE_BRIDGE,
         },
     )
     lag = DynamicModelChoiceField(
@@ -2743,9 +2739,6 @@ class InterfaceBulkEditForm(
     bridge = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        query_params={
-            "type": InterfaceTypeChoices.TYPE_BRIDGE,
-        },
     )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
