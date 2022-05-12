@@ -12,13 +12,21 @@
     <div class="panel panel-default">
             <table class="table table-hover panel-body attr-table">
                 <tr>
-                    <td>Site</td>
-                    <td>
-                        {% if object.site.region %}
-                            <a href="{{ object.site.region.get_absolute_url }}">{{ object.site.region }}</a> /
-                        {% endif %}
-                        <a href="{% url 'dcim:site' slug=object.site.slug %}">{{ object.site }}</a>
-                    </td>
+                    {% if object.site %}
+                        <td>Site</td>
+                        <td>
+                            {% if object.site.region %}
+                                <a href="{{ object.site.region.get_absolute_url }}">{{ object.site.region }}</a> /
+                            {% endif %}
+                            <a href="{% url 'dcim:site' slug=object.site.slug %}">{{ object.site }}</a>
+                        </td>
+                    {% endif %}
+                    {% if object.provider_network %}
+                        <td>Provider Network</td>
+                        <td>
+                            <a href="{% url 'circuits:providernetwork' slug=object.provider_network.slug %}">{{ object.provider_network }}</a>
+                        </td>
+                    {% endif %}
                 </tr>
                 <tr>
                     <td>Termination</td>
@@ -45,7 +53,7 @@
                                 ({{ peer }})
                             {% endwith %}
                         {% else %}
-                            {% if perms.dcim.add_cable %}
+                            {% if perms.dcim.add_cable and object.site %}
                                 <div class="pull-right">
                                     <span class="dropdown">
                                         <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
