@@ -878,6 +878,11 @@ class InterfaceFilterSet(
         field_name="pk",
         label="Device (ID)",
     )
+    device_with_common_vc = MultiValueUUIDFilter(
+        method="filter_device_common_vc_id",
+        field_name="pk",
+        label="Device (ID)",
+    )
     kind = django_filters.CharFilter(
         method="filter_kind",
         label="Kind of interface",
@@ -933,6 +938,17 @@ class InterfaceFilterSet(
             devices = Device.objects.filter(pk__in=id_list)
             for device in devices:
                 vc_interface_ids += device.vc_interfaces.values_list("id", flat=True)
+            return queryset.filter(pk__in=vc_interface_ids)
+        except Device.DoesNotExist:
+            return queryset.none()
+
+    def filter_device_common_vc_id(self, queryset, name, id_list):
+        # Include interfaces that share common virtual chassis
+        vc_interface_ids = []
+        try:
+            devices = Device.objects.filter(pk__in=id_list)
+            for device in devices:
+                vc_interface_ids += device.common_vc_interfaces.values_list("id", flat=True)
             return queryset.filter(pk__in=vc_interface_ids)
         except Device.DoesNotExist:
             return queryset.none()
