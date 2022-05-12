@@ -52,7 +52,6 @@ class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
             "name": "icontains",
             "rd": "icontains",
             "description": "icontains",
-            "id": "iexact",
         },
     )
     import_target_id = django_filters.ModelMultipleChoiceFilter(
@@ -89,7 +88,6 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
-            "id": "iexact",
         },
     )
     importing_vrf_id = django_filters.ModelMultipleChoiceFilter(
@@ -151,7 +149,7 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
         return qs.ip_family(value)
 
 
-class AggregateFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet):
+class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -187,7 +185,7 @@ class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug"]
 
 
-class PrefixFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -341,7 +339,7 @@ class PrefixFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet, S
         return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
 
-class IPAddressFilterSet(IPAMFilterSetMixin, NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -513,8 +511,10 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
-            "vid:int": "exact",  # vid expects an int
-            "id": "iexact",
+            "vid": {
+                "lookup_expr": "exact",
+                "preprocessor": int,  # vid expects an int
+            },
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(
@@ -572,7 +572,6 @@ class ServiceFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
-            "id": "iexact",
         },
     )
     device_id = django_filters.ModelMultipleChoiceFilter(

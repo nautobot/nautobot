@@ -41,7 +41,6 @@ class TenantFilterSet(NautobotFilterSet):
             "slug": "icontains",
             "description": "icontains",
             "comments": "icontains",
-            "id": "iexact",
         },
     )
     group_id = TreeNodeMultipleChoiceFilter(

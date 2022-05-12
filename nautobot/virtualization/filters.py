@@ -45,7 +45,6 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         filter_predicates={
             "name": "icontains",
             "comments": "icontains",
-            "id": "iexact",
         },
     )
     region_id = TreeNodeMultipleChoiceFilter(
@@ -103,7 +102,6 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         filter_predicates={
             "name": "icontains",
             "comments": "icontains",
-            "id": "iexact",
         },
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
@@ -198,12 +196,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
 
 
 class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "id": "iexact",
-        }
-    )
+    q = SearchFilter(filter_predicates={"name": "icontains"})
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),

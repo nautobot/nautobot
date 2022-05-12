@@ -114,7 +114,6 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
             "terminations__description": "icontains",
             "description": "icontains",
             "comments": "icontains",
-            "id": "iexact",
         },
     )
     provider_id = django_filters.ModelMultipleChoiceFilter(
