@@ -823,6 +823,21 @@ This parameter defines the URL of the repository that will be checked periodical
 
 ---
 
+## SANITIZER_PATTERNS
+
+Default:
+
+```python
+[
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
+```
+
+List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+
+---
+
 ## SESSION_COOKIE_AGE
 
 Default: `1209600` (2 weeks, in seconds)

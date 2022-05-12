@@ -158,6 +158,10 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1755](https://github.com/nautobot/nautobot/issues/1755) - Fixed "Select All" helper widget from taking full UI height.
 - [#1761](https://github.com/nautobot/nautobot/pull/1761) - Fixed typo in upgrading documentation.
 
+### Security
+
+- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../configuration/optional-settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
+
 ## v1.3.3 (2022-05-02)
 
 ### Added

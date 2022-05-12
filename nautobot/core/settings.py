@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -101,6 +102,13 @@ REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 # Nautobot related - May be overridden if using custom social auth backend
 SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
+
+# Job log entry sanitization and similar
+SANITIZER_PATTERNS = [
+    # General removal of username-like and password-like tokens
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
 
 # Storage
 STORAGE_BACKEND = None
