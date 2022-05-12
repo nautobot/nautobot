@@ -1779,6 +1779,10 @@ class InterfaceView(generic.ObjectView):
             orderable=False,
         )
 
+        # Get child interfaces
+        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+        child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
+
         # Get assigned VLANs and annotate whether each is tagged or untagged
         vlans = []
         if instance.untagged_vlan is not None:
@@ -1793,6 +1797,7 @@ class InterfaceView(generic.ObjectView):
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
             "breadcrumb_url": "dcim:device_interfaces",
+            "child_interfaces_table": child_interfaces_tables,
         }
 
 
