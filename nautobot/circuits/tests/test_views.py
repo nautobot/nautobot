@@ -244,3 +244,7 @@ class CircuitTerminationTestCase(NautobotTestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn("Test Provider Network", str(response.content))
         self.assertNotIn("</span> Connect", str(response.content))
+
+        # Visit the circuit object detail page and check there is no connect button present:
+        response = self.client.get(reverse("circuits:circuit", kwargs={"pk": circuit.pk}))
+        self.assertNotIn("</span> Connect", str(response.content))
