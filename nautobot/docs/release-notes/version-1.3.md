@@ -154,6 +154,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Fixed
 
 - [#1263](https://github.com/nautobot/nautobot/issues/1263) - Rack device image toggle added back to detail UI.
+- [#1449](https://github.com/nautobot/nautobot/issues/1449) - Fixed a performance bug in `/api/dcim/devices/` and `/api/virtualization/virtual-machines/` relating to configuration contexts.
 - [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
 - [#1712](https://github.com/nautobot/nautobot/issues/1712) - Fixed circuit termination detail view getting 500 response when it's a provider network.
 - [#1755](https://github.com/nautobot/nautobot/issues/1755) - Fixed "Select All" helper widget from taking full UI height.
