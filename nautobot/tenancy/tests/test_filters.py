@@ -95,3 +95,8 @@ class TenantTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"group": [group[0].slug, group[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
