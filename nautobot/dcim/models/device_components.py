@@ -506,7 +506,7 @@ class BaseInterface(RelationshipModel):
     bridge = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
-        related_name="bridge_interfaces",
+        related_name="bridged_interfaces",
         null=True,
         blank=True,
         verbose_name="Bridge interface",
