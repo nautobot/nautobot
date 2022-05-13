@@ -48,7 +48,7 @@ class RelationshipBaseTest(TestCase):
             slug="vlan-rack",
             source_type=self.rack_ct,
             source_label="My Vlans",
-            source_filter={"site": ["site-a"]},
+            source_filter={"site": [site.slug for site in self.sites]},
             destination_type=self.vlan_ct,
             destination_label="My Racks",
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
