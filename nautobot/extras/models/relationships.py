@@ -8,11 +8,13 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Q
 
+from nautobot.core.api.exceptions import FilterSetNotFound
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
+from nautobot.utilities.api import get_filterset_class_for_model
 from nautobot.utilities.utils import get_filterset_for_model
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
@@ -691,10 +693,15 @@ class RelationshipAssociation(BaseModel):
         for side_name in sides:
             side = getattr(self, side_name)  # destination / source
             side_filter = getattr(self.relationship, f"{side_name}_filter")
+            try:
+                filterset_class = get_filterset_class_for_model(side.__class__)
+                filterset = filterset_class(side_filter, side.__class__.objects.all())
+                queryset = filterset.qs.filter(id=side.id)
+            except FilterSetNotFound:
+                # use django objects filter
+                queryset = side.__class__.objects.filter(**side_filter)
 
-            for key, values in side_filter.items():
-                values = [values] if not isinstance(values, (list, tuple)) else values
-                if getattr(side, key, None) not in values:
-                    raise ValidationError(
-                        {side_name: (f"{side} violates {self.relationship} {side_name}_filter restriction")}
-                    )
+            if queryset.exists() is False:
+                raise ValidationError(
+                    {side_name: (f"{side} violates {self.relationship} {side_name}_filter restriction")}
+                )

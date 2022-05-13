@@ -7,7 +7,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.utils import formatting
 
-from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.exceptions import SerializerNotFound, FilterSetNotFound
 from .utils import dynamic_import
 
 
@@ -28,6 +28,20 @@ def get_serializer_for_model(model, prefix=""):
         raise SerializerNotFound(
             "Could not determine serializer for {}.{} with prefix '{}'".format(app_name, model_name, prefix)
         )
+
+
+def get_filterset_class_for_model(model):
+    """
+    Dynamically resolve and return the appropriate filterset class for a model.
+    """
+    app_name, model_name = model._meta.label.split(".")
+    filterset_name = f"{app_name}.filters.{model_name}FilterSet"
+    if app_name not in settings.PLUGINS:
+        filterset_name = f"nautobot.{filterset_name}"
+    try:
+        return dynamic_import(filterset_name)
+    except AttributeError:
+        raise FilterSetNotFound("Could not determine filterset for {}.{}".format(app_name, model_name))
 
 
 def is_api_request(request):
