@@ -501,7 +501,23 @@ class DynamicGroupFilterActionChoices(models.TextChoices):
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
-    filter = models.ForeignKey("extras.DynamicGroupFilter", on_delete=models.CASCADE)
-    group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE)
+    filter = models.ForeignKey("extras.DynamicGroupFilter",
+                               on_delete=models.CASCADE,
+                               related_name="dynamic_group_memberships")
+    group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE,
+                              related_name="dynamic_group_memberships")
     action = models.CharField(choices=DynamicGroupFilterActionChoices.choices,
                               default=DynamicGroupFilterActionChoices.INCLUDE, max_length=10)
+
+    def __str__(self):
+        return f"{self.group}: {self.filter} ({self.action})"
+
+    class Meta:
+        unique_together = ["filter", "group"]
+        ordering = ["group", "filter"]
+
+    def clean(self):
+        super().clean()
+
+        if self.filter.content_type != self.group.content_type:
+            raise ValidationError({"filter": "ContentType for filter and group must match"})
