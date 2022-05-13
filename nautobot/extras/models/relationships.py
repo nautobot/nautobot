@@ -676,9 +676,9 @@ class RelationshipAssociation(BaseModel):
                     )
 
         if self.relationship.destination_filter or self.relationship.source_filter:
-            self._validate_relationship_filter()
+            self._validate_relationship_filter_restriction()
 
-    def _validate_relationship_filter(self):
+    def _validate_relationship_filter_restriction(self):
         """Validate relationship association do not violate filter restrictions"""
         sides = []
 
