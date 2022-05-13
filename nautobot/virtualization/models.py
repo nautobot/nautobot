@@ -479,7 +479,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         if self.pk and self.bridge_id == self.pk:
             raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
 
-        # A bridged interface belong to the same virtual machine
+        # A bridged interface must belong to the same virtual machine
         if self.bridge and self.bridge.virtual_machine != self.virtual_machine:
             raise ValidationError(
                 {
