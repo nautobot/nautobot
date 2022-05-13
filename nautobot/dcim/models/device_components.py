@@ -584,8 +584,6 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
         "device",
         "name",
         "label",
-        "parent_interface",
-        "bridge",
         "lag",
         "type",
         "enabled",
@@ -594,6 +592,8 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
         "mgmt_only",
         "description",
         "mode",
+        "parent_interface",
+        "bridge",
     ]
 
     class Meta:
