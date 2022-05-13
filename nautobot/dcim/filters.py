@@ -228,8 +228,14 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         filter_predicates={
             "name": "icontains",
             "facility_id": "icontains",
-            "serial": "icontains",
-            "asset_tag": "icontains",
+            "serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "comments": "icontains",
         },
     )
@@ -526,9 +532,18 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "serial": "icontains",
-            "inventoryitems__serial": "icontains",
-            "asset_tag": "icontains",
+            "serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "inventoryitems__serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "comments": "icontains",
         },
     )
@@ -935,8 +950,14 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         filter_predicates={
             "name": "icontains",
             "part_id": "icontains",
-            "serial": "icontains",
-            "asset_tag": "icontains",
+            "serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "description": "icontains",
         },
     )
