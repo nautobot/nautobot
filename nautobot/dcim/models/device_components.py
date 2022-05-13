@@ -515,6 +515,98 @@ class BaseInterface(RelationshipModel):
     class Meta:
         abstract = True
 
+    def clean(self):
+        super().clean()
+
+        # Virtual interfaces cannot be connected
+        if getattr(self, "type", None) in NONCONNECTABLE_IFACE_TYPES and (
+            self.cable or getattr(self, "circuit_termination", False)
+        ):
+            raise ValidationError(
+                {
+                    "type": "Virtual and wireless interfaces cannot be connected to another interface or circuit. "
+                    "Disconnect the interface or choose a suitable type."
+                }
+            )
+
+        # Parent validation
+        if self.parent_interface is not None:
+
+            # An interface cannot be its own parent
+            if self.parent_interface_id == self.pk:
+                raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
+            # A physical interface cannot have a parent interface
+            if hasattr(self, "type") and self.type != InterfaceTypeChoices.TYPE_VIRTUAL:
+                raise ValidationError(
+                    {"parent_interface": "Only virtual interfaces may be assigned to a parent interface."}
+                )
+
+            # A virtual interface cannot be a parent interface
+            if getattr(self.parent_interface, "type", None) == InterfaceTypeChoices.TYPE_VIRTUAL:
+                raise ValidationError(
+                    {"parent_interface": "Virtual interfaces may not be parents of other interfaces."}
+                )
+
+            # An interface's parent must belong to the same device or virtual chassis
+            if self.parent_interface.parent != self.parent:
+                if self.parent.virtual_chassis is None:
+                    raise ValidationError(
+                        {
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
+                            f"({self.parent_interface.device})."
+                        }
+                    )
+                elif self.parent_interface.device.virtual_chassis != self.parent_interface.virtual_chassis:
+                    raise ValidationError(
+                        {
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
+                            f"is not part of virtual chassis {self.device.virtual_chassis}."
+                        }
+                    )
+
+        # Validate untagged VLAN
+        if self.untagged_vlan and self.untagged_vlan.site_id not in [self.parent.site_id, None]:
+            raise ValidationError(
+                {
+                    "untagged_vlan": (
+                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the interface's parent "
+                        f"device, or it must be global."
+                    )
+                }
+            )
+
+        # Bridge validation
+        if self.bridge is not None:
+
+            # An interface cannot be bridged to itself
+            if self.bridge_id == self.pk:
+                raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
+
+            # A bridged interface can only be assigned to an interface with type = bridge
+            if hasattr(self.bridge, "type") and self.bridge.type != InterfaceTypeChoices.TYPE_BRIDGE:
+                raise ValidationError({"bridge": f"The selected interface ({self.bridge}) is not a bridge interface."})
+
+            # A bridged interface belong to the same device or virtual chassis
+            if self.bridge.parent.id != self.parent.id:
+                if self.parent.virtual_chassis is None:
+                    raise ValidationError(
+                        {
+                            "bridge": (
+                                f"The selected bridge interface ({self.bridge}) belongs to a different device "
+                                f"({self.bridge.device})."
+                            )
+                        }
+                    )
+                elif self.bridge.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
+                    raise ValidationError(
+                        {
+                            "bridge": (
+                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
+                                f"is not part of virtual chassis {self.device.virtual_chassis}."
+                            )
+                        }
+                    )
+
     def save(self, *args, **kwargs):
 
         # Remove untagged VLAN assignment for non-802.1Q interfaces
@@ -623,106 +715,34 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
     def clean(self):
         super().clean()
 
-        # Virtual interfaces cannot be connected
-        if self.type in NONCONNECTABLE_IFACE_TYPES and (self.cable or getattr(self, "circuit_termination", False)):
-            raise ValidationError(
-                {
-                    "type": "Virtual and wireless interfaces cannot be connected to another interface or circuit. "
-                    "Disconnect the interface or choose a suitable type."
-                }
-            )
+        # LAG validation
+        if self.lag is not None:
 
-        # An interface's parent must belong to the same device or virtual chassis
-        if self.parent_interface and self.parent_interface.device != self.device:
-            if self.device.virtual_chassis is None:
-                raise ValidationError(
-                    {
-                        "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
-                        f"({self.parent_interface.device})."
-                    }
-                )
-            elif self.parent_interface.device.virtual_chassis != self.parent_interface.virtual_chassis:
-                raise ValidationError(
-                    {
-                        "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
-                        f"is not part of virtual chassis {self.device.virtual_chassis}."
-                    }
-                )
+            # A LAG interface cannot be its own parent
+            if self.lag_id == self.pk:
+                raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
 
-        # A physical interface cannot have a parent interface
-        if self.type != InterfaceTypeChoices.TYPE_VIRTUAL and self.parent_interface is not None:
-            raise ValidationError(
-                {"parent_interface": "Only virtual interfaces may be assigned to a parent interface."}
-            )
+            # An interface's LAG must belong to the same device or virtual chassis
+            if self.lag.device_id != self.device_id:
+                if self.device.virtual_chassis is None:
+                    raise ValidationError(
+                        {
+                            "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.device})."
+                        }
+                    )
+                elif self.lag.device.virtual_chassis_id != self.device.virtual_chassis_id:
+                    raise ValidationError(
+                        {
+                            "lag": (
+                                f"The selected LAG interface ({self.lag}) belongs to {self.lag.device}, which is not part "
+                                f"of virtual chassis {self.device.virtual_chassis}."
+                            )
+                        }
+                    )
 
-        # A virtual interface cannot be a parent interface
-        if self.parent_interface is not None and self.parent_interface.type == InterfaceTypeChoices.TYPE_VIRTUAL:
-            raise ValidationError({"parent_interface": "Virtual interfaces may not be parents of other interfaces."})
-
-        # An interface cannot be its own parent
-        if self.pk and self.parent_interface_id == self.pk:
-            raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
-
-        # An interface's LAG must belong to the same device or virtual chassis
-        if self.lag and self.lag.device != self.device:
-            if self.device.virtual_chassis is None:
-                raise ValidationError(
-                    {
-                        "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.device})."
-                    }
-                )
-            elif self.lag.device.virtual_chassis != self.device.virtual_chassis:
-                raise ValidationError(
-                    {
-                        "lag": f"The selected LAG interface ({self.lag}) belongs to {self.lag.device}, which is not part "
-                        f"of virtual chassis {self.device.virtual_chassis}."
-                    }
-                )
-
-        # A virtual interface cannot have a parent LAG
-        if self.type == InterfaceTypeChoices.TYPE_VIRTUAL and self.lag is not None:
-            raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
-
-        # A LAG interface cannot be its own parent
-        if self.present_in_database and self.lag_id == self.pk:
-            raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
-
-        # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site not in [
-            self.parent.site,
-            None,
-        ]:
-            raise ValidationError(
-                {
-                    "untagged_vlan": "The untagged VLAN ({}) must belong to the same site as the interface's parent "
-                    "device, or it must be global".format(self.untagged_vlan)
-                }
-            )
-
-        # An interface cannot be bridged to itself
-        if self.pk and self.bridge_id == self.pk:
-            raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
-
-        # A bridged interface belong to the same device or virtual chassis
-        if self.bridge and self.bridge.device != self.device:
-            if self.device.virtual_chassis is None:
-                raise ValidationError(
-                    {
-                        "bridge": f"The selected bridge interface ({self.bridge}) belongs to a different device "
-                        f"({self.bridge.device})."
-                    }
-                )
-            elif self.bridge.device.virtual_chassis != self.device.virtual_chassis:
-                raise ValidationError(
-                    {
-                        "bridge": f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
-                        f"is not part of virtual chassis {self.device.virtual_chassis}."
-                    }
-                )
-
-        # A bridged interface can only be assigned to an interface with type = bridge
-        if self.bridge and self.bridge.type != InterfaceTypeChoices.TYPE_BRIDGE:
-            raise ValidationError({"bridge": f"The selected interface ({self.bridge}) is not a bridge interface."})
+            # A virtual interface cannot have a parent LAG
+            if self.type == InterfaceTypeChoices.TYPE_VIRTUAL:
+                raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
 
     @property
     def is_connectable(self):

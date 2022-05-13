@@ -878,10 +878,10 @@ class InterfaceFilterSet(
         field_name="pk",
         label="Device (ID)",
     )
-    device_with_common_vc = MultiValueUUIDFilter(
+    device_with_common_vc = django_filters.UUIDFilter(
         method="filter_device_common_vc_id",
         field_name="pk",
-        label="Device (ID)",
+        label="Virtual Chassis member Device (ID)",
     )
     kind = django_filters.CharFilter(
         method="filter_kind",
@@ -942,14 +942,11 @@ class InterfaceFilterSet(
         except Device.DoesNotExist:
             return queryset.none()
 
-    def filter_device_common_vc_id(self, queryset, name, id_list):
+    def filter_device_common_vc_id(self, queryset, name, value):
         # Include interfaces that share common virtual chassis
-        vc_interface_ids = []
         try:
-            devices = Device.objects.filter(pk__in=id_list)
-            for device in devices:
-                vc_interface_ids += device.common_vc_interfaces.values_list("id", flat=True)
-            return queryset.filter(pk__in=vc_interface_ids)
+            device = Device.objects.get(pk=value)
+            return queryset.filter(pk__in=device.common_vc_interfaces.values_list("pk", flat=True))
         except Device.DoesNotExist:
             return queryset.none()
 
