@@ -549,14 +549,14 @@ class BaseInterface(RelationshipModel):
 
             # An interface's parent must belong to the same device or virtual chassis
             if self.parent_interface.parent != self.parent:
-                if self.parent.virtual_chassis is None:
+                if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
                             f"({self.parent_interface.device})."
                         }
                     )
-                elif self.parent_interface.device.virtual_chassis != self.parent_interface.virtual_chassis:
+                elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:
                     raise ValidationError(
                         {
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
@@ -584,7 +584,7 @@ class BaseInterface(RelationshipModel):
 
             # A bridged interface belong to the same device or virtual chassis
             if self.bridge.parent.id != self.parent.id:
-                if self.parent.virtual_chassis is None:
+                if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "bridge": (
