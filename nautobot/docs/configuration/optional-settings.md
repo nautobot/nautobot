@@ -158,7 +158,9 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ## BRANDING_PREPENDED_FILENAME
 
+<!-- markdownlint-disable MD036 -->
 _Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
 
 Default: `"nautobot_"`
 
@@ -829,7 +831,9 @@ This parameter defines the URL of the repository that will be checked periodical
 
 ## SANITIZER_PATTERNS
 
+<!-- markdownlint-disable MD036 -->
 _Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
 
 Default:
 
