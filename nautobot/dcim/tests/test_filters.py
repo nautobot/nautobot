@@ -2615,6 +2615,50 @@ class InterfaceTestCase(TestCase):
         params = {"lag_id": [lag_interface.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
+    def test_device_with_common_vc(self):
+        """Assert only interfaces belonging to devices with common VC are returned"""
+        site = Site.objects.first()
+        device_type = DeviceType.objects.first()
+        device_role = DeviceRole.objects.first()
+        devices = (
+            Device.objects.create(
+                name="Device in vc 1",
+                device_type=device_type,
+                device_role=device_role,
+                site=site,
+            ),
+            Device.objects.create(
+                name="Device in vc 2",
+                device_type=device_type,
+                device_role=device_role,
+                site=site,
+            ),
+            Device.objects.create(
+                name="Device not in vc",
+                device_type=device_type,
+                device_role=device_role,
+                site=site,
+            ),
+        )
+
+        # VirtualChassis assignment for filtering
+        virtual_chassis = VirtualChassis.objects.create(master=devices[0])
+        Device.objects.filter(pk=devices[0].pk).update(virtual_chassis=virtual_chassis, vc_position=1, vc_priority=1)
+        Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis, vc_position=2, vc_priority=2)
+
+        Interface.objects.create(device=devices[0], name="int1")
+        Interface.objects.create(device=devices[0], name="int2")
+        Interface.objects.create(device=devices[1], name="int3")
+        Interface.objects.create(device=devices[2], name="int4")
+
+        params = {"device_with_common_vc": devices[0].pk}
+        queryset = self.filterset(params, self.queryset).qs
+        self.assertEqual(queryset.count(), 3)
+        # Assert interface of a device belonging to same VC as device[0] are returned
+        self.assertTrue(queryset.filter(name="int3").exists())
+        # Assert interface of a device not belonging as device[0] to same VC are not returned
+        self.assertFalse(queryset.filter(name="int4").exists())
+
     def test_region(self):
         regions = Region.objects.all()[:2]
         params = {"region_id": [regions[0].pk, regions[1].pk]}

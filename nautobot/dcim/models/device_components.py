@@ -582,7 +582,6 @@ class BaseInterface(RelationshipModel):
             if self.bridge_id == self.pk:
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
 
-
             # A bridged interface belong to the same device or virtual chassis
             if self.bridge.parent.id != self.parent.id:
                 if self.parent.virtual_chassis is None:
