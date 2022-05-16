@@ -27,6 +27,7 @@ What does this mean in practice?
 - Any [Job](../additional-features/jobs.md) can potentially access your Secrets, and can trivially log a Secret value to its JobResult, where it may be visible to users, so only install Jobs that you trust, carefully limit which users are able to execute jobs and view job results, and be aware of the potential for privilege escalation resulting from careless or malicious logging.
 - Any [Git repository](../models/extras/gitrepository.md) can add new Jobs to your system, so be careful about which users you grant the ability to create/edit `GitRepository` records.
 - Any user with access to [`nautobot-server nbshell`](../administration/nautobot-shell.md) can execute arbitrary code, including accessing Secrets, and will be able to bypass any Nautobot permissions restrictions as well.
+- Any user with access to modify Secrets can take advantage of a leak of one Secret's information through any of the above vectors to additionally leak other secret values (except as restricted with [object permissions](#using-object-permissions-with-secrets), see below). For example, if a Job erroneously logs a username obtained from a Secret as a part of its output, a user could modify the corresponding Secret definition to make the Job log any other secret value they have access to.
 
 ### Using Object Permissions with Secrets
 

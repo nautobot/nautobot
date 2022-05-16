@@ -25,7 +25,7 @@
                     <p class="form-control-static">{{ form.term_side.value }}</p>
                 </div>
             </div>
-                {% with providernetwork_tab_active=form.initial.providernetwork %}
+                {% with providernetwork_tab_active=form.initial.provider_network %}
                     <ul class="nav nav-tabs" role="tablist">
                         <li role="presentation"{% if not providernetwork_tab_active %} class="active"{% endif %}><a href="#site" role="tab" data-toggle="tab">Site</a></li>
                         <li role="presentation"{% if providernetwork_tab_active %} class="active"{% endif %}><a href="#providernetwork" role="tab" data-toggle="tab">Provider Network</a></li>

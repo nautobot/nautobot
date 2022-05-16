@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -183,8 +184,15 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         Return the rendered configuration context for a device or VM.
         """
 
-        # always manually query for config contexts
-        config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+        if not hasattr(self, "config_context_data"):
+            # Annotation not available, so fall back to manually querying for the config context
+            config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+        else:
+            config_context_data = self.config_context_data or []
+            # Annotation has keys "weight" and "name" (used for ordering) and "data" (the actual config context data)
+            config_context_data = [
+                c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
+            ]
 
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
@@ -403,7 +411,8 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
 
         # Build the response
         response = HttpResponse(output, content_type=mime_type)
-        filename = "nautobot_{}{}".format(
+        filename = "{}{}{}".format(
+            settings.BRANDING_PREPENDED_FILENAME,
             queryset.model._meta.verbose_name_plural,
             ".{}".format(self.file_extension) if self.file_extension else "",
         )
@@ -738,12 +747,12 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
     def render_body(self, context):
         """
-        Render the body template, if defined. Otherwise, jump the context as a JSON object.
+        Render the body template, if defined. Otherwise, dump the context as a JSON object.
         """
         if self.body_template:
             return render_jinja2(self.body_template, context)
         else:
-            return json.dumps(context, cls=JSONEncoder)
+            return json.dumps(context, cls=JSONEncoder, ensure_ascii=False)
 
     def get_absolute_url(self):
         return reverse("extras:webhook", kwargs={"pk": self.pk})

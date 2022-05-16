@@ -156,6 +156,14 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ---
 
+## BRANDING_PREPENDED_FILENAME
+
+Default: `"nautobot_"`
+
+Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
+
+Defines the initial pre-pended portion of a filename for for export to CSV/YAML or export templates.
+
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
@@ -812,6 +820,21 @@ This parameter defines the URL of the repository that will be checked periodical
 
 !!! tip
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## SANITIZER_PATTERNS
+
+Default:
+
+```python
+[
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
+```
+
+List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
 
 ---
 
