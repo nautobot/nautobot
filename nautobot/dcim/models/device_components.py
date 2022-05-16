@@ -203,7 +203,7 @@ class PathEndpoint(models.Model):
     "relationships",
     "webhooks",
 )
-class ConsolePort(ComponentModel, CableTermination, PathEndpoint):
+class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical console port within a Device. ConsolePorts connect to ConsoleServerPorts.
     """
@@ -240,7 +240,7 @@ class ConsolePort(ComponentModel, CableTermination, PathEndpoint):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class ConsoleServerPort(ComponentModel, CableTermination, PathEndpoint):
+class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
     """
@@ -284,7 +284,7 @@ class ConsoleServerPort(ComponentModel, CableTermination, PathEndpoint):
     "relationships",
     "webhooks",
 )
-class PowerPort(ComponentModel, CableTermination, PathEndpoint):
+class PowerPort(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical power supply (intake) port within a Device. PowerPorts connect to PowerOutlets.
     """
@@ -415,7 +415,7 @@ class PowerPort(ComponentModel, CableTermination, PathEndpoint):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class PowerOutlet(ComponentModel, CableTermination, PathEndpoint):
+class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical power outlet (output) within a Device which provides power to a PowerPort.
     """
@@ -628,7 +628,7 @@ class BaseInterface(RelationshipModel):
     "relationships",
     "webhooks",
 )
-class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
+class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     """
     A network interface within a Device. A physical Interface can connect to exactly one other Interface.
     """
@@ -775,7 +775,7 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class FrontPort(ComponentModel, CableTermination):
+class FrontPort(CableTermination, ComponentModel):
     """
     A pass-through port on the front of a Device.
     """
@@ -839,7 +839,7 @@ class FrontPort(ComponentModel, CableTermination):
 
 
 @extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
-class RearPort(ComponentModel, CableTermination):
+class RearPort(CableTermination, ComponentModel):
     """
     A pass-through port on the rear of a Device.
     """
