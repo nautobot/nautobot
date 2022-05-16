@@ -598,8 +598,8 @@ class BaseInterface(RelationshipModel):
                     raise ValidationError(
                         {
                             "bridge": (
-                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
-                                f"is not part of virtual chassis {self.device.virtual_chassis}."
+                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.parent}, which "
+                                f"is not part of virtual chassis {self.parent.virtual_chassis}."
                             )
                         }
                     )
