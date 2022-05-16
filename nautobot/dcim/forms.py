@@ -2589,15 +2589,9 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             device = self.instance.device
 
         # Restrict parent/bridge/LAG interface assignment by device
-        self.fields["parent_interface"].widget.add_query_param("device_id", device.pk)
-        self.fields["bridge"].widget.add_query_param("device_id", device.pk)
+        self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
+        self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
         self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
-
-        if device.virtual_chassis and device.virtual_chassis.master:
-            self.fields["parent_interface"].widget.add_query_param(
-                "device_id", (device.virtual_chassis.master.pk, device.pk)
-            )
-            self.fields["bridge"].widget.add_query_param("device_id", (device.virtual_chassis.master.pk, device.pk))
 
         # Add current site to VLANs query params
         self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
@@ -2614,7 +2608,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         query_params={
-            "device_id": "$device",
+            "device_with_common_vc": "$device",
             "kind": "physical",
         },
     )
@@ -2622,7 +2616,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         queryset=Interface.objects.all(),
         required=False,
         query_params={
-            "device_id": "$device",
+            "device_with_common_vc": "$device",
         },
     )
     lag = DynamicModelChoiceField(
@@ -2786,15 +2780,9 @@ class InterfaceBulkEditForm(
             device = Device.objects.filter(pk=self.initial["device"]).first()
 
             # Restrict parent/bridge/LAG interface assignment by device
-            self.fields["parent_interface"].widget.add_query_param("device_id", device.pk)
-            self.fields["bridge"].widget.add_query_param("device_id", device.pk)
+            self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
+            self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
-
-            if device.virtual_chassis and device.virtual_chassis.master:
-                self.fields["parent_interface"].widget.add_query_param(
-                    "device_id", (device.virtual_chassis.master.pk, device.pk)
-                )
-                self.fields["bridge"].widget.add_query_param("device_id", (device.virtual_chassis.master.pk, device.pk))
 
             # Add current site to VLANs query params
             self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
