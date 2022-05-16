@@ -251,7 +251,12 @@ class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSeria
             try:
                 data["status"] = query.get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
             except Status.DoesNotExist:
-                data["status"] = query.first()
+                raise serializers.ValidationError(
+                    {
+                        "status": "VMInterface default status 'active' does not exist, "
+                        "create 'active' status for VMInterface or use the latest api_version"
+                    }
+                )
 
         # Validate many-to-many VLAN assignments
         virtual_machine = self.instance.virtual_machine if self.instance else data.get("virtual_machine")

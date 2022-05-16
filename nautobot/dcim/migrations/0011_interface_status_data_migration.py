@@ -18,9 +18,6 @@ def populate_interface_status(app, schema):
     for choice_kwargs in choices:
         try:
             obj, created = Status.objects.get_or_create(**choice_kwargs)
-        except IntegrityError:
-            choice_kwargs.pop("color")
-            obj, created = Status.objects.get_or_create(**choice_kwargs)
         except Exception as err:
             raise SystemExit(
                 f"Unexpected error while running data migration to populate status for dcim.interface: {err}"

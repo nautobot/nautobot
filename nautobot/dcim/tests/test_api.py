@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
@@ -1490,10 +1491,43 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
             },
         ]
 
+    def test_active_status_not_found(self):
+        self.add_permissions("dcim.add_interface")
 
-class InterfaceTestVersion14(InterfaceTestVersion13):
+        status = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        status.content_types.remove(interface_ct)
+        device = Device.objects.first()
+
+        data = {
+            "device": device.pk,
+            "name": "int-001",
+            "type": "1000base-t",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+        }
+
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            response.data["status"],
+            [
+                "Interface default status 'active' does not exist, create 'active' status for Interface or use the latest api_version"
+            ],
+        )
+
+
+class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     api_version = "1.4"
     validation_excluded_fields = ["status"]
+    model = Interface
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    peer_termination_type = Interface
+    choices_fields = ["mode", "type", "status"]
 
     @classmethod
     def setUpTestData(cls):

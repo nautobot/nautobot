@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
@@ -328,10 +329,39 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_active_status_not_found(self):
+        self.add_permissions("virtualization.add_vminterface")
 
-class VMInterfaceTestVersion14(VMInterfaceTestVersion13):
+        vminterface_ct = ContentType.objects.get_for_model(VMInterface)
+        status = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+        status.content_types.remove(vminterface_ct)
+
+        data = {
+            "virtual_machine": VirtualMachine.objects.first().id,
+            "name": "VMInterface-001",
+        }
+
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            response.data["status"],
+            [
+                "VMInterface default status 'active' does not exist, create 'active' status for VMInterface or use the latest api_version"
+            ],
+        )
+
+
+class VMInterfaceTestVersion14(APIViewTestCases.APIViewTestCase):
     api_version = "1.4"
     validation_excluded_fields = ["status"]
+    model = VMInterface
+    brief_fields = ["display", "id", "name", "url", "virtual_machine"]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = ["mode", "status"]
 
     @classmethod
     def setUpTestData(cls):

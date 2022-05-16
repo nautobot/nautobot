@@ -510,7 +510,7 @@ class BaseInterface(RelationshipModel, StatusModel):
             try:
                 status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
             except Status.DoesNotExist:
-                status = query.first()
+                raise ValidationError({"status": "Default status 'active' does not exist"})
             self.status = status
 
         # Remove untagged VLAN assignment for non-802.1Q interfaces

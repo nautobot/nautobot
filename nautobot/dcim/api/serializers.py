@@ -1080,7 +1080,12 @@ class InterfaceSerializerVersion12(
             try:
                 data["status"] = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
             except Status.DoesNotExist:
-                data["status"] = query.first()
+                raise serializers.ValidationError(
+                    {
+                        "status": "Interface default status 'active' does not exist, "
+                        "create 'active' status for Interface or use the latest api_version"
+                    }
+                )
 
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
