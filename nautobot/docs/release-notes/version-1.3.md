@@ -145,7 +145,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#1766](https://github.com/nautobot/nautobot/pull/1766) - Added configuration for downloaded filename branding.
-- [#1752](https://github.com/nautobot/nautobot/pull/1752) - Added a new `SearchFilter` that ias now used on all core filtersets to provide the `q=` search parameter for basic searching in list view of objects.
+- [#1752](https://github.com/nautobot/nautobot/pull/1752) - Added a new `SearchFilter` that is now used on all core filtersets to provide the `q=` search parameter for basic searching in list view of objects.
 
 ### Changed
 
