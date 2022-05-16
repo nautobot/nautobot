@@ -825,6 +825,8 @@ This parameter defines the URL of the repository that will be checked periodical
 
 ## SANITIZER_PATTERNS
 
+_Added in version 1.3.4_
+
 Default:
 
 ```python
