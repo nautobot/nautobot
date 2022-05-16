@@ -590,7 +590,7 @@ class BaseInterface(RelationshipModel):
                         {
                             "bridge": (
                                 f"The selected bridge interface ({self.bridge}) belongs to a different device "
-                                f"({self.bridge.device})."
+                                f"({self.bridge.parent})."
                             )
                         }
                     )
