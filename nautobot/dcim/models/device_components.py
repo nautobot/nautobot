@@ -553,14 +553,14 @@ class BaseInterface(RelationshipModel):
                     raise ValidationError(
                         {
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
-                            f"({self.parent_interface.device})."
+                            f"({self.parent_interface.parent})."
                         }
                     )
                 elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:
                     raise ValidationError(
                         {
-                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
-                            f"is not part of virtual chassis {self.device.virtual_chassis}."
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.parent}, which "
+                            f"is not part of virtual chassis {self.parent.virtual_chassis}."
                         }
                     )
 
