@@ -8,7 +8,3 @@ class ServiceUnavailable(APIException):
 
 class SerializerNotFound(Exception):
     pass
-
-
-class FilterSetNotFound(Exception):
-    pass
