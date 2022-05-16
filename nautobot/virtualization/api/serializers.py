@@ -245,7 +245,7 @@ class VMInterfaceSerializerVersion13(TaggedObjectSerializer, ValidatedModelSeria
 
         # set vminterface status to active if status not provided
         if not data.get("status"):
-            # status is currently required in the VMInterface model but not required in api_version < 1.3 serializers
+            # status is currently required in the VMInterface model but not required in api_version < 1.4 serializers
             # which raises an error when validating except status is explicitly set here
             query = Status.objects.get_for_model(VMInterface)
             try:
