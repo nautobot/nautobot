@@ -151,7 +151,7 @@ class APISelect(SelectWithDisabled):
         else:
             values.append(str(value))
 
-        self.attrs[key] = json.dumps(values)
+        self.attrs[key] = json.dumps(values, ensure_ascii=False)
 
 
 class APISelectMultiple(APISelect, forms.SelectMultiple):
