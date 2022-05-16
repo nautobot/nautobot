@@ -1436,7 +1436,7 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
         ]
 
 
-class InterfaceTestVersion13(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = Interface
     brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {

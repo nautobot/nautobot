@@ -212,7 +212,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 
 
 # TODO: collapse this with VMInterfaceSerializer in 2.0.
-class VMInterfaceSerializerVersion13(TaggedObjectSerializer, ValidatedModelSerializer):
+class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
@@ -267,7 +267,7 @@ class VMInterfaceSerializerVersion13(TaggedObjectSerializer, ValidatedModelSeria
         return super().validate(data)
 
 
-class VMInterfaceSerializer(VMInterfaceSerializerVersion13, StatusModelSerializerMixin):
+class VMInterfaceSerializer(VMInterfaceSerializerVersion12, StatusModelSerializerMixin):
     class Meta:
         model = VMInterface
         fields = [

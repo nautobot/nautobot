@@ -96,20 +96,20 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
 
 @extend_schema_view(
     bulk_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]
+        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
     ),
     bulk_partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]
+        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
     ),
-    create=extend_schema(responses={"201": serializers.VMInterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
+    create=extend_schema(responses={"201": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
     list=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]
+        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
     ),
     partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion13}, versions=["1.2", "1.3"]
+        responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]
     ),
-    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
-    update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
+    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
 class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
     queryset = VMInterface.objects.prefetch_related("virtual_machine", "status", "tags", "tagged_vlans")
@@ -119,7 +119,7 @@ class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
 
     def get_serializer_class(self):
         serializer_choices = (
-            SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion13),
+            SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion12),
         )
         return versioned_serializer_selector(
             obj=self,

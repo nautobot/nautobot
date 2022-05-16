@@ -1018,7 +1018,7 @@ class PowerPortSerializer(
 
 
 # TODO: collapse this with InterfaceSerializer in 2.0.
-class InterfaceSerializerVersion13(
+class InterfaceSerializerVersion12(
     TaggedObjectSerializer,
     CableTerminationSerializer,
     ConnectedEndpointSerializer,
@@ -1096,7 +1096,7 @@ class InterfaceSerializerVersion13(
         return super().validate(data)
 
 
-class InterfaceSerializer(InterfaceSerializerVersion13, StatusModelSerializerMixin):
+class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
     class Meta:
         model = Interface
         fields = [

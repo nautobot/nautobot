@@ -595,16 +595,16 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
 
 @extend_schema_view(
     bulk_update=extend_schema(
-        responses={"200": serializers.InterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]
+        responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
     ),
     bulk_partial_update=extend_schema(
-        responses={"200": serializers.InterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]
+        responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
     ),
-    create=extend_schema(responses={"201": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
-    list=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13(many=True)}, versions=["1.2", "1.3"]),
-    partial_update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
-    retrieve=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
-    update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion13}, versions=["1.2", "1.3"]),
+    create=extend_schema(responses={"201": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    list=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]),
+    partial_update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    retrieve=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
 class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):
     queryset = Interface.objects.prefetch_related(
@@ -616,7 +616,7 @@ class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSet
 
     def get_serializer_class(self):
         serializer_choices = (
-            SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion13),
+            SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion12),
         )
         return versioned_serializer_selector(
             obj=self,
