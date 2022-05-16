@@ -531,7 +531,7 @@ def get_table_for_model(model):
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
 
-# namedtuple accepts versions(list of API versions) and serializer(Appropriate Serializer class for versions).
+# namedtuple accepts versions(list of API versions) and serializer(Related 'versions' serializer).
 SerializerVersions = namedtuple("SerializersVersions", ("versions", "serializer"))
 
 
