@@ -23,7 +23,7 @@ def populate_interface_status(app, schema):
             obj, created = Status.objects.get_or_create(**choice_kwargs)
         except Exception as err:
             raise SystemExit(
-                f"Unexpected error while running data migration to populate" f"status for dcim.interface: {err}"
+                f"Unexpected error while running data migration to populate status for dcim.interface: {err}"
             )
 
         obj.content_types.add(interface_content_type)
