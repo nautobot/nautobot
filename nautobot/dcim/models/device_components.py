@@ -700,8 +700,6 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
             self.device.identifier if self.device else None,
             self.name,
             self.label,
-            self.parent_interface.name if self.parent_interface else None,
-            self.bridge.name if self.bridge else None,
             self.lag.name if self.lag else None,
             self.get_type_display(),
             self.enabled,
@@ -710,6 +708,8 @@ class Interface(ComponentModel, CableTermination, PathEndpoint, BaseInterface):
             self.mgmt_only,
             self.description,
             self.get_mode_display(),
+            self.parent_interface.name if self.parent_interface else None,
+            self.bridge.name if self.bridge else None,
         )
 
     def clean(self):

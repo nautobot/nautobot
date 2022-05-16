@@ -426,13 +426,13 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
     csv_headers = [
         "virtual_machine",
         "name",
-        "parent_interface",
-        "bridge",
         "enabled",
         "mac_address",
         "mtu",
         "description",
         "mode",
+        "parent_interface",
+        "bridge",
     ]
 
     class Meta:
@@ -451,12 +451,12 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.virtual_machine.name,
             self.name,
             self.enabled,
-            self.parent_interface.name if self.parent_interface else None,
-            self.bridge.name if self.bridge else None,
             self.mac_address,
             self.mtu,
             self.description,
             self.get_mode_display(),
+            self.parent_interface.name if self.parent_interface else None,
+            self.bridge.name if self.bridge else None,
         )
 
     def to_objectchange(self, action):
