@@ -165,7 +165,7 @@ class LabelTestCase(TestCase):
             "name_pattern": "eth[0-9]",
             "label_pattern": "Interface[0-9]",
             "type": InterfaceTypeChoices.TYPE_100ME_FIXED,
-            "status": status_active,
+            "status": status_active.pk,
         }
         form = InterfaceCreateForm(interface_data)
 
