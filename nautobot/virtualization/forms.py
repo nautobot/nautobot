@@ -475,7 +475,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
-        label="Bridged interface",
+        label="Bridge interface",
     )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -612,7 +612,7 @@ class VMInterfaceCSVForm(CustomFieldModelCSVForm):
         queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
     )
     bridge = CSVModelChoiceField(
-        queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Bridged interface"
+        queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Bridge interface"
     )
     mode = CSVChoiceField(
         choices=InterfaceModeChoices,
