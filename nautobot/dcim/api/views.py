@@ -64,7 +64,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import count_related, SerializerVersions, versioned_serializer_selector
+from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization.models import VirtualMachine
 from . import serializers
 from .exceptions import MissingFilterException
@@ -616,12 +616,12 @@ class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSet
 
     def get_serializer_class(self):
         serializer_choices = (
-            SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion12),
+            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion12),
         )
         return versioned_serializer_selector(
             obj=self,
             serializer_choices=serializer_choices,
-            current_serializer=super().get_serializer_class(),
+            default_serializer=super().get_serializer_class(),
         )
 
 

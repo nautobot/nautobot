@@ -8,7 +8,7 @@ from nautobot.extras.api.views import (
     ModelViewSet,
     StatusViewSetMixin,
 )
-from nautobot.utilities.utils import count_related, SerializerVersions, versioned_serializer_selector
+from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
     Cluster,
@@ -119,10 +119,10 @@ class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
 
     def get_serializer_class(self):
         serializer_choices = (
-            SerializerVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion12),
+            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion12),
         )
         return versioned_serializer_selector(
             obj=self,
             serializer_choices=serializer_choices,
-            current_serializer=super().get_serializer_class(),
+            default_serializer=super().get_serializer_class(),
         )

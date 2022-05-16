@@ -24,7 +24,7 @@ from nautobot.ipam.models import (
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
     count_related,
-    SerializerVersions,
+    SerializerForAPIVersions,
     versioned_serializer_selector,
 )
 from . import serializers
@@ -321,11 +321,13 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     filterset_class = filters.IPAddressFilterSet
 
     def get_serializer_class(self):
-        serializer_choices = (SerializerVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),)
+        serializer_choices = (
+            SerializerForAPIVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),
+        )
         return versioned_serializer_selector(
             obj=self,
             serializer_choices=serializer_choices,
-            current_serializer=super().get_serializer_class(),
+            default_serializer=super().get_serializer_class(),
         )
 
     # 2.0 TODO: Remove exception class and overloaded methods below
