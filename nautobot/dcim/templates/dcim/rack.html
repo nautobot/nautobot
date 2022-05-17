@@ -23,6 +23,12 @@
 
 {% block title %}Rack {{ object }}{% endblock title %}
 
+{% block panel_buttons %}
+<button class="btn btn-sm btn-default toggle-images" selected="selected">
+    <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
+</button>
+{% endblock panel_buttons %}
+
 {% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">

@@ -1,4 +1,5 @@
-from django.db.models import Model, OuterRef, Subquery, Q
+from django.db.models import Model, OuterRef, Subquery, Q, F
+from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
 from nautobot.extras.models.tags import TaggedItem
@@ -10,9 +11,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
     def get_for_object(self, obj):
         """
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
-
-        Args:
-          aggregate_data: If True, use the JSONBAgg aggregate function to return only the list of JSON data objects
         """
 
         # `device_role` for Device; `role` for VirtualMachine
@@ -71,8 +69,9 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
     def annotate_config_context_data(self):
         """
         Attach the subquery annotation to the base queryset.
-        Order By clause in Subquery is not guaranteed to be respected
-        within the aggregated JSON array.
+
+        Order By clause in Subquery is not guaranteed to be respected within the aggregated JSON array, which is why
+        we include "weight" and "name" into the result so that we can sort it within Python to ensure correctness.
         """
         from nautobot.extras.models import ConfigContext
 
@@ -80,7 +79,15 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             config_context_data=Subquery(
                 ConfigContext.objects.filter(self._get_config_context_filters())
                 .order_by("weight", "name")
-                .annotate(_data=EmptyGroupByJSONBAgg("data"))
+                .annotate(
+                    _data=EmptyGroupByJSONBAgg(
+                        JSONObject(
+                            data=F("data"),
+                            name=F("name"),
+                            weight=F("weight"),
+                        )
+                    )
+                )
                 .values("_data")
             )
         ).distinct()

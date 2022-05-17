@@ -105,6 +105,11 @@ class UserTestCase(TestCase):
         params = {"group": [groups[0].name, groups[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
 
 class GroupTestCase(TestCase):
     queryset = Group.objects.all()
@@ -124,6 +129,11 @@ class GroupTestCase(TestCase):
     def test_name(self):
         params = {"name": ["Group 1", "Group 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class ObjectPermissionTestCase(TestCase):
@@ -238,3 +248,8 @@ class TokenTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"write_enabled": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
