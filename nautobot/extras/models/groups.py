@@ -21,11 +21,49 @@ from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 logger = logging.getLogger(__name__)
 
 
-class DynamicGroupFilteringMixin:
-    """
-    Dynamic Group Filtering mixin to provide shared functionality between
-    DynamicGroup and DynamicGroupFilter.
-    """
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class DynamicGroup(OrganizationalModel):
+    """Dynamic Group Model."""
+
+    name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
+    slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
+    description = models.CharField(max_length=200, blank=True)
+    content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        verbose_name="Object Type",
+        help_text="The type of object for this Dynamic Group.",
+    )
+    # TODO(jathan): Set editable=False that this field doesn't show up in forms.
+    # It's a complex field only modified by the DynamicGroupForm internals at
+    # this time. I am not happy with this pattern right now but due to the
+    # dynamism of the form by merging in the `FooFilterForm` fields, there's not
+    # currently an easy way to move this construction logic to the model.
+    filter = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        editable=False,
+        default=dict,
+        help_text="A JSON-encoded dictionary of filter parameters for group membership",
+    )
+    groups = models.ManyToManyField(
+        "extras.DynamicGroup",
+        help_text="Child DynamicGroups of filter parameters for group membership",
+        through="extras.DynamicGroupMembership",
+        through_fields=("parent_group", "group"),
+        related_name="dynamic_groups",
+    )
+
+    objects = DynamicGroupQuerySet.as_manager()
+
+    clone_fields = ["content_type", "filter"]
 
     # This is used as a `startswith` check on field names, so these can be
     # explicit fields or just substrings.
@@ -38,6 +76,12 @@ class DynamicGroupFilteringMixin:
     #
     # Type: tuple
     exclude_filter_fields = ("q", "cr", "cf", "comments")  # Must be a tuple
+
+    class Meta:
+        ordering = ["content_type", "name"]
+
+    def __str__(self):
+        return self.name
 
     @property
     def model(self):
@@ -193,145 +237,6 @@ class DynamicGroupFilteringMixin:
 
         return self._map_filter_fields
 
-    def set_filter(self, form_data):
-        """
-        Set all desired fields from `form_data` into `filter` dict.
-
-        :param form_data:
-            Dict of filter parameters, generally from a filter form's `cleaned_data`
-        """
-        # Get the authoritative source of filter fields we want to keep.
-        filter_fields = self.get_filter_fields()
-
-        # Populate the filterset from the incoming `form_data`. The filterset's internal form is
-        # used for validation, will be used by us to extract cleaned data for final processing.
-        filterset_class = self.filterset_class
-        filterset_class.form_prefix = "filter"
-        filterset = filterset_class(form_data)
-
-        # Use the auto-generated filterset form perform creation of the filter dictionary.
-        filterset_form = filterset.form
-
-        # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
-        # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
-        # filterset form, but will also catch errors in case a user-created dict is provided instead.
-        if not filterset_form.is_valid():
-            raise ValidationError(filterset_form.errors)
-
-        # Perform some type coercions so that they are URL-friendly and reversible, excluding any
-        # empty/null value fields.
-        new_filter = {}
-        for field_name in filter_fields:
-            field = filterset_form.fields[field_name]
-            field_value = filterset_form.cleaned_data[field_name]
-
-            if isinstance(field, forms.ModelMultipleChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = [getattr(item, field_to_query) for item in field_value]
-
-            elif isinstance(field, forms.ModelChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = getattr(field_value, field_to_query, None)
-
-            else:
-                new_value = field_value
-
-            # Don't store empty values like `None`, [], etc.
-            if new_value in (None, "", [], {}):
-                logger.debug("[%s] Not storing empty value (%s) for %s", self.name, field_value, field_name)
-                continue
-
-            logger.debug("[%s] Setting filter field {%s: %s}", self.name, field_name, field_value)
-            new_filter[field_name] = new_value
-
-        self.filter = new_filter
-
-    def clean_filter(self):
-        """Clean for `self.filter` that uses the filterset_class to validate."""
-        if not isinstance(self.filter, dict):
-            raise ValidationError({"filter": "Filter must be a dict"})
-
-        # Accessing `self.model` will determine if the `content_type` is not correctly set, blocking validation.
-        if self.model is None:
-            raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
-
-        # Validate against the filterset's internal form validation.
-        filterset = self.filterset_class(self.filter)
-        if not filterset.is_valid():
-            raise ValidationError(filterset.errors)
-
-    def clean(self):
-        super().clean()
-
-        if self.present_in_database:
-            # Check immutable fields
-            database_object = self.__class__.objects.get(pk=self.pk)
-
-            if self.content_type != database_object.content_type:
-                raise ValidationError({"content_type": "ContentType cannot be changed once created"})
-
-        # Validate `filter` dict
-        self.clean_filter()
-
-
-@extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
-)
-class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
-    """Dynamic Group Model."""
-
-    name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
-    slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
-    description = models.CharField(max_length=200, blank=True)
-    content_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        verbose_name="Object Type",
-        help_text="The type of object for this Dynamic Group.",
-    )
-    # TODO(jathan): Set editable=False that this field doesn't show up in forms.
-    # It's a complex field only modified by the DynamicGroupForm internals at
-    # this time. I am not happy with this pattern right now but due to the
-    # dynamism of the form by merging in the `FooFilterForm` fields, there's not
-    # currently an easy way to move this construction logic to the model.
-    filters = models.ManyToManyField(
-        "extras.SavedFilter",
-        help_text="A list of JSON-encoded dictionary of filter parameters for group membership",
-        through="extras.DynamicGroupMembership",
-        through_fields=("parent_group", "filter"),
-        related_name="dynamic_groups",
-    )
-    groups = models.ManyToManyField(
-        "extras.DynamicGroupProxy",
-        help_text="Child DynamicGroups of filter parameters for group membership",
-        through="extras.DynamicGroupMembershipProxy",
-        through_fields=("parent_group", "group"),
-        related_name="dynamic_groups",
-    )
-    filter = models.JSONField(
-        encoder=DjangoJSONEncoder,
-        editable=False,
-        default=dict,
-        help_text="A JSON-encoded dictionary of filter parameters for group membership",
-    )
-
-    objects = DynamicGroupQuerySet.as_manager()
-
-    clone_fields = ["content_type", "filters"]
-
-    class Meta:
-        ordering = ["content_type", "name"]
-
-    def __str__(self):
-        getattr(self, "model")
-        return self.name
-
     def get_queryset(self):
         """
         Return a queryset for the `content_type` model of this group.
@@ -387,6 +292,59 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
             url += f"?{filter_str}"
 
         return url
+
+    def set_filter(self, form_data):
+        """
+        Set all desired fields from `form_data` into `filter` dict.
+
+        :param form_data:
+            Dict of filter parameters, generally from a filter form's `cleaned_data`
+        """
+        # Get the authoritative source of filter fields we want to keep.
+        filter_fields = self.get_filter_fields()
+
+        # Populate the filterset from the incoming `form_data`. The filterset's internal form is
+        # used for validation, will be used by us to extract cleaned data for final processing.
+        filterset_class = self.filterset_class
+        filterset_class.form_prefix = "filter"
+        filterset = filterset_class(form_data)
+
+        # Use the auto-generated filterset form perform creation of the filter dictionary.
+        filterset_form = filterset.form
+
+        # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
+        # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
+        # filterset form, but will also catch errors in case a user-created dict is provided instead.
+        if not filterset_form.is_valid():
+            raise ValidationError(filterset_form.errors)
+
+        # Perform some type coercions so that they are URL-friendly and reversible, excluding any
+        # empty/null value fields.
+        new_filter = {}
+        for field_name in filter_fields:
+            field = filterset_form.fields[field_name]
+            field_value = filterset_form.cleaned_data[field_name]
+
+            if isinstance(field, forms.ModelMultipleChoiceField):
+                field_to_query = field.to_field_name or "pk"
+                new_value = [getattr(item, field_to_query) for item in field_value]
+
+            elif isinstance(field, forms.ModelChoiceField):
+                field_to_query = field.to_field_name or "pk"
+                new_value = getattr(field_value, field_to_query, None)
+
+            else:
+                new_value = field_value
+
+            # Don't store empty values like `None`, [], etc.
+            if new_value in (None, "", [], {}):
+                logger.debug("[%s] Not storing empty value (%s) for %s", self.name, field_value, field_name)
+                continue
+
+            logger.debug("[%s] Setting filter field {%s: %s}", self.name, field_name, field_value)
+            new_filter[field_name] = new_value
+
+        self.filter = new_filter
 
     # FIXME(jathan): Yes, this is "something", but there is discrepancy between explicitly declared
     # fields on `DeviceFilterForm` (for example) vs. the `DeviceFilterSet` filters. For example
@@ -452,14 +410,54 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
 
         return FilterForm
 
-    def process_group_filters(self):
-        queryset = self.get_queryset()
-        memberships = self.dynamic_group_memberships.all()
-        qs = queryset.clone()
-        for membership in memberships:
+    def clean_filter(self):
+        """Clean for `self.filter` that uses the filterset_class to validate."""
+        if not isinstance(self.filter, dict):
+            raise ValidationError({"filter": "Filter must be a dict"})
+
+        # Accessing `self.model` will determine if the `content_type` is not correctly set, blocking validation.
+        if self.model is None:
+            raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
+
+        # Validate against the filterset's internal form validation.
+        filterset = self.filterset_class(self.filter)
+        if not filterset.is_valid():
+            raise ValidationError(filterset.errors)
+
+    def clean(self):
+        super().clean()
+
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.objects.get(pk=self.pk)
+
+            if self.content_type != database_object.content_type:
+                raise ValidationError({"content_type": "ContentType cannot be changed once created"})
+
+        # Validate `filter` dict
+        self.clean_filter()
+
+    def process_group_filters(self, qs=None, group=None):
+        # Start with this group's base queryset
+        if qs is None:
+            # Clone the base queryset so we can modify it.
+            qs = self.get_queryset().clone()
+
+        if group is None:
+            group = self
+            print(f"Processing group {group}...")
+
+        # Enumerate the filters. Recursing into any groups of groups.
+        for membership in group.dynamic_group_memberships.all():
+            group = membership.group
+            print(f"Processing group {group}...")
+            child_memberships = group.dynamic_group_memberships.all()
+            if child_memberships.exists():
+                qs = self.process_group_filters(qs, group)
+
             operator = membership.operator
-            # group = membership.group
-            fs = self.filterset_class(group.filter, queryset)
+
+            fs = self.filterset_class(group.filter, self.get_queryset())
             print(f"{group} -> {group.filter} -> {operator}")
             if operator == "union":
                 qs = qs.union(fs.qs)
@@ -471,52 +469,6 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
         return qs
 
 
-@extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "webhooks",
-)
-class SavedFilter(DynamicGroupFilteringMixin, OrganizationalModel):
-    """Dynamic Group Model."""
-
-    name = models.CharField(max_length=100, unique=True, help_text="Saved filter name")
-    slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
-    description = models.CharField(max_length=200, blank=True)
-    content_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        verbose_name="Object Type",
-        help_text="The type of object for this Dynamic Group.",
-    )
-    # TODO(jathan): Set editable=False that this field doesn't show up in forms.
-    # It's a complex field only modified by the DynamicGroupForm internals at
-    # this time. I am not happy with this pattern right now but due to the
-    # dynamism of the form by merging in the `FooFilterForm` fields, there's not
-    # currently an easy way to move this construction logic to the model.
-    filter = models.JSONField(
-        encoder=DjangoJSONEncoder,
-        editable=False,
-        default=dict,
-        help_text="A JSON-encoded dictionary of filter parameters for group membership",
-    )
-
-    objects = DynamicGroupQuerySet.as_manager()
-
-    clone_fields = ["content_type", "filter"]
-
-    class Meta:
-        ordering = ["content_type", "name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:savedfilter", kwargs={"slug": self.slug})
-
-
 class DynamicGroupFilterActionChoices(models.TextChoices):
     UNION = "union", "Union"
     INTERSECTION = "intersection", "Intersection"
@@ -526,48 +478,35 @@ class DynamicGroupFilterActionChoices(models.TextChoices):
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
-    filter = models.ForeignKey(
-        "extras.SavedFilter",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="dynamic_group_memberships",
-    )
     group = models.ForeignKey(
-        "extras.DynamicGroupProxy",
+        "extras.DynamicGroup",
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="dynamic_group_groups",
+        related_name="+",
     )
-    parent_group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE,
-                              related_name="dynamic_group_memberships")
-    operator = models.CharField(choices=DynamicGroupFilterActionChoices.choices,
-                              default=DynamicGroupFilterActionChoices.UNION, max_length=12)
+    parent_group = models.ForeignKey(
+        "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
+    )
+    operator = models.CharField(choices=DynamicGroupFilterActionChoices.choices, max_length=12)
+    weight = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return f"{self.group}: {self.filter} ({self.operator})"
+        return f"{self.group}: {self.operator} ({self.weight})"
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["filter", "parent_group"],
-                name="filter_to_group_uniq"
-            ),
-            models.UniqueConstraint(
-                fields=["group", "parent_group"],
-                name="group_to_filter_uniq"
-            ),
+            models.UniqueConstraint(fields=["group", "parent_group"], name="group_to_filter_uniq"),
         ]
-        ordering = ["parent_group", "group", "filter"]
+        ordering = ["parent_group", "weight", "group"]
 
     def clean(self):
         super().clean()
 
-        if all([
-            self.filter is not None,
-            self.group is not None,
-        ]):
+        if all(
+            [
+                self.filter is not None,
+                self.group is not None,
+            ]
+        ):
             raise ValidationError({"__all__": "Filter and group cannot both be set"})
 
         if self.filter.content_type != self.parent_group.content_type:
@@ -575,8 +514,9 @@ class DynamicGroupMembership(BaseModel):
 
 
 # Signals
-# This is forklifted from NSoT. Going to be used to 
-'''
+# This is forklifted from NSoT. Going to be used to enforce constraints on
+# `DynamicGroup` memberships to assert content_type's match or any other things.
+"""
 def dynamic_group_membership_changed(
     sender, instance, action, reverse, model, pk_set, **kwargs
 ):
@@ -606,15 +546,4 @@ models.signals.m2m_changed.connect(
     dynamic_group_membership_changed,
     sender=DynamicGroup.filters.through,
 )
-'''
-
-class DynamicGroupProxy(DynamicGroup):
-    class Meta:
-        proxy = True
-
-
-class DynamicGroupMembershipProxy(DynamicGroupMembership):
-    """Subclass to allow for using the same intermediate model twice."""
-
-    class Meta:
-        proxy = True
+"""
