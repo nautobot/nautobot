@@ -301,9 +301,17 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
     # dynamism of the form by merging in the `FooFilterForm` fields, there's not
     # currently an easy way to move this construction logic to the model.
     filters = models.ManyToManyField(
-        "extras.DynamicGroupFilter",
+        "extras.SavedFilter",
         help_text="A list of JSON-encoded dictionary of filter parameters for group membership",
         through="extras.DynamicGroupMembership",
+        through_fields=("parent_group", "filter"),
+        related_name="dynamic_groups",
+    )
+    groups = models.ManyToManyField(
+        "extras.DynamicGroupProxy",
+        help_text="Child DynamicGroups of filter parameters for group membership",
+        through="extras.DynamicGroupMembershipProxy",
+        through_fields=("parent_group", "group"),
         related_name="dynamic_groups",
     )
     filter = models.JSONField(
@@ -321,6 +329,7 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
         ordering = ["content_type", "name"]
 
     def __str__(self):
+        getattr(self, "model")
         return self.name
 
     def get_queryset(self):
@@ -455,10 +464,10 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
     "graphql",
     "webhooks",
 )
-class DynamicGroupFilter(DynamicGroupFilteringMixin, OrganizationalModel):
+class SavedFilter(DynamicGroupFilteringMixin, OrganizationalModel):
     """Dynamic Group Model."""
 
-    name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
+    name = models.CharField(max_length=100, unique=True, help_text="Saved filter name")
     slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_type = models.ForeignKey(
@@ -490,34 +499,52 @@ class DynamicGroupFilter(DynamicGroupFilteringMixin, OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("extras:dynamicgroupfilter", kwargs={"slug": self.slug})
+        return reverse("extras:savedfilter", kwargs={"slug": self.slug})
 
 
 class DynamicGroupFilterActionChoices(models.TextChoices):
-    INCLUDE = "include", "Include"
-    EXCLUDE = "exclude", "Exclude"
+    UNION = "union", "Union"
+    INTERSECTION = "intersection", "Intersection"
+    DIFFERENCE = "difference", "Difference"
 
 
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
-    filter = models.ForeignKey("extras.DynamicGroupFilter",
+    filter = models.ForeignKey("extras.SavedFilter",
                                on_delete=models.CASCADE,
                                related_name="dynamic_group_memberships")
-    group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE,
+    group = models.ForeignKey("extras.DynamicGroupProxy", on_delete=models.CASCADE,
+                              related_name="dynamic_group_groups")
+    parent_group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE,
                               related_name="dynamic_group_memberships")
-    action = models.CharField(choices=DynamicGroupFilterActionChoices.choices,
-                              default=DynamicGroupFilterActionChoices.INCLUDE, max_length=10)
+    operator = models.CharField(choices=DynamicGroupFilterActionChoices.choices,
+                              default=DynamicGroupFilterActionChoices.UNION, max_length=12)
 
     def __str__(self):
         return f"{self.group}: {self.filter} ({self.action})"
 
     class Meta:
-        unique_together = ["filter", "group"]
-        ordering = ["group", "filter"]
+        unique_together = [
+            ["filter", "parent_group"],
+            ["group", "parent_group"],
+        ]
+        ordering = ["parent_group", "group", "filter"]
 
     def clean(self):
         super().clean()
 
         if self.filter.content_type != self.group.content_type:
             raise ValidationError({"filter": "ContentType for filter and group must match"})
+
+
+class DynamicGroupProxy(DynamicGroup):
+    class Meta:
+        proxy = True
+
+
+class DynamicGroupMembershipProxy(DynamicGroupMembership):
+    """Subclass to allow for using the same intermediate model twice."""
+
+    class Meta:
+        proxy = True
