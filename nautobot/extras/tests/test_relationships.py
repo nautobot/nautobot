@@ -385,7 +385,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
             cra.validated_save()
 
     def test_create_invalid_relationship_association(self):
-        # Test creation of invalid relationship association restricted by destination/source filter
+        """Test creation of invalid relationship association restricted by destination/source filter."""
 
         relationship = Relationship.objects.create(
             name="Site to Rack Rel 1",
