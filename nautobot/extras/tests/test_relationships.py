@@ -315,7 +315,7 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
-        self.assertEqual(field.query_params, {"site": ["site-a", "site-b", "site-c", "site-d", "site-e"]})
+        self.assertEqual(field.query_params, {"site": ["site-a", "site-b", "site-c"]})
 
         field = self.m2ms_1.to_form_field("peer")
         self.assertFalse(field.required)
