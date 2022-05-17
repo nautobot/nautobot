@@ -1,9 +1,9 @@
 import django_filters
-from django.db.models import Q
 
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.utilities.filters import (
     NameSlugSearchFilterSet,
+    SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -35,9 +35,13 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class TenantFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "description": "icontains",
+            "comments": "icontains",
+        },
     )
     group_id = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
@@ -57,16 +61,6 @@ class TenantFilterSet(NautobotFilterSet):
     class Meta:
         model = Tenant
         fields = ["id", "name", "slug"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(slug__icontains=value)
-            | Q(description__icontains=value)
-            | Q(comments__icontains=value)
-        )
 
 
 class TenancyFilterSet(django_filters.FilterSet):

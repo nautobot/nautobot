@@ -13,6 +13,7 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueMACAddressFilter,
     NameSlugSearchFilterSet,
+    SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -40,9 +41,11 @@ class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "comments": "icontains",
+        },
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -93,16 +96,13 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         model = Cluster
         fields = ["id", "name"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(comments__icontains=value))
-
 
 class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "comments": "icontains",
+        },
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster__group",
@@ -188,11 +188,6 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         model = VirtualMachine
         fields = ["id", "name", "cluster", "vcpus", "memory", "disk"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(comments__icontains=value))
-
     def _has_primary_ip(self, queryset, name, value):
         params = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
         if value:
@@ -201,10 +196,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
 
 
 class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
+    q = SearchFilter(filter_predicates={"name": "icontains"})
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),
@@ -235,8 +227,3 @@ class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     class Meta:
         model = VMInterface
         fields = ["id", "name", "enabled", "mtu"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value))

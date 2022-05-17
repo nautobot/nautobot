@@ -1,5 +1,6 @@
 import json
 from io import StringIO
+import re
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -8,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.test.client import RequestFactory
 
 from nautobot.dcim.models import DeviceRole, Site
@@ -245,6 +247,22 @@ class JobTest(TransactionTestCase):
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
         self.assertEqual(form_data, job_result_data)
+
+    @override_settings(
+        SANITIZER_PATTERNS=((re.compile(r"(secret is )\S+"), r"\1{replacement}"),),
+    )
+    def test_log_redaction(self):
+        """
+        Test that an attempt is made at log redaction.
+        """
+        module = "test_log_redaction"
+        name = "TestLogRedaction"
+        job_result = create_job_result_and_run_job(module, name, data=None, commit=True, request=self.request)
+
+        logs = JobLogEntry.objects.filter(job_result=job_result, grouping="run")
+        self.assertGreater(logs.count(), 0)
+        for log in logs:
+            self.assertEqual(log.message, "The secret is (redacted)")
 
     def test_object_vars(self):
         """
