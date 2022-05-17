@@ -637,11 +637,15 @@ class RelationshipAssociation(BaseModel):
                 RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
             ):
                 # Don't allow multiple destinations from the same source
-                if RelationshipAssociation.objects.filter(
-                    relationship=self.relationship,
-                    source_type=self.source_type,
-                    source_id=self.source_id,
-                ).exists():
+                if (
+                    RelationshipAssociation.objects.filter(
+                        relationship=self.relationship,
+                        source_type=self.source_type,
+                        source_id=self.source_id,
+                    )
+                    .exclude(pk=self.pk)
+                    .exists()
+                ):
                     raise ValidationError(
                         {
                             "source": (
