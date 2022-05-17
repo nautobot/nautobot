@@ -384,6 +384,28 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         for cra in self.invalid_relationship_associations:
             cra.validated_save()
 
+    def test_exception_not_raised_when_updating_instance_with_type_o2m_or_o21(self):
+        """Validate 'Unable to create more than one relationship-association...' not raise when updating instance with
+        type one-to-one or one-to-many relationship."""
+
+        # RelationshipAssociation with type one-to-many
+        cra_1 = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[1])
+        cra_1.validated_save()
+
+        cra_1.source = self.sites[1]
+        cra_1.validated_save()
+
+        self.assertEqual(cra_1.source, self.sites[1])
+
+        # RelationshipAssociation with type one-to-one
+        cra_2 = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0])
+        cra_2.validated_save()
+
+        cra_2.source = self.racks[1]
+        cra_2.validated_save()
+
+        self.assertEqual(cra_2.source, self.racks[1])
+
     def test_clean_wrong_type(self):
         # Create with the wrong source Type
         with self.assertRaises(ValidationError) as handler:
