@@ -344,9 +344,6 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
         if model is None:
             raise RuntimeError(f"Could not determine queryset for model '{model}'")
 
-        if not self.filter:
-            return model.objects.none()
-
         filterset = self.filterset_class(self.filter, model.objects.all())
         qs = filterset.qs
 
@@ -455,6 +452,24 @@ class DynamicGroup(DynamicGroupFilteringMixin, OrganizationalModel):
 
         return FilterForm
 
+    def process_group_filters(self):
+        queryset = self.get_queryset()
+        memberships = self.dynamic_group_memberships.all()
+        qs = queryset.clone()
+        for membership in memberships:
+            operator = membership.operator
+            # group = membership.group
+            fs = self.filterset_class(group.filter, queryset)
+            print(f"{group} -> {group.filter} -> {operator}")
+            if operator == "union":
+                qs = qs.union(fs.qs)
+            elif operator == "difference":
+                qs = qs.difference(fs.qs)
+            elif operator == "intersection":
+                qs = qs.intersection(fs.qs)
+
+        return qs
+
 
 @extras_features(
     "custom_fields",
@@ -511,32 +526,87 @@ class DynamicGroupFilterActionChoices(models.TextChoices):
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
-    filter = models.ForeignKey("extras.SavedFilter",
-                               on_delete=models.CASCADE,
-                               related_name="dynamic_group_memberships")
-    group = models.ForeignKey("extras.DynamicGroupProxy", on_delete=models.CASCADE,
-                              related_name="dynamic_group_groups")
+    filter = models.ForeignKey(
+        "extras.SavedFilter",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="dynamic_group_memberships",
+    )
+    group = models.ForeignKey(
+        "extras.DynamicGroupProxy",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="dynamic_group_groups",
+    )
     parent_group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE,
                               related_name="dynamic_group_memberships")
     operator = models.CharField(choices=DynamicGroupFilterActionChoices.choices,
                               default=DynamicGroupFilterActionChoices.UNION, max_length=12)
 
     def __str__(self):
-        return f"{self.group}: {self.filter} ({self.action})"
+        return f"{self.group}: {self.filter} ({self.operator})"
 
     class Meta:
-        unique_together = [
-            ["filter", "parent_group"],
-            ["group", "parent_group"],
+        constraints = [
+            models.UniqueConstraint(
+                fields=["filter", "parent_group"],
+                name="filter_to_group_uniq"
+            ),
+            models.UniqueConstraint(
+                fields=["group", "parent_group"],
+                name="group_to_filter_uniq"
+            ),
         ]
         ordering = ["parent_group", "group", "filter"]
 
     def clean(self):
         super().clean()
 
-        if self.filter.content_type != self.group.content_type:
-            raise ValidationError({"filter": "ContentType for filter and group must match"})
+        if all([
+            self.filter is not None,
+            self.group is not None,
+        ]):
+            raise ValidationError({"__all__": "Filter and group cannot both be set"})
 
+        if self.filter.content_type != self.parent_group.content_type:
+            raise ValidationError({"filter": "ContentType for filter and parent_group must match"})
+
+
+# Signals
+# This is forklifted from NSoT. Going to be used to 
+'''
+def dynamic_group_membership_changed(
+    sender, instance, action, reverse, model, pk_set, **kwargs
+):
+    if action == "pre_add":
+        # First filter in Protocol attributes.
+        if attrs.exclude(resource_name="Protocol").exists():
+            raise exc.ValidationError(
+                {"filter": "Only Protocol attributes are allowed"}
+            )
+
+        # Then make sure that they match the site of the incoming instance.
+        wrong_site = attrs.exclude(site_id=instance.site_id)
+        if wrong_site.exists():
+            bad_attrs = [str(w) for w in wrong_site]
+            raise exc.ValidationError(
+                {
+                    "required_attributes": (
+                        "Attributes must share the same site as "
+                        "ProtocolType.site. Got: %s" % bad_attrs
+                    )
+                }
+            )
+
+
+# Register required_attributes_changed -> ProtocolType.required_attributes
+models.signals.m2m_changed.connect(
+    dynamic_group_membership_changed,
+    sender=DynamicGroup.filters.through,
+)
+'''
 
 class DynamicGroupProxy(DynamicGroup):
     class Meta:
