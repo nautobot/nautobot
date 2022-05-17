@@ -555,7 +555,7 @@ class JSONField(_JSONField):
             return value
         if value is None:
             return ""
-        return json.dumps(value, sort_keys=True, indent=4)
+        return json.dumps(value, sort_keys=True, indent=4, ensure_ascii=False)
 
     # TODO: remove this when we upgrade to Django 4
     def bound_data(self, data, initial):

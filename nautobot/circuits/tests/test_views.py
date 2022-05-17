@@ -1,8 +1,16 @@
 import datetime
+from django.urls import reverse
 
-from nautobot.circuits.models import Circuit, CircuitType, Provider, ProviderNetwork
+from nautobot.circuits.models import (
+    Circuit,
+    CircuitTermination,
+    CircuitTerminationSideChoices,
+    CircuitType,
+    Provider,
+    ProviderNetwork,
+)
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import ViewTestCases
+from nautobot.utilities.testing import TestCase as NautobotTestCase, ViewTestCases
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -198,3 +206,45 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.slug_test_object = "Provider Network 8"
         cls.slug_source = "name"
+
+
+class CircuitTerminationTestCase(NautobotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+
+    def test_circuit_termination_detail_200(self):
+        """
+        This tests that a circuit termination's detail page (with a provider
+        network instead of a site) returns a 200 response and doesn't contain the connect menu button.
+        """
+
+        # Set up the required objects:
+        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        provider_network = ProviderNetwork.objects.create(
+            name="Test Provider Network",
+            slug="test-provider-network",
+            provider=provider,
+        )
+        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
+        active_status = Status.objects.get_for_model(Circuit).get(slug="active")
+        circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            type=circuit_type,
+            status=active_status,
+        )
+        termination = CircuitTermination.objects.create(
+            circuit=circuit, provider_network=provider_network, term_side=CircuitTerminationSideChoices.SIDE_A
+        )
+
+        # Visit the termination detail page and assert responses:
+        response = self.client.get(reverse("circuits:circuittermination", kwargs={"pk": termination.pk}))
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Test Provider Network", str(response.content))
+        self.assertNotIn("</span> Connect", str(response.content))
+
+        # Visit the circuit object detail page and check there is no connect button present:
+        response = self.client.get(reverse("circuits:circuit", kwargs={"pk": circuit.pk}))
+        self.assertNotIn("</span> Connect", str(response.content))

@@ -286,6 +286,138 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         return qs
 
 
+class MappedPredicatesFilterMixin:
+    """
+    A filter mixin to provide the ability to specify fields and lookup expressions to use for
+    filtering.
+
+    A mapping of filter predicates (field_name: lookup_expr) must be provided to the filter when
+    declared on a filterset. This mapping is used to construct a `Q` query to filter based on the
+    provided predicates.
+
+    By default a predicate for `{"id": "iexact"}` (`id__exact`) will always be included.
+
+    Example:
+
+        q = SearchFilter(
+            filter_predicates={
+                "comments": "icontains",
+                "name": "icontains",
+            },
+        )
+
+    Optionally you may also provide a callable to use as a preprocessor for the filter predicate by
+    providing the value as a nested dict with "lookup_expr" and "preprocessor" keys. For example:
+
+        q = SearchFilter(
+            filter_predicates={
+                "asn": {
+                    "lookup_expr": "exact",
+                    "preprocessor": int,
+                },
+            },
+        )
+
+    This tells the filter to try to cast `asn` to an `int`. If it fails, this predicate will be
+    skipped.
+    """
+
+    # Optional label for the form element generated for this filter
+    label = None
+
+    # Filter predicates that will always be included if not otherwise specified.
+    default_filter_predicates = {"id": "iexact"}
+
+    # Lookup expressions for which whitespace should be preserved.
+    preserve_whitespace = ["icontains"]
+
+    def __init__(self, filter_predicates=None, strip=False, *args, **kwargs):
+        if not isinstance(filter_predicates, dict):
+            raise TypeError("filter_predicates must be a dict")
+
+        # Layer incoming filter_predicates on top of the defaults so that any overrides take
+        # precedence.
+        defaults = deepcopy(self.default_filter_predicates)
+        defaults.update(filter_predicates)
+
+        # Format: {field_name: lookup_expr, ...}
+        self.filter_predicates = defaults
+
+        # Try to use the label from the class if it is defined.
+        kwargs.setdefault("label", self.label)
+
+        # Whether to strip whtespace in the inner CharField form (default: False)
+        kwargs.setdefault("strip", strip)
+
+        super().__init__(*args, **kwargs)
+
+        # Generate the query with a sentinel value to validate it and surface parse errors.
+        self.generate_query(self.filter_predicates, value="")
+
+    def generate_query(self, filter_predicates, value):
+        """
+        Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
+        predicate=value.
+        """
+
+        def noop(v):
+            """Pass through the value."""
+            return v
+
+        query = models.Q()
+        for field_name, lookup_info in filter_predicates.items():
+            # Unless otherwise specified, set the default prepreprocssor
+            if isinstance(lookup_info, str):
+                lookup_expr = lookup_info
+                if lookup_expr in self.preserve_whitespace:
+                    preprocessor = noop
+                else:
+                    preprocessor = str.strip
+
+            # Or set it to what was defined by caller
+            elif isinstance(lookup_info, dict):
+                lookup_expr = lookup_info["lookup_expr"]
+                preprocessor = lookup_info.get("preprocessor")
+                if not callable(preprocessor):
+                    raise TypeError("Preprocessor {preprocessor} must be callable!")
+            else:
+                raise TypeError(f"Predicate value must be a str or a dict! Got: {type(lookup_info)}")
+
+            # Try to preprocess the value or skip creating a predicate for it. In the event we try
+            # to cast a value to an invalid type (e.g. `int("foo")` or `dict(42)`), ensure this
+            # predicate is not included in the query.
+            try:
+                new_value = preprocessor(value)
+            except (TypeError, ValueError):
+                continue
+
+            predicate = {f"{field_name}__{lookup_expr}": new_value}
+            query |= models.Q(**predicate)
+
+        # Return this for later use (such as introspection or debugging)
+        return query
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
+        # Evaluate the query and stash it for later use (such as introspection or debugging)
+        query = self.generate_query(self.filter_predicates, value)
+        qs = self.get_method(qs)(query)
+        self._most_recent_query = query
+        return qs.distinct()
+
+
+class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
+    """
+    Provide a search filter for use on filtersets as the `q=` parameter.
+
+    See the docstring for `nautobot.utilities.filters.MappedPredicatesFilterMixin` for usage.
+    """
+
+    label = "Search"
+
+
 #
 # FilterSets
 #
@@ -309,7 +441,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.FloatField: {"filter_class": MultiValueNumberFilter},
             models.IntegerField: {"filter_class": MultiValueNumberFilter},
             # Ref: https://github.com/carltongibson/django-filter/issues/1107
-            models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": ["icontains"]}},
+            models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": "icontains"}},
             models.PositiveIntegerField: {"filter_class": MultiValueNumberFilter},
             models.PositiveSmallIntegerField: {"filter_class": MultiValueNumberFilter},
             models.SlugField: {"filter_class": MultiValueCharFilter},
@@ -389,6 +521,10 @@ class BaseFilterSet(django_filters.FilterSet):
         field_name = filter_field.field_name
         field = get_model_field(cls._meta.model, field_name)
 
+        # If there isn't a model field, return.
+        if field is None:
+            return magic_filters
+
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = "{}__{}".format(filter_name, lookup_name)
@@ -466,12 +602,4 @@ class NameSlugSearchFilterSet(django_filters.FilterSet):
     A base class for adding the search method to models which only expose the `name` and `slug` fields
     """
 
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(models.Q(name__icontains=value) | models.Q(slug__icontains=value))
+    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
