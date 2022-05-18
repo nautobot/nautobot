@@ -92,10 +92,9 @@ class UserFilter(NautobotFilterSet):
 - It is acceptable that default filter mappings **may** need to be overridden with custom filter declarations, but [`filter_overrides`](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#customise-filter-generation-with-filter-overrides) (see below) should be used as a first resort.
 - Custom filter definitions **must not** shadow the name of an existing model field if it is also changing the type.
     - For example `DeviceFilterSet.interfaces` is a `BooleanFilter` that is shadowing the `Device.interfaces` related manager. This introduces problems with automatic introspection of the filterset and this pattern **must** be avoided.
-- For foreign-key related fields, **on existing core models in the v1.3 release train**: 
-    - The field **should** be shadowed, replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available). 
+- For foreign-key related fields, **on existing core models in the v1.3 release train**:
+    - The field **should** be shadowed, replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
     - A PK-based filter **should** be made available as well, generally with a name suffixed by `_id`. For example:
-
 
 ```python
     provider = django_filters.ModelMultipleChoiceFilter(
@@ -111,8 +110,8 @@ class UserFilter(NautobotFilterSet):
 ```
 
 - For foreign-key related fields on **new core models for v1.4 or later:**
-    - The field **must** be shadowed utilizing a hybrid `NaturalKeyMultipleChoiceFilter`(yet to be implemented) which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string). 
-    - Using this filter by default, `provider` would be a `pk` (UUID) field, whereas ithis field will automatically support both input values for `slug` or `pk`.
+    - The field **must** be shadowed utilizing a hybrid `NaturalKeyMultipleChoiceFilter`(yet to be implemented) which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
+    - In default settings for filtersets, when not using `NaturalKeyMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
     - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. *We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release.*
     - Using the previous field (`provider`) as an example, it would look something like this:
 
