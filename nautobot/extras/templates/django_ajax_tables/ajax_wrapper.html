@@ -18,8 +18,6 @@ Ref: https://github.com/nautobot/nautobot/issues/1289
                     // Store the query string in sessiong storage.
                     window.sessionStorage.setItem("job_results_current_page", new_querystring);
                     update_{{ ajax_divname }}(new_querystring, url);
-                    let qs = window.sessionStorage.getItem("job_results_current_page");
-                    console.log("SRC query= " + qs);
                 };
             }
         }
@@ -43,7 +41,7 @@ Ref: https://github.com/nautobot/nautobot/issues/1289
         xhr.send();
     }
 
-    // Remove any previous session data for storing curreng page.
+    // Remove any previous session data for storing current page. Session storage is unique per tab but not per page load.
     window.sessionStorage.removeItem("job_results_current_page");
     // Call update_ for the first time.
     update_{{ ajax_divname }}('', "{{ ajax_tableurl }}");

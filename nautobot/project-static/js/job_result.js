@@ -51,8 +51,8 @@ $(document).ready(function(){
 
                     // If there is a terminal status, refresh the page and clear session storage.
                     if (terminal_statuses.includes(data.status.value)) {
-                        reload_page && window.location.reload();
                         window.sessionStorage.removeItem("job_results_current_page");
+                        reload_page && window.location.reload();
                     }
                     // Otherwise call myself again after `timeout`.
                     else {
