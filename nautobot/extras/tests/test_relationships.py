@@ -397,6 +397,9 @@ class RelationshipAssociationTest(RelationshipBaseTest):
 
         self.assertEqual(cra_1.source, self.sites[1])
 
+        # Validate Exception not raised when calling .validated_save() on a RelationshipAssociation instance without making any update
+        cra_1.validated_save()
+
         # Assert Exception not raise updating source of RelationshipAssociation with one-to-one relationship type
         cra_2 = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0])
         cra_2.validated_save()
