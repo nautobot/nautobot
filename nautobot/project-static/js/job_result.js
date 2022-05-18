@@ -24,7 +24,9 @@ function updatePendingStatusLabel(status) {
 
 function updateLogTable(result_id) {
     // Calls `update_log_table` to refresh the jobs table from the `/log-table/` endpoint
-    update_log_table('', '/extras/job-results/' + result_id + '/log-table/');
+    // Grab the query string from session storage and pass it through to the log table.
+    let qs = window.sessionStorage.getItem("job_results_current_page");
+    update_log_table(qs, '/extras/job-results/' + result_id + '/log-table/');
 }
 
 $(document).ready(function(){
@@ -44,9 +46,13 @@ $(document).ready(function(){
                     // Update the job logs table
                     updateLogTable(pending_result_id);
 
-                    // If there is a terminal status, refresh the page.
+                    /// Should reload the page yet?
+                    let reload_page = window.sessionStorage.getItem("job_results_current_page") == null;
+
+                    // If there is a terminal status, refresh the page and clear session storage.
                     if (terminal_statuses.includes(data.status.value)) {
-                        window.location.reload();
+                        reload_page && window.location.reload();
+                        window.sessionStorage.removeItem("job_results_current_page");
                     }
                     // Otherwise call myself again after `timeout`.
                     else {
