@@ -394,6 +394,7 @@ class JobResult(BaseModel, CustomFieldModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
+    # todoindex:
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
