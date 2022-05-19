@@ -9,6 +9,23 @@ on:  # yamllint disable
   workflow_call:
 
 jobs:
+  pr_helper:
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Notify Updated Build"
+        uses: thollander/actions-comment-pull-request@v1
+        with:
+          comment_includes: '🤖 Pull Request Container Bot'
+          message: |
+            👋 Thanks for opening the PR!
+            
+            Friendly reminder: To have a container built of this PR a member of this organization can leave a comment saying:
+            
+            > 📦 ENABLE CONTAINER BUILD
+            
+            Signed,
+              🤖 Pull Request Container Bot
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   black:
     runs-on: "ubuntu-20.04"
     env:
@@ -275,15 +292,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Comment PR
-        uses: thollander/actions-comment-pull-request@v1
-        with:
-          message: |
-            New container built! Check it out with:
-            ```sh
-            docker pull ghcr.io/nautobot/nautobot-pr-validation:pr-${{ steps.pr.outputs.pull_request_number }}-py3.7
-            ```
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Docker Metadata"
         id: "dockermeta"
         uses: "docker/metadata-action@v3"
@@ -311,3 +319,14 @@ jobs:
             PYTHON_VER=3.7
             PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
             POETRY_PARALLEL=true
+      - name: "Notify Updated Build"
+        uses: thollander/actions-comment-pull-request@v1
+        with:
+          comment_includes: '🤖 Pull Request Container Bot'
+          message: |
+            New container built! Check it out with:
+            ```sh
+            docker pull ghcr.io/nautobot/nautobot-pr-validation:pr-${{ github.event.number }}-py3.7
+            ```
+            - 🤖 Pull Request Container Bot
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
