@@ -30,7 +30,6 @@ class GitRepository(PrimaryModel):
         max_length=100,
         unique=True,
     )
-    # todoindex:
     slug = AutoSlugField(populate_from="name")
 
     remote_url = models.URLField(
