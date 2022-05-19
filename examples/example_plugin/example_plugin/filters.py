@@ -13,7 +13,7 @@ class ExampleModelFilterSet(BaseFilterSet):
         },
     )
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = ExampleModel
         fields = [
             "name",
@@ -31,7 +31,7 @@ class AnotherExampleModelFilterSet(BaseFilterSet):
         },
     )
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = AnotherExampleModel
         fields = [
             "name",

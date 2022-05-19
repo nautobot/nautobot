@@ -417,6 +417,7 @@ class CustomLinkFilterSet(BaseFilterSet):
     class Meta(BaseFilterSet.Meta):
         model = CustomLink
         fields = (
+            "id",
             "content_type",
             "name",
             "text",
@@ -520,7 +521,7 @@ class GraphQLQueryFilterSet(BaseFilterSet):
 
     class Meta(BaseFilterSet.Meta):
         model = GraphQLQuery
-        fields = ["name", "slug"]
+        fields = ["id", "name", "slug"]
 
 
 #
@@ -930,6 +931,7 @@ class WebhookFilterSet(BaseFilterSet):
     class Meta(BaseFilterSet.Meta):
         model = Webhook
         fields = [
+            "id",
             "name",
             "payload_url",
             "enabled",

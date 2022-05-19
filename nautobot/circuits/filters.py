@@ -203,4 +203,4 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
 
     class Meta(BaseFilterSet.Meta):
         model = CircuitTermination
-        fields = ["term_side", "port_speed", "upstream_speed", "xconnect_id"]
+        fields = ["id", "term_side", "port_speed", "upstream_speed", "xconnect_id"]

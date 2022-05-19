@@ -2,7 +2,6 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
 from nautobot.extras.choices import (
@@ -52,6 +51,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
@@ -59,7 +59,7 @@ from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 User = get_user_model()
 
 
-class ConfigContextTestCase(TestCase):
+class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     queryset = ConfigContext.objects.all()
     filterset = ConfigContextFilterSet
 
@@ -140,10 +140,6 @@ class ConfigContextTestCase(TestCase):
             c.tenant_groups.set([tenant_groups[i]])
             c.tenants.set([tenants[i]])
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["Config Context 1", "Config Context 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -221,7 +217,7 @@ class ConfigContextTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class CustomLinkTestCase(TestCase):
+class CustomLinkTestCase(FilterTestCases.FilterTestCase):
     queryset = CustomLink.objects.all()
     filterset = CustomLinkFilterSet
 
@@ -274,7 +270,7 @@ class CustomLinkTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
-class ExportTemplateTestCase(TestCase):
+class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = ExportTemplate.objects.all()
     filterset = ExportTemplateFilterSet
 
@@ -299,10 +295,6 @@ class ExportTemplateTestCase(TestCase):
             template_code="TESTING",
         )
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["Export Template 1", "Export Template 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -316,7 +308,7 @@ class ExportTemplateTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
-class GraphQLTestCase(TestCase):
+class GraphQLTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = GraphQLQuery.objects.all()
     filterset = GraphQLQueryFilterSet
 
@@ -432,20 +424,12 @@ query ($device: String!) {
             query.clean()
             query.save()
 
-    def test_name(self):
-        params = {"name": ["graphql-query-1"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_slug(self):
-        params = {"slug": ["graphql-query-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
     def test_query(self):
         params = {"query": ["sites"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
-class ImageAttachmentTestCase(TestCase):
+class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
     queryset = ImageAttachment.objects.all()
     filterset = ImageAttachmentFilterSet
 
@@ -498,10 +482,6 @@ class ImageAttachmentTestCase(TestCase):
             image_width=100,
         )
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["Image Attachment 1", "Image Attachment 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -518,13 +498,9 @@ class ImageAttachmentTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class JobFilterSetTestCase(TestCase):
+class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = Job.objects.all()
     filterset = JobFilterSet
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
         params = {"name": ["File Upload Success", "File Upload Failure"]}
@@ -568,7 +544,7 @@ class JobFilterSetTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class JobLogEntryTestCase(TestCase):
+class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     queryset = JobLogEntry.objects.all()
     filterset = JobLogEntryFilterSet
 
@@ -587,10 +563,6 @@ class JobLogEntryTestCase(TestCase):
                 job_result=cls.job_result,
                 message=f"I am a {log_level} log.",
             )
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_log_level(self):
         params = {"log_level": "success"}
@@ -613,7 +585,7 @@ class JobLogEntryTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class ObjectChangeTestCase(TestCase):
+class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectChange.objects.all()
     filterset = ObjectChangeFilterSet
 
@@ -683,10 +655,6 @@ class ObjectChangeTestCase(TestCase):
             object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:3]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
     def test_user(self):
         params = {"user_id": User.objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
@@ -711,7 +679,7 @@ class ObjectChangeTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class RelationshipTestCase(TestCase):
+class RelationshipTestCase(FilterTestCases.FilterTestCase):
     queryset = Relationship.objects.all()
     filterset = RelationshipFilterSet
 
@@ -743,10 +711,6 @@ class RelationshipTestCase(TestCase):
             destination_type=interface_type,
         ).validated_save()
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["Primary VLAN", "Primary Interface"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -764,7 +728,7 @@ class RelationshipTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class RelationshipAssociationTestCase(TestCase):
+class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = RelationshipAssociation.objects.all()
     filterset = RelationshipAssociationFilterSet
 
@@ -834,10 +798,6 @@ class RelationshipAssociationTestCase(TestCase):
             destination_id=cls.devices[1].pk,
         ).validated_save()
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_relationship(self):
         params = {"relationship": [self.relationships[0].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -859,7 +819,7 @@ class RelationshipAssociationTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class SecretTestCase(TestCase):
+class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Secret.objects.all()
     filterset = SecretFilterSet
 
@@ -886,18 +846,6 @@ class SecretTestCase(TestCase):
         for secret in secrets:
             secret.validated_save()
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Secret 1", "Secret 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["secret-1", "secret-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_provider(self):
         params = {"provider": ["environment-variable"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -908,7 +856,7 @@ class SecretTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class SecretsGroupTestCase(TestCase):
+class SecretsGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = SecretsGroup.objects.all()
     filterset = SecretsGroupFilterSet
 
@@ -918,25 +866,13 @@ class SecretsGroupTestCase(TestCase):
         SecretsGroup.objects.create(name="Group 2", slug="group-2")
         SecretsGroup.objects.create(name="Group 3", slug="group-3")
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Group 1", "Group 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["group-1", "group-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class SecretsGroupAssociationTestCase(TestCase):
+class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = SecretsGroupAssociation.objects.all()
     filterset = SecretsGroupAssociationFilterSet
 
@@ -988,10 +924,6 @@ class SecretsGroupAssociationTestCase(TestCase):
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_group(self):
         params = {"group_id": [self.groups[0].pk, self.groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -1013,7 +945,7 @@ class SecretsGroupAssociationTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class StatusTestCase(TestCase):
+class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
 
@@ -1029,18 +961,6 @@ class StatusTestCase(TestCase):
 
         See `extras.management.create_custom_statuses` for context.
         """
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Active", "Offline"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["active", "offline"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):
         ct = ContentType.objects.get_for_model(Device)
@@ -1066,7 +986,7 @@ class StatusTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class TagTestCase(TestCase):
+class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tag.objects.all()
     filterset = TagFilterSet
 
@@ -1082,18 +1002,6 @@ class TagTestCase(TestCase):
 
         for tag in cls.tags[1:]:
             tag.content_types.add(ContentType.objects.get_for_model(Device))
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Tag 1", "Tag 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["tag-1", "tag-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_color(self):
         params = {"color": ["ff0000", "00ff00"]}
@@ -1113,7 +1021,7 @@ class TagTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class WebhookTestCase(TestCase):
+class WebhookTestCase(FilterTestCases.FilterTestCase):
     queryset = Webhook.objects.all()
     filterset = WebhookFilterSet
 
