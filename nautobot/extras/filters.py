@@ -847,7 +847,10 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         # e.g. `status__slug`
         to_field_name = self.field.to_field_name
         name = f"{self.field_name}__{to_field_name}"
-        return {name: getattr(value, to_field_name)}
+        try:
+            return {name: getattr(value, to_field_name)}
+        except (AttributeError, TypeError):
+            return {name: value}
 
 
 class StatusFilterSet(NautobotFilterSet):

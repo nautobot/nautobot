@@ -3,6 +3,7 @@
 import logging
 import urllib
 
+import django_filters
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -79,6 +80,10 @@ class DynamicGroup(OrganizationalModel):
 
     class Meta:
         ordering = ["content_type", "name"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        getattr(self, "model")
 
     def __str__(self):
         return self.name
@@ -437,8 +442,29 @@ class DynamicGroup(OrganizationalModel):
         # Validate `filter` dict
         self.clean_filter()
 
+    def generate_query_for_filter(self, filter_field, value):
+        q = models.Q()
+        if isinstance(filter_field, django_filters.MultipleChoiceFilter):
+            for v in value:
+                q |= models.Q(**filter_field.get_filter_predicate(v))
+        else:
+            q |= filter_field.get_filter_predicate(v)
+        return q
+
+    def generate_query_for_group(self, group):
+        fs = group.filterset_class(group.filter, group.get_queryset())
+
+        q = models.Q()
+
+        for field_name, value in fs.data.items():
+            filter_field = fs.filters[field_name]
+            q &= self.generate_query_for_filter(filter_field, value)
+
+        return q
+
     def process_group_filters(self, qs=None, group=None):
         # Start with this group's base queryset
+        base_qs = self.get_queryset().clone()
         if qs is None:
             # Clone the base queryset so we can modify it.
             qs = self.get_queryset().clone()
@@ -446,6 +472,8 @@ class DynamicGroup(OrganizationalModel):
         if group is None:
             group = self
             print(f"Processing group {group}...")
+
+        big_q = models.Q()
 
         # Enumerate the filters. Recursing into any groups of groups.
         for membership in group.dynamic_group_memberships.all():
@@ -457,15 +485,33 @@ class DynamicGroup(OrganizationalModel):
 
             operator = membership.operator
 
-            fs = self.filterset_class(group.filter, self.get_queryset())
             print(f"{group} -> {group.filter} -> {operator}")
+
+            # The previous iteration that used set operations at the DB layer
+            # but limited by not being able to do further filtering.
+            """
+            fs = self.filterset_class(group.filter, self.get_queryset())
             if operator == "union":
                 qs = qs.union(fs.qs)
             elif operator == "difference":
                 qs = qs.difference(fs.qs)
             elif operator == "intersection":
                 qs = qs.intersection(fs.qs)
+            """
+            next_set = self.generate_query_for_group(group)
+            # print(next_set)
+            if operator == "union":
+                big_q |= next_set
+                qs = qs | base_qs.filter(next_set)
+            elif operator == "difference":
+                big_q &= ~next_set
+                qs = qs.exclude(next_set)
+            elif operator == "intersection":
+                big_q &= next_set
+                qs = qs.filter(next_set)
+            # print(big_q)
 
+        # return big_q
         return qs
 
 
