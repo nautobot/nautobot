@@ -35,7 +35,9 @@ class ProviderNetwork(PrimaryModel):
     name = models.CharField(max_length=100, db_index=True)
     slug = AutoSlugField(populate_from="name")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
+    # todoindex:
     description = models.CharField(max_length=200, blank=True)
+    # todoindex:
     comments = models.TextField(blank=True)
 
     csv_headers = [
@@ -96,10 +98,14 @@ class Provider(PrimaryModel):
         verbose_name="ASN",
         help_text="32-bit autonomous system number",
     )
+    # todoindex:
     account = models.CharField(max_length=100, blank=True, verbose_name="Account number")
     portal_url = models.URLField(blank=True, verbose_name="Portal URL")
+    # todoindex:
     noc_contact = models.TextField(blank=True, verbose_name="NOC contact")
+    # todoindex:
     admin_contact = models.TextField(blank=True, verbose_name="Admin contact")
+    # todoindex:
     comments = models.TextField(blank=True)
 
     csv_headers = [
@@ -204,7 +210,9 @@ class Circuit(PrimaryModel, StatusModel):
     )
     install_date = models.DateField(blank=True, null=True, verbose_name="Date installed")
     commit_rate = models.PositiveIntegerField(blank=True, null=True, verbose_name="Commit rate (Kbps)")
+    # todoindex:
     description = models.CharField(max_length=200, blank=True)
+    # todoindex:
     comments = models.TextField(blank=True)
 
     # Cache associated CircuitTerminations
@@ -282,6 +290,7 @@ class Circuit(PrimaryModel, StatusModel):
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
+    # todoindex:
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     site = models.ForeignKey(
         to="dcim.Site",

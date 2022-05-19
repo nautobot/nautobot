@@ -335,7 +335,9 @@ class CablePath(BaseModel):
     )
     destination_id = models.UUIDField(blank=True, null=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
+    # todoindex:
     path = JSONPathField()
+    # todoindex:
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
 
