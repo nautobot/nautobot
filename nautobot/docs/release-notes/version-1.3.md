@@ -148,6 +148,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Fixed
 
+- [#1289](https://github.com/nautobot/nautobot/issues/1289) - Fixed issue where job result live pagination would reset to page 1 on refresh. The currently selected page will now persist until the job run completes.
+
 ## v1.3.4 (2022-05-16)
 
 ### Added
