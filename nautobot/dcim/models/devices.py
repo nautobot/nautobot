@@ -344,6 +344,7 @@ class DeviceRole(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     color = ColorField(default=ColorChoices.COLOR_GREY)
+    # todoindex:
     vm_role = models.BooleanField(
         default=True,
         verbose_name="VM Role",
