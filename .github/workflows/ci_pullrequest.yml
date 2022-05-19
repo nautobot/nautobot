@@ -285,7 +285,7 @@ jobs:
           tags: |
             type=ref,enable=true,priority=600,prefix=pr-,suffix=-py3.7,event=pr
           labels: |
-            org.opencontainers.image.title=Nautobot (PR VALIDATION IMAGE)
+            org.opencontainers.image.title=Nautobot (PULL REQUEST VALIDATION IMAGE)
       - name: "Build"
         uses: "docker/build-push-action@v2"
         with:
