@@ -576,6 +576,9 @@ class MyJobTestCase(TransactionTestCase):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
         job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
+        # As tests run on a clean database each time, we need to make sure the job is enabled
+        job.enabled = True
+        job.validated_save()
         job_result = run_job_for_testing(job, data={}, commit=False)
 
         # Since we ran with commit=False, any database changes made by the job won't persist,

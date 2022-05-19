@@ -96,6 +96,9 @@ class TransactionTestCase(_TransactionTestCase):
     Base test case class using the TransactionTestCase for unit testing
     """
 
+    # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging
+    databases = ("default", "job_logs")
+
     def setUp(self):
         """Provide a clean, post-migration state before each test case.
 
