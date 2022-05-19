@@ -392,10 +392,24 @@ class RackElevationListView(generic.ObjectListView):
     """
 
     queryset = Rack.objects.prefetch_related("role")
+    non_filter_params = (
+        *generic.ObjectListView.non_filter_params,
+        "face",  # render front or rear of racks?
+        "reverse",  # control of ordering
+    )
 
     def get(self, request):
+        filter_params = self.get_filter_params(request)
+        filterset = filters.RackFilterSet(filter_params, self.queryset)
+        if filterset.is_valid():
+            racks = filterset.qs
+        else:
+            messages.error(
+                request,
+                mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+            )
+            racks = filterset.qs.none()
 
-        racks = filters.RackFilterSet(request.GET, self.queryset).qs
         total_count = racks.count()
 
         # Determine ordering
@@ -428,7 +442,7 @@ class RackElevationListView(generic.ObjectListView):
                 "total_count": total_count,
                 "reverse": reverse,
                 "rack_face": rack_face,
-                "filter_form": forms.RackElevationFilterForm(request.GET),
+                "filter_form": forms.RackElevationFilterForm(filter_params),
             },
         )
 

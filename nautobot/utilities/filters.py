@@ -425,7 +425,9 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
 
 class BaseFilterSet(django_filters.FilterSet):
     """
-    A base filterset which provides common functionaly to all Nautobot filtersets
+    A base filterset which provides common functionality to all Nautobot filtersets.
+
+    Note that filtersets inheriting from this class MUST also inherit their Meta from BaseFilterSet.Meta or a subclass.
     """
 
     FILTER_DEFAULTS = deepcopy(django_filters.filterset.FILTER_FOR_DBFIELD_DEFAULTS)
@@ -453,6 +455,21 @@ class BaseFilterSet(django_filters.FilterSet):
             MACAddressField: {"filter_class": MultiValueMACAddressFilter},
         }
     )
+
+    class Meta:
+        """Base class that all BaseFilterSet.Meta subclasses must inherit from."""
+
+        class StrictFilterForm(forms.Form):
+            """Form class that treats any unknown form data entries as a validation error."""
+
+            def is_valid(self):
+                result = super().is_valid()
+                for extra_key in set(self.data.keys()).difference(self.cleaned_data.keys()):
+                    self.add_error(None, f'Unknown filter field "{extra_key}"')
+                    result = False
+                return result
+
+        form = StrictFilterForm
 
     @staticmethod
     def _get_filter_lookup_dict(existing_filter):

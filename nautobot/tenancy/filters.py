@@ -29,7 +29,7 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Tenant group group (slug)",
     )
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = TenantGroup
         fields = ["id", "name", "slug", "description"]
 
@@ -58,11 +58,12 @@ class TenantFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Tenant
         fields = ["id", "name", "slug"]
 
 
+# TODO: should be TenancyFilterSetMixin
 class TenancyFilterSet(django_filters.FilterSet):
     """
     An inheritable FilterSet for models which support Tenant assignment.

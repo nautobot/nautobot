@@ -78,7 +78,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = VRF
         fields = ["id", "name", "rd", "enforce_unique"]
 
@@ -114,13 +114,13 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = RouteTarget
         fields = ["id", "name"]
 
 
 class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = RIR
         fields = ["id", "name", "slug", "is_private", "description"]
 
@@ -166,7 +166,7 @@ class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Aggregate
         fields = ["id", "date_added"]
 
@@ -180,7 +180,7 @@ class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
 
 
 class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Role
         fields = ["id", "name", "slug"]
 
@@ -271,7 +271,7 @@ class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, S
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Prefix
         fields = ["id", "is_pool", "prefix"]
 
@@ -424,7 +424,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
     role = django_filters.MultipleChoiceFilter(choices=IPAddressRoleChoices)
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = IPAddress
         fields = ["id", "dns_name"]
 
@@ -501,7 +501,7 @@ class VLANGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Site (slug)",
     )
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = VLANGroup
         fields = ["id", "name", "slug", "description"]
 
@@ -562,7 +562,7 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = VLAN
         fields = ["id", "vid", "name"]
 
@@ -597,6 +597,6 @@ class ServiceFilterSet(NautobotFilterSet):
     port = NumericArrayFilter(field_name="ports", lookup_expr="contains")
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Service
         fields = ["id", "name", "protocol"]

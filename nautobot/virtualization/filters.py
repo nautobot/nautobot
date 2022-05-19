@@ -29,13 +29,13 @@ __all__ = (
 
 
 class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = ClusterType
         fields = ["id", "name", "slug", "description"]
 
 
 class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = ClusterGroup
         fields = ["id", "name", "slug", "description"]
 
@@ -92,7 +92,7 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Cluster
         fields = ["id", "name"]
 
@@ -184,7 +184,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = VirtualMachine
         fields = ["id", "name", "cluster", "vcpus", "memory", "disk"]
 
@@ -224,6 +224,6 @@ class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = VMInterface
         fields = ["id", "name", "enabled", "mtu"]

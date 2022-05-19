@@ -123,7 +123,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Parent region (slug)",
     )
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Region
         fields = ["id", "name", "slug", "description"]
 
@@ -161,7 +161,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Site
         fields = [
             "id",
@@ -212,13 +212,13 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Rack group (slug)",
     )
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = RackGroup
         fields = ["id", "name", "slug", "description"]
 
 
 class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = RackRole
         fields = ["id", "name", "slug", "color"]
 
@@ -290,7 +290,7 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     serial = django_filters.CharFilter(lookup_expr="iexact")
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Rack
         fields = [
             "id",
@@ -354,13 +354,13 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = RackReservation
         fields = ["id", "created"]
 
 
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Manufacturer
         fields = ["id", "name", "slug", "description"]
 
@@ -414,7 +414,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = DeviceType
         fields = [
             "id",
@@ -448,6 +448,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         return queryset.exclude(devicebaytemplates__isnull=value)
 
 
+# TODO: should be DeviceTypeComponentFilterSetMixin
 class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilterSet):
     devicetype_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
@@ -457,55 +458,55 @@ class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilt
 
 
 class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = ConsolePortTemplate
         fields = ["id", "name", "type"]
 
 
 class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = ConsoleServerPortTemplate
         fields = ["id", "name", "type"]
 
 
 class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = PowerPortTemplate
         fields = ["id", "name", "type", "maximum_draw", "allocated_draw"]
 
 
 class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = PowerOutletTemplate
         fields = ["id", "name", "type", "feed_leg"]
 
 
 class InterfaceTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = InterfaceTemplate
         fields = ["id", "name", "type", "mgmt_only"]
 
 
 class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = FrontPortTemplate
         fields = ["id", "name", "type"]
 
 
 class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = RearPortTemplate
         fields = ["id", "name", "type", "positions"]
 
 
 class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = DeviceBayTemplate
         fields = ["id", "name"]
 
 
 class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = DeviceRole
         fields = ["id", "name", "slug", "color", "vm_role"]
 
@@ -523,7 +524,7 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Manufacturer (slug)",
     )
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Platform
         fields = ["id", "name", "slug", "napalm_driver", "description"]
 
@@ -705,7 +706,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
     device_bays = has_device_bays
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Device
         fields = [
             "id",
@@ -728,6 +729,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 
 
+# TODO: should be DeviceComponentFilterSetMixin
 class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     q = SearchFilter(
         filter_predicates={
@@ -773,10 +775,12 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     tag = TagFilter()
 
 
+# TODO: should be CableTerminationFilterSetMixin
 class CableTerminationFilterSet(django_filters.FilterSet):
     cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
 
 
+# TODO: should be PathEndpointFilterSetMixin
 class PathEndpointFilterSet(django_filters.FilterSet):
     connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
 
@@ -795,7 +799,7 @@ class ConsolePortFilterSet(
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = ConsolePort
         fields = ["id", "name", "description"]
 
@@ -808,7 +812,7 @@ class ConsoleServerPortFilterSet(
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = ConsoleServerPort
         fields = ["id", "name", "description"]
 
@@ -821,7 +825,7 @@ class PowerPortFilterSet(
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = PowerPort
         fields = ["id", "name", "maximum_draw", "allocated_draw", "description"]
 
@@ -834,7 +838,7 @@ class PowerOutletFilterSet(
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = PowerOutlet
         fields = ["id", "name", "feed_leg", "description"]
 
@@ -872,7 +876,7 @@ class InterfaceFilterSet(
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = Interface
         fields = [
             "id",
@@ -928,19 +932,19 @@ class InterfaceFilterSet(
 
 
 class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = FrontPort
         fields = ["id", "name", "type", "description"]
 
 
 class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = RearPort
         fields = ["id", "name", "type", "positions", "description"]
 
 
 class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = DeviceBay
         fields = ["id", "name", "description"]
 
@@ -1010,7 +1014,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
     )
     serial = django_filters.CharFilter(lookup_expr="iexact")
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = InventoryItem
         fields = ["id", "name", "part_id", "asset_tag", "discovered"]
 
@@ -1070,7 +1074,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = VirtualChassis
         fields = ["id", "domain", "name"]
 
@@ -1089,7 +1093,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Cable
         fields = ["id", "label", "length", "length_unit"]
 
@@ -1100,6 +1104,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         return queryset
 
 
+# TODO: should be ConnectionFilterSetMixin
 class ConnectionFilterSet:
     def filter_site(self, queryset, name, value):
         if not value.strip():
@@ -1120,7 +1125,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = ConsolePort
         fields = ["name"]
 
@@ -1133,7 +1138,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = PowerPort
         fields = ["name"]
 
@@ -1146,7 +1151,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = Interface
         fields = []
 
@@ -1184,7 +1189,7 @@ class PowerPanelFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = PowerPanel
         fields = ["id", "name"]
 
@@ -1228,7 +1233,7 @@ class PowerFeedFilterSet(
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = PowerFeed
         fields = [
             "id",

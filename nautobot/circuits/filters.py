@@ -54,7 +54,7 @@ class ProviderFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Provider
         fields = ["id", "name", "slug", "asn", "account"]
 
@@ -87,7 +87,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = ProviderNetwork
         fields = ["id", "name", "slug"]
 
@@ -100,7 +100,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
 
 
 class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = CircuitType
         fields = ["id", "name", "slug"]
 
@@ -167,7 +167,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
     )
     tag = TagFilter()
 
-    class Meta:
+    class Meta(NautobotFilterSet.Meta):
         model = Circuit
         fields = ["id", "cid", "install_date", "commit_rate"]
 
@@ -201,6 +201,6 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
         label="Provider Network (ID)",
     )
 
-    class Meta:
+    class Meta(BaseFilterSet.Meta):
         model = CircuitTermination
         fields = ["term_side", "port_speed", "upstream_speed", "xconnect_id"]
