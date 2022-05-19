@@ -556,8 +556,8 @@ def versioned_serializer_selector(obj, serializer_choices, default_serializer):
 
     Args:
         obj (ViewSet instance):
-        default_serializer (Serializer): Default Serializer class
         serializer_choices (tuple): Tuple of SerializerVersions
+        default_serializer (Serializer): Default Serializer class
     """
     if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
         api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
