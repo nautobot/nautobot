@@ -516,9 +516,9 @@ class DynamicGroup(OrganizationalModel):
 
 
 class DynamicGroupFilterActionChoices(models.TextChoices):
-    UNION = "union", "Union"
-    INTERSECTION = "intersection", "Intersection"
-    DIFFERENCE = "difference", "Difference"
+    UNION = "union", "Union (OR)"
+    INTERSECTION = "intersection", "Intersection (AND)"
+    DIFFERENCE = "difference", "Difference (NOT)"
 
 
 class DynamicGroupMembership(BaseModel):

@@ -8,30 +8,49 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0033_add__optimized_indexing'),
+        ("extras", "0033_add__optimized_indexing"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DynamicGroupMembership',
+            name="DynamicGroupMembership",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('operator', models.CharField(max_length=12)),
-                ('weight', models.PositiveSmallIntegerField()),
-                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='extras.dynamicgroup')),
-                ('parent_group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dynamic_group_memberships', to='extras.dynamicgroup')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("operator", models.CharField(max_length=12)),
+                ("weight", models.PositiveSmallIntegerField()),
+                (
+                    "group",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="+", to="extras.dynamicgroup"
+                    ),
+                ),
+                (
+                    "parent_group",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="dynamic_group_memberships",
+                        to="extras.dynamicgroup",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['parent_group', 'weight', 'group'],
+                "ordering": ["parent_group", "weight", "group"],
             },
         ),
         migrations.AddField(
-            model_name='dynamicgroup',
-            name='groups',
-            field=models.ManyToManyField(related_name='dynamic_groups', through='extras.DynamicGroupMembership', to='extras.DynamicGroup'),
+            model_name="dynamicgroup",
+            name="groups",
+            field=models.ManyToManyField(
+                related_name="dynamic_groups", through="extras.DynamicGroupMembership", to="extras.DynamicGroup"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='dynamicgroupmembership',
-            constraint=models.UniqueConstraint(fields=('group', 'parent_group'), name='group_to_filter_uniq'),
+            model_name="dynamicgroupmembership",
+            constraint=models.UniqueConstraint(fields=("group", "parent_group"), name="group_to_filter_uniq"),
         ),
     ]
