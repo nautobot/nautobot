@@ -1,6 +1,7 @@
 var url = nautobot_api_path + "extras/job-results/";
 var timeout = 1000;
 var terminal_statuses = ['completed', 'failed', 'errored'];
+var session_key = "ajax_table_current_page";
 
 function updatePendingStatusLabel(status) {
     // Updates "Status" label in "Summary of Results" table in JobResult detail view.
@@ -25,7 +26,7 @@ function updatePendingStatusLabel(status) {
 function updateLogTable(result_id) {
     // Calls `update_log_table` to refresh the jobs table from the `/log-table/` endpoint
     // Grab the query string from session storage and pass it through to the log table.
-    let qs = window.sessionStorage.getItem("job_results_current_page");
+    let qs = window.sessionStorage.getItem(session_key) || "";
     update_log_table(qs, '/extras/job-results/' + result_id + '/log-table/');
 }
 
@@ -47,11 +48,11 @@ $(document).ready(function(){
                     updateLogTable(pending_result_id);
 
                     /// Should reload the page yet?
-                    let reload_page = window.sessionStorage.getItem("job_results_current_page") == null;
+                    let reload_page = window.sessionStorage.getItem(session_key) == null;
 
                     // If there is a terminal status, refresh the page and clear session storage.
                     if (terminal_statuses.includes(data.status.value)) {
-                        window.sessionStorage.removeItem("job_results_current_page");
+                        window.sessionStorage.removeItem(session_key);
                         reload_page && window.location.reload();
                     }
                     // Otherwise call myself again after `timeout`.
