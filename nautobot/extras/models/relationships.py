@@ -693,13 +693,8 @@ class RelationshipAssociation(BaseModel):
             side_filter = getattr(self.relationship, f"{side_name}_filter")
 
             filterset_class = get_filterset_for_model(side.__class__)
-            if filterset_class is not None:
-                filterset = filterset_class(side_filter, side.__class__.objects.all())
-                queryset = filterset.qs.filter(id=side.id)
-
-            else:
-                # use django objects filter
-                queryset = side.__class__.objects.filter(**side_filter)
+            filterset = filterset_class(side_filter, side.__class__.objects.all())
+            queryset = filterset.qs.filter(id=side.id)
 
             if queryset.exists() is False:
                 raise ValidationError(
