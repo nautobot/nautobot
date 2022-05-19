@@ -246,7 +246,7 @@ jobs:
       - name: "Check comments for magic statement"
         id: comment_check
         run: |
-          echo "::set-output name=magic_comment_present::"$(gh pr view https://github.com/nautobot/nautobot/pull/${{ github.event.number }} --json comments -q "[.comments[] | {body_trigger: .body | test(\"Please build a container.\"), author_assoc_trigger: .authorAssociation | test(\"MEMBER\")} | .body_trigger == true and .author_assoc_trigger == true] | any")
+          echo "::set-output name=magic_comment_present::"$(gh pr view https://github.com/nautobot/nautobot/pull/${{ github.event.number }} --json comments -q "[.comments[] | {body_trigger: .body | test(\"📦 ENABLE CONTAINER BUILD\"), author_assoc_trigger: .authorAssociation | test(\"MEMBER\")} | .body_trigger == true and .author_assoc_trigger == true] | any")
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
@@ -275,6 +275,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v1
+        with:
+          message: |
+            New container built! Check it out with:
+            ```sh
+            docker pull ghcr.io/nautobot/nautobot-pr-validation:pr-${{ steps.pr.outputs.pull_request_number }}-py3.7
+            ```
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Docker Metadata"
         id: "dockermeta"
         uses: "docker/metadata-action@v3"
