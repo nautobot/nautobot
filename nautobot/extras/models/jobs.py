@@ -710,6 +710,7 @@ class ScheduledJob(BaseModel):
         verbose_name="Start Datetime",
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
+    # todoindex:
     enabled = models.BooleanField(
         default=True,
         verbose_name="Enabled",
@@ -755,7 +756,9 @@ class ScheduledJob(BaseModel):
         null=True,
         help_text="User that approved the schedule",
     )
+    # todoindex:
     approval_required = models.BooleanField(default=False)
+    # todoindex:
     approved_at = models.DateTimeField(
         editable=False,
         blank=True,
