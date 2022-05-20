@@ -614,11 +614,15 @@ class RelationshipAssociation(BaseModel):
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         ):
             # Either one-to-many or one-to-one, in either case don't allow multiple sources to the same destination
-            if RelationshipAssociation.objects.filter(
-                relationship=self.relationship,
-                destination_type=self.destination_type,
-                destination_id=self.destination_id,
-            ).exists():
+            if (
+                RelationshipAssociation.objects.filter(
+                    relationship=self.relationship,
+                    destination_type=self.destination_type,
+                    destination_id=self.destination_id,
+                )
+                .exclude(pk=self.pk)
+                .exists()
+            ):
                 raise ValidationError(
                     {
                         "destination": (
@@ -633,11 +637,15 @@ class RelationshipAssociation(BaseModel):
                 RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
             ):
                 # Don't allow multiple destinations from the same source
-                if RelationshipAssociation.objects.filter(
-                    relationship=self.relationship,
-                    source_type=self.source_type,
-                    source_id=self.source_id,
-                ).exists():
+                if (
+                    RelationshipAssociation.objects.filter(
+                        relationship=self.relationship,
+                        source_type=self.source_type,
+                        source_id=self.source_id,
+                    )
+                    .exclude(pk=self.pk)
+                    .exists()
+                ):
                     raise ValidationError(
                         {
                             "source": (

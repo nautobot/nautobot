@@ -384,6 +384,49 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         for cra in self.invalid_relationship_associations:
             cra.validated_save()
 
+    def test_exception_not_raised_when_updating_instance_with_relationship_type_o2o_or_o2m(self):
+        """Validate 'Unable to create more than one relationship-association...' not raise when updating instance with
+        type one-to-one, symmetric-one-to-one, one-to-many relationship."""
+
+        # Assert Exception not raise updating source of RelationshipAssociation with one-to-many relationship type
+        cra_1 = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[1])
+        cra_1.validated_save()
+
+        cra_1.source = self.sites[1]
+        cra_1.validated_save()
+
+        self.assertEqual(cra_1.source, self.sites[1])
+
+        # Validate Exception not raised when calling .validated_save() on a RelationshipAssociation instance without making any update
+        cra_1.validated_save()
+
+        # Assert Exception not raise updating source of RelationshipAssociation with one-to-one relationship type
+        cra_2 = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0])
+        cra_2.validated_save()
+
+        cra_2.source = self.racks[1]
+        cra_2.validated_save()
+
+        self.assertEqual(cra_2.source, self.racks[1])
+
+        # Assert Exception not raise updating destination of RelationshipAssociation with one-to-one relationship type
+        cra_3 = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[2], destination=self.sites[2])
+        cra_3.validated_save()
+
+        cra_3.destination = self.sites[4]
+        cra_3.validated_save()
+
+        self.assertEqual(cra_3.destination, self.sites[4])
+
+        # Assert Exception not raise updating destination of RelationshipAssociation with symmetric-one-to-one relationship type
+        cra_4 = RelationshipAssociation(relationship=self.o2os_1, source=self.racks[0], destination=self.racks[2])
+        cra_4.validated_save()
+
+        cra_4.destination = self.racks[1]
+        cra_4.validated_save()
+
+        self.assertEqual(cra_4.destination, self.racks[1])
+
     def test_clean_wrong_type(self):
         # Create with the wrong source Type
         with self.assertRaises(ValidationError) as handler:
