@@ -2850,21 +2850,25 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-            # Limit choices for parent, bridge, and LAG interfaces to the assigned device (or VC master)
+            # Limit choices for parent, bridge, and LAG interfaces to the assigned device (or VC)
             device_name = data.get("device")
             if device_name is not None:
-                params = {}
-                field_name = f"device__{self.fields['device'].to_field_name}"
-                params.setdefault(field_name, [device_name])
-
                 device = Device.objects.filter(name=device_name).first()
 
-                if device and device.virtual_chassis and device.virtual_chassis.master:
-                    params[field_name].append(device.virtual_chassis.master.name)
+                filter_by = Q(device=device)
 
-                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.filter(**params)
-                self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(**params)
-                self.fields["lag"].queryset = self.fields["lag"].queryset.filter(**params)
+                if device and device.virtual_chassis:
+                    filter_by |= Q(device__virtual_chassis=device.virtual_chassis)
+
+                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.filter(filter_by)
+                self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(filter_by)
+
+                filter_by &= Q(type=InterfaceTypeChoices.TYPE_LAG)
+                self.fields["lag"].queryset = self.fields["lag"].queryset.filter(filter_by)
+            else:
+                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.none()
+                self.fields["bridge"].queryset = self.fields["bridge"].queryset.none()
+                self.fields["lag"].queryset = self.fields["lag"].queryset.none()
 
     class Meta:
         model = Interface
