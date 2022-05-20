@@ -2447,6 +2447,8 @@ class InterfaceTestCase(TestCase):
         vlan2 = VLAN.objects.create(name="VLAN 2", vid=2)
         vlan3 = VLAN.objects.create(name="VLAN 3", vid=3)
 
+        statuses = Status.objects.get_for_model(Interface)
+
         interfaces = (
             Interface.objects.create(
                 device=devices[0],
@@ -2459,6 +2461,7 @@ class InterfaceTestCase(TestCase):
                 mac_address="00-00-00-00-00-01",
                 untagged_vlan=vlan1,
                 description="First",
+                status=statuses.get(slug="active"),
             ),
             Interface.objects.create(
                 device=devices[1],
@@ -2471,6 +2474,7 @@ class InterfaceTestCase(TestCase):
                 mac_address="00-00-00-00-00-02",
                 untagged_vlan=vlan2,
                 description="Second",
+                status=statuses.get(slug="planned"),
             ),
             Interface.objects.create(
                 device=devices[2],
@@ -2482,6 +2486,7 @@ class InterfaceTestCase(TestCase):
                 mode=InterfaceModeChoices.MODE_TAGGED_ALL,
                 mac_address="00-00-00-00-00-03",
                 description="Third",
+                status=statuses.get(slug="failed"),
             ),
             Interface.objects.create(
                 device=devices[3],
@@ -2489,6 +2494,7 @@ class InterfaceTestCase(TestCase):
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=True,
                 mgmt_only=True,
+                status=statuses.get(slug="failed"),
             ),
             Interface.objects.create(
                 device=devices[3],
@@ -2496,6 +2502,7 @@ class InterfaceTestCase(TestCase):
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=True,
                 mgmt_only=True,
+                status=statuses.get(slug="planned"),
             ),
             Interface.objects.create(
                 device=devices[3],
@@ -2503,6 +2510,7 @@ class InterfaceTestCase(TestCase):
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=False,
                 mgmt_only=False,
+                status=statuses.get(slug="active"),
             ),
         )
 
@@ -2620,6 +2628,10 @@ class InterfaceTestCase(TestCase):
     def test_vlan_id(self):
         params = {"vlan_id": VLAN.objects.last().id}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_status(self):
+        params = {"status": ["active", "failed"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
 class FrontPortTestCase(TestCase):

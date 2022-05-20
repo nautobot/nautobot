@@ -185,7 +185,7 @@ class VirtualMachineDetailTable(VirtualMachineTable):
 #
 
 
-class VMInterfaceTable(BaseInterfaceTable):
+class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
     pk = ToggleColumn()
     virtual_machine = tables.LinkColumn()
     name = tables.Column(linkify=True)
@@ -197,6 +197,7 @@ class VMInterfaceTable(BaseInterfaceTable):
             "pk",
             "virtual_machine",
             "name",
+            "status",
             "enabled",
             "mac_address",
             "mtu",
@@ -207,7 +208,7 @@ class VMInterfaceTable(BaseInterfaceTable):
             "untagged_vlan",
             "tagged_vlans",
         )
-        default_columns = ("pk", "virtual_machine", "name", "enabled", "description")
+        default_columns = ("pk", "virtual_machine", "name", "status", "enabled", "description")
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):
@@ -222,6 +223,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
         fields = (
             "pk",
             "name",
+            "status",
             "enabled",
             "mac_address",
             "mtu",
@@ -236,6 +238,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
         default_columns = (
             "pk",
             "name",
+            "status",
             "enabled",
             "mac_address",
             "mtu",

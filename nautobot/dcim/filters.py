@@ -844,6 +844,7 @@ class InterfaceFilterSet(
     DeviceComponentFilterSet,
     CableTerminationFilterSet,
     PathEndpointFilterSet,
+    StatusModelFilterSetMixin,
 ):
     # Override device and device_id filters from DeviceComponentFilterSet to match against any peer virtual chassis
     # members

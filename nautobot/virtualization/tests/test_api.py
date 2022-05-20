@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
@@ -5,6 +6,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
+from nautobot.virtualization.choices import VMInterfaceStatusChoices
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -278,13 +280,13 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
-class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
+class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
     model = VMInterface
     brief_fields = ["display", "id", "name", "url", "virtual_machine"]
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = ["mode"]
+    choices_fields = ["mode", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -324,5 +326,85 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
+            },
+        ]
+
+    def test_active_status_not_found(self):
+        self.add_permissions("virtualization.add_vminterface")
+
+        vminterface_ct = ContentType.objects.get_for_model(VMInterface)
+        status = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+        status.content_types.remove(vminterface_ct)
+
+        data = {
+            "virtual_machine": VirtualMachine.objects.first().id,
+            "name": "VMInterface-001",
+        }
+
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            response.data["status"],
+            [
+                "VMInterface default status 'active' does not exist, create 'active' status for VMInterface or use the latest api_version"
+            ],
+        )
+
+
+class VMInterfaceTestVersion14(APIViewTestCases.APIViewTestCase):
+    api_version = "1.4"
+    validation_excluded_fields = ["status"]
+    model = VMInterface
+    brief_fields = ["display", "id", "name", "url", "virtual_machine"]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = ["mode", "status"]
+
+    @classmethod
+    def setUpTestData(cls):
+
+        clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
+        cluster = Cluster.objects.create(name="Test Cluster 1", type=clustertype)
+        virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
+
+        status_active = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+
+        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1", status=status_active)
+        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2", status=status_active)
+        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3", status=status_active)
+
+        vlans = (
+            VLAN.objects.create(name="VLAN 1", vid=1),
+            VLAN.objects.create(name="VLAN 2", vid=2),
+            VLAN.objects.create(name="VLAN 3", vid=3),
+        )
+
+        cls.create_data = [
+            {
+                "virtual_machine": virtualmachine.pk,
+                "name": "Interface 4",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
+            },
+            {
+                "virtual_machine": virtualmachine.pk,
+                "name": "Interface 5",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
+            },
+            {
+                "virtual_machine": virtualmachine.pk,
+                "name": "Interface 6",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
             },
         ]

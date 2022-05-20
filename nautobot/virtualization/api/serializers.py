@@ -18,12 +18,14 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
+from nautobot.extras.models import Status
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
 )
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
+from nautobot.virtualization.choices import VMInterfaceStatusChoices
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -209,7 +211,8 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 #
 
 
-class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
+# TODO: collapse this with VMInterfaceSerializer in 2.0.
+class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
@@ -240,6 +243,21 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
 
     def validate(self, data):
 
+        # set vminterface status to active if status not provided
+        if not data.get("status"):
+            # status is currently required in the VMInterface model but not required in api_version < 1.4 serializers
+            # which raises an error when validating except status is explicitly set here
+            query = Status.objects.get_for_model(VMInterface)
+            try:
+                data["status"] = query.get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "status": "VMInterface default status 'active' does not exist, "
+                        "create 'active' status for VMInterface or use the latest api_version"
+                    }
+                )
+
         # Validate many-to-many VLAN assignments
         virtual_machine = self.instance.virtual_machine if self.instance else data.get("virtual_machine")
         for vlan in data.get("tagged_vlans", []):
@@ -252,3 +270,23 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
                 )
 
         return super().validate(data)
+
+
+class VMInterfaceSerializer(VMInterfaceSerializerVersion12, StatusModelSerializerMixin):
+    class Meta:
+        model = VMInterface
+        fields = [
+            "id",
+            "url",
+            "virtual_machine",
+            "name",
+            "status",
+            "enabled",
+            "mtu",
+            "mac_address",
+            "description",
+            "mode",
+            "untagged_vlan",
+            "tagged_vlans",
+            "tags",
+        ]

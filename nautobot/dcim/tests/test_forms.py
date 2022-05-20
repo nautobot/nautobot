@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from nautobot.dcim.forms import DeviceForm, InterfaceCreateForm, CableCSVForm
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceStatusChoices, InterfaceTypeChoices
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Rack, Site, Interface
 from nautobot.extras.models import SecretsGroup, Status
@@ -159,11 +159,13 @@ class LabelTestCase(TestCase):
 
     def test_interface_label_count_valid(self):
         """Test that a `label` can be generated for each generated `name` from `name_pattern` on InterfaceCreateForm"""
+        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
         interface_data = {
             "device": self.device.pk,
             "name_pattern": "eth[0-9]",
             "label_pattern": "Interface[0-9]",
             "type": InterfaceTypeChoices.TYPE_100ME_FIXED,
+            "status": status_active.pk,
         }
         form = InterfaceCreateForm(interface_data)
 

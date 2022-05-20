@@ -57,7 +57,12 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import copy_safe_request, count_related
+from nautobot.utilities.utils import (
+    copy_safe_request,
+    count_related,
+    SerializerForAPIVersions,
+    versioned_serializer_selector,
+)
 from . import nested_serializers, serializers
 
 
@@ -915,17 +920,12 @@ class TagViewSet(CustomFieldModelViewSet):
     filterset_class = filters.TagFilterSet
 
     def get_serializer_class(self):
-        if (
-            not self.brief
-            and not getattr(self, "swagger_fake_view", False)
-            and (
-                not hasattr(self.request, "major_version")
-                or self.request.major_version > 1
-                or (self.request.major_version == 1 and self.request.minor_version < 3)
-            )
-        ):
-            return serializers.TagSerializer
-        return super().get_serializer_class()
+        serializer_choices = (SerializerForAPIVersions(versions=["1.2"], serializer=serializers.TagSerializer),)
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )
 
 
 #

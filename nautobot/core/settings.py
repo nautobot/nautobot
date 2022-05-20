@@ -220,6 +220,7 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
+        "VMInterfaceStatusChoice": "nautobot.virtualization.api.serializers.VMInterfaceSerializer.status_choices",
     },
 }
 
