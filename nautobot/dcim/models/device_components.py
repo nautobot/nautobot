@@ -502,7 +502,7 @@ class BaseInterface(RelationshipModel):
     def clean(self):
         # Remove untagged VLAN assignment for non-802.1Q interfaces
         if not self.mode and self.untagged_vlan is not None:
-            raise ValidationError({"untagged_vlan": "Mode must be set when specifiying unagged_vlan"})
+            raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
 
     def save(self, *args, **kwargs):
 

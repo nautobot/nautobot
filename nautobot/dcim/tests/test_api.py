@@ -1490,7 +1490,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
         ]
 
     def test_untagged_vlan_requires_mode(self):
-        """Test that when an `untagged_vlan` is specified, `mode` is also set."""
+        """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface")
 
         vlan = VLAN.objects.first()
