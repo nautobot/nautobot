@@ -2682,7 +2682,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit LAG choices to interfaces belonging to this device or a peer VC member
         device = Device.objects.get(pk=self.initial.get("device") or self.data.get("device"))
 
         # Add current site to VLANs query params
