@@ -11,6 +11,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
+    ComputedFieldFilterSet,
     ConfigContextFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
@@ -29,6 +30,7 @@ from nautobot.extras.filters import (
     WebhookFilterSet,
 )
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     CustomLink,
     ExportTemplate,
@@ -57,6 +59,85 @@ from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
+    queryset = ComputedField.objects.all()
+    filterset = ComputedFieldFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="computed_field_one",
+            label="Computed Field One",
+            template="{{ obj.name }} is the name of this site.",
+            fallback_value="An error occurred while rendering this template.",
+            weight=100,
+        )
+        # Field whose template will raise a TemplateError
+        ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        # Field whose template will raise a TypeError
+        ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="worse_computed_field",
+            label="Worse Computed Field",
+            template="{{ obj.images | list }}",
+            fallback_value="Another template error",
+            weight=200,
+        )
+        ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Device),
+            slug="device_computed_field",
+            label="Device Computed Field",
+            template="Hello, world.",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+
+    def test_slug(self):
+        params = {"slug": ["device_computed_field", "worse_computed_field"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_type(self):
+        params = {"content_type": "dcim.site"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_template(self):
+        params = {"template": ["Hello, world."]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_fallback_value(self):
+        params = {"fallback_value": ["This template has errored"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_weight(self):
+        params = {"weight": [100]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_search(self):
+        # label
+        params = {"q": "Field One"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        # content_type__app_label
+        params = {"q": "dcim"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        # content_type__model
+        params = {"q": "site"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        # template
+        params = {"q": "hello"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        # fallback_value
+        params = {"q": "has errored"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class ConfigContextTestCase(FilterTestCases.FilterTestCase):

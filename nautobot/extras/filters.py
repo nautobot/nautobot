@@ -106,11 +106,12 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
 class ComputedFieldFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
-            "target_url": "icontains",
-            "text": "icontains",
+            "label": "icontains",
+            "description": "icontains",
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
+            "template": "icontains",
+            "fallback_value": "icontains",
         },
     )
     content_type = ContentTypeFilter()
@@ -118,6 +119,7 @@ class ComputedFieldFilterSet(BaseFilterSet):
     class Meta(BaseFilterSet.Meta):
         model = ComputedField
         fields = (
+            "id",
             "content_type",
             "slug",
             "template",

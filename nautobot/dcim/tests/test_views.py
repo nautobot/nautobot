@@ -77,7 +77,7 @@ from nautobot.extras.models import (
 )
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2322,6 +2322,23 @@ Device 1,Interface 2,,,True
 Device 1,Interface 3,,,False""",
             response.content.decode(response.charset),
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_objects_filtered(self):
+        """Extend base ListObjectsViewTestCase to filter based on *both ends* of a connection."""
+        # self.interfaces[0] is cabled to self.device_2_interface, and unfortunately with the way the queryset filtering
+        # works at present, we can't guarantee whether filtering on id=interfaces[0] will show it or not.
+        instance1, instance2 = self.interfaces[1], self.interfaces[2]
+        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+        if hasattr(self.model, "name"):
+            self.assertIn(instance1.name, content, msg=content)
+            self.assertNotIn(instance2.name, content, msg=content)
+        if hasattr(self.model, "get_absolute_url"):
+            self.assertIn(instance1.get_absolute_url(), content, msg=content)
+            self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):

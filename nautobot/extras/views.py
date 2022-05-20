@@ -681,7 +681,7 @@ class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
 
 class GitRepositoryListView(generic.ObjectListView):
     queryset = GitRepository.objects.all()
-    # filterset = filters.GitRepositoryFilterSet
+    filterset = filters.GitRepositoryFilterSet
     # filterset_form = forms.GitRepositoryFilterForm
     table = tables.GitRepositoryTable
     template_name = "extras/gitrepository_list.html"

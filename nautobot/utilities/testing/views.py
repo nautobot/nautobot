@@ -712,6 +712,35 @@ class ViewTestCases:
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_list_objects_filtered(self):
+            instance1, instance2 = self._get_queryset().all()[:2]
+            response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+            if hasattr(self.model, "name"):
+                self.assertIn(instance1.name, content, msg=content)
+                self.assertNotIn(instance2.name, content, msg=content)
+            if hasattr(self.model, "get_absolute_url"):
+                self.assertIn(instance1.get_absolute_url(), content, msg=content)
+                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_list_objects_invalid_filter(self):
+            instance1, instance2 = self._get_queryset().all()[:2]
+            response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Unknown filter field", content, msg=content)
+            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+            if hasattr(self.model, "name"):
+                self.assertNotIn(instance1.name, content, msg=content)
+                self.assertNotIn(instance2.name, content, msg=content)
+            if hasattr(self.model, "get_absolute_url"):
+                self.assertNotIn(instance1.get_absolute_url(), content, msg=content)
+                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
 

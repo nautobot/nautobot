@@ -147,6 +147,7 @@ class ProviderNetworkBulkDeleteView(generic.BulkDeleteView):
 
 class CircuitTypeListView(generic.ObjectListView):
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
+    filterset = filters.CircuitTypeFilterSet
     table = tables.CircuitTypeTable
 
 

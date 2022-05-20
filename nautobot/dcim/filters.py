@@ -1127,7 +1127,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
 
     class Meta(BaseFilterSet.Meta):
         model = ConsolePort
-        fields = ["name"]
+        fields = ["id", "name"]
 
 
 class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
@@ -1140,7 +1140,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
 
     class Meta(BaseFilterSet.Meta):
         model = PowerPort
-        fields = ["name"]
+        fields = ["id", "name"]
 
 
 class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
@@ -1153,7 +1153,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
 
     class Meta(BaseFilterSet.Meta):
         model = Interface
-        fields = []
+        fields = ["id"]
 
 
 class PowerPanelFilterSet(NautobotFilterSet):

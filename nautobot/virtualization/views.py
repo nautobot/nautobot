@@ -25,6 +25,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 class ClusterTypeListView(generic.ObjectListView):
     queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    filterset = filters.ClusterTypeFilterSet
     table = tables.ClusterTypeTable
 
 
@@ -84,6 +85,7 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 
 class ClusterGroupListView(generic.ObjectListView):
     queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    filterset = filters.ClusterGroupFilterSet
     table = tables.ClusterGroupTable
 
 
