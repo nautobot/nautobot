@@ -331,7 +331,7 @@ class TestInterfaceCSVForm(TestCase):
             "type": None,
         }
 
-    def test_interface_belonging_to_common_interface_or_vc_allowed(self):
+    def test_interface_belonging_to_common_device_or_vc_allowed(self):
         """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
 
         data_1 = {
@@ -367,7 +367,7 @@ class TestInterfaceCSVForm(TestCase):
         self.assertEqual(queryset.lag, self.interfaces[2])
         self.assertEqual(queryset.bridge, self.interfaces[1])
 
-    def test_interface_not_belonging_to_common_interface_or_vc_not_allowed(self):
+    def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
         """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
         data = {
             "device": self.devices[0].name,
