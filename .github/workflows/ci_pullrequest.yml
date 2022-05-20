@@ -322,6 +322,9 @@ jobs:
             PYTHON_VER=3.7
             PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
             POETRY_PARALLEL=true
+      - name: Get current date timestamp
+        id: message_date_time
+        run: echo "::set-output name=datetime::$(date +'%F %T %Z')"
       - name: "Notify Updated Build"
         uses: thollander/actions-comment-pull-request@v1
         with:
@@ -334,5 +337,5 @@ jobs:
             ```
 
             ---
-            📦🤖 Last Built: ${{ github.event.created_at }}
+            📦🤖 Last Built: ${{ steps.message_date_time.outputs.datetime }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
