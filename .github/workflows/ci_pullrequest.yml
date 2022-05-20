@@ -22,6 +22,8 @@ jobs:
             Friendly reminder: To have a container built of this PR a member of this organization can leave a comment saying:
             
             > 📦 ENABLE CONTAINER BUILD
+
+            You can also disable container builds by editing or removing the comment afterwards.
             
             Signed,
               🤖 Pull Request Container Bot
@@ -303,6 +305,7 @@ jobs:
             type=ref,enable=true,priority=600,prefix=pr-,suffix=-py3.7,event=pr
           labels: |
             org.opencontainers.image.title=Nautobot (PULL REQUEST VALIDATION IMAGE)
+            org.opencontainers.image.description=This image is meant for validating PR ${{ github.event.number }}. It is based on the target of final.
       - name: "Build"
         uses: "docker/build-push-action@v2"
         with:
@@ -322,11 +325,14 @@ jobs:
       - name: "Notify Updated Build"
         uses: thollander/actions-comment-pull-request@v1
         with:
-          comment_includes: '🤖 Pull Request Container Bot'
+          comment_includes: '🤖'
           message: |
-            New container built! Check it out with:
+            Container built! Check it out with:
+
             ```sh
             docker pull ghcr.io/nautobot/nautobot-pr-validation:pr-${{ github.event.number }}-py3.7
             ```
-            - 🤖 Pull Request Container Bot
+
+            ---
+            📦🤖 Last Built: ${{ github.event.created_at }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
