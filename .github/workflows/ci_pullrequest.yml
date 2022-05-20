@@ -325,7 +325,7 @@ jobs:
       - name: "Notify Updated Build"
         uses: thollander/actions-comment-pull-request@v1
         with:
-          comment_includes: '🤖'
+          comment_includes: '📦🤖'
           message: |
             Container built! Check it out with:
 
