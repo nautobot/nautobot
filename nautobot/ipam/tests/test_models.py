@@ -318,6 +318,10 @@ class TestPrefix(TestCase):
             # Create 32 IPAddresses within the Prefix
             [IPAddress(address=netaddr.IPNetwork("10.0.0.{}/24".format(i))) for i in range(1, 33)]
         )
+        # Create IPAddress objects for network and broadcast addresses
+        IPAddress.objects.bulk_create(
+            (IPAddress(address=netaddr.IPNetwork("10.0.0.0/32")), IPAddress(address=netaddr.IPNetwork("10.0.0.255/32")))
+        )
         self.assertEqual(prefix.get_utilization(), (32, 254))
 
     #
