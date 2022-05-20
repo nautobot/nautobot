@@ -24,12 +24,10 @@ User = get_user_model()
 
 
 def get_job_class_and_model(module, name):
-    """Test helper function to look up a job class and job model and ensure the latter is enabled."""
+    """Test helper function to look up a job class and job model."""
     class_path = f"local/{module}/{name}"
     job_class = get_job(class_path)
     job_model = Job.objects.get_for_class_path(class_path)
-    job_model.enabled = True
-    job_model.validated_save()
     return (job_class, job_model)
 
 
@@ -87,6 +85,8 @@ class JobTest(TransactionTestCase):
         module = "test_pass"
         name = "TestPass"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = JobResult.objects.create(
             name=job_model.class_path,
@@ -455,6 +455,8 @@ class RunJobManagementCommandTest(CeleryTestCase):
         module = "test_pass"
         name = "TestPass"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
 
         out, err = self.run_command(job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -472,6 +474,8 @@ class RunJobManagementCommandTest(CeleryTestCase):
         module = "test_modify_db"
         name = "TestModifyDB"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
 
         out, err = self.run_command(job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -492,6 +496,8 @@ class RunJobManagementCommandTest(CeleryTestCase):
         module = "test_modify_db"
         name = "TestModifyDB"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
         with self.assertRaises(CommandError):
             self.run_command("--commit", job_model.class_path)
 
@@ -500,6 +506,8 @@ class RunJobManagementCommandTest(CeleryTestCase):
         module = "test_modify_db"
         name = "TestModifyDB"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
         with self.assertRaises(CommandError):
             self.run_command("--commit", "--username", "nosuchuser", job_model.class_path)
 
@@ -510,6 +518,8 @@ class RunJobManagementCommandTest(CeleryTestCase):
         module = "test_modify_db"
         name = "TestModifyDB"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
 
         out, err = self.run_command("--commit", "--username", "test_user", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)

@@ -62,6 +62,11 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
     if data is None:
         data = {}
 
+    # Enable the job if it wasn't enabled before
+    if not job.enabled:
+        job.enabled = True
+        job.validated_save()
+
     # If the request has a user, ignore the username argument and use that user.
     if request and request.user:
         user_instance = request.user
