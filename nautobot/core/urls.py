@@ -16,7 +16,6 @@ urlpatterns = [
     # Base views
     path("", HomeView.as_view(), name="home"),
     path("search/", SearchView.as_view(), name="search"),
-    path("modals/", ThemeView.as_view(), name="modals"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
