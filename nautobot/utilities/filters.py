@@ -1,4 +1,5 @@
 from copy import deepcopy
+import logging
 
 from django import forms
 from django.conf import settings
@@ -16,6 +17,9 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def multivalue_field_factory(field_class):
@@ -460,13 +464,21 @@ class BaseFilterSet(django_filters.FilterSet):
         """Base class that all BaseFilterSet.Meta subclasses must inherit from."""
 
         class StrictFilterForm(forms.Form):
-            """Form class that treats any unknown form data entries as a validation error."""
+            """Form class that treats any unknown form data entries as a potential validation error."""
 
             def is_valid(self):
                 result = super().is_valid()
                 for extra_key in set(self.data.keys()).difference(self.cleaned_data.keys()):
-                    self.add_error(None, f'Unknown filter field "{extra_key}"')
-                    result = False
+                    # If a given field was invalid, it will be omitted from cleaned_data; don't report extra errors
+                    if extra_key not in self.errors:
+                        if settings.STRICT_FILTERING:
+                            # Sure would be nice if we could instead do:
+                            # self.add_error(extra_key, "Unknown filter field") but extra_key isn't a field, so...
+                            self.add_error(None, f'Unknown filter field "{extra_key}"')
+                            result = False
+                        else:
+                            logger.warning('%s: Unknown filter field "%s"', self.__class__.__name__, extra_key)
+
                 return result
 
         form = StrictFilterForm

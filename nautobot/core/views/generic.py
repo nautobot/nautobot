@@ -209,14 +209,13 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         filter_params = self.get_filter_params(request)
         if self.filterset:
             filterset = self.filterset(filter_params, self.queryset)
-            if filterset.is_valid():
-                self.queryset = filterset.qs
-            else:
+            self.queryset = filterset.qs
+            if not filterset.is_valid():
                 messages.error(
                     request,
                     mark_safe(f"Invalid filters were specified: {filterset.errors}"),
                 )
-                self.queryset = filterset.qs.none()
+                self.queryset = self.queryset.none()
 
         # Check for export template rendering
         if request.GET.get("export"):

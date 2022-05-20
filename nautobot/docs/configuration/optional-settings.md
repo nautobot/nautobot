@@ -915,6 +915,25 @@ If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ig
 
 ---
 
+## STRICT_FILTERING
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.4.0_
+<!-- markdownlint-enable MD036 -->
+
+Default: `True`
+
+Environment Variable: `NAUTOBOT_STRICT_FILTERING`
+
+If set to `True` (default), UI and REST API filtering of object lists will fail if an unknown/unrecognized filter parameter is provided as a URL parameter. (For example, `/dcim/devices/?ice_cream_flavor=chocolate` or `/api/dcim/sites/?ice_cream_flavor=chocolate`). UI list (table) views will report an error message in this case and display no filtered objects; REST API list endpoints will return a 400 Bad Request response with an explanatory error message.
+
+If set to `False`, unknown/unrecognized filter parameters will be discarded and ignored, although Nautobot will log a warning message.
+
+!!! warning
+    Setting this to `False` can result in unexpected filtering results in the case of user error, for example `/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+
+---
+
 ## TIME_ZONE
 
 Default: `"UTC"`
