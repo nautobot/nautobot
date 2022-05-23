@@ -140,6 +140,19 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.5 (2022-MM-DD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- [#895](https://github.com/nautobot/nautobot/issues/895) - Fixed validation when creating `Interface` and `VMInterface` objects via the REST API while specifying `untagged_vlan` without `mode` also set in the payload. A 400 error will now be raised as expected.
+- [#1289](https://github.com/nautobot/nautobot/issues/1289) - Fixed issue where job result live pagination would reset to page 1 on refresh. The currently selected page will now persist until the job run completes.
+- [#1771](https://github.com/nautobot/nautobot/issues/1771) - Fix exception raised for RelationshipAssociation when updating source.
+- [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
+
 ## v1.3.4 (2022-05-16)
 
 ### Added

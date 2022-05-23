@@ -502,20 +502,12 @@ class BaseInterface(RelationshipModel, StatusModel):
     class Meta:
         abstract = True
 
-    def save(self, *args, **kwargs):
-
-        # set interface status to active if status not provided
-        if not self.status:
-            query = Status.objects.get_for_model(self)
-            try:
-                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-            except Status.DoesNotExist:
-                raise ValidationError({"status": "Default status 'active' does not exist"})
-            self.status = status
-
+    def clean(self):
         # Remove untagged VLAN assignment for non-802.1Q interfaces
-        if not self.mode:
-            self.untagged_vlan = None
+        if not self.mode and self.untagged_vlan is not None:
+            raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
+
+    def save(self, *args, **kwargs):
 
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
         if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:
