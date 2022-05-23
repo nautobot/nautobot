@@ -355,7 +355,7 @@ $(document).ready(function() {
     if( $('select#id_mode').length > 0 ) {
         $('select#id_mode').on('change', function () {
             if ($(this).val() == '') {
-                $('select#id_untagged_vlan').val();
+                $('select#id_untagged_vlan').val('');
                 $('select#id_untagged_vlan').trigger('change');
                 $('select#id_tagged_vlans').val([]);
                 $('select#id_tagged_vlans').trigger('change');
