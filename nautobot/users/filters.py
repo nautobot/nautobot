@@ -15,7 +15,7 @@ __all__ = (
 class GroupFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains"})
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = Group
         fields = ["id", "name"]
 
@@ -41,7 +41,7 @@ class UserFilterSet(BaseFilterSet):
         label="Group (name)",
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = get_user_model()
         fields = [
             "id",
@@ -57,7 +57,7 @@ class UserFilterSet(BaseFilterSet):
 class TokenFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"description": "icontains"})
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = Token
         fields = ["id", "key", "write_enabled", "created", "expires"]
 
@@ -86,6 +86,6 @@ class ObjectPermissionFilterSet(BaseFilterSet):
         label="Group (name)",
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ObjectPermission
         fields = ["id", "name", "enabled", "object_types"]

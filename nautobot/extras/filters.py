@@ -116,10 +116,9 @@ class ComputedFieldFilterSet(BaseFilterSet):
     )
     content_type = ContentTypeFilter()
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ComputedField
         fields = (
-            "id",
             "content_type",
             "slug",
             "template",
@@ -242,7 +241,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Tag (slug)",
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ConfigContext
         fields = ["id", "name", "is_active", "owner_content_type", "owner_object_id"]
 
@@ -262,7 +261,7 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
     )
     owner_content_type = ContentTypeFilter()
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ConfigContextSchema
         fields = [
             "id",
@@ -277,7 +276,7 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
 
 
 class ContentTypeFilterSet(BaseFilterSet):
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ContentType
         fields = ["id", "app_label", "model"]
 
@@ -359,7 +358,7 @@ class CustomFieldFilterSet(BaseFilterSet):
         choices=FeatureQuery("custom_fields").get_choices,
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = CustomField
         fields = ["id", "content_types", "name", "required", "filter_logic", "weight"]
 
@@ -378,7 +377,7 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
         label="Field (name)",
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = CustomFieldChoice
         fields = ["id", "value", "weight"]
 
@@ -394,9 +393,6 @@ class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModel
     codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet
     are needed.
     """
-
-    class Meta(BaseFilterSet.Meta):
-        """Provided for proper inheritability from BaseFilterSet."""
 
 
 #
@@ -416,10 +412,9 @@ class CustomLinkFilterSet(BaseFilterSet):
     )
     content_type = ContentTypeFilter()
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = CustomLink
         fields = (
-            "id",
             "content_type",
             "name",
             "text",
@@ -448,7 +443,7 @@ class DynamicGroupFilterSet(NautobotFilterSet):
     )
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
 
-    class Meta(NautobotFilterSet.Meta):
+    class Meta:
         model = DynamicGroup
         fields = ("id", "name", "slug", "description")
 
@@ -471,7 +466,7 @@ class ExportTemplateFilterSet(BaseFilterSet):
     )
     owner_content_type = ContentTypeFilter()
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ExportTemplate
         fields = ["id", "content_type", "owner_content_type", "owner_object_id", "name"]
 
@@ -502,7 +497,7 @@ class GitRepositoryFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta(NautobotFilterSet.Meta):
+    class Meta:
         model = GitRepository
         fields = ["id", "name", "slug", "remote_url", "branch"]
 
@@ -521,9 +516,9 @@ class GraphQLQueryFilterSet(BaseFilterSet):
         },
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = GraphQLQuery
-        fields = ["id", "name", "slug"]
+        fields = ["name", "slug"]
 
 
 #
@@ -534,7 +529,7 @@ class GraphQLQueryFilterSet(BaseFilterSet):
 class ImageAttachmentFilterSet(BaseFilterSet):
     content_type = ContentTypeFilter()
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ImageAttachment
         fields = ["id", "content_type_id", "object_id", "name"]
 
@@ -555,7 +550,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     )
     tag = TagFilter()
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = Job
         fields = [
             "id",
@@ -608,7 +603,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     completed = django_filters.DateTimeFilter()
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = JobResult
         fields = ["id", "created", "completed", "status", "user", "obj_type", "name"]
 
@@ -622,7 +617,7 @@ class JobLogEntryFilterSet(BaseFilterSet):
         },
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = JobLogEntry
         exclude = []
 
@@ -649,7 +644,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
     first_run = django_filters.DateTimeFilter()
     last_run = django_filters.DateTimeFilter()
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ScheduledJob
         fields = ["id", "name", "total_run_count"]
 
@@ -699,7 +694,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
         label="User name",
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = ObjectChange
         fields = [
             "id",
@@ -726,7 +721,7 @@ class RelationshipFilterSet(BaseFilterSet):
         choices=FeatureQuery("relationships").get_choices, conjoined=False
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = Relationship
         fields = ["id", "name", "type", "source_type", "destination_type"]
 
@@ -744,7 +739,7 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         choices=FeatureQuery("relationships").get_choices, conjoined=False
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = RelationshipAssociation
         fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]
 
@@ -770,7 +765,7 @@ class SecretFilterSet(
     # TODO dynamic choices needed
     # provider = django_filters.MultipleChoiceFilter(choices=..., null_value=None)
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = Secret
         fields = ("id", "name", "slug", "provider", "created", "last_updated")
 
@@ -789,7 +784,7 @@ class SecretsGroupFilterSet(
         },
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = SecretsGroup
         fields = ("id", "name", "slug", "created", "last_updated")
 
@@ -820,7 +815,7 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
     access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
     secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = SecretsGroupAssociation
         fields = ("id",)
 
@@ -869,7 +864,7 @@ class StatusFilterSet(NautobotFilterSet):
         choices=FeatureQuery("statuses").get_choices,
     )
 
-    class Meta(NautobotFilterSet.Meta):
+    class Meta:
         model = Status
         fields = [
             "id",
@@ -907,7 +902,7 @@ class TagFilterSet(NautobotFilterSet):
         choices=TaggableClassesQuery().get_choices,
     )
 
-    class Meta(NautobotFilterSet.Meta):
+    class Meta:
         model = Tag
         fields = ["id", "name", "slug", "color", "content_types"]
 
@@ -930,10 +925,9 @@ class WebhookFilterSet(BaseFilterSet):
         choices=FeatureQuery("webhooks").get_choices,
     )
 
-    class Meta(BaseFilterSet.Meta):
+    class Meta:
         model = Webhook
         fields = [
-            "id",
             "name",
             "payload_url",
             "enabled",

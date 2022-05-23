@@ -29,7 +29,7 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Tenant group group (slug)",
     )
 
-    class Meta(NautobotFilterSet.Meta):
+    class Meta:
         model = TenantGroup
         fields = ["id", "name", "slug", "description"]
 
@@ -58,7 +58,7 @@ class TenantFilterSet(NautobotFilterSet):
     )
     tag = TagFilter()
 
-    class Meta(NautobotFilterSet.Meta):
+    class Meta:
         model = Tenant
         fields = ["id", "name", "slug"]
 
