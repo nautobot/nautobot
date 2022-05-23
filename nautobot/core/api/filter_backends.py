@@ -16,7 +16,9 @@ class NautobotFilterBackend(DjangoFilterBackend):
         data = kwargs["data"].copy()
 
         for non_filter_param in (
+            "api_version",  # used to select the Nautobot API version
             "brief",  # used to select NestedSerializer rather than Serializer
+            "format",  # "json" or "api", used in the interactive HTML REST API views
             "include",  # used to include computed fields (excluded by default)
             "limit",  # pagination
             "offset",  # pagination
