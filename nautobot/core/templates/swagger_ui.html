@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ title | default:"Swagger" }}{% endblock title %}
 
 {% block extra_styles %}
-    <link rel="stylesheet" href="{{ dist }}/swagger-ui.css">
+    <link rel="stylesheet" href="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui.css' %}">
     <style>
       /* Manual styling inherited from drf-spectacular */
       html { box-sizing: border-box; overflow-y: scroll; }
@@ -20,8 +21,8 @@
 {% endblock content %}
 
 {% block javascript %}
-    <script src="{{ dist }}/swagger-ui-bundle.js"></script>
-    <script src="{{ dist }}/swagger-ui-standalone-preset.js"></script>
+    <script src="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui-bundle.js' %}"></script>
+    <script src="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui-standalone-preset.js' %}"></script>
     {% if script_url %}
     <script src="{{ script_url }}"></script>
     {% else %}

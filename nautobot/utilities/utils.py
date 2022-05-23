@@ -530,3 +530,38 @@ def get_table_for_model(model):
 
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
+
+# namedtuple accepts versions(list of API versions) and serializer(Related Serializer for versions).
+SerializerForAPIVersions = namedtuple("SerializersVersions", ("versions", "serializer"))
+
+
+def get_api_version_serializer(serializer_choices, api_version):
+    """Returns the serializer of an api_version
+
+    Args:
+        serializer_choices (tuple): list of SerializerVersions
+        api_version (str): Request API version
+
+    Returns:
+        returns the serializer for the api_version if found in serializer_choices else None
+    """
+    for versions, serializer in serializer_choices:
+        if api_version in versions:
+            return serializer
+    return None
+
+
+def versioned_serializer_selector(obj, serializer_choices, default_serializer):
+    """Returns appropriate serializer class depending on request api_version, brief and swagger_fake_view
+
+    Args:
+        obj (ViewSet instance):
+        serializer_choices (tuple): Tuple of SerializerVersions
+        default_serializer (Serializer): Default Serializer class
+    """
+    if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
+        api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
+        serializer = get_api_version_serializer(serializer_choices, api_version)
+        if serializer is not None:
+            return serializer
+    return default_serializer

@@ -23,7 +23,7 @@ from jsonschema.validators import Draft7Validator
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -1037,7 +1037,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_content_type = ContentType.objects.get(app_label="extras", model="job")
+                job_content_type = get_job_content_type()
                 job_result = JobResult.enqueue_job(
                     run_job,
                     job_model.class_path,
@@ -1143,7 +1143,7 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "You do not have permission to run this job")
             else:
                 # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
-                job_content_type = ContentType.objects.get(app_label="extras", model="job")
+                job_content_type = get_job_content_type()
                 initial = scheduled_job.kwargs.get("data", {})
                 initial["_commit"] = False
                 job_result = JobResult.enqueue_job(
@@ -1265,7 +1265,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.all()
+    queryset = JobResult.objects.prefetch_related("job_model", "logs", "obj_type", "user")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable

@@ -12,11 +12,11 @@
                 <form class="form-horizontal userconfigform" data-config-root="forms.{{ form_as_dialog.form_name }}" action="{{ form_action_url }}" method="post">
                     {% csrf_token %}
                     <h3>
-                        {% if settings.DOCS_ROOT %}
+                        {% if obj %}
                             <div class="pull-right">
-                                <button type="button" class="btn btn-link btn-xs" data-toggle="modal" data-target="#docs_modal" title="Help">
-                                <i class="mdi mdi-help-circle"></i>
-                                </button>
+                                <a href="{{ obj|get_docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
+                                    <i class="mdi mdi-help-circle"></i>
+                                </a>
                             </div>
                         {% endif %}
                         {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new:{% endif %}{% endblock %}
@@ -39,9 +39,6 @@
                         </div>
                     </div>
                 </form>
-                {% if obj and settings.DOCS_ROOT %}
-                    {% include 'inc/modal.html' with name='docs' content=obj|get_docs %}
-                {% endif %}
             </div>
         </div>
     </div>

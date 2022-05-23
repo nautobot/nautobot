@@ -94,7 +94,7 @@ def nautobot_kombu_json_loads_hook(data):
 
 # Encoder function
 def _dumps(obj):
-    return json.dumps(obj, cls=NautobotKombuJSONEncoder)
+    return json.dumps(obj, cls=NautobotKombuJSONEncoder, ensure_ascii=False)
 
 
 # Decoder function

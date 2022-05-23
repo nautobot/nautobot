@@ -37,7 +37,8 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
-from nautobot.extras.utils import extras_features, FeatureQuery, jobs_in_directory
+from nautobot.extras.utils import get_job_content_type, extras_features, FeatureQuery, jobs_in_directory
+from nautobot.utilities.logging import sanitize
 
 from .customfields import CustomFieldModel
 
@@ -452,10 +453,13 @@ class JobResult(BaseModel, CustomFieldModel):
         instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
         but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
         to plugin model instances.
+
+        This method is potentially rather slow as get_job() may need to actually load the Job class from disk;
+        consider carefully whether you actually need to use it.
         """
         from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
 
-        if self.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+        if self.obj_type == get_job_content_type():
             # Related object is an extras.Job subclass, our `name` matches its `class_path`
             return get_job(self.name)
 
@@ -481,6 +485,8 @@ class JobResult(BaseModel, CustomFieldModel):
     def related_name(self):
         """
         Similar to self.name, but if there's an appropriate `related_object`, use its name instead.
+
+        Since this calls related_object, the same potential performance concerns exist. Use with caution.
         """
         related_object = self.related_object
         if not related_object:
@@ -488,6 +494,27 @@ class JobResult(BaseModel, CustomFieldModel):
         if hasattr(related_object, "name"):
             return related_object.name
         return str(related_object)
+
+    @property
+    def linked_record(self):
+        """
+        A newer alternative to self.related_object that looks up an extras.models.Job instead of an extras.jobs.Job.
+        """
+        if self.job_model is not None:
+            return self.job_model
+        model_class = self.obj_type.model_class()
+        if model_class is not None:
+            if hasattr(model_class, "name"):
+                try:
+                    return model_class.objects.get(name=self.name)
+                except model_class.DoesNotExist:
+                    pass
+            if hasattr(model_class, "class_path"):
+                try:
+                    return model_class.objects.get(class_path=self.name)
+                except model_class.DoesNotExist:
+                    pass
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
@@ -562,7 +589,7 @@ class JobResult(BaseModel, CustomFieldModel):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
 
-        message (str): Message to log
+        message (str): Message to log (an attempt will be made to sanitize sensitive information from this message)
         obj (object): Object associated with this message, if any
         level_choice (LogLevelChoices): Message severity level
         grouping (str): Grouping to store the log message under
@@ -571,11 +598,13 @@ class JobResult(BaseModel, CustomFieldModel):
         if level_choice not in LogLevelChoices.as_dict():
             raise Exception(f"Unknown logging level: {level_choice}")
 
+        message = sanitize(str(message))
+
         log = JobLogEntry(
             job_result=self,
             log_level=level_choice,
             grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
-            message=str(message),
+            message=message,
             created=timezone.now().isoformat(),
             log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else None,
             absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
@@ -599,7 +628,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 log_level = logging.WARNING
             else:
                 log_level = logging.INFO
-            logger.log(log_level, str(message))
+            logger.log(log_level, message)
 
 
 class ScheduledJobs(models.Model):

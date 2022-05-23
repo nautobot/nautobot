@@ -245,7 +245,7 @@ class DeviceType(PrimaryModel):
                 for c in self.devicebaytemplates.all()
             ]
 
-        return yaml.dump(dict(data), sort_keys=False)
+        return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
 
     def clean(self):
         super().clean()

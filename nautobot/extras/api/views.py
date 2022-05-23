@@ -4,8 +4,8 @@ from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from nautobot.third_party.drf_spectacular.types import OpenApiTypes
-from nautobot.third_party.drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -54,10 +54,15 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import copy_safe_request, count_related
+from nautobot.utilities.utils import (
+    copy_safe_request,
+    count_related,
+    SerializerForAPIVersions,
+    versioned_serializer_selector,
+)
 from . import nested_serializers, serializers
 
 
@@ -402,7 +407,7 @@ def _run_job(request, job_model, legacy_response=False):
     if not get_worker_count():
         raise CeleryWorkerNotRunningException()
 
-    job_content_type = ContentType.objects.get(app_label="extras", model="job")
+    job_content_type = get_job_content_type()
     schedule_data = input_serializer.data.get("schedule")
 
     # Default to a null JobResult.
@@ -481,7 +486,7 @@ class JobViewSet(
         # API version 1.2 or earlier - serialize JobClass records
         if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        job_content_type = get_job_content_type()
         results = {
             r.name: r
             for r in JobResult.objects.filter(
@@ -530,7 +535,7 @@ class JobViewSet(
             raise Http404
         if not job_model.installed or job_model.job_class is None:
             raise Http404
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        job_content_type = get_job_content_type()
         job = job_model.job_class()  # TODO: why do we need to instantiate the job_class?
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
@@ -650,7 +655,7 @@ class JobResultViewSet(ModelViewSet):
     Retrieve a list of job results
     """
 
-    queryset = JobResult.objects.prefetch_related("user")
+    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -787,7 +792,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job with commit=False
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        job_content_type = get_job_content_type()
         job_result = JobResult.enqueue_job(
             run_job,
             job_model.class_path,
@@ -915,17 +920,12 @@ class TagViewSet(CustomFieldModelViewSet):
     filterset_class = filters.TagFilterSet
 
     def get_serializer_class(self):
-        if (
-            not self.brief
-            and not getattr(self, "swagger_fake_view", False)
-            and (
-                not hasattr(self.request, "major_version")
-                or self.request.major_version > 1
-                or (self.request.major_version == 1 and self.request.minor_version < 3)
-            )
-        ):
-            return serializers.TagSerializer
-        return super().get_serializer_class()
+        serializer_choices = (SerializerForAPIVersions(versions=["1.2"], serializer=serializers.TagSerializer),)
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )
 
 
 #

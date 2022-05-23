@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -57,8 +58,6 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
-DOCS_ROOT = os.path.join(BASE_DIR, "docs")
-
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
 # table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
 # ENFORCE_GLOBAL_UNIQUE to True.
@@ -103,6 +102,13 @@ REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 # Nautobot related - May be overridden if using custom social auth backend
 SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
+
+# Job log entry sanitization and similar
+SANITIZER_PATTERNS = [
+    # General removal of username-like and password-like tokens
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
 
 # Storage
 STORAGE_BACKEND = None
@@ -214,6 +220,7 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
+        "VMInterfaceStatusChoice": "nautobot.virtualization.api.serializers.VMInterfaceSerializer.status_choices",
     },
 }
 
@@ -291,7 +298,7 @@ INSTALLED_APPS = [
     "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
-    "nautobot.third_party.drf_spectacular",
+    "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
     "health_check",
@@ -656,10 +663,13 @@ BRANDING_FILEPATHS = {
 # Title to use in place of "Nautobot"
 BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
 
+# Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
+BRANDING_PREPENDED_FILENAME = os.getenv("NAUTOBOT_BRANDING_PREPENDED_FILENAME", "nautobot_")
+
 # Branding URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
-    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", None),
     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 }
 

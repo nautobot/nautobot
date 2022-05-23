@@ -139,7 +139,7 @@ Default:
 ```python
 {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),  # Code link in the footer
-    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),  # Docs link in the footer
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "<STATIC_URL>docs/index.html"),  # Docs link in the footer
     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),  # Help link in the footer
 }
 ```
@@ -153,6 +153,20 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_URLS_HELP`
 
 If a custom URL is not provided for any of the links, the default link within the Nautobot community is used.
+
+---
+
+## BRANDING_PREPENDED_FILENAME
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
+
+Default: `"nautobot_"`
+
+Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
+
+Defines the prefix of the filename when exporting to CSV/YAML or export templates.
 
 ---
 
@@ -354,17 +368,6 @@ Environment Variable: `NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY`
 This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
 
 A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
-
----
-
-## DOCS_ROOT
-
-Default: `$BASE_DIR/docs`
-
-The filesystem path to Nautobot's documentation. This is used when presenting context-sensitive documentation in the web UI. By default, this will be the `docs` directory within the root Nautobot installation path. (Set this to `None` to disable the embedded documentation.)
-
-!!! warning
-    The `BASE_DIR` variable is internal to Nautobot and is referenced here to represent the fully qualified file path where the Nautobot library code is installed. Please do not modify the value of `BASE_DIR` as it can have unintended side effects.
 
 ---
 
@@ -823,6 +826,25 @@ This parameter defines the URL of the repository that will be checked periodical
 
 !!! tip
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## SANITIZER_PATTERNS
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
+
+Default:
+
+```python
+[
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
+```
+
+List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
 
 ---
 

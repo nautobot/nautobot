@@ -388,6 +388,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "export_templates",
     "graphql",
     "relationships",
+    "statuses",
     "webhooks",
 )
 class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
@@ -431,6 +432,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         "mtu",
         "description",
         "mode",
+        "status",
         "parent_interface",
         "bridge",
     ]
@@ -455,6 +457,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.mtu,
             self.description,
             self.get_mode_display(),
+            self.get_status_display(),
             self.parent_interface.name if self.parent_interface else None,
             self.bridge.name if self.bridge else None,
         )

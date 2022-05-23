@@ -11,6 +11,7 @@ from taggit.managers import TaggableManager
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -31,6 +32,8 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
+    Status,
+    StatusModel,
     TaggedItem,
 )
 from nautobot.extras.utils import extras_features
@@ -481,7 +484,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-class BaseInterface(RelationshipModel):
+class BaseInterface(RelationshipModel, StatusModel):
     """
     Abstract base class for fields shared by dcim.Interface and virtualization.VMInterface.
     """
@@ -515,11 +518,12 @@ class BaseInterface(RelationshipModel):
     class Meta:
         abstract = True
 
-    def save(self, *args, **kwargs):
-
+    def clean(self):
         # Remove untagged VLAN assignment for non-802.1Q interfaces
-        if not self.mode:
-            self.untagged_vlan = None
+        if not self.mode and self.untagged_vlan is not None:
+            raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
+
+    def save(self, *args, **kwargs):
 
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
         if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:
@@ -534,6 +538,7 @@ class BaseInterface(RelationshipModel):
     "export_templates",
     "graphql",
     "relationships",
+    "statuses",
     "webhooks",
 )
 class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
@@ -592,6 +597,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         "mgmt_only",
         "description",
         "mode",
+        "status",
         "parent_interface",
         "bridge",
     ]
@@ -616,6 +622,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.mgmt_only,
             self.description,
             self.get_mode_display(),
+            self.get_status_display(),
             self.parent_interface.name if self.parent_interface else None,
             self.bridge.name if self.bridge else None,
         )

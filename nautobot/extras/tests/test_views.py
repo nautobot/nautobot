@@ -42,6 +42,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
+from nautobot.extras.utils import get_job_content_type
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
@@ -1275,7 +1276,7 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get(app_label="extras", model="job")
+        obj_type = get_job_content_type()
         JobResult.objects.create(
             name="local/test_pass/TestPass",
             job_id=uuid.uuid4(),

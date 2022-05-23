@@ -32,6 +32,7 @@ class ExamplePluginConfig(PluginConfig):
     # URL reverse lookup names
     home_view_name = "plugins:example_plugin:home"
     config_view_name = "plugins:example_plugin:config"
+    docs_view_name = "plugins:example_plugin:docs"
 
     def ready(self):
         """Callback when this plugin is loaded."""

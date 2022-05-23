@@ -567,7 +567,7 @@ class BaseInterfaceTable(BaseTable):
     )
 
 
-class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
 
@@ -577,6 +577,7 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
             "pk",
             "device",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
@@ -597,6 +598,7 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
             "pk",
             "device",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
@@ -621,6 +623,7 @@ class DeviceInterfaceTable(InterfaceTable):
         fields = (
             "pk",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
@@ -644,6 +647,7 @@ class DeviceInterfaceTable(InterfaceTable):
         default_columns = (
             "pk",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
