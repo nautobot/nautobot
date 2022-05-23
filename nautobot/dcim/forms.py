@@ -2648,17 +2648,13 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         brief_mode=False,
-        query_params={
-            "site_id": "null",
-        },
+        query_params={"available_on_device": "$device"},
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         brief_mode=False,
-        query_params={
-            "site_id": "null",
-        },
+        query_params={"available_on_device": "$device"},
     )
     field_order = (
         "device",
@@ -2678,15 +2674,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "tagged_vlans",
         "tags",
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        device = Device.objects.get(pk=self.initial.get("device") or self.data.get("device"))
-
-        # Add current site to VLANs query params
-        self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
-        self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
 
 
 class InterfaceBulkCreateForm(

@@ -576,6 +576,7 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         to_field_name="slug",
         label="Site (slug)",
     )
+    available_on_device = django_filters.ModelChoiceFilter(queryset=Device.objects.all(), method="get_for_device")
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
         label="Group (ID)",
@@ -611,6 +612,13 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         except ValueError:
             pass
         return queryset.filter(qs_filter)
+
+    def get_for_device(self, queryset, name, value):
+        """Return all VLANs available to the specified Device(value)."""
+        try:
+            return queryset.filter(Q(site__isnull=True) | Q(site=value.site))
+        except Device.DoesNotExist:
+            return queryset.none()
 
 
 class ServiceFilterSet(NautobotFilterSet):
