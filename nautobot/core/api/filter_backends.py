@@ -21,10 +21,7 @@ class NautobotFilterBackend(DjangoFilterBackend):
             "limit",  # pagination
             "offset",  # pagination
         ):
-            try:
-                data.pop(non_filter_param)
-            except KeyError:
-                pass
+            data.pop(non_filter_param, None)
 
         kwargs["data"] = data
         return kwargs
