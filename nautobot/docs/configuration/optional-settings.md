@@ -528,6 +528,13 @@ HTTP_PROXIES = {
 }
 ```
 
+!!! note
+    When using Git repositories within Nautobot the Python library `GitPython` needs extra proxy configuration:
+
+```bash
+git config --global http.proxy http://10.10.1.10:3128
+git con
+
 ---
 
 ## INTERNAL_IPS
