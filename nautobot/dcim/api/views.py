@@ -608,8 +608,15 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
 )
 class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):
     queryset = Interface.objects.prefetch_related(
-        "device", "parent_interface",
-        "bridge", "status", "_path__destination", "cable", "_cable_peer", "ip_addresses", "tags",
+        "device",
+        "parent_interface",
+        "bridge",
+        "status",
+        "_path__destination",
+        "cable",
+        "_cable_peer",
+        "ip_addresses",
+        "tags",
     )
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
