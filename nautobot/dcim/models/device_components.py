@@ -503,6 +503,7 @@ class BaseInterface(RelationshipModel, StatusModel):
         null=True,
         blank=True,
         verbose_name="Parent interface",
+        help_text="Assigned parent interface",
     )
     bridge = models.ForeignKey(
         to="self",
@@ -511,6 +512,7 @@ class BaseInterface(RelationshipModel, StatusModel):
         null=True,
         blank=True,
         verbose_name="Bridge interface",
+        help_text="Assigned bridge interface",
     )
 
     class Meta:
@@ -555,6 +557,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         null=True,
         blank=True,
         verbose_name="Parent LAG",
+        help_text="Assigned LAG interface",
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
     mgmt_only = models.BooleanField(

@@ -471,12 +471,16 @@ class VirtualMachineFilterForm(
 
 class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
     parent_interface = DynamicModelChoiceField(
-        queryset=VMInterface.objects.all(), required=False, label="Parent interface"
+        queryset=VMInterface.objects.all(),
+        required=False,
+        label="Parent interface",
+        help_text="Assigned parent VMinterface",
     )
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="Bridge interface",
+        help_text="Assigned bridge VMinterface",
     )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -551,6 +555,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         query_params={
             "virtual_machine_id": "$virtual_machine",
         },
+        help_text="Assigned parent VMinterface",
     )
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
@@ -558,6 +563,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         query_params={
             "virtual_machine_id": "$virtual_machine",
         },
+        help_text="Assigned bridge VMinterface",
     )
     mtu = forms.IntegerField(
         required=False,

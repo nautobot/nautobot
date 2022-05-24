@@ -2515,11 +2515,13 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         query_params={
             "kind": "physical",
         },
+        help_text="Assigned parent interface",
     )
     bridge = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Bridge interface",
+        help_text="Assigned bridge interface",
     )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2528,6 +2530,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         query_params={
             "type": InterfaceTypeChoices.TYPE_LAG,
         },
+        help_text="Assigned LAG interface",
     )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -2618,6 +2621,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
             "device_with_common_vc": "$device",
             "kind": "physical",
         },
+        help_text="Assigned parent interface",
     )
     bridge = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2625,6 +2629,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         query_params={
             "device_with_common_vc": "$device",
         },
+        help_text="Assigned bridge interface",
     )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2633,6 +2638,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
             "device_with_common_vc": "$device",
             "type": InterfaceTypeChoices.TYPE_LAG,
         },
+        help_text="Assigned LAG interface",
     )
     mtu = forms.IntegerField(
         required=False,
