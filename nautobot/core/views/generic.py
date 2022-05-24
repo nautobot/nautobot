@@ -188,13 +188,15 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
     def validate_action_buttons(self):
         """Verify actions in self.action_buttons are valid view actions. Raise exception if not valid"""
-        invalid_buttons = [
-            action_button
-            for action_button in self.action_buttons
-            if validated_viewname(self.queryset.model, action_button) is None
+
+        # export is excluded because it's not a view
+        invalid_actions = [
+            action
+            for action in self.action_buttons
+            if action != "export" and validated_viewname(self.queryset.model, action) is None
         ]
-        if invalid_buttons:
-            raise NoReverseMatch(f"Path for {', '.join(invalid_buttons)} views are missing")
+        if invalid_actions:
+            raise NoReverseMatch(f"Path for {', '.join(invalid_actions)} views are missing")
 
     def get(self, request):
 
