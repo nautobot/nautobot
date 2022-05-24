@@ -9,6 +9,12 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Dark Mode UI ([#729](https://github.com/nautobot/nautobot/issues/729))
+
+Nautobot's UI now supports dark mode, both explicitly and via browser preference selection.
+
+The "Theme" link in the footer provides a modal popup to select the preferred theme. This preference is saved per browser via `localStorage`.
+
 #### Status Field on Interface, VMInterface Models ([#984](https://github.com/nautobot/nautobot/issues/984))
 
 Interface and VMInterface models now support a status. Default statuses that are available to be set are: Active, Planned, Maintenance, Failed, and Decommissioned. During migration all existing interfaces will be set to the status of "Active".
@@ -27,6 +33,7 @@ Visit the documentation on [REST API versioning](../rest-api/overview/#versionin
 
 ### Added
 
+- [#729](https://github.com/nautobot/nautobot/issues/729) - Added UI dark mode.
 - [#984](https://github.com/nautobot/nautobot/issues/984) - Added status field to Interface, VMInterface models.
 
 ### Changed
