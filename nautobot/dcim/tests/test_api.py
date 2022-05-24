@@ -1561,68 +1561,6 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         data["mode"] = InterfaceModeChoices.MODE_ACCESS
         self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
-
-class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
-    api_version = "1.4"
-    validation_excluded_fields = ["status"]
-    model = Interface
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    peer_termination_type = Interface
-    choices_fields = ["mode", "type", "status"]
-
-    @classmethod
-    def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
-
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t", status=status_active)
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t", status=status_active)
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t", status=status_active)
-
-        vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1),
-            VLAN.objects.create(name="VLAN 2", vid=2),
-            VLAN.objects.create(name="VLAN 3", vid=3),
-        )
-
-        cls.create_data = [
-            {
-                "device": device.pk,
-                "name": "Interface 4",
-                "type": "1000base-t",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "failed",
-            },
-            {
-                "device": device.pk,
-                "name": "Interface 5",
-                "type": "1000base-t",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "active",
-            },
-            {
-                "device": device.pk,
-                "name": "Interface 6",
-                "type": "1000base-t",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "active",
-            },
-        ]
-
     def test_interface_belonging_to_common_device_or_vc_allowed(self):
         """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
         self.add_permissions("dcim.add_interface")
@@ -1704,6 +1642,68 @@ class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
                 f"The selected {field_name} interface ({interface}) belongs to {interface.parent}, which is "
                 f"not part of virtual chassis {self.virtualchassis}.",
             )
+
+
+class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+    api_version = "1.4"
+    validation_excluded_fields = ["status"]
+    model = Interface
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    peer_termination_type = Interface
+    choices_fields = ["mode", "type", "status"]
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+
+        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+
+        Interface.objects.create(device=device, name="Interface 1", type="1000base-t", status=status_active)
+        Interface.objects.create(device=device, name="Interface 2", type="1000base-t", status=status_active)
+        Interface.objects.create(device=device, name="Interface 3", type="1000base-t", status=status_active)
+
+        vlans = (
+            VLAN.objects.create(name="VLAN 1", vid=1),
+            VLAN.objects.create(name="VLAN 2", vid=2),
+            VLAN.objects.create(name="VLAN 3", vid=3),
+        )
+
+        cls.create_data = [
+            {
+                "device": device.pk,
+                "name": "Interface 4",
+                "type": "1000base-t",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "failed",
+            },
+            {
+                "device": device.pk,
+                "name": "Interface 5",
+                "type": "1000base-t",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
+            },
+            {
+                "device": device.pk,
+                "name": "Interface 6",
+                "type": "1000base-t",
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
+                "untagged_vlan": vlans[2].pk,
+                "status": "active",
+            },
+        ]
 
 
 class FrontPortTest(APIViewTestCases.APIViewTestCase):

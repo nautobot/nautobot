@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("virtualization", "0005_add_natural_indexing"),
+        ("virtualization", "0007_vminterface_status_data_migration"),
     ]
 
     operations = [

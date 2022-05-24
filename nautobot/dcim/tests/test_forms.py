@@ -321,6 +321,7 @@ class TestInterfaceCSVForm(TestCase):
         cls.headers_1 = {
             "device": None,
             "name": None,
+            "status": None,
             "parent_interface": None,
             "bridge": None,
             "type": None,
@@ -328,6 +329,7 @@ class TestInterfaceCSVForm(TestCase):
         cls.headers_2 = {
             "device": None,
             "name": None,
+            "status": None,
             "lag": None,
             "bridge": None,
             "type": None,
@@ -339,6 +341,7 @@ class TestInterfaceCSVForm(TestCase):
         data_1 = {
             "device": self.devices[0].name,
             "name": "interface test",
+            "status": "active",
             "parent_interface": self.interfaces[0].name,
             "bridge": self.interfaces[2].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -356,6 +359,7 @@ class TestInterfaceCSVForm(TestCase):
         data_2 = {
             "device": self.devices[0].name,
             "name": "interface lagged",
+            "status": "active",
             "lag": self.interfaces[2].name,
             "bridge": self.interfaces[1].name,
             "type": InterfaceTypeChoices.TYPE_100ME_FIXED,
@@ -374,6 +378,7 @@ class TestInterfaceCSVForm(TestCase):
         data = {
             "device": self.devices[0].name,
             "name": "interface test",
+            "status": "active",
             "parent_interface": self.interfaces[4].name,
             "bridge": self.interfaces[4].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -388,6 +393,7 @@ class TestInterfaceCSVForm(TestCase):
         data = {
             "device": self.devices[0].name,
             "name": "interface lagged",
+            "status": "active",
             "lag": self.interfaces[3].name,
             "bridge": self.interfaces[1].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
