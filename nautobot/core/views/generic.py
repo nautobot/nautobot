@@ -37,6 +37,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
+from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     csv_format,
     normalize_querydict,
@@ -185,10 +186,22 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         return "\n".join(csv_data)
 
+    def validate_action_buttons(self):
+        """Verify actions in self.action_buttons are valid view actions. Raise exception if not valid"""
+        invalid_buttons = [
+            action_button
+            for action_button in self.action_buttons
+            if validated_viewname(self.queryset.model, action_button) is None
+        ]
+        if invalid_buttons:
+            raise NoReverseMatch(f"path for {', '.join(invalid_buttons)} views are missing")
+
     def get(self, request):
 
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
+
+        self.validate_action_buttons()
 
         if self.filterset:
             self.queryset = self.filterset(request.GET, self.queryset).qs
