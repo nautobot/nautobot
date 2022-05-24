@@ -194,7 +194,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             if validated_viewname(self.queryset.model, action_button) is None
         ]
         if invalid_buttons:
-            raise NoReverseMatch(f"path for {', '.join(invalid_buttons)} views are missing")
+            raise NoReverseMatch(f"Path for {', '.join(invalid_buttons)} views are missing")
 
     def get(self, request):
 
