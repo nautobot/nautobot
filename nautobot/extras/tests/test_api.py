@@ -1963,6 +1963,25 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_model_clean_method_is_called(self):
+        """Validate RelationshipAssociation clean method is called"""
+
+        data = {
+            "relationship": self.relationship.pk,
+            "source_type": "dcim.device",
+            "source_id": self.sites[2].pk,
+            "destination_type": "dcim.device",
+            "destination_id": self.devices[2].pk,
+        }
+
+        self.add_permissions("extras.add_relationshipassociation")
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["source_type"], [f"source_type has a different value than defined in {self.relationship}"]
+        )
+
 
 class SecretTest(APIViewTestCases.APIViewTestCase):
     model = Secret
