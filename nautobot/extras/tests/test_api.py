@@ -1959,6 +1959,13 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 "destination_type": "dcim.device",
                 "destination_id": cls.devices[1].pk,
             },
+            {
+                "relationship": cls.relationship.pk,
+                "source_type": "dcim.site",
+                "source_id": cls.sites[2].pk,
+                "destination_type": "dcim.device",
+                "destination_id": cls.devices[2].pk,
+            },
         ]
 
     def test_create_invalid_relationship_association(self):
