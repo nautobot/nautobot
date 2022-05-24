@@ -155,6 +155,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1290](https://github.com/nautobot/nautobot/issues/1290) - Fix NAPALM enable password argument for devices using the eos NAPALM driver.
 - [#1428](https://github.com/nautobot/nautobot/issues/1428) - Fix IPAM prefix utilization sometimes showing greater than 100 percent for IPv4 prefixes.
 - [#1771](https://github.com/nautobot/nautobot/issues/1771) - Fix exception raised for RelationshipAssociation when updating source.
+- [#1772](https://github.com/nautobot/nautobot/issues/1772) - Fix RelationshipAssociationSerializer not triggering model clean method.
 - [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
 
 ## v1.3.4 (2022-05-16)
