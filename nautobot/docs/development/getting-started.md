@@ -113,6 +113,11 @@ $ ln -s ../../scripts/git-hooks/pre-commit
 
 Getting started with Nautobot development is pretty straightforward, and should feel very familiar to anyone with Django development experience. We can recommend either a [Docker Compose workflow](#docker-compose-workflow) (if you don't want to install dependencies such as PostgreSQL and Redis directly onto your system) or a [Python virtual environment workflow](#python-virtual-environment-workflow).
 
+### Windows Development
+
+Local development on Windows Subsystem for Linux (WSL) is not currently supported. When developing locally on Windows, we recommend
+using a virtual machine running an [officially supported operating system](../../installation/#installing-nautobot-dependencies).
+
 ### Docker Compose Workflow
 
 This workflow uses [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) and assumes that you have them installed.
