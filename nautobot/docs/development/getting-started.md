@@ -115,7 +115,7 @@ Getting started with Nautobot development is pretty straightforward, and should 
 
 ### Windows Development
 
-Local development on Windows Subsystem for Linux (WSL) is not currently supported. When developing locally on Windows, we recommended
+Local development on Windows Subsystem for Linux (WSL) is not currently supported. When developing locally on Windows, we recommend
 using a virtual machine running an [officially supported operating system](../../installation/#installing-nautobot-dependencies).
 
 ### Docker Compose Workflow
