@@ -509,6 +509,14 @@ class BaseInterface(RelationshipModel, StatusModel):
 
     def save(self, *args, **kwargs):
 
+        if not self.status:
+            query = Status.objects.get_for_model(self)
+            try:
+                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise ValidationError({"status": "Default status 'active' does not exist"})
+            self.status = status
+
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
         if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:
             self.tagged_vlans.clear()
