@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from copy import deepcopy
 import logging
 
@@ -5,9 +6,10 @@ from django import forms
 from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
+from django.forms.utils import ErrorDict, ErrorList
+
 import django_filters
 from django_filters.constants import EMPTY_VALUES
-from django_filters.filterset import FilterSetMetaclass, FilterSetOptions
 from django_filters.utils import get_model_field, resolve_field
 
 from nautobot.dcim.forms import MACAddressField
@@ -428,56 +430,7 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
 #
 
 
-class BaseFilterSetFilterForm(forms.Form):
-    """Base/default filter form class for BaseFilterSet."""
-
-    def is_valid(self):
-        """Extend forms.Form.is_valid() to treat any unknown form data entries as a potential validation error."""
-        result = super().is_valid()
-        for extra_key in set(self.data.keys()).difference(self.cleaned_data.keys()):
-            # If a given field was invalid, it will be omitted from cleaned_data; don't report extra errors
-            if extra_key not in self.errors:
-                if settings.STRICT_FILTERING:
-                    # Sure would be nice if we could instead do:
-                    # self.add_error(extra_key, "Unknown filter field") but extra_key isn't a field, so...
-                    self.add_error(None, f'Unknown filter field "{extra_key}"')
-                    result = False
-                else:
-                    logger.warning('%s: Unknown filter field "%s"', self.__class__.__name__, extra_key)
-
-        return result
-
-
-class BaseFilterSetOptions(FilterSetOptions):
-    """
-    Helper class for BaseFilterSetMetaclass.
-
-    - Changes the default `_meta.form` to BaseFilterSetFilterForm.
-    - Ensures that `id` is always an included filter field
-    """
-
-    def __init__(self, options=None):
-        super().__init__(options)
-        if self.fields is not None and "id" not in self.fields:
-            self.fields = ("id", *self.fields)
-        self.form = getattr(options, "form", BaseFilterSetFilterForm)
-
-
-class BaseFilterSetMetaclass(FilterSetMetaclass):
-    """Custom metaclass for BaseFilterSet that uses BaseFilterSetOptions instead of django-filters FilterSetOptions."""
-
-    def __new__(cls, name, bases, attrs):
-        """Copied from FilterSetMetaClass."""
-        attrs["declared_filters"] = cls.get_declared_filters(bases, attrs)
-
-        new_class = type.__new__(cls, name, bases, attrs)
-        new_class._meta = BaseFilterSetOptions(getattr(new_class, "Meta", None))
-        new_class.base_filters = new_class.get_filters()
-
-        return new_class
-
-
-class BaseFilterSet(django_filters.FilterSet, metaclass=BaseFilterSetMetaclass):
+class BaseFilterSet(django_filters.FilterSet):
     """
     A base filterset which provides common functionality to all Nautobot filtersets.
     """
@@ -635,6 +588,14 @@ class BaseFilterSet(django_filters.FilterSet, metaclass=BaseFilterSetMetaclass):
         )
 
     @classmethod
+    def get_fields(cls):
+        fields = super().get_fields()
+        if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
+            # Add "id" as the first key in the `fields` OrderedDict
+            fields = OrderedDict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
+        return fields
+
+    @classmethod
     def get_filters(cls):
         """
         Override filter generation to support dynamic lookup expressions for certain filter types.
@@ -649,6 +610,37 @@ class BaseFilterSet(django_filters.FilterSet, metaclass=BaseFilterSetMetaclass):
 
         filters.update(new_filters)
         return filters
+
+    def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
+        super().__init__(data, queryset, request=request, prefix=prefix)
+        self._is_valid = None
+        self._errors = None
+
+    def is_valid(self):
+        """Extend FilterSet.is_valid() to potentially enforce settings.STRICT_FILTERING."""
+        if self._is_valid is None:
+            self._is_valid = super().is_valid()
+            if settings.STRICT_FILTERING:
+                self._is_valid = self._is_valid and set(self.form.data.keys()).issubset(self.form.cleaned_data.keys())
+            else:
+                # Trigger warning logs associated with generating self.errors
+                self.errors
+        return self._is_valid
+
+    @property
+    def errors(self):
+        """Extend FilterSet.errors to potentially include additional errors from settings.STRICT_FILTERING."""
+        if self._errors is None:
+            self._errors = ErrorDict(self.form.errors)
+            for extra_key in set(self.form.data.keys()).difference(self.form.cleaned_data.keys()):
+                # If a given field was invalid, it will be omitted from cleaned_data; don't report extra errors
+                if extra_key not in self._errors:
+                    if settings.STRICT_FILTERING:
+                        self._errors.setdefault(extra_key, ErrorList()).append("Unknown filter field")
+                    else:
+                        logger.warning('%s: Unknown filter field "%s"', self.__class__.__name__, extra_key)
+
+        return self._errors
 
 
 class NameSlugSearchFilterSet(django_filters.FilterSet):

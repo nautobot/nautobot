@@ -30,7 +30,7 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SubdeviceRoleChoices,
 )
-
+from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -2165,6 +2165,7 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:console_connections_{}"
 
     model = ConsolePort
+    filterset = ConsoleConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2218,6 +2219,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:power_connections_{}"
 
     model = PowerPort
+    filterset = PowerConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2276,6 +2278,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:interface_connections_{}"
 
     model = Interface
+    filterset = InterfaceConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
