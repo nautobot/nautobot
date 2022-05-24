@@ -540,10 +540,10 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         to_field_name="slug",
         label="Site (slug)",
     )
-    available_on_device = django_filters.ModelChoiceFilter(
-        queryset=Device.objects.all(),
+    available_on_device = django_filters.UUIDFilter(
         method="get_for_device",
         label="Device (ID)",
+        field_name="pk",
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
@@ -574,7 +574,8 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     def get_for_device(self, queryset, name, value):
         """Return all VLANs available to the specified Device(value)."""
         try:
-            return queryset.filter(Q(site__isnull=True) | Q(site=value.site))
+            device = Device.objects.get(id=value)
+            return queryset.filter(Q(site__isnull=True) | Q(site=device.site))
         except Device.DoesNotExist:
             return queryset.none()
 
