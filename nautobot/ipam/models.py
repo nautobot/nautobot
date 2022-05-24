@@ -704,11 +704,10 @@ class Prefix(PrimaryModel, StatusModel):
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
         else:
-            # Compile an IPSet to avoid counting duplicate IPs
-            child_count = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()]).size
             prefix_size = self.prefix.size
             if self.prefix.version == 4 and self.prefix.prefixlen < 31 and not self.is_pool:
                 prefix_size -= 2
+            child_count = prefix_size - self.get_available_ips().size
             return UtilizationData(numerator=child_count, denominator=prefix_size)
 
 
