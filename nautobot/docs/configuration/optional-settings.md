@@ -158,11 +158,17 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ## BRANDING_PREPENDED_FILENAME
 
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
+
 Default: `"nautobot_"`
 
 Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
 
-Defines the initial pre-pended portion of a filename for for export to CSV/YAML or export templates.
+Defines the prefix of the filename when exporting to CSV/YAML or export templates.
+
+---
 
 ## CACHEOPS_DEFAULTS
 
@@ -824,6 +830,10 @@ This parameter defines the URL of the repository that will be checked periodical
 ---
 
 ## SANITIZER_PATTERNS
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
 
 Default:
 

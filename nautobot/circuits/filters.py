@@ -8,6 +8,7 @@ from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
+    SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -105,9 +106,15 @@ class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "cid": "icontains",
+            "terminations__xconnect_id": "icontains",
+            "terminations__pp_info": "icontains",
+            "terminations__description": "icontains",
+            "description": "icontains",
+            "comments": "icontains",
+        },
     )
     provider_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Provider.objects.all(),
@@ -164,23 +171,15 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
         model = Circuit
         fields = ["id", "cid", "install_date", "commit_rate"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(cid__icontains=value)
-            | Q(terminations__xconnect_id__icontains=value)
-            | Q(terminations__pp_info__icontains=value)
-            | Q(terminations__description__icontains=value)
-            | Q(description__icontains=value)
-            | Q(comments__icontains=value)
-        ).distinct()
-
 
 class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, PathEndpointFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "circuit__cid": "icontains",
+            "xconnect_id": "icontains",
+            "pp_info": "icontains",
+            "description": "icontains",
+        },
     )
     circuit_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Circuit.objects.all(),
@@ -205,13 +204,3 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
     class Meta:
         model = CircuitTermination
         fields = ["term_side", "port_speed", "upstream_speed", "xconnect_id"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(circuit__cid__icontains=value)
-            | Q(xconnect_id__icontains=value)
-            | Q(pp_info__icontains=value)
-            | Q(description__icontains=value)
-        ).distinct()

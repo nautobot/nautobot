@@ -42,7 +42,7 @@
                 </td>
             </tr>
             <tr>
-                <td>Termination</td>
+                <td>Cable</td>
                 <td>
                     {% if termination.cable %}
                         {% if perms.dcim.delete_cable %}
@@ -66,7 +66,7 @@
                             ({{ peer }})
                         {% endwith %}
                     {% else %}
-                        {% if perms.dcim.add_cable and termination.site %}
+                        {% if perms.dcim.add_cable %}
                             <div class="pull-right">
                                 <span class="dropdown">
                                     <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
