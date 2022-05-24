@@ -25,7 +25,7 @@ fi
 
 echo "Check that all files conform to Black..."
 invoke black
-if [[ $? != 0 ]]; then
+if [ $? != 0 ]; then
     EXIT=1
 fi
 
@@ -35,22 +35,16 @@ if [ $? != 0 ]; then
 	EXIT=1
 fi
 
-HADOLINT_PATH=$(which hadolint)
-if [ -x $HADOLINT_PATH ]; then
-	echo "Checking Dockerfile..."
-	hadolint docker/Dockerfile
-	if [ $? != 0 ]; then
-		EXIT=1
-	fi
+echo "Checking Dockerfile..."
+invoke hadolint
+if [ $? != 0 ]; then
+    EXIT=1
 fi
 
-MARKDOWNLINT_PATH=$(which markdownlint)
-if [ -x $MARKDOWNLINT_PATH ]; then
-    echo "Checking Markdown files..."
-    invoke markdownlint
-    if [ $? != 0 ]; then
-        EXIT=1
-    fi
+echo "Checking Markdown files..."
+invoke markdownlint
+if [ $? != 0 ]; then
+    EXIT=1
 fi
 
 if [ $EXIT != 0 ]; then
