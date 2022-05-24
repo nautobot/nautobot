@@ -682,3 +682,29 @@ class RelationshipAssociation(BaseModel):
                             )
                         }
                     )
+
+        if self.relationship.destination_filter or self.relationship.source_filter:
+            self._validate_relationship_filter_restriction()
+
+    def _validate_relationship_filter_restriction(self):
+        """Validate relationship association do not violate filter restrictions"""
+        sides = []
+
+        if self.relationship.destination_filter:
+            sides.append("destination")
+
+        if self.relationship.source_filter:
+            sides.append("source")
+
+        for side_name in sides:
+            side = getattr(self, side_name)  # destination / source
+            side_filter = getattr(self.relationship, f"{side_name}_filter")
+
+            filterset_class = get_filterset_for_model(side.__class__)
+            filterset = filterset_class(side_filter, side.__class__.objects.all())
+            queryset = filterset.qs.filter(id=side.id)
+
+            if queryset.exists() is False:
+                raise ValidationError(
+                    {side_name: (f"{side} violates {self.relationship} {side_name}_filter restriction")}
+                )
