@@ -145,6 +145,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#1606](https://github.com/nautobot/nautobot/issues/1606) - Added best practices for working with FilterSet classes to developer documentation.
+- [#1796](https://github.com/nautobot/nautobot/issues/1796) - Added documentation for using Git Repositories behind/via proxies.
 
 ### Changed
 
