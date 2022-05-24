@@ -540,7 +540,11 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         to_field_name="slug",
         label="Site (slug)",
     )
-    available_on_device = django_filters.ModelChoiceFilter(queryset=Device.objects.all(), method="get_for_device")
+    available_on_device = django_filters.ModelChoiceFilter(
+        queryset=Device.objects.all(),
+        method="get_for_device",
+        label="Device (ID)",
+    )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
         label="Group (ID)",
