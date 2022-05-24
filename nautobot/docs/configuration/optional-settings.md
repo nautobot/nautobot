@@ -685,19 +685,20 @@ NAPALM_ARGS = {
 }
 ```
 
-Some platforms (e.g. Cisco IOS) require an argument named `secret` to be passed in addition to the normal password. If desired, you can use the configured `NAPALM_PASSWORD` as the value for this argument:
+Some platforms (e.g. Cisco IOS) require an enable password to be passed in addition to the normal password. If desired, you can use the configured `NAPALM_PASSWORD` as the value for this argument:
 
 ```python
 NAPALM_USERNAME = 'username'
 NAPALM_PASSWORD = 'MySecretPassword'
 NAPALM_ARGS = {
-    'secret': NAPALM_PASSWORD,
+    'secret': NAPALM_PASSWORD,          # ios and nxos_ssh
+    'enable_password': NAPALM_PASSWORD, # eos
     # Include any additional args here
 }
 ```
 
 !!! note
-    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, a [secret](../../models/extras/secret/) defined in that group can override the `NAPALM_ARGS["secret"]` default value defined here.
+    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, a [secret](../../models/extras/secret/) defined in that group can override the `NAPALM_ARGS["secret"]` or `NAPALM_ARGS["enable_password"]` default value defined here.
 
 ---
 

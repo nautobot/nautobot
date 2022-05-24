@@ -890,7 +890,7 @@ class RelationshipSerializer(serializers.ModelSerializer):
         ]
 
 
-class RelationshipAssociationSerializer(serializers.ModelSerializer):
+class RelationshipAssociationSerializer(ValidatedModelSerializer):
 
     source_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()),
