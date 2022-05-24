@@ -954,24 +954,6 @@ class ApprovalQueueTestCase(
         self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
 
     #
-    # Reimplementations of ViewTestCases.ListObjectViewTestCase test functions.
-    # Needed because those use instance.get_absolute_url() instead of self._get_url("view", instance)...
-    #
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_list_objects_filtered(self):
-        """Override ListObjectsViewTestCase.test_list_objects_filtered to check for correct URL."""
-        instance1, instance2 = self._get_queryset().all()[:2]
-        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
-        self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
-        self.assertIn(instance1.name, content, msg=content)
-        self.assertNotIn(instance2.name, content, msg=content)
-        self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
-        self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
-
-    #
     # Reimplementations of ViewTestCases.GetObjectViewTestCase test functions.
     # Needed because those use instance.get_absolute_url() instead of self._get_url("view", instance)...
     #

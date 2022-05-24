@@ -149,6 +149,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "export",  # trigger for CSV/export-template/YAML export
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
+        "sort",  # table sorting
     )
 
     def get_filter_params(self, request):

@@ -250,7 +250,7 @@ class APIViewTestCases:
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), 2)
             for entry in response.data["results"]:
-                self.assertIn(entry["id"], [str(instance1.pk), str(instance2.pk)])
+                self.assertIn(str(entry["id"]), [str(instance1.pk), str(instance2.pk)])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):

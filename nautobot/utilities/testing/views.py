@@ -728,9 +728,11 @@ class ViewTestCases:
             if hasattr(self.model, "name"):
                 self.assertIn(instance1.name, content, msg=content)
                 self.assertNotIn(instance2.name, content, msg=content)
-            if hasattr(self.model, "get_absolute_url"):
-                self.assertIn(instance1.get_absolute_url(), content, msg=content)
-                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+            try:
+                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
+                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
+            except NoReverseMatch:
+                pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
@@ -744,9 +746,11 @@ class ViewTestCases:
             if hasattr(self.model, "name"):
                 self.assertNotIn(instance1.name, content, msg=content)
                 self.assertNotIn(instance2.name, content, msg=content)
-            if hasattr(self.model, "get_absolute_url"):
-                self.assertNotIn(instance1.get_absolute_url(), content, msg=content)
-                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+            try:
+                self.assertNotIn(self._get_url("view", instance=instance1), content, msg=content)
+                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
+            except NoReverseMatch:
+                pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
@@ -768,9 +772,11 @@ class ViewTestCases:
             if hasattr(self.model, "name"):
                 self.assertIn(instance1.name, content, msg=content)
                 self.assertIn(instance2.name, content, msg=content)
-            if hasattr(self.model, "get_absolute_url"):
-                self.assertIn(instance1.get_absolute_url(), content, msg=content)
-                self.assertIn(instance2.get_absolute_url(), content, msg=content)
+            try:
+                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
+                self.assertIn(self._get_url("view", instance=instance2), content, msg=content)
+            except NoReverseMatch:
+                pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
