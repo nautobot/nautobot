@@ -28,8 +28,9 @@
                         </td>
                     {% endif %}
                 </tr>
+                {% if object.site %}
                 <tr>
-                    <td>Termination</td>
+                    <td>Cable</td>
                     <td>
                         {% if object.cable %}
                             {% if perms.dcim.delete_cable %}
@@ -72,6 +73,7 @@
                         {% endif %}
                     </td>
                 </tr>
+                {% endif %}
                 <tr>
                     <td>Speed</td>
                     <td>

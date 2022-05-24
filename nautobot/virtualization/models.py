@@ -384,6 +384,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "export_templates",
     "graphql",
     "relationships",
+    "statuses",
     "webhooks",
 )
 class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
@@ -427,6 +428,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         "mtu",
         "description",
         "mode",
+        "status",
     ]
 
     class Meta:
@@ -449,6 +451,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.mtu,
             self.description,
             self.get_mode_display(),
+            self.get_status_display(),
         )
 
     def clean(self):

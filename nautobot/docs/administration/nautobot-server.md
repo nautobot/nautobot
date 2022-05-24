@@ -129,13 +129,18 @@ nautobot=> \q
 
 ### `dumpdata`
 
+<!-- markdownlint-disable MD036 -->
+_Changed in version 1.3.0: `extras.job` should now be included (removed `--exclude extras.job`)_
+_Changed in version 1.3.0: `django_rq` should now be excluded (add `--exclude django_rq`)_
+ <!-- markdownlint-enable MD036 -->
+
 ```no-highlight
 $ nautobot-server dumpdata \
   --natural-foreign \
   --natural-primary \
   --exclude contenttypes \
   --exclude auth.permission \
-  --exclude extras.job \
+  --exclude django_rq \
   --format json \
   --indent 2 \
   --traceback  > nautobot_dump.json

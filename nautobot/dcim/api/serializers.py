@@ -17,6 +17,7 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -73,6 +74,7 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
+from nautobot.extras.models import Status
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -1015,7 +1017,8 @@ class PowerPortSerializer(
         opt_in_fields = ["computed_fields"]
 
 
-class InterfaceSerializer(
+# TODO: collapse this with InterfaceSerializer in 2.0.
+class InterfaceSerializerVersion12(
     TaggedObjectSerializer,
     CableTerminationSerializer,
     ConnectedEndpointSerializer,
@@ -1069,6 +1072,21 @@ class InterfaceSerializer(
 
     def validate(self, data):
 
+        # set interface status to active if status not provided
+        if not data.get("status"):
+            # status is currently required in the Interface model but not required in api_version < 1.3 serializers
+            # which raises an error when validating except status is explicitly set here
+            query = Status.objects.get_for_model(Interface)
+            try:
+                data["status"] = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "status": "Interface default status 'active' does not exist, "
+                        "create 'active' status for Interface or use the latest api_version"
+                    }
+                )
+
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
         for vlan in data.get("tagged_vlans", []):
@@ -1081,6 +1099,40 @@ class InterfaceSerializer(
                 )
 
         return super().validate(data)
+
+
+class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
+    class Meta:
+        model = Interface
+        fields = [
+            "id",
+            "url",
+            "device",
+            "name",
+            "status",
+            "label",
+            "type",
+            "enabled",
+            "lag",
+            "mtu",
+            "mac_address",
+            "mgmt_only",
+            "description",
+            "mode",
+            "untagged_vlan",
+            "tagged_vlans",
+            "cable",
+            "cable_peer",
+            "cable_peer_type",
+            "connected_endpoint",
+            "connected_endpoint_type",
+            "connected_endpoint_reachable",
+            "tags",
+            "count_ipaddresses",
+            "custom_fields",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
 
 
 class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, CustomFieldModelSerializer):

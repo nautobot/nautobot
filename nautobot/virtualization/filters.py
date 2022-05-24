@@ -195,8 +195,9 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         return queryset.exclude(params)
 
 
-class VMInterfaceFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains"})
+
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),

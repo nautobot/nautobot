@@ -221,6 +221,9 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
+        # Because Interface and VMInterface have the same set of default statuses, we get the error:
+        #   enum naming encountered a non-optimally resolvable collision for fields named "status"
+        "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
     },
 }
 

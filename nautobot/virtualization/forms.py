@@ -20,6 +20,7 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
+from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -501,6 +502,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "tags",
             "untagged_vlan",
             "tagged_vlans",
+            "status",
         ]
         widgets = {"virtual_machine": forms.HiddenInput(), "mode": StaticSelect2()}
         labels = {
@@ -557,6 +559,12 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             "site_id": "null",
         },
     )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={
+            "content_types": VMInterface._meta.label_lower,
+        },
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -572,7 +580,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
 
-class VMInterfaceCSVForm(CustomFieldModelCSVForm):
+class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     virtual_machine = CSVModelChoiceField(queryset=VirtualMachine.objects.all(), to_field_name="name")
     mode = CSVChoiceField(
         choices=InterfaceModeChoices,
@@ -592,7 +600,7 @@ class VMInterfaceCSVForm(CustomFieldModelCSVForm):
             return self.cleaned_data["enabled"]
 
 
-class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
     virtual_machine = forms.ModelChoiceField(
         queryset=VirtualMachine.objects.all(),
@@ -654,7 +662,7 @@ class VMInterfaceBulkRenameForm(BulkRenameForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class VMInterfaceFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilterForm):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     virtual_machine_id = DynamicModelMultipleChoiceField(
