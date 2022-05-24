@@ -143,6 +143,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ## v1.3.5 (2022-MM-DD)
 
 ### Added
+
 - [#1606](https://github.com/nautobot/nautobot/issues/1606) - Added best practices for working with FilterSet classes to developer documentation.
 
 ### Changed
