@@ -188,13 +188,17 @@ A development environment can be easily started up from the root of the project 
 * `invoke build` - Builds Nautobot docker images
 * `invoke migrate` - Performs database migration operation in Django
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
-* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, the RQ worker, and Mkdocs in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
+* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts all Docker containers (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
+
+!!! note
+    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
+    `invoke start` or `invoke debug` commands.
 
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
