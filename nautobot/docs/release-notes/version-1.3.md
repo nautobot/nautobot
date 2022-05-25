@@ -161,6 +161,15 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1772](https://github.com/nautobot/nautobot/issues/1772) - Fix RelationshipAssociationSerializer not triggering model clean method.
 - [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
 
+### Security
+
+!!! attention
+    `PyJWT` - Nautobot does not directly depend on `PyJWT` so your upgrading Nautobot via `pip` or other package management tools may not pick up the patched version (we are not pinning this dependency). However some tools support an "eager" upgrade policy as an option. For example, `pip install --upgrade --upgrade-strategy eager nautobot` will upgrade Nautobot and all it's dependencies to their latest compatible version. This may not work for all use cases so it may be safer to update Nautobot then perform `pip install --upgrade PyJWT`.
+
+    Docker containers published with this build will have PyJWT upgraded.
+
+- [#1808](https://github.com/nautobot/nautobot/pull/1808) - Bump PyJWT from 2.3.0 to 2.4.0
+
 ## v1.3.4 (2022-05-16)
 
 ### Added
