@@ -190,7 +190,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         """Verify actions in self.action_buttons are valid view actions. Raise exception if not valid"""
 
         # ignore_actions are excluded because they are not view actions
-        ignore_actions = ["export", "delete"]
+        ignore_actions = ("export",)
 
         invalid_actions = [
             action
