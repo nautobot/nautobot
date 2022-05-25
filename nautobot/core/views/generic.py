@@ -186,26 +186,26 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         return "\n".join(csv_data)
 
-    def validate_action_buttons(self):
-        """Verify actions in self.action_buttons are valid view actions. Raise exception if not valid"""
+    def validate_action_buttons(self, request):
+        """Verify actions in self.action_buttons are valid view actions."""
 
-        # ignore_actions are excluded because they are not view actions
-        ignore_actions = ("export",)
+        always_valid_actions = ("export",)
+        valid_actions = []
+        invalid_actions = []
 
-        invalid_actions = [
-            action
-            for action in self.action_buttons
-            if action not in ignore_actions and validated_viewname(self.queryset.model, action) is None
-        ]
+        for action in self.action_buttons:
+            if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
+                valid_actions.append(action)
+            else:
+                invalid_actions.append(action)
         if invalid_actions:
-            raise NoReverseMatch(f"Path for {', '.join(invalid_actions)} views are missing")
+            messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
+        return valid_actions
 
     def get(self, request):
 
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
-
-        self.validate_action_buttons()
 
         if self.filterset:
             self.queryset = self.filterset(request.GET, self.queryset).qs
@@ -273,11 +273,13 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 # Use unbound form with default (initial) values
                 filter_form = self.filterset_form(label_suffix="")
 
+        valid_actions = self.validate_action_buttons(request)
+
         context = {
             "content_type": content_type,
             "table": table,
             "permissions": permissions,
-            "action_buttons": self.action_buttons,
+            "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": filter_form,
         }
