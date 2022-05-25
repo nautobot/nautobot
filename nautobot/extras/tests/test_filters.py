@@ -579,13 +579,9 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
+class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Job.objects.all()
     filterset = JobFilterSet
-
-    def test_name(self):
-        params = {"name": ["File Upload Success", "File Upload Failure"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_grouping(self):
         params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
@@ -760,7 +756,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class RelationshipTestCase(FilterTestCases.FilterTestCase):
+class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Relationship.objects.all()
     filterset = RelationshipFilterSet
 
@@ -791,10 +787,6 @@ class RelationshipTestCase(FilterTestCases.FilterTestCase):
             source_type=device_type,
             destination_type=interface_type,
         ).validated_save()
-
-    def test_name(self):
-        params = {"name": ["Primary VLAN", "Primary Interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
         params = {"type": "one-to-many"}

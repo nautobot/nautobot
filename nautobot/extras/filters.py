@@ -723,7 +723,7 @@ class RelationshipFilterSet(BaseFilterSet):
 
     class Meta:
         model = Relationship
-        fields = ["id", "name", "type", "source_type", "destination_type"]
+        fields = ["id", "name", "slug", "type", "source_type", "destination_type"]
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
