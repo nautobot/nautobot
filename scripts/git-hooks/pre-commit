@@ -35,16 +35,24 @@ if [ $? != 0 ]; then
 	EXIT=1
 fi
 
-echo "Checking Dockerfile..."
-invoke hadolint
-if [ $? != 0 ]; then
-    EXIT=1
+if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ]; then
+    if [ -x "$(command -v hadolint)" ]; then
+        echo "Checking Dockerfile..."
+        invoke hadolint || EXIT=1
+    fi
+else
+    echo "Checking Dockerfile..."
+    invoke hadolint || EXIT=1
 fi
 
-echo "Checking Markdown files..."
-invoke markdownlint
-if [ $? != 0 ]; then
-    EXIT=1
+if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ]; then
+    if [ -x "$(command -v markdownlint)" ]; then
+        echo "Checking Markdown files..."
+        invoke markdownlint || EXIT=1
+    fi
+else
+    echo "Checking Markdown files..."
+    invoke markdownlint || EXIT=1
 fi
 
 if [ $EXIT != 0 ]; then
