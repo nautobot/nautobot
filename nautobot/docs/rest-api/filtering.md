@@ -104,8 +104,8 @@ Nautobot core or plugin data model.
 - `**` `istartswith` - Determine if IP or network starts with the value provided, e.g. `host__istartswith="10.0.0."`
 - `**` `endswith` - Determine if IP or network ends with the value provided, e.g. `host__endswith="0.1"`
 - `**` `iendswith` - Determine if IP or network ends with the value provided, e.g. `host__iendswith="0.1"`
-- `**` `regex` - Determine if IP or network matches the pattern provided, e.g.` host__regex=r"10\.(.*)\.1`
-- `**` `iregex` - Determine if IP or network matches the pattern provided, e.g.` host__iregex=r"10\.(.*)\.1`
+- `**` `regex` - Determine if IP or network matches the pattern provided, e.g. `host__regex=r"10\.(.*)\.1`
+- `**` `iregex` - Determine if IP or network matches the pattern provided, e.g. `host__iregex=r"10\.(.*)\.1`
 - `net_contained` - Given a network, determine which networks are contained within the provided e.g. `network__net_contained="192.0.0.0/8"` would include 192.168.0.0/24 in the result
 - `net_contained_or_equal` - Given a network, determine which networks are contained or is within the provided e.g. `network__net_contained_or_equal="192.0.0.0/8"` would include 192.168.0.0/24 and 192.0.0.0/8 in the result
 - `net_contains` - Given a network, determine which networks contain the provided network e.g. `network__net_contains="192.168.0.0/16"` would include 192.0.0.0/8 in the result

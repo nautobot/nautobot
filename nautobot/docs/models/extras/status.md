@@ -18,13 +18,14 @@ For example, the default **Active** status has a slug of `active`, so the `activ
 
 ## Customizing Statuses
 
-With Status as a model, statuses can be customized. This can be as simple as removing the option to configure an existing status with a particular model or to remove that status entirely. 
+With Status as a model, statuses can be customized. This can be as simple as removing the option to configure an existing status with a particular model or to remove that status entirely.
 
-The real benefit of custom status is adding your own organization status and process names directly to Nautobot. An example of custom statuses would be including End of Life information for your devices. A simple End of Life status could be EOx for a device hitting any end of life milestone; more specific statuses like EOSS (End of Software Support), EOS (End of Sale), and Pre-EOS (for 1 year prior to EOS) to be more specific. Once the end of life information is tracked as a status, developing a report for Devices that have reached EOSS is trivial. 
+The real benefit of custom status is adding your own organization status and process names directly to Nautobot. An example of custom statuses would be including End of Life information for your devices. A simple End of Life status could be EOx for a device hitting any end of life milestone; more specific statuses like EOSS (End of Software Support), EOS (End of Sale), and Pre-EOS (for 1 year prior to EOS) to be more specific. Once the end of life information is tracked as a status, developing a report for Devices that have reached EOSS is trivial.
 
 Another example for sites is tracking the nature of a specific site's installation status. A site that is under construction could received a status like 'Pre Production'.
 
 For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be customized to reflect the specific [Nova virtual machine states](https://docs.openstack.org/nova/latest/reference/vm-states.html).
+
 ## Status Internals
 
 !!! warning
@@ -32,7 +33,7 @@ For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be cust
     data models of their own that implement a `status` field. Proceed at your
     own risk!
 
-Any model that is intended to have a `status` field must inherit from `extras.models.statuses.StatusModel`. This abstract model will add an `extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `devices`).o
+Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `devices`).
 
 ### `StatusField` model field
 
@@ -44,25 +45,25 @@ This model field also emits its own form field to eliminate the requirement for 
 
 ### `StatusFilter` filter field
 
-Any filter that is intended to have a `status` field must inherit from `extras.filters.StatusModelFilterSetMixin`. This will add a `extras.filters.StatusFilter` to the filter, which allows filtering by the `name` of the status.
+Any filter that is intended to have a `status` field must inherit from `nautobot.extras.filters.StatusModelFilterSetMixin`. This will add a `nautobot.extras.filters.StatusFilter` to the filter, which allows filtering by the `name` of the status.
 
 ### Form fields
 
 Any model form that is intended to have a `status` field must inherit from one of three mixins, depending on the use-case:
 
-- `extras.forms.StatusFilterFormMixin` should be used to add a non-required, multiple-choice `status` filter field to UI filter forms. This multiple-choice field allows for multiple status values to be selected for filtering objects in list views in the web UI.
-- `extras.forms.StatusBulkEditFormMixin` should be used to add a non-required `status` form field to a an object's model form. This field constrains status choices eligible to the object type being edited.
+- `nautobot.extras.forms.StatusFilterFormMixin` should be used to add a non-required, multiple-choice `status` filter field to UI filter forms. This multiple-choice field allows for multiple status values to be selected for filtering objects in list views in the web UI.
+- `nautobot.extras.forms.StatusBulkEditFormMixin` should be used to add a non-required `status` form field to a an object's model form. This field constrains status choices eligible to the object type being edited.
 - FIXME: CSV import forms
 
 ### `StatusSerializerField` serializer field
 
-Any serializer that is intended to have a `status` field must inherit from `extras.api.serializers.StatusModelSerializerMixin`. This adds an `extras.api.fields.StatusSerializerField` to the serializer.
+Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
 
-The `StatusSerializerField` is a writable slug-related choicee field that allows writing to the field using the `name` value of the status (e.g. `"active"`). Writing to this field is normalized to always be lowercased.
+The `StatusSerializerField` is a writable slug-related choice field that allows writing to the field using the `name` value of the status (e.g. `"active"`). Writing to this field is normalized to always be converted to lowercase.
 
 ### Table field
 
-If you wish for a table to include a `status` field, your table must inherit from `extras.tables.StatusTableMixin`. This includes a `ColorColumn` on the table.
+If you wish for a table to include a `status` field, your table must inherit from `nautobot.extras.tables.StatusTableMixin`. This includes a `ColorColumn` on the table.
 
 ## Status object integrations
 
@@ -70,24 +71,24 @@ To fully integrate a model to include a `status` field, assert the following:
 
 ### Model
 
-- The model must inherit from `extras.models.statuses.StatusModel`
-- Decorate the model class with `@extras.utils.extras_features('statuses')`
+- The model must inherit from `nautobot.extras.models.statuses.StatusModel`
+- Decorate the model class with `@extras_features('statuses')` (`from nautobot.extras.utils import extras_features`)
 
 ### Forms
 
 - Generic model forms will automatically include a `StatusField`
-- Bulk edit model forms must inherit from `extras.forms.StatusBulkEditFormMixin`
-- CSV model import forms must inherit from `extras.forms.StatusModelCSVFormMixin`
-- Filter forms must inherit from `extras.forms.StatusFilterFormMixin`
+- Bulk edit model forms must inherit from `nautobot.extras.forms.StatusBulkEditFormMixin`
+- CSV model import forms must inherit from `nautobot.extras.forms.StatusModelCSVFormMixin`
+- Filter forms must inherit from `nautobot.extras.forms.StatusFilterFormMixin`
 
 ### Filters
 
-- Filtersets for your model must inherit from `extras.filters.StatusModelFilterSetMixin`
+- Filtersets for your model must inherit from `nautobot.extras.filters.StatusModelFilterSetMixin`
 
 ### Serializers
 
-- Serializers for your model must inherit from `extras.api.serializers.StatusModelSerializerMixin`
+- Serializers for your model must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`
 
 ### Tables
 
-- The table class for your model must inherit from `extras.tables.StatusTableMixin`
+- The table class for your model must inherit from `nautobot.extras.tables.StatusTableMixin`

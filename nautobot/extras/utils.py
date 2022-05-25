@@ -6,6 +6,8 @@ import logging
 import pkgutil
 import sys
 
+from cacheops import file_cache
+from django.apps import apps
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -13,11 +15,24 @@ from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
 from nautobot.core.fields import slugify_dots_to_dashes
-from nautobot.extras.constants import EXTRAS_FEATURES, JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.constants import (
+    EXTRAS_FEATURES,
+    JOB_MAX_GROUPING_LENGTH,
+    JOB_MAX_NAME_LENGTH,
+    JOB_MAX_SLUG_LENGTH,
+    JOB_MAX_SOURCE_LENGTH,
+    JOB_OVERRIDABLE_FIELDS,
+)
 from nautobot.extras.registry import registry
 
 
 logger = logging.getLogger(__name__)
+
+
+@file_cache.cached(timeout=60)
+def get_job_content_type():
+    """Return a cached instance of the `ContentType` for `extras.Job`."""
+    return ContentType.objects.get(app_label="extras", model="job")
 
 
 def is_taggable(obj):
@@ -32,7 +47,7 @@ def is_taggable(obj):
 
 def image_upload(instance, filename):
     """
-    Return a path for uploading image attchments.
+    Return a path for uploading image attachments.
     """
     path = "image-attachments/"
 
@@ -78,6 +93,40 @@ class FeatureQuery:
             [('dcim.device', 13), ('dcim.rack', 34)]
         """
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+
+
+@deconstructible
+class TaggableClassesQuery:
+    """
+    Helper class to get ContentType models that implements tags(TaggableManager)
+    """
+
+    def list_subclasses(self):
+        """
+        Return a list of classes that has implements tags e.g tags = TaggableManager(...)
+        """
+        return [
+            _class
+            for _class in apps.get_models()
+            if hasattr(_class, "tags") and isinstance(_class.tags, _TaggableManager)
+        ]
+
+    def __call__(self):
+        """
+        Given an extras feature, return a Q object for content type lookup
+        """
+        query = Q()
+        for model in self.list_subclasses():
+            query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
+
+        return query
+
+    @property
+    def as_queryset(self):
+        return ContentType.objects.filter(self()).order_by("app_label", "model")
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
 
 
 def extras_features(*features):
@@ -182,15 +231,54 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     else:
         default_slug = slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}")
 
+    # Unrecoverable errors
+    if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
+        logger.error(
+            'Unable to store Jobs from "%s" as Job models because the source exceeds %d characters in length!',
+            job_source,
+            JOB_MAX_SOURCE_LENGTH,
+        )
+        return (None, False)
+    if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:
+        logger.error(
+            'Unable to store Jobs from module "%s" as Job models because the module exceeds %d characters in length!',
+            job_class.__module__,
+            JOB_MAX_NAME_LENGTH,
+        )
+        return (None, False)
+    if len(job_class.__name__) > JOB_MAX_NAME_LENGTH:
+        logger.error(
+            'Unable to represent Job class "%s" as a Job model because the class name exceeds %d characters in length!',
+            job_class.__name__,
+            JOB_MAX_NAME_LENGTH,
+        )
+        return (None, False)
+
+    # Recoverable errors
+    if len(job_class.grouping) > JOB_MAX_GROUPING_LENGTH:
+        logger.warning(
+            'Job class "%s" grouping "%s" exceeds %d characters in length, it will be truncated in the database.',
+            job_class.__name__,
+            job_class.grouping,
+            JOB_MAX_GROUPING_LENGTH,
+        )
+    if len(job_class.name) > JOB_MAX_NAME_LENGTH:
+        logger.warning(
+            'Job class "%s" name "%s" exceeds %d characters in length, it will be truncated in the database.',
+            job_class.__name__,
+            job_class.name,
+            JOB_MAX_NAME_LENGTH,
+        )
+
     job_model, created = job_model_class.objects.get_or_create(
-        source=job_source,
+        source=job_source[:JOB_MAX_SOURCE_LENGTH],
         git_repository=git_repository,
-        module_name=job_class.__module__,
-        job_class_name=job_class.__name__,
+        module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+        job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
-            "slug": default_slug,
-            "grouping": job_class.grouping,
-            "name": job_class.name,
+            "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
+            "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
+            "name": job_class.name[:JOB_MAX_NAME_LENGTH],
             "installed": True,
             "enabled": False,
         },

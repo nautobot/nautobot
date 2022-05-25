@@ -23,7 +23,7 @@ from jsonschema.validators import Draft7Validator
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -950,7 +950,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
 
-        job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+        try:
+            job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+        except RuntimeError as err:
+            messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
+            return redirect("extras:job_list")
+
         schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
 
         return render(
@@ -1032,7 +1037,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_content_type = ContentType.objects.get(app_label="extras", model="job")
+                job_content_type = get_job_content_type()
                 job_result = JobResult.enqueue_job(
                     run_job,
                     job_model.class_path,
@@ -1138,7 +1143,7 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "You do not have permission to run this job")
             else:
                 # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
-                job_content_type = ContentType.objects.get(app_label="extras", model="job")
+                job_content_type = get_job_content_type()
                 initial = scheduled_job.kwargs.get("data", {})
                 initial["_commit"] = False
                 job_result = JobResult.enqueue_job(
@@ -1260,7 +1265,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.all()
+    queryset = JobResult.objects.prefetch_related("job_model", "logs", "obj_type", "user")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1330,6 +1335,26 @@ class ObjectChangeListView(generic.ObjectListView):
     table = tables.ObjectChangeTable
     template_name = "extras/objectchange_list.html"
     action_buttons = ("export",)
+
+    # TODO: Remove this remapping in 2.0 as it is addressing a potentially breaking change
+    def get(self, request, **kwargs):
+
+        # Remappings below allow previous queries of time_before and time_after to use
+        # newer methods specifying the lookup method.
+
+        # They will only use the previous arguments if the newer ones are undefined
+
+        if request.GET.get("time_after") and request.GET.get("time__gte") is None:
+            request.GET._mutable = True
+            request.GET.update({"time__gte": request.GET.get("time_after")})
+            request.GET._mutable = False
+
+        if request.GET.get("time_before") and request.GET.get("time__lte") is None:
+            request.GET._mutable = True
+            request.GET.update({"time__lte": request.GET.get("time_before")})
+            request.GET._mutable = False
+
+        return super().get(request=request, **kwargs)
 
 
 class ObjectChangeView(generic.ObjectView):
@@ -1765,6 +1790,7 @@ class TagView(generic.ObjectView):
         return {
             "items_count": tagged_items.count(),
             "items_table": items_table,
+            "content_types": instance.content_types.order_by("app_label", "model"),
         }
 
 

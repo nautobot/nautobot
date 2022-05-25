@@ -211,14 +211,18 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Check for YAML export support
         elif "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
-            filename = "nautobot_{}.yaml".format(self.queryset.model._meta.verbose_name_plural)
+            filename = "{}{}.yaml".format(
+                settings.BRANDING_PREPENDED_FILENAME, self.queryset.model._meta.verbose_name_plural
+            )
             response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
             return response
 
         # Fall back to built-in CSV formatting if export requested but no template specified
         elif "export" in request.GET and hasattr(model, "to_csv"):
             response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = "nautobot_{}.csv".format(self.queryset.model._meta.verbose_name_plural)
+            filename = "{}{}.csv".format(
+                settings.BRANDING_PREPENDED_FILENAME, self.queryset.model._meta.verbose_name_plural
+            )
             response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
             return response
 

@@ -1,0 +1,53 @@
+<!--
+This is a fork of `ajax_wrapper.html` from `django-ajax-tables` plugin core. It has been updated to
+store the current query string in session storage so that it may be passed along to persist current
+page in the log table while a job is running.
+
+Ref: https://github.com/nautobot/nautobot/issues/1289
+-->
+
+<div id="{{ ajax_divname }}"></div>
+
+<script type='text/javascript'>
+
+    var session_key = "ajax_table_current_page";
+
+    function _replace_links_{{ ajax_divname }}(url, elements) {
+        for (var x = 0; x < elements.length; x++) {
+            var links = elements[x].getElementsByTagName('A');
+            for (var y = 0; y < links.length; y++) {
+                let new_querystring = links[y].getAttribute('href');
+                links[y].onclick = function(e) {
+                    e.preventDefault();
+                    // Store the query string in session storage.
+                    window.sessionStorage.setItem(session_key, new_querystring);
+                    update_{{ ajax_divname }}(new_querystring, url);
+                };
+            }
+        }
+    };
+
+    function update_{{ ajax_divname }}(querystring = '', url = "{{ ajax_tableurl }}") {
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == XMLHttpRequest.DONE ) {
+                if (xhr.status == 200) {
+                    var div = document.getElementById('{{ ajax_divname }}');
+
+                    div.innerHTML = xhr.responseText;
+
+                    _replace_links_{{ ajax_divname }}(url, div.getElementsByTagName('TH'));
+                    _replace_links_{{ ajax_divname }}(url, div.getElementsByClassName('pagination'));
+                }
+            }
+        };
+        xhr.open('GET', url + querystring, true);
+        xhr.send();
+    }
+
+    // Remove any previous session data for storing current page. Session storage is unique per tab
+    // but not per page load.
+    window.sessionStorage.removeItem(session_key);
+    // Call update_ for the first time.
+    update_{{ ajax_divname }}('', "{{ ajax_tableurl }}");
+</script>

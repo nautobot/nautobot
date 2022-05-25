@@ -777,6 +777,41 @@ device-bays:
         self.assertEqual(data[0]["manufacturer"], "Manufacturer 1")
         self.assertEqual(data[0]["model"], "Device Type 1")
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rack_height_bulk_edit_set_zero(self):
+        """Test that rack height can be set to "0" in bulk_edit."""
+        self.add_permissions("dcim.change_devicetype")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "u_height": 0,
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+
+        response = self.client.post(url, data)
+        self.assertHttpStatus(response, 302)
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertEqual(instance.u_height, data["u_height"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rack_height_bulk_edit_invalid(self):
+        """Test that a rack height cannot be set to an invalid value in bulk_edit."""
+        self.add_permissions("dcim.change_devicetype")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "u_height": -1,  # Invalid rack height
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+
+        response = self.client.post(url, data)
+        self.assertHttpStatus(response, 200)
+        self.assertIn("failed validation", response.content.decode(response.charset))
+
 
 #
 # DeviceType components
@@ -1100,7 +1135,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         DeviceRole.objects.create(name="Device Role 8")
 
         cls.form_data = {
-            "name": "Devie Role X",
+            "name": "Device Role X",
             "slug": "device-role-x",
             "color": "c0c0c0",
             "vm_role": False,
@@ -1693,6 +1728,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
+        statuses = Status.objects.get_for_model(Interface)
+        status_active = statuses.get(slug="active")
+
         interfaces = (
             Interface.objects.create(device=device, name="Interface 1"),
             Interface.objects.create(device=device, name="Interface 2"),
@@ -1715,6 +1753,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name": "Interface X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
+            "status": status_active.pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1740,6 +1779,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in tags],
+            "status": status_active.pk,
         }
 
         cls.bulk_edit_data = {
@@ -1753,13 +1793,14 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "status": status_active.pk,
         }
 
         cls.csv_data = (
-            "device,name,type",
-            "Device 1,Interface 4,1000base-t",
-            "Device 1,Interface 5,1000base-t",
-            "Device 1,Interface 6,1000base-t",
+            "device,name,type,status",
+            "Device 1,Interface 4,1000base-t,active",
+            "Device 1,Interface 5,1000base-t,active",
+            "Device 1,Interface 6,1000base-t,active",
         )
 
 

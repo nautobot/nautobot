@@ -10,12 +10,11 @@ import traceback
 import warnings
 
 
-from cacheops import cached
+from cacheops import file_cache
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
@@ -34,7 +33,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, Job as JobModel, ScheduledJob
 from .registry import registry
-from .utils import jobs_in_directory
+from .utils import get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -897,6 +896,7 @@ def get_jobs():
     return jobs
 
 
+@file_cache.cached(timeout=60)
 def _get_job_source_paths():
     """
     Helper function to get_jobs().
@@ -955,7 +955,7 @@ def _get_job_source_paths():
     return paths
 
 
-@cached(timeout=60)
+@file_cache.cached(timeout=60)
 def get_job_classpaths():
     """
     Get a list of all known Job class_path strings.
@@ -1202,5 +1202,5 @@ def scheduled_job_handler(*args, **kwargs):
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
-    job_content_type = ContentType.objects.get(app_label="extras", model="job")
+    job_content_type = get_job_content_type()
     JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)

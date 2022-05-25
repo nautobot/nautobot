@@ -4,19 +4,19 @@
 
 As of Nautobot 1.2.0, it is now possible to configure a number of settings via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
-- [BANNER_BOTTOM](#banner_bottom)
-- [BANNER_LOGIN](#banner_login)
-- [BANNER_TOP](#banner_top)
-- [CHANGELOG_RETENTION](#changelog_retention)
-- [HIDE_RESTRICTED_UI](#hide_restricted_ui)
-- [MAX_PAGE_SIZE](#max_page_size)
-- [PAGINATE_COUNT](#paginate_count)
-- PER_PAGE_DEFAULTS
-- [PREFER_IPV4](#prefer_ipv4)
-- [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
-- [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
-- [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
-- [RELEASE_CHECK_URL](#release_check_url)
+* [BANNER_BOTTOM](#banner_bottom)
+* [BANNER_LOGIN](#banner_login)
+* [BANNER_TOP](#banner_top)
+* [CHANGELOG_RETENTION](#changelog_retention)
+* [HIDE_RESTRICTED_UI](#hide_restricted_ui)
+* [MAX_PAGE_SIZE](#max_page_size)
+* [PAGINATE_COUNT](#paginate_count)
+* PER_PAGE_DEFAULTS
+* [PREFER_IPV4](#prefer_ipv4)
+* [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
+* [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
+* [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
+* [RELEASE_CHECK_URL](#release_check_url)
 
 ## Extra Applications
 
@@ -139,7 +139,7 @@ Default:
 ```python
 {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),  # Code link in the footer
-    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),  # Docs link in the footer
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "<STATIC_URL>docs/index.html"),  # Docs link in the footer
     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),  # Help link in the footer
 }
 ```
@@ -153,6 +153,20 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_URLS_HELP`
 
 If a custom URL is not provided for any of the links, the default link within the Nautobot community is used.
+
+---
+
+## BRANDING_PREPENDED_FILENAME
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
+
+Default: `"nautobot_"`
+
+Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
+
+Defines the prefix of the filename when exporting to CSV/YAML or export templates.
 
 ---
 
@@ -203,7 +217,7 @@ A dict of additional options passed to the Celery broker transport. This is only
 
 Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
 
-Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+Default: `'redis://localhost:6379/0'`
 
 Celery broker URL used to tell workers where queues are located.
 
@@ -213,7 +227,7 @@ Celery broker URL used to tell workers where queues are located.
 
 Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
 
-Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+Default: `'redis://localhost:6379/0'`
 
 Celery result backend used to tell workers where to store task results (tombstones).
 
@@ -357,17 +371,6 @@ A later release of Nautobot will address the underlying performance issues, and 
 
 ---
 
-## DOCS_ROOT
-
-Default: `$BASE_DIR/docs`
-
-The filesystem path to Nautobot's documentation. This is used when presenting context-sensitive documentation in the web UI. By default, this will be the `docs` directory within the root Nautobot installation path. (Set this to `None` to disable the embedded documentation.)
-
-!!! warning
-    The `BASE_DIR` variable is internal to Nautobot and is referenced here to represent the fully qualified file path where the Nautobot library code is installed. Please do not modify the value of `BASE_DIR` as it can have unintended side effects.
-
----
-
 ## ENFORCE_GLOBAL_UNIQUE
 
 Default: `False`
@@ -462,7 +465,7 @@ Please see [the object permissions page](../administration/permissions.md) for m
 
 Default: `None`
 
-If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. *example.com/nautobot/*).
+If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. _example.com/nautobot/_).
 
 !!! important
     To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot/`, you must set `FORCE_SCRIPT_NAME = "/nautobot/"`.
@@ -489,7 +492,7 @@ If you are using a self-signed git repository, you will need to set the environm
 in order for the repository to sync.
 
 !!! warning
-    This *must* be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
+    This _must_ be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
 
 ---
 
@@ -825,6 +828,26 @@ This parameter defines the URL of the repository that will be checked periodical
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
+
+## SANITIZER_PATTERNS
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
+
+Default:
+
+```python
+[
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
+```
+
+List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+
+---
+
 ## SESSION_COOKIE_AGE
 
 Default: `1209600` (2 weeks, in seconds)

@@ -21,7 +21,9 @@ query {
   }
 }
 ```
+
 Result
+
 ```json
 {
   "data": {
@@ -77,6 +79,7 @@ query {
 ```
 
 Result
+
 ```json
 {
   "data": {
@@ -110,6 +113,7 @@ query {
 ```
 
 Result
+
 ```json
 {
   "data": {
@@ -149,6 +153,7 @@ query {
 ```
 
 Result
+
 ```json
 {
   "data": {

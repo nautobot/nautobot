@@ -1,16 +1,24 @@
 from django import forms
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
+from django.urls import reverse
 from unittest import mock
 from netaddr import IPNetwork
 
-from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm
+from nautobot.dcim.models import Device
+from nautobot.dcim.tests.test_views import create_test_device
+from nautobot.extras.models import CustomField
+from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
 from nautobot.ipam.models import IPAddress, Prefix
-from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField
+from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField, JSONField
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
+    add_field_to_filter_form_class,
 )
+from nautobot.utilities.forms.widgets import APISelect
 from nautobot.utilities.forms.forms import AddressFieldMixin, PrefixFieldMixin
+from nautobot.utilities.testing import TestCase as NautobotTestCase
 
 
 class ExpandIPAddress(TestCase):
@@ -330,6 +338,31 @@ class ExpandAlphanumeric(TestCase):
             sorted(expand_alphanumeric_pattern("r[a,,b]a"))
 
 
+class AddFieldToFormClassTest(TestCase):
+    def test_field_added(self):
+        """
+        Test adding of a new field to an existing form.
+        """
+        new_form_field = forms.CharField(required=False, label="Added Field Description")
+        new_form_field_name = "added_form_field_name"
+        self.assertNotIn(new_form_field_name, ServiceFilterForm().fields.keys())
+        add_field_to_filter_form_class(ServiceFilterForm, new_form_field_name, new_form_field)
+        self.assertIn(new_form_field_name, ServiceFilterForm().fields.keys())
+
+    def test_field_validation(self):
+        """
+        Test that the helper function performs validation on field to be added:
+            - Name collission not permitted
+            - Field must be inheriting from django.forms.Field
+        """
+        with self.assertRaises(TypeError):
+            add_field_to_filter_form_class(ServiceFilterForm, "my_custom_field_name", IPAddress)
+        with self.assertRaises(AttributeError):
+            add_field_to_filter_form_class(
+                ServiceFilterForm, "port", forms.CharField(required=False, label="Added Field Description")
+            )
+
+
 class CSVDataFieldTest(TestCase):
     def setUp(self):
         self.field = CSVDataField(from_form=IPAddressCSVForm)
@@ -519,3 +552,34 @@ class PrefixFieldMixinTest(TestCase):
         with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
             PrefixFieldMixin(instance=self.prefix)
             mock_init.assert_called_with(initial=self.initial, instance=self.prefix)
+
+
+class JSONFieldTest(NautobotTestCase):
+    def test_no_exception_raised(self):
+        """
+        Demonstrate that custom fields with JSON type handle None values correctly
+        """
+        self.user.is_superuser = True
+        self.user.save()
+        create_test_device("Foo Device")
+        custom_field = CustomField(
+            type="json",
+            name="json-field",
+            required=False,
+        )
+        custom_field.save()
+        device_content_type = ContentType.objects.get_for_model(Device)
+        custom_field.content_types.set([device_content_type])
+        # Fetch URL with filter parameter
+        response = self.client.get(f'{reverse("dcim:device_list")}?name=Foo%20Device')
+        self.assertIn("Foo Device", str(response.content))
+
+    def test_prepare_value_with_utf8(self):
+        self.assertEqual('"I am UTF-8! 😀"', JSONField().prepare_value("I am UTF-8! 😀"))
+
+
+class WidgetsTest(TestCase):
+    def test_api_select_add_query_param_with_utf8(self):
+        widget = APISelect()
+        widget.add_query_param("utf8", "I am UTF-8! 😀")
+        self.assertEqual('["I am UTF-8! 😀"]', widget.attrs["data-query-param-utf8"])

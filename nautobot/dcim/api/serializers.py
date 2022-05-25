@@ -1,13 +1,13 @@
 from django.contrib.contenttypes.models import ContentType
-from drf_yasg.utils import swagger_serializer_method
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from timezone_field.rest_framework import TimeZoneSerializerField
 
 from nautobot.core.api import (
     ChoiceField,
     ContentTypeField,
     SerializedPKRelatedField,
+    TimeZoneSerializerField,
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
@@ -17,6 +17,7 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -73,6 +74,7 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
+from nautobot.extras.models import Status
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -126,12 +128,13 @@ class CableTerminationSerializer(serializers.ModelSerializer):
     cable_peer_type = serializers.SerializerMethodField(read_only=True)
     cable_peer = serializers.SerializerMethodField(read_only=True)
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_cable_peer_type(self, obj):
         if obj._cable_peer is not None:
             return f"{obj._cable_peer._meta.app_label}.{obj._cable_peer._meta.model_name}"
         return None
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_cable_peer(self, obj):
         """
         Return the appropriate serializer for the cable termination model.
@@ -148,12 +151,13 @@ class ConnectedEndpointSerializer(ValidatedModelSerializer):
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
     connected_endpoint_reachable = serializers.SerializerMethodField(read_only=True)
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_connected_endpoint_type(self, obj):
         if obj._path is not None and obj._path.destination is not None:
             return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
         return None
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_connected_endpoint(self, obj):
         """
         Return the appropriate serializer for the type of connected object.
@@ -164,7 +168,7 @@ class ConnectedEndpointSerializer(ValidatedModelSerializer):
             return serializer(obj._path.destination, context=context).data
         return None
 
-    @swagger_serializer_method(serializer_or_field=serializers.BooleanField)
+    @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
         if obj._path is not None:
             return obj._path.is_active
@@ -810,7 +814,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
 
         return data
 
-    @swagger_serializer_method(serializer_or_field=NestedDeviceSerializer)
+    @extend_schema_field(NestedDeviceSerializer)
     def get_parent_device(self, obj):
         try:
             device_bay = obj.parent_bay
@@ -862,7 +866,7 @@ class DeviceWithConfigContextSerializer(DeviceSerializer):
         ]
         opt_in_fields = ["computed_fields"]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_config_context(self, obj):
         return obj.get_config_context()
 
@@ -1013,7 +1017,8 @@ class PowerPortSerializer(
         opt_in_fields = ["computed_fields"]
 
 
-class InterfaceSerializer(
+# TODO: collapse this with InterfaceSerializer in 2.0.
+class InterfaceSerializerVersion12(
     TaggedObjectSerializer,
     CableTerminationSerializer,
     ConnectedEndpointSerializer,
@@ -1067,6 +1072,21 @@ class InterfaceSerializer(
 
     def validate(self, data):
 
+        # set interface status to active if status not provided
+        if not data.get("status"):
+            # status is currently required in the Interface model but not required in api_version < 1.3 serializers
+            # which raises an error when validating except status is explicitly set here
+            query = Status.objects.get_for_model(Interface)
+            try:
+                data["status"] = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "status": "Interface default status 'active' does not exist, "
+                        "create 'active' status for Interface or use the latest api_version"
+                    }
+                )
+
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
         for vlan in data.get("tagged_vlans", []):
@@ -1079,6 +1099,40 @@ class InterfaceSerializer(
                 )
 
         return super().validate(data)
+
+
+class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
+    class Meta:
+        model = Interface
+        fields = [
+            "id",
+            "url",
+            "device",
+            "name",
+            "status",
+            "label",
+            "type",
+            "enabled",
+            "lag",
+            "mtu",
+            "mac_address",
+            "mgmt_only",
+            "description",
+            "mode",
+            "untagged_vlan",
+            "tagged_vlans",
+            "cable",
+            "cable_peer",
+            "cable_peer_type",
+            "connected_endpoint",
+            "connected_endpoint_type",
+            "connected_endpoint_reachable",
+            "tags",
+            "count_ipaddresses",
+            "custom_fields",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
 
 
 class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, CustomFieldModelSerializer):
@@ -1258,11 +1312,11 @@ class CableSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custom
 
         return data
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_termination_a(self, obj):
         return self._get_termination(obj, "a")
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_termination_b(self, obj):
         return self._get_termination(obj, "b")
 
@@ -1308,7 +1362,7 @@ class CablePathSerializer(serializers.ModelSerializer):
             "is_split",
         ]
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField)
     def get_origin(self, obj):
         """
         Return the appropriate serializer for the origin.
@@ -1317,7 +1371,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         context = {"request": self.context["request"]}
         return serializer(obj.origin, context=context).data
 
-    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_destination(self, obj):
         """
         Return the appropriate serializer for the destination, if any.
@@ -1328,7 +1382,7 @@ class CablePathSerializer(serializers.ModelSerializer):
             return serializer(obj.destination, context=context).data
         return None
 
-    @swagger_serializer_method(serializer_or_field=serializers.ListField)
+    @extend_schema_field(serializers.ListField)
     def get_path(self, obj):
         ret = []
         for node in obj.get_path():
@@ -1352,12 +1406,12 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
         model = Interface
         fields = ["interface_a", "interface_b", "connected_endpoint_reachable"]
 
-    @swagger_serializer_method(serializer_or_field=NestedInterfaceSerializer)
+    @extend_schema_field(NestedInterfaceSerializer)
     def get_interface_a(self, obj):
         context = {"request": self.context["request"]}
         return NestedInterfaceSerializer(instance=obj, context=context).data
 
-    @swagger_serializer_method(serializer_or_field=serializers.BooleanField)
+    @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
         if obj._path is not None:
             return obj._path.is_active

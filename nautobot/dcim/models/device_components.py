@@ -8,10 +8,10 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from taggit.managers import TaggableManager
 
-
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -32,6 +32,8 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
+    Status,
+    StatusModel,
     TaggedItem,
 )
 from nautobot.extras.utils import extras_features
@@ -64,8 +66,8 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
     """
 
     device = models.ForeignKey(to="dcim.Device", on_delete=models.CASCADE, related_name="%(class)ss")
-    name = models.CharField(max_length=64)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
+    name = models.CharField(max_length=64, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
     description = models.CharField(max_length=200, blank=True)
     tags = TaggableManager(through=TaggedItem)
@@ -482,7 +484,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-class BaseInterface(RelationshipModel):
+class BaseInterface(RelationshipModel, StatusModel):
     """
     Abstract base class for fields shared by dcim.Interface and virtualization.VMInterface.
     """
@@ -500,11 +502,20 @@ class BaseInterface(RelationshipModel):
     class Meta:
         abstract = True
 
+    def clean(self):
+        # Remove untagged VLAN assignment for non-802.1Q interfaces
+        if not self.mode and self.untagged_vlan is not None:
+            raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
+
     def save(self, *args, **kwargs):
 
-        # Remove untagged VLAN assignment for non-802.1Q interfaces
-        if not self.mode:
-            self.untagged_vlan = None
+        if not self.status:
+            query = Status.objects.get_for_model(self)
+            try:
+                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise ValidationError({"status": "Default status 'active' does not exist"})
+            self.status = status
 
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
         if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:
@@ -519,6 +530,7 @@ class BaseInterface(RelationshipModel):
     "export_templates",
     "graphql",
     "relationships",
+    "statuses",
     "webhooks",
 )
 class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
@@ -528,10 +540,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
-        target_field="name",
-        naturalize_function=naturalize_interface,
-        max_length=100,
-        blank=True,
+        target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
     )
     lag = models.ForeignKey(
         to="self",
@@ -580,6 +589,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         "mgmt_only",
         "description",
         "mode",
+        "status",
     ]
 
     class Meta:
@@ -602,6 +612,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.mgmt_only,
             self.description,
             self.get_mode_display(),
+            self.get_status_display(),
         )
 
     def clean(self):
@@ -897,7 +908,7 @@ class InventoryItem(MPTTModel, ComponentModel):
         blank=True,
         help_text="Manufacturer-assigned part identifier",
     )
-    serial = models.CharField(max_length=255, verbose_name="Serial number", blank=True)
+    serial = models.CharField(max_length=255, verbose_name="Serial number", blank=True, db_index=True)
     asset_tag = models.CharField(
         max_length=50,
         unique=True,

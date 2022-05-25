@@ -308,9 +308,13 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
+        statuses = Status.objects.get_for_model(VMInterface)
+        status_active = statuses.get(slug="active")
+
         cls.form_data = {
             "virtual_machine": virtualmachines[1].pk,
             "name": "Interface X",
+            "status": status_active.pk,
             "enabled": False,
             "mac_address": EUI("01-02-03-04-05-06"),
             "mtu": 2000,
@@ -326,6 +330,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "virtual_machine": virtualmachines[1].pk,
             "name_pattern": "Interface [4-6]",
             "enabled": False,
+            "status": status_active.pk,
             "mac_address": EUI("01-02-03-04-05-06"),
             "mtu": 2000,
             "description": "New description",
@@ -337,15 +342,16 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
         cls.csv_data = (
-            "virtual_machine,name",
-            "Virtual Machine 2,Interface 4",
-            "Virtual Machine 2,Interface 5",
-            "Virtual Machine 2,Interface 6",
+            "virtual_machine,name,status",
+            "Virtual Machine 2,Interface 4,active",
+            "Virtual Machine 2,Interface 5,active",
+            "Virtual Machine 2,Interface 6,active",
         )
 
         cls.bulk_edit_data = {
             "enabled": False,
             "mtu": 2000,
+            "status": status_active.pk,
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,

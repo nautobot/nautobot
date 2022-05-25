@@ -1,10 +1,9 @@
 import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.db.models import Q
 
-from nautobot.users.models import ObjectPermission
-from nautobot.utilities.filters import BaseFilterSet
+from nautobot.users.models import ObjectPermission, Token
+from nautobot.utilities.filters import BaseFilterSet, SearchFilter
 
 __all__ = (
     "GroupFilterSet",
@@ -14,25 +13,21 @@ __all__ = (
 
 
 class GroupFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
+    q = SearchFilter(filter_predicates={"name": "icontains"})
 
     class Meta:
         model = Group
         fields = ["id", "name"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(name__icontains=value)
-
 
 class UserFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "username": "icontains",
+            "first_name": "icontains",
+            "last_name": "icontains",
+            "email": "icontains",
+        },
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
@@ -58,15 +53,13 @@ class UserFilterSet(BaseFilterSet):
             "is_active",
         ]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(username__icontains=value)
-            | Q(first_name__icontains=value)
-            | Q(last_name__icontains=value)
-            | Q(email__icontains=value)
-        )
+
+class TokenFilterSet(BaseFilterSet):
+    q = SearchFilter(filter_predicates={"description": "icontains"})
+
+    class Meta:
+        model = Token
+        fields = ["id", "key", "write_enabled", "created", "expires"]
 
 
 class ObjectPermissionFilterSet(BaseFilterSet):

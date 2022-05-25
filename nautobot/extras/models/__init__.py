@@ -27,6 +27,7 @@ from .relationships import Relationship, RelationshipAssociation, RelationshipMo
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from .tags import Tag, TaggedItem
 
+
 __all__ = (
     "ChangeLoggedModel",
     "ComputedField",

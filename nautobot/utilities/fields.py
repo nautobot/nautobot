@@ -77,7 +77,7 @@ class NaturalOrderingField(models.CharField):
         kwargs["naturalize_function"] = self.naturalize_function
         return (
             self.name,
-            "utilities.fields.NaturalOrderingField",
+            "nautobot.utilities.fields.NaturalOrderingField",
             [self.target_field],
             kwargs,
         )
@@ -161,7 +161,7 @@ class JSONArrayField(models.JSONField):
             else:
                 obj = AttributeSetter(base_field.attname, val)
                 values.append(base_field.value_to_string(obj))
-        return json.dumps(values)
+        return json.dumps(values, ensure_ascii=False)
 
     def validate(self, value, model_instance):
         """

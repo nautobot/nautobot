@@ -191,6 +191,11 @@ class ClusterTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
 
 class VirtualMachineTestCase(TestCase):
     queryset = VirtualMachine.objects.all()
@@ -439,6 +444,11 @@ class VirtualMachineTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
 
 class VMInterfaceTestCase(TestCase):
     queryset = VMInterface.objects.all()
@@ -465,12 +475,15 @@ class VMInterfaceTestCase(TestCase):
             VirtualMachine.objects.create(name="Virtual Machine 3", cluster=clusters[2]),
         )
 
+        statuses = Status.objects.get_for_model(VMInterface)
+
         VMInterface.objects.create(
             virtual_machine=vms[0],
             name="Interface 1",
             enabled=True,
             mtu=100,
             mac_address="00-00-00-00-00-01",
+            status=statuses.get(slug="active"),
         )
         VMInterface.objects.create(
             virtual_machine=vms[1],
@@ -478,6 +491,7 @@ class VMInterfaceTestCase(TestCase):
             enabled=True,
             mtu=200,
             mac_address="00-00-00-00-00-02",
+            status=statuses.get(slug="active"),
         )
         VMInterface.objects.create(
             virtual_machine=vms[2],
@@ -485,6 +499,7 @@ class VMInterfaceTestCase(TestCase):
             enabled=False,
             mtu=300,
             mac_address="00-00-00-00-00-03",
+            status=statuses.get(slug="planned"),
         )
 
     def test_id(self):
@@ -516,3 +531,12 @@ class VMInterfaceTestCase(TestCase):
     def test_mac_address(self):
         params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_status(self):
+        params = {"status": ["active"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

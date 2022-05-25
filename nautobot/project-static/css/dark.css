@@ -1,0 +1,49 @@
+/* Layout */
+
+/* Inverts all colors with a slight offset to use as a dark mode. Overrides are below */
+html[data-theme="dark"] {
+  background: rgb(12, 12, 12);
+  filter: invert(1) hue-rotate(180deg);
+}
+/* Ignores inverting images for dark theme */
+html[data-theme="dark"] img {
+  filter: invert(1) hue-rotate(180deg);
+}
+/* Makes badge text white in dark mode */
+html[data-theme="dark"] .badge {
+  color: black;
+}
+/* White text on buttons */
+html[data-theme="dark"] button {
+  color: black;
+}
+/* White text on buttons */
+html[data-theme="dark"] .btn {
+  color: black;
+}
+/* White text on labels */
+html[data-theme="dark"] .label {
+  color: black !important;
+}
+/* Colors for labels like with device role, status, etc */
+html[data-theme="dark"] .color-block {
+  filter: invert(1) hue-rotate(180deg);
+}
+/* Dropdown list when selecting a color for status, device role, etc */
+html[data-theme="dark"] .select2-results__option {
+  filter: invert(1) hue-rotate(180deg);
+  color: #ccc !important;
+}
+/* Dropdown list for showing selected color for status, device role, etc */
+html[data-theme="dark"] .select2-selection__rendered {
+  filter: invert(1) hue-rotate(180deg);
+  color: #ccc !important;
+}
+/* Labels in API Swagger docs */
+html[data-theme="dark"] .opblock-summary-method {
+  color: black !important;
+}
+/* Version stamp in API Swagger docs */
+html[data-theme="dark"] .version {
+  color: black !important;
+}

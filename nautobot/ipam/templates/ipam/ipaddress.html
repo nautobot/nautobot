@@ -101,8 +101,12 @@
                 <tr>
                     <td>NAT (outside)</td>
                     <td>
-                        {% if object.nat_outside %}
-                            <a href="{% url 'ipam:ipaddress' pk=object.nat_outside.pk %}">{{ object.nat_outside }}</a>
+                        {% if object.nat_outside_list.exists %}
+                            <ul class="list-unstyled">
+                                {% for nat in object.nat_outside_list.all %}
+                                    <li><a href="{% url 'ipam:ipaddress' pk=nat.pk %}">{{ nat }}</a></li>
+                                {% endfor %}
+                            </ul>
                         {% else %}
                             <span class="text-muted">None</span>
                         {% endif %}
@@ -134,5 +138,5 @@
                 {% render_table duplicate_ips_table 'inc/table.html' %}
             </div>
         {% endif %}
-        {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default noprint' %}
+        {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default' %}
 {% endblock content_full_width_page %}

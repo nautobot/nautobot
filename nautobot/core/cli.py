@@ -128,7 +128,7 @@ def _configure_settings(config):
     #
 
     # If metrics are enabled and postgres is the backend, set the driver to the
-    # one provided by django-prometheous.
+    # one provided by django-prometheus.
     if settings.METRICS_ENABLED and "postgres" in settings.DATABASES["default"]["ENGINE"]:
         settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
 

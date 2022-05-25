@@ -16,8 +16,10 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
+    MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
+    SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -127,9 +129,22 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "facility": "icontains",
+            "description": "icontains",
+            "physical_address": "icontains",
+            "shipping_address": "icontains",
+            "contact_name": "icontains",
+            "contact_phone": "icontains",
+            "contact_email": "icontains",
+            "comments": "icontains",
+            "asn": {
+                "lookup_expr": "exact",
+                "preprocessor": int,  # asn expects an int
+            },
+        },
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -160,26 +175,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "contact_phone",
             "contact_email",
         ]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = (
-            Q(name__icontains=value)
-            | Q(facility__icontains=value)
-            | Q(description__icontains=value)
-            | Q(physical_address__icontains=value)
-            | Q(shipping_address__icontains=value)
-            | Q(contact_name__icontains=value)
-            | Q(contact_phone__icontains=value)
-            | Q(contact_email__icontains=value)
-            | Q(comments__icontains=value)
-        )
-        try:
-            qs_filter |= Q(asn=int(value.strip()))
-        except ValueError:
-            pass
-        return queryset.filter(qs_filter)
 
 
 class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
@@ -229,9 +224,20 @@ class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "facility_id": "icontains",
+            "serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "comments": "icontains",
+        },
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -298,22 +304,15 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "outer_unit",
         ]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(facility_id__icontains=value)
-            | Q(serial__icontains=value.strip())
-            | Q(asset_tag__icontains=value.strip())
-            | Q(comments__icontains=value)
-        )
-
 
 class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "rack__name": "icontains",
+            "rack__facility_id": "icontains",
+            "user__username": "icontains",
+            "description": "icontains",
+        },
     )
     rack_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Rack.objects.all(),
@@ -359,16 +358,6 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
         model = RackReservation
         fields = ["id", "created"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(rack__name__icontains=value)
-            | Q(rack__facility_id__icontains=value)
-            | Q(user__username__icontains=value)
-            | Q(description__icontains=value)
-        )
-
 
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
@@ -377,9 +366,13 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class DeviceTypeFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "manufacturer__name": "icontains",
+            "model": "icontains",
+            "part_number": "icontains",
+            "comments": "icontains",
+        },
     )
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(),
@@ -432,16 +425,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "is_full_depth",
             "subdevice_role",
         ]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(manufacturer__name__icontains=value)
-            | Q(model__icontains=value)
-            | Q(part_number__icontains=value)
-            | Q(comments__icontains=value)
-        )
 
     def _console_ports(self, queryset, name, value):
         return queryset.exclude(consoleporttemplates__isnull=value)
@@ -546,9 +529,23 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "inventoryitems__serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "comments": "icontains",
+        },
     )
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_type__manufacturer",
@@ -720,17 +717,6 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
             "vc_priority",
         ]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(serial__icontains=value.strip())
-            | Q(inventoryitems__serial__icontains=value.strip())
-            | Q(asset_tag__icontains=value.strip())
-            | Q(comments__icontains=value)
-        ).distinct()
-
     def _has_primary_ip(self, queryset, name, value):
         params = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
         if value:
@@ -743,9 +729,12 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
 
 
 class DeviceComponentFilterSet(CustomFieldModelFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "label": "icontains",
+            "description": "icontains",
+        },
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -782,11 +771,6 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
         label="Device (name)",
     )
     tag = TagFilter()
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(label__icontains=value) | Q(description__icontains=value))
 
 
 class CableTerminationFilterSet(django_filters.FilterSet):
@@ -860,11 +844,8 @@ class InterfaceFilterSet(
     DeviceComponentFilterSet,
     CableTerminationFilterSet,
     PathEndpointFilterSet,
+    StatusModelFilterSetMixin,
 ):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
     # Override device and device_id filters from DeviceComponentFilterSet to match against any peer virtual chassis
     # members
     device = MultiValueCharFilter(
@@ -872,7 +853,7 @@ class InterfaceFilterSet(
         field_name="name",
         label="Device (name)",
     )
-    device_id = MultiValueCharFilter(
+    device_id = MultiValueUUIDFilter(
         method="filter_device_id",
         field_name="pk",
         label="Device (ID)",
@@ -966,9 +947,20 @@ class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
 
 
 class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "part_id": "icontains",
+            "serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "description": "icontains",
+        },
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -1023,23 +1015,14 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         model = InventoryItem
         fields = ["id", "name", "part_id", "asset_tag", "discovered"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = (
-            Q(name__icontains=value)
-            | Q(part_id__icontains=value)
-            | Q(serial__icontains=value)
-            | Q(asset_tag__icontains=value)
-            | Q(description__icontains=value)
-        )
-        return queryset.filter(qs_filter)
-
 
 class VirtualChassisFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "members__name": "icontains",
+            "domain": "icontains",
+        },
     )
     master_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
@@ -1092,38 +1075,24 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         model = VirtualChassis
         fields = ["id", "domain", "name"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = Q(name__icontains=value) | Q(members__name__icontains=value) | Q(domain__icontains=value)
-        return queryset.filter(qs_filter)
-
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
+    q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
-    rack_id = MultiValueCharFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
+    rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
-    site_id = MultiValueCharFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
+    site_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
     site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
-    tenant_id = MultiValueCharFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
+    tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     tag = TagFilter()
 
     class Meta:
         model = Cable
         fields = ["id", "label", "length", "length_unit"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(label__icontains=value)
 
     def filter_device(self, queryset, name, value):
         queryset = queryset.filter(
@@ -1149,7 +1118,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
@@ -1162,7 +1131,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
@@ -1175,7 +1144,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
@@ -1184,10 +1153,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
 
 
 class PowerPanelFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
+    q = SearchFilter(filter_predicates={"name": "icontains"})
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
@@ -1223,20 +1189,11 @@ class PowerPanelFilterSet(NautobotFilterSet):
         model = PowerPanel
         fields = ["id", "name"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = Q(name__icontains=value)
-        return queryset.filter(qs_filter)
-
 
 class PowerFeedFilterSet(
     NautobotFilterSet, CableTerminationFilterSet, PathEndpointFilterSet, StatusModelFilterSetMixin
 ):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
+    q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="power_panel__site__region",
@@ -1285,9 +1242,3 @@ class PowerFeedFilterSet(
             "amperage",
             "max_utilization",
         ]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = Q(name__icontains=value) | Q(comments__icontains=value)
-        return queryset.filter(qs_filter)

@@ -6,7 +6,7 @@ Like most Django applications, Nautobot runs as a [WSGI application](https://en.
 
 Nautobot comes preinstalled with [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) to use as the WSGI server, however other WSGI servers are available and should work similarly well. [Gunicorn](http://gunicorn.org/) is a popular alternative.
 
-Additionally, certain Nautobot features (including Git repository synchronization, Webhooks, Jobs, etc.) depend on the presence of Nautobot's [Celery](https://docs.celeryproject.org/en/stable/) background worker process, which is not automatically started with Nautobot and is run as a separate service.
+Additionally, certain Nautobot features (including Git repository synchronization, Webhooks, Jobs, etc.) depend on the presence of Nautobot's [Celery](https://docs.celeryq.dev/en/stable/) background worker process, which is not automatically started with Nautobot and is run as a separate service.
 
 This document will guide you through setting up uWSGI and establishing Nautobot web and Celery worker services to run on system startup.
 
@@ -214,7 +214,7 @@ WantedBy=multi-user.target
 Prior to migrating, you need to determine whether you have any plugins installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
 
 * Ask your developer or administrator if there are any plugins running background tasks still using the RQ worker
-* If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job` 
+* If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job`
 
 If you're upgrading from Nautobot version 1.0.x and are NOT running plugins that use the RQ worker, all you really need to do are two things.
 
@@ -224,8 +224,8 @@ Next, you must update any custom background tasks that you may have written. If 
 
 To update your custom tasks, you'll need to do the following.
 
-- Replace each import `from django_rq import job` with `from nautobot.core.celery import nautobot_task`
-- Replace each decorator of `@job` with `@nautobot_task`
+* Replace each import `from django_rq import job` with `from nautobot.core.celery import nautobot_task`
+* Replace each decorator of `@job` with `@nautobot_task`
 
 For example:
 
@@ -303,9 +303,10 @@ sudo systemctl enable --now nautobot-rq-worker
 ```
 
 !!! tip
-    If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in addition to the `nautobot-worker` process. 
+    If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in addition to the `nautobot-worker` process.
 
 ### Verify the service
+
 You can use the command `systemctl status nautobot.service` to verify that the WSGI service is running:
 
 ```no-highlight
@@ -338,7 +339,7 @@ Once you've verified that the WSGI service and worker are up and running, move o
 If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI
 configuration and Nautobot's database settings.
 
-- Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
+* Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
 
 For example:
 

@@ -7,9 +7,8 @@ from django.db.models import F
 from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from drf_yasg import openapi
-from drf_yasg.openapi import Parameter
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -65,7 +64,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import count_related
+from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization.models import VirtualMachine
 from . import serializers
 from .exceptions import MissingFilterException
@@ -196,9 +195,9 @@ class RackViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     serializer_class = serializers.RackSerializer
     filterset_class = filters.RackFilterSet
 
-    @swagger_auto_schema(
+    @extend_schema(
         responses={200: serializers.RackUnitSerializer(many=True)},
-        query_serializer=serializers.RackElevationDetailFilterSerializer,
+        parameters=[serializers.RackElevationDetailFilterSerializer],
     )
     @action(detail=True)
     @xframe_options_sameorigin
@@ -383,9 +382,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         "site",
         "rack",
         "parent_bay",
+        "primary_ip4__nat_outside_list",
+        "primary_ip6__nat_outside_list",
         "virtual_chassis__master",
-        "primary_ip4__nat_outside",
-        "primary_ip6__nat_outside",
         "tags",
         "status",
     )
@@ -403,16 +402,16 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         """
 
         request = self.get_serializer_context()["request"]
-        if request.query_params.get("brief", False):
+        if request is not None and request.query_params.get("brief", False):
             return serializers.NestedDeviceSerializer
 
-        elif "config_context" in request.query_params.get("exclude", []):
+        elif request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.DeviceSerializer
 
         return serializers.DeviceWithConfigContextSerializer
 
-    @swagger_auto_schema(
-        manual_parameters=[Parameter(name="method", in_="query", required=True, type=openapi.TYPE_STRING)],
+    @extend_schema(
+        parameters=[OpenApiParameter(name="method", location="query", required=True, type=OpenApiTypes.STR)],
         responses={"200": serializers.DeviceNAPALMSerializer},
     )
     @action(detail=True, url_path="napalm")
@@ -421,8 +420,6 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         Execute a NAPALM method on a Device
         """
         device = get_object_or_404(self.queryset, pk=pk)
-        if not device.primary_ip:
-            raise ServiceUnavailable("This device does not have a primary IP address configured.")
         if device.platform is None:
             raise ServiceUnavailable("No platform is configured for this device.")
         if not device.platform.napalm_driver:
@@ -596,13 +593,36 @@ class PowerOutletViewSet(PathEndpointMixin, CustomFieldModelViewSet):
     brief_prefetch_fields = ["device"]
 
 
-class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet):
+@extend_schema_view(
+    bulk_update=extend_schema(
+        responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
+    ),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
+    ),
+    create=extend_schema(responses={"201": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    list=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]),
+    partial_update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    retrieve=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+)
+class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSetMixin):
     queryset = Interface.objects.prefetch_related(
-        "device", "_path__destination", "cable", "_cable_peer", "ip_addresses", "tags"
+        "device", "status", "_path__destination", "cable", "_cable_peer", "ip_addresses", "tags"
     )
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
     brief_prefetch_fields = ["device"]
+
+    def get_serializer_class(self):
+        serializer_choices = (
+            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion12),
+        )
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )
 
 
 class FrontPortViewSet(PassThroughPortMixin, CustomFieldModelViewSet):
@@ -733,26 +753,26 @@ class ConnectedDeviceViewSet(ViewSet):
     """
 
     permission_classes = [IsAuthenticated]
-    _device_param = Parameter(
+    _device_param = OpenApiParameter(
         name="peer_device",
-        in_="query",
+        location="query",
         description="The name of the peer device",
         required=True,
-        type=openapi.TYPE_STRING,
+        type=OpenApiTypes.STR,
     )
-    _interface_param = Parameter(
+    _interface_param = OpenApiParameter(
         name="peer_interface",
-        in_="query",
+        location="query",
         description="The name of the peer interface",
         required=True,
-        type=openapi.TYPE_STRING,
+        type=OpenApiTypes.STR,
     )
 
     def get_view_name(self):
         return "Connected Device Locator"
 
-    @swagger_auto_schema(
-        manual_parameters=[_device_param, _interface_param],
+    @extend_schema(
+        parameters=[_device_param, _interface_param],
         responses={"200": serializers.DeviceSerializer},
     )
     def list(self, request):

@@ -27,7 +27,7 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import SecretsGroup, Tag
+from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -291,7 +291,6 @@ class SiteForm(NautobotModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
     slug = SlugField()
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Site
@@ -509,7 +508,6 @@ class RackForm(NautobotModelForm, TenancyForm):
     )
     role = DynamicModelChoiceField(queryset=RackRole.objects.all(), required=False)
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Rack
@@ -733,7 +731,6 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
         help_text="Comma-separated list of numeric unit IDs. A range may be specified using a hyphen.",
     )
     user = forms.ModelChoiceField(queryset=get_user_model().objects.order_by("username"), widget=StaticSelect2())
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = RackReservation
@@ -878,7 +875,6 @@ class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
     slug = SlugField(slug_source="model")
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = DeviceType
@@ -928,7 +924,7 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
 class DeviceTypeBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
-    u_height = forms.IntegerField(min_value=1, required=False)
+    u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
 
     class Meta:
@@ -1728,7 +1724,6 @@ class DeviceForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         query_params={"group_id": "$cluster_group"},
     )
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Device
@@ -2147,13 +2142,11 @@ class ComponentCreateForm(ComponentForm):
 
     device = DynamicModelChoiceField(queryset=Device.objects.all())
     description = forms.CharField(max_length=100, required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
 
 class DeviceBulkAddComponentForm(ComponentForm, CustomFieldBulkCreateForm):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=100, required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         nullable_fields = []
@@ -2171,8 +2164,6 @@ class ConsolePortFilterForm(DeviceComponentFilterForm):
 
 
 class ConsolePortForm(NautobotModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = ConsolePort
         fields = [
@@ -2241,8 +2232,6 @@ class ConsoleServerPortFilterForm(DeviceComponentFilterForm):
 
 
 class ConsoleServerPortForm(NautobotModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = ConsoleServerPort
         fields = [
@@ -2311,8 +2300,6 @@ class PowerPortFilterForm(DeviceComponentFilterForm):
 
 
 class PowerPortForm(NautobotModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = PowerPort
         fields = [
@@ -2399,7 +2386,6 @@ class PowerOutletFilterForm(DeviceComponentFilterForm):
 
 class PowerOutletForm(NautobotModelForm):
     power_port = forms.ModelChoiceField(queryset=PowerPort.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = PowerOutlet
@@ -2537,7 +2523,7 @@ class PowerOutletCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class InterfaceFilterForm(DeviceComponentFilterForm):
+class InterfaceFilterForm(DeviceComponentFilterForm, StatusFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -2565,7 +2551,6 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "site_id": "null",
         },
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Interface
@@ -2584,6 +2569,7 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "untagged_vlan",
             "tagged_vlans",
             "tags",
+            "status",
         ]
         widgets = {
             "device": forms.HiddenInput(),
@@ -2623,6 +2609,12 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={
+            "content_types": Interface._meta.label_lower,
+        },
     )
     enabled = forms.BooleanField(required=False, initial=True)
     lag = forms.ModelChoiceField(
@@ -2668,6 +2660,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "device",
         "name_pattern",
         "label_pattern",
+        "status",
         "type",
         "enabled",
         "lag",
@@ -2716,6 +2709,7 @@ class InterfaceBulkEditForm(
     form_from_model(Interface, ["label", "type", "lag", "mac_address", "mtu", "description", "mode"]),
     BootstrapMixin,
     AddRemoveTagsForm,
+    StatusBulkEditFormMixin,
     CustomFieldBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
@@ -2804,7 +2798,7 @@ class InterfaceBulkEditForm(
             self.cleaned_data["tagged_vlans"] = []
 
 
-class InterfaceCSVForm(CustomFieldModelCSVForm):
+class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
     lag = CSVModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2863,8 +2857,6 @@ class FrontPortFilterForm(DeviceComponentFilterForm):
 
 
 class FrontPortForm(NautobotModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = FrontPort
         fields = [
@@ -3030,8 +3022,6 @@ class RearPortFilterForm(DeviceComponentFilterForm):
 
 
 class RearPortForm(NautobotModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = RearPort
         fields = [
@@ -3118,8 +3108,6 @@ class DeviceBayFilterForm(DeviceComponentFilterForm):
 
 
 class DeviceBayForm(NautobotModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = DeviceBay
         fields = [
@@ -3231,7 +3219,6 @@ class InventoryItemForm(NautobotModelForm):
         query_params={"device_id": "$device"},
     )
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = InventoryItem
@@ -3362,7 +3349,6 @@ class ConnectCableToDeviceForm(BootstrapMixin, CustomFieldModelForm):
             "rack_id": "$termination_b_rack",
         },
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Cable
@@ -3482,7 +3468,6 @@ class ConnectCableToCircuitTerminationForm(BootstrapMixin, CustomFieldModelForm)
         disabled_indicator="cable",
         query_params={"circuit_id": "$termination_b_circuit"},
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Cable
@@ -3535,7 +3520,6 @@ class ConnectCableToPowerFeedForm(BootstrapMixin, CustomFieldModelForm):
         disabled_indicator="cable",
         query_params={"power_panel_id": "$termination_b_powerpanel"},
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = Cable
@@ -3558,8 +3542,6 @@ class ConnectCableToPowerFeedForm(BootstrapMixin, CustomFieldModelForm):
 
 
 class CableForm(BootstrapMixin, CustomFieldModelForm):
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
     class Meta:
         model = Cable
         fields = [
@@ -3843,7 +3825,6 @@ class VirtualChassisCreateForm(NautobotModelForm):
         required=False,
         help_text="Position of the first member device. Increases by one for each additional member.",
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VirtualChassis
@@ -3880,7 +3861,6 @@ class VirtualChassisForm(NautobotModelForm):
         queryset=Device.objects.all(),
         required=False,
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = VirtualChassis
@@ -4041,7 +4021,6 @@ class PowerPanelForm(NautobotModelForm):
         required=False,
         query_params={"site_id": "$site"},
     )
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = PowerPanel
@@ -4141,7 +4120,6 @@ class PowerFeedForm(NautobotModelForm):
         query_params={"site_id": "$site"},
     )
     comments = CommentField()
-    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = PowerFeed

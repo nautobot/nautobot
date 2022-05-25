@@ -1,0 +1,18 @@
+# Exclude everything by default
+*
+
+# Un-exclude specific things needed for the Docker build
+!development/nautobot_config.py
+!docker/docker-entrypoint.sh
+!docker/nautobot_config.append.py
+!docker/uwsgi.ini
+!examples
+!nautobot
+!poetry.lock
+!pyproject.toml
+!README.md
+!docs
+!mkdocs.yml
+
+# Add specific exclusions
+**/__pycache__
