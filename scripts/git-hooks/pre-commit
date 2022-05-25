@@ -35,21 +35,15 @@ if [ $? != 0 ]; then
 	EXIT=1
 fi
 
-if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ]; then
-    if [ -x "$(command -v hadolint)" ]; then
-        echo "Checking Dockerfile..."
-        invoke hadolint || EXIT=1
-    fi
+if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ] && [ ! -x "$(command -v hadolint)" ]; then
+    echo "Skipping Dockerfile check: hadolint must be installed to run"
 else
     echo "Checking Dockerfile..."
     invoke hadolint || EXIT=1
 fi
 
-if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ]; then
-    if [ -x "$(command -v markdownlint)" ]; then
-        echo "Checking Markdown files..."
-        invoke markdownlint || EXIT=1
-    fi
+if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ] && [ ! -x "$(command -v markdownlint)" ]; then
+    echo "Skipping Markdownlint check: markdownlint must be installed to run"
 else
     echo "Checking Markdown files..."
     invoke markdownlint || EXIT=1
