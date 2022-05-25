@@ -1581,9 +1581,7 @@ class SecretsGroupListView(generic.ObjectListView):
     filterset = filters.SecretsGroupFilterSet
     filterset_form = forms.SecretsGroupFilterForm
     table = tables.SecretsGroupTable
-    action_buttons = (
-        "add",
-    )
+    action_buttons = ("add",)
 
 
 class SecretsGroupView(generic.ObjectView):
