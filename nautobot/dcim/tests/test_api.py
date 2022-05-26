@@ -1622,7 +1622,7 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
                 "lag",
                 {
                     "device": self.devices[0].pk,
-                    "name": "interface test 2",
+                    "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
                     "lag": self.interfaces[5].id,  # belongs to different device but same vc
                 },
