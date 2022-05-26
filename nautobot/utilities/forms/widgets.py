@@ -163,7 +163,7 @@ class APISelectMultiple(APISelect, forms.SelectMultiple):
 
     def get_context(self, name, value, attrs):
 
-        # This adds None options to DynamicModelMultipleChoiceField selected choices
+        # This adds null options to DynamicModelMultipleChoiceField selected choices
         # example <select ..>
         #           <option .. selected value="null">None</option>
         #           <option .. selected value="1234-455...">Rack 001</option>
