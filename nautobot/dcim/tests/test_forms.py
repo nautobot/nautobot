@@ -351,9 +351,9 @@ class TestInterfaceCSVForm(TestCase):
         self.assertTrue(form.is_valid())
         form.save()
 
-        queryset = Interface.objects.get(name="interface test", device=self.devices[0])
-        self.assertEqual(queryset.parent_interface, self.interfaces[0])
-        self.assertEqual(queryset.bridge, self.interfaces[2])
+        interface = Interface.objects.get(name="interface test", device=self.devices[0])
+        self.assertEqual(interface.parent_interface, self.interfaces[0])
+        self.assertEqual(interface.bridge, self.interfaces[2])
 
         # Assert LAG
         data_2 = {
