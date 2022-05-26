@@ -18,22 +18,13 @@ if [ -d ./venv/ ]; then
 fi
 
 echo "Validating PEP8 compliance..."
-invoke flake8
-if [ $? != 0 ]; then
-	EXIT=1
-fi
+invoke flake8 || EXIT=1
 
 echo "Check that all files conform to Black..."
-invoke black
-if [ $? != 0 ]; then
-    EXIT=1
-fi
+invoke black || EXIT=1
 
 echo "Checking for missing migrations..."
-invoke check-migrations
-if [ $? != 0 ]; then
-	EXIT=1
-fi
+invoke check-migrations || EXIT=1
 
 if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ] && [ ! -x "$(command -v hadolint)" ]; then
     echo "Skipping Dockerfile check: hadolint must be installed to run"
