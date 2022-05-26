@@ -2661,7 +2661,9 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         brief_mode=False,
-        query_params={"available_on_device": "$device"},
+        query_params={
+            "available_on_device": "$device",
+        },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
