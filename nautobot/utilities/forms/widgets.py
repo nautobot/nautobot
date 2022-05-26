@@ -1,4 +1,5 @@
 import json
+from collections.abc import Iterable
 from urllib.parse import urljoin
 
 from django import forms
@@ -159,6 +160,34 @@ class APISelectMultiple(APISelect, forms.SelectMultiple):
         super().__init__(*args, **kwargs)
 
         self.attrs["data-multiple"] = 1
+
+    def get_context(self, name, value, attrs):
+
+        # This adds None options to DynamicModelMultipleChoiceField selected choices
+        # example <select ..>
+        #           <option .. selected value="null">None</option>
+        #           <option .. selected value="1234-455...">Rack 001</option>
+        #           <option .. value="1234-455...">Rack 002</option>
+        #          </select>
+        # Prepend None choice to self.choices if
+        # 1. form field allow null_option e.g. DynamicModelMultipleChoiceField(..., null_option="None"..)
+        # 2. if null is part of url query parameter for name(field_name) i.e. http://.../?rack_id=null
+        # 3. if both value and choices are iterable
+        if (
+            self.attrs.get("data-null-option")
+            and isinstance(value, Iterable)
+            and "null" in value
+            and isinstance(self.choices, Iterable)
+        ):
+            choices = list(self.choices)
+            null_instance = (
+                "null",
+                self.attrs.get("data-null-option"),
+            )
+            choices.insert(0, null_instance)
+            self.choices = choices
+
+        return super().get_context(name, value, attrs)
 
 
 class DatePicker(forms.TextInput):
