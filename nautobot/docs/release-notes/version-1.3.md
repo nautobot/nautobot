@@ -160,6 +160,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1771](https://github.com/nautobot/nautobot/issues/1771) - Fix exception raised for RelationshipAssociation when updating source.
 - [#1772](https://github.com/nautobot/nautobot/issues/1772) - Fix RelationshipAssociationSerializer not triggering model clean method.
 - [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
+- [#1805](https://github.com/nautobot/nautobot/pull/1805) - Fix git pre-commit hook incompatibility with dash shell and add warning on skipped tests.
 
 ### Security
 
