@@ -1615,16 +1615,16 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
                     "device": self.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                    "bridge": self.interfaces[6].id,  # belongs to different device but same vc
+                    "bridge": self.interfaces[6].id,  # does not belong to same device or vc
                 },
             ),
             (
                 "lag",
                 {
                     "device": self.devices[0].pk,
-                    "name": "interface test 2",
+                    "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                    "lag": self.interfaces[5].id,  # belongs to different device but same vc
+                    "lag": self.interfaces[6].id,  # does not belong to same device or vc
                 },
             ),
         ]
