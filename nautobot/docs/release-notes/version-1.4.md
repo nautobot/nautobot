@@ -51,4 +51,6 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 ### Fixed
 
+- [#1815](https://github.com/nautobot/nautobot/issues/1815) - Fix theme link style in footer.
+
 ### Removed
