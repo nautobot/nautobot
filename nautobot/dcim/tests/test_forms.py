@@ -369,9 +369,9 @@ class TestInterfaceCSVForm(TestCase):
         self.assertTrue(form.is_valid())
         form.save()
 
-        queryset = Interface.objects.get(name="interface lagged", device=self.devices[0])
-        self.assertEqual(queryset.lag, self.interfaces[2])
-        self.assertEqual(queryset.bridge, self.interfaces[1])
+        interface = Interface.objects.get(name="interface lagged", device=self.devices[0])
+        self.assertEqual(interface.lag, self.interfaces[2])
+        self.assertEqual(interface.bridge, self.interfaces[1])
 
     def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
         """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
