@@ -169,7 +169,7 @@ class APISelectMultiple(APISelect, forms.SelectMultiple):
         #           <option .. selected value="1234-455...">Rack 001</option>
         #           <option .. value="1234-455...">Rack 002</option>
         #          </select>
-        # Prepend None choice to self.choices if
+        # Prepend null choice to self.choices if
         # 1. form field allow null_option e.g. DynamicModelMultipleChoiceField(..., null_option="None"..)
         # 2. if null is part of url query parameter for name(field_name) i.e. http://.../?rack_id=null
         # 3. if both value and choices are iterable
