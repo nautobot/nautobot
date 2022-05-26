@@ -424,6 +424,7 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
         choices=RackElevationDetailRenderChoices,
         default=RackElevationDetailRenderChoices.RENDER_JSON,
     )
+    host_only = serializers.BooleanField(required=False, default=False)
     unit_width = serializers.IntegerField(required=False)
     unit_height = serializers.IntegerField(required=False)
     legend_width = serializers.IntegerField(default=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT)

@@ -77,6 +77,7 @@ class RackElevationSVG:
 
     def _draw_device_front(self, drawing, device, start, end, text):
         name = str(device).split(".")[0] if settings.UI_RACK_VIEW_TRUNCATE_FQDN else str(device)
+        hostname = str(device).split(".")[0]
         if device.devicebay_count:
             name += " ({}/{})".format(device.get_children().count(), device.devicebay_count)
 
@@ -88,9 +89,16 @@ class RackElevationSVG:
                 fill="black",
             )
         )
+        hex_color = "#{}".format(foreground_color(color))
+        drawing.add(
+            drawing.text(
+                hostname,
+                insert=text,
+                fill=hex_color,
+            )
+        )
         link.set_desc(self._get_device_description(device))
         link.add(drawing.rect(start, end, style="fill: #{}".format(color), class_="slot"))
-        hex_color = "#{}".format(foreground_color(color))
         link.add(drawing.text(str(name), insert=text, fill=hex_color))
 
         # Embed front device type image if one exists

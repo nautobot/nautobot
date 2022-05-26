@@ -469,6 +469,7 @@ class Rack(PrimaryModel, StatusModel):
         legend_width=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
         include_images=True,
         base_url=None,
+        host_only=False,
     ):
         """
         Return an SVG of the rack elevation
