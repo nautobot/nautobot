@@ -2,6 +2,11 @@
 
 While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through the `nbshell`.
 
+## Base Classes
+
+- All FilterSet classes should inherit from either `nautobot.utilities.filters.BaseFilterSet` (for bare-bones models) or `nautobot.extras.filters.NautobotFilterSet` (for models that support both change-logging and custom fields).
+- All Serializer classes should inherit from `ValidatedModelSerializer`.
+
 ## Model Existence in the Database
 
 A common Django pattern is to check whether a model instance's primary key (`pk`) field is set as a proxy for whether the instance has been written to the database or whether it exists only in memory.

@@ -1199,9 +1199,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Check that config context data is included by default in the devices list.
         """
         self.add_permissions("dcim.view_device")
-        url = reverse("dcim-api:device-list") + "?slug=device-with-context-data"
+        url = reverse("dcim-api:device-list")
         response = self.client.get(url, **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["results"][0].get("config_context", {}).get("A"), 1)
 
     def test_config_context_excluded(self):
@@ -1212,6 +1213,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         url = reverse("dcim-api:device-list") + "?exclude=config_context"
         response = self.client.get(url, **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertFalse("config_context" in response.data["results"][0])
 
     def test_unique_name_per_site_constraint(self):

@@ -63,6 +63,7 @@ class TenantFilterSet(NautobotFilterSet):
         fields = ["id", "name", "slug"]
 
 
+# TODO: should be TenancyFilterSetMixin
 class TenancyFilterSet(django_filters.FilterSet):
     """
     An inheritable FilterSet for models which support Tenant assignment.

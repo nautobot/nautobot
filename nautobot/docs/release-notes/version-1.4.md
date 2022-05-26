@@ -25,6 +25,15 @@ Visit the documentation on [REST API versioning](../rest-api/overview/#versionin
 
 ### Changed
 
+#### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
+
+Filtering of object lists in the UI and in the REST API will now report an error if an unknown or unrecognized filter parameter is specified. _This is a behavior change from previous Nautobot releases, in which unknown filter parameters would be silently discarded and ignored._
+
+A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-settings.md#strict_filtering) has been added. It defaults to `True`, enabling strict validation of filter parameters, but can be set to `False` to disable this validation.
+
+!!! warning
+    Setting `STRICT_FILTERING` to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+
 ### Fixed
 
 ### Removed
@@ -37,6 +46,8 @@ Visit the documentation on [REST API versioning](../rest-api/overview/#versionin
 - [#984](https://github.com/nautobot/nautobot/issues/984) - Added status field to Interface, VMInterface models.
 
 ### Changed
+
+- [#1736](https://github.com/nautobot/nautobot/issues/1736) - `STRICT_FILTERING` setting is added and enabled by default.
 
 ### Fixed
 

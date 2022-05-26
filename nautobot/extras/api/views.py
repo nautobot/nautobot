@@ -16,6 +16,7 @@ from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
+from nautobot.core.api.filter_backends import NautobotFilterBackend
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
@@ -95,12 +96,30 @@ class ComputedFieldViewSet(ModelViewSet):
 #
 
 
+class ConfigContextFilterBackend(NautobotFilterBackend):
+    """
+    Used by views that work with config context models (device and virtual machine).
+
+    Recognizes that "exclude" is not a filterset parameter but rather a view parameter (see ConfigContextQuerySetMixin)
+    """
+
+    def get_filterset_kwargs(self, request, queryset, view):
+        kwargs = super().get_filterset_kwargs(request, queryset, view)
+        try:
+            kwargs["data"].pop("exclude")
+        except KeyError:
+            pass
+        return kwargs
+
+
 class ConfigContextQuerySetMixin:
     """
     Used by views that work with config context models (device and virtual machine).
     Provides a get_queryset() method which deals with adding the config context
     data annotation or not.
     """
+
+    filter_backends = [ConfigContextFilterBackend]
 
     def get_queryset(self):
         """

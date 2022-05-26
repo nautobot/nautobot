@@ -88,6 +88,7 @@ __all__ = (
 #
 
 
+# TODO: should be CreatedUpdatedFilterSetMixin.
 class CreatedUpdatedFilterSet(django_filters.FilterSet):
     created = django_filters.DateFilter()
     created__gte = django_filters.DateFilter(field_name="created", lookup_expr="gte")
@@ -105,11 +106,12 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
 class ComputedFieldFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
-            "target_url": "icontains",
-            "text": "icontains",
+            "label": "icontains",
+            "description": "icontains",
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
+            "template": "icontains",
+            "fallback_value": "icontains",
         },
     )
     content_type = ContentTypeFilter()
@@ -273,7 +275,7 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
 #
 
 
-class ContentTypeFilterSet(django_filters.FilterSet):
+class ContentTypeFilterSet(BaseFilterSet):
     class Meta:
         model = ContentType
         fields = ["id", "app_label", "model"]
@@ -328,6 +330,7 @@ class CustomFieldFilter(django_filters.Filter):
         return super().filter(qs, value)
 
 
+# TODO: should be CustomFieldModelFilterSetMixin
 class CustomFieldModelFilterSet(django_filters.FilterSet):
     """
     Dynamically add a Filter for each CustomField applicable to the parent model.
@@ -651,6 +654,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
 #
 
 
+# TODO: should be LocalContextFilterSetMixin
 class LocalContextFilterSet(django_filters.FilterSet):
     local_context_data = django_filters.BooleanFilter(
         method="_local_context_data",
@@ -719,7 +723,7 @@ class RelationshipFilterSet(BaseFilterSet):
 
     class Meta:
         model = Relationship
-        fields = ["id", "name", "type", "source_type", "destination_type"]
+        fields = ["id", "name", "slug", "type", "source_type", "destination_type"]
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):

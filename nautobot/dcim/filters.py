@@ -448,6 +448,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         return queryset.exclude(devicebaytemplates__isnull=value)
 
 
+# TODO: should be DeviceTypeComponentFilterSetMixin
 class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilterSet):
     devicetype_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
@@ -728,6 +729,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 
 
+# TODO: should be DeviceComponentFilterSetMixin
 class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     q = SearchFilter(
         filter_predicates={
@@ -773,10 +775,12 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     tag = TagFilter()
 
 
+# TODO: should be CableTerminationFilterSetMixin
 class CableTerminationFilterSet(django_filters.FilterSet):
     cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
 
 
+# TODO: should be PathEndpointFilterSetMixin
 class PathEndpointFilterSet(django_filters.FilterSet):
     connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
 
@@ -1101,6 +1105,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         return queryset
 
 
+# TODO: should be ConnectionFilterSetMixin
 class ConnectionFilterSet:
     def filter_site(self, queryset, name, value):
         if not value.strip():
