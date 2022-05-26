@@ -80,6 +80,7 @@ from .constants import (
     CABLE_TERMINATION_MODELS,
     INTERFACE_MTU_MAX,
     INTERFACE_MTU_MIN,
+    NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
@@ -2863,7 +2864,11 @@ class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
                 if device and device.virtual_chassis:
                     filter_by |= Q(device__virtual_chassis=device.virtual_chassis)
 
-                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.filter(filter_by)
+                self.fields["parent_interface"].queryset = (
+                    self.fields["parent_interface"]
+                    .queryset.filter(Q(filter_by))
+                    .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+                )
                 self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(filter_by)
 
                 filter_by &= Q(type=InterfaceTypeChoices.TYPE_LAG)

@@ -611,6 +611,7 @@ class InterfaceViewSet(PathEndpointMixin, CustomFieldModelViewSet, StatusViewSet
         "device",
         "parent_interface",
         "bridge",
+        "lag",
         "status",
         "_path__destination",
         "cable",
