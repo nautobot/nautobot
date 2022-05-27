@@ -46,3 +46,41 @@ Site.objects.filter(
 ### Creating and Modifying Objects
 
 The same sort of logic is in play when a user attempts to create or modify an object in Nautobot, with a twist. Once validation has completed, Nautobot starts an atomic database transaction to facilitate the change, and the object is created or saved normally. Next, still within the transaction, Nautobot issues a second query to retrieve the newly created/updated object, filtering the restricted queryset with the object's primary key. If this query fails to return the object, Nautobot knows that the new revision does not match the constraints imposed by the permission. The transaction is then rolled back, leaving the database in its original state prior to the change, and the user is informed of the violation.
+
+## Assigning Permissions
+
+Permissions can be applied directly to users or to groups of users.
+
+### Permissions Assigned to Individual Users
+
+Permissions can be related directly to users from the Admin UI or the API:
+
+| -                                                           | Admin UI | API |
+| ----------------------------------------------------------- | -------- | --- |
+| Superusers                                                  | Yes      | Yes |
+| Users with permission to add or change `users | permission` | No       | Yes |
+
+!!! info
+
+    User permission relationships can be managed in the Admin UI by modifying the user or the permission.
+
+!!! warning
+
+    Granting a user permission to add or change `users | permission` gives the user the ability to modify their own permissions. This permission should be restricted to trusted accounts and should be considered the same as giving a user full access.
+
+### Group Creation
+
+Groups can be created to provide role-based access control and simplify user permissions management. Permissions related to groups will apply to all users in the group. Groups can be created from the Admin UI or the API:
+
+| -                                                           | Admin UI | API |
+| ----------------------------------------------------------- | -------- | --- |
+| Superusers                                                  | Yes      | Yes |
+| Users with permission to add or change `auth | group`       | No       | Yes |
+
+!!! info
+
+    Group permission relationships can be managed in the Admin UI by modifying the group or the permission.
+
+### Group Assignment
+
+Users can be added to groups through the Admin UI by superusers or automatically assigned to externally authenticated users through the [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings/#external_auth_default_groups) setting.
