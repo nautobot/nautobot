@@ -2,7 +2,7 @@
 
 The exercises in the prior sections in this *Getting Started Guide* walked you through how to **navigate** to the proper objects.
 
-You can also use the Search Bar to find the desired object.
+You can also use the Search Bar to find desired objects with either partial or complete alpha/numeric characters or exact UUID.
 
 We will show two quick examples.
 

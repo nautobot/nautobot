@@ -1,6 +1,5 @@
 from django.db.models import Aggregate, JSONField
 
-from django.contrib.postgres.aggregates.mixins import OrderableAggMixin
 from django.db import NotSupportedError
 from django.db.models import Func
 
@@ -30,10 +29,18 @@ class CollateAsChar(Func):
 
 
 class JSONBAgg(Aggregate):
+    """
+    Like django.contrib.postgres.aggregates.JSONBAgg, but different.
+
+    1. Supports both Postgres (JSONB_AGG) and MySQL (JSON_ARRAYAGG)
+    2. Does not support `ordering` as JSON_ARRAYAGG does not guarantee ordering.
+    """
+
     function = None
     output_field = JSONField()
+    # TODO: Django's JSONBAgg has `allow_distinct=True`, we might want to think about adding that at some point?
 
-    # Borrowed from `django.contrib.postrgres.aggregates.JSONBagg`.
+    # Borrowed from `django.contrib.postgres.aggregates.JSONBagg`.
     def convert_value(self, value, expression, connection):
         if not value:
             return "[]"
@@ -60,16 +67,6 @@ class EmptyGroupByJSONBAgg(JSONBAgg):
     JSONBAgg is a builtin aggregation function which means it includes the use of a GROUP BY clause.
     When used as an annotation for collecting config context data objects, the GROUP BY is
     incorrect. This subclass overrides the Django ORM aggregation control to remove the GROUP BY.
-
-    TODO in Django 3.2 ordering is supported natively on JSONBAgg so we only need to inherit from JSONBAgg.
     """
 
     contains_aggregate = False
-
-
-class OrderableJSONBAgg(OrderableAggMixin, JSONBAgg):
-    """
-    TODO in Django 3.2 ordering is supported natively on JSONBAgg so this is no longer needed.
-    """
-
-    template = "%(function)s(%(distinct)s%(expressions)s %(ordering)s)"

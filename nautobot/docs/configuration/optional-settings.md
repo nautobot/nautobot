@@ -156,6 +156,20 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ---
 
+## BRANDING_PREPENDED_FILENAME
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
+
+Default: `"nautobot_"`
+
+Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
+
+Defines the prefix of the filename when exporting to CSV/YAML or export templates.
+
+---
+
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
@@ -815,6 +829,25 @@ This parameter defines the URL of the repository that will be checked periodical
 
 ---
 
+## SANITIZER_PATTERNS
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.3.4_
+<!-- markdownlint-enable MD036 -->
+
+Default:
+
+```python
+[
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
+```
+
+List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+
+---
+
 ## SESSION_COOKIE_AGE
 
 Default: `1209600` (2 weeks, in seconds)
@@ -879,6 +912,25 @@ Default: `{}` (Empty dictionary)
 A dictionary of configuration parameters for the storage backend configured as [`STORAGE_BACKEND`](#storage_backend). The specific parameters to be used here are specific to each backend; see the [`django-storages` documentation](https://django-storages.readthedocs.io/en/stable/) for more detail.
 
 If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ignored.
+
+---
+
+## STRICT_FILTERING
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.4.0_
+<!-- markdownlint-enable MD036 -->
+
+Default: `True`
+
+Environment Variable: `NAUTOBOT_STRICT_FILTERING`
+
+If set to `True` (default), UI and REST API filtering of object lists will fail if an unknown/unrecognized filter parameter is provided as a URL parameter. (For example, `/dcim/devices/?ice_cream_flavor=chocolate` or `/api/dcim/sites/?ice_cream_flavor=chocolate`). UI list (table) views will report an error message in this case and display no filtered objects; REST API list endpoints will return a 400 Bad Request response with an explanatory error message.
+
+If set to `False`, unknown/unrecognized filter parameters will be discarded and ignored, although Nautobot will log a warning message.
+
+!!! warning
+    Setting this to `False` can result in unexpected filtering results in the case of user error, for example `/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
 
 ---
 

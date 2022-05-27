@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -102,6 +103,13 @@ SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 # Nautobot related - May be overridden if using custom social auth backend
 SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 
+# Job log entry sanitization and similar
+SANITIZER_PATTERNS = [
+    # General removal of username-like and password-like tokens
+    (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
+    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+]
+
 # Storage
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
@@ -134,6 +142,7 @@ PROMETHEUS_EXPORT_MIGRATIONS = False
 FILTERS_NULL_CHOICE_LABEL = "None"
 FILTERS_NULL_CHOICE_VALUE = "null"
 
+STRICT_FILTERING = True
 
 #
 # Django REST framework (API)
@@ -153,7 +162,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
-    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
@@ -212,6 +221,9 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
+        # Because Interface and VMInterface have the same set of default statuses, we get the error:
+        #   enum naming encountered a non-optimally resolvable collision for fields named "status"
+        "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
     },
 }
 
@@ -653,6 +665,9 @@ BRANDING_FILEPATHS = {
 
 # Title to use in place of "Nautobot"
 BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
+
+# Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
+BRANDING_PREPENDED_FILENAME = os.getenv("NAUTOBOT_BRANDING_PREPENDED_FILENAME", "nautobot_")
 
 # Branding URLs (links in the bottom right of the footer)
 BRANDING_URLS = {

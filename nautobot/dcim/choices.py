@@ -909,6 +909,31 @@ class InterfaceModeChoices(ChoiceSet):
     )
 
 
+class InterfaceStatusChoices(ChoiceSet):
+
+    STATUS_PLANNED = "planned"
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONING = "decommissioning"
+    STATUS_FAILED = "failed"
+    STATUS_MAINTENANCE = "maintenance"
+
+    CHOICES = (
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+        (STATUS_MAINTENANCE, "Maintenance"),
+    )
+
+    CSS_CLASSES = {
+        STATUS_PLANNED: "info",
+        STATUS_FAILED: "danger",
+        STATUS_ACTIVE: "success",
+        STATUS_DECOMMISSIONING: "warning",
+        STATUS_MAINTENANCE: "default",
+    }
+
+
 #
 # FrontPorts/RearPorts
 #

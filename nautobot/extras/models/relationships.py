@@ -448,7 +448,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
             error_messages = []
             if filterset.errors:
                 for key in filterset.errors:
-                    error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
+                    # When settings.STRICT_FILTERING is True, any extraneous filter parameters will result in
+                    # filterset.errors[key] = ["Unknown filter field"]
+                    # This is redundant with our custom (more specific) error message added below from filterset_params
+                    # So discard such a message if present.
+                    errors_list = [error for error in filterset.errors[key] if "Unknown filter field" not in str(error)]
+                    if errors_list:
+                        error_messages.append(f"'{key}': " + ", ".join(errors_list))
 
             filterset_params = set(filterset.filters.keys())
             for key in filter.keys():
@@ -614,11 +620,15 @@ class RelationshipAssociation(BaseModel):
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         ):
             # Either one-to-many or one-to-one, in either case don't allow multiple sources to the same destination
-            if RelationshipAssociation.objects.filter(
-                relationship=self.relationship,
-                destination_type=self.destination_type,
-                destination_id=self.destination_id,
-            ).exists():
+            if (
+                RelationshipAssociation.objects.filter(
+                    relationship=self.relationship,
+                    destination_type=self.destination_type,
+                    destination_id=self.destination_id,
+                )
+                .exclude(pk=self.pk)
+                .exists()
+            ):
                 raise ValidationError(
                     {
                         "destination": (
@@ -633,11 +643,15 @@ class RelationshipAssociation(BaseModel):
                 RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
             ):
                 # Don't allow multiple destinations from the same source
-                if RelationshipAssociation.objects.filter(
-                    relationship=self.relationship,
-                    source_type=self.source_type,
-                    source_id=self.source_id,
-                ).exists():
+                if (
+                    RelationshipAssociation.objects.filter(
+                        relationship=self.relationship,
+                        source_type=self.source_type,
+                        source_id=self.source_id,
+                    )
+                    .exclude(pk=self.pk)
+                    .exists()
+                ):
                     raise ValidationError(
                         {
                             "source": (

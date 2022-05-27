@@ -1,10 +1,9 @@
-from django.test import TestCase
-
 from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.testing import FilterTestCases
 
 
-class TenantGroupTestCase(TestCase):
+class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = TenantGroup.objects.all()
     filterset = TenantGroupFilterSet
 
@@ -36,18 +35,6 @@ class TenantGroupTestCase(TestCase):
             description="C",
         ),
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Tenant Group 1", "Tenant Group 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["tenant-group-1", "tenant-group-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -60,7 +47,7 @@ class TenantGroupTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class TenantTestCase(TestCase):
+class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tenant.objects.all()
     filterset = TenantFilterSet
 
@@ -77,21 +64,14 @@ class TenantTestCase(TestCase):
         Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1])
         Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2])
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Tenant 1", "Tenant 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["tenant-1", "tenant-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_group(self):
         group = TenantGroup.objects.all()[:2]
         params = {"group_id": [group[0].pk, group[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"group": [group[0].slug, group[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

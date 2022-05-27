@@ -323,6 +323,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 class RackRoleListView(generic.ObjectListView):
     queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
+    filterset = filters.RackRoleFilterSet
     table = tables.RackRoleTable
 
 
@@ -392,10 +393,24 @@ class RackElevationListView(generic.ObjectListView):
     """
 
     queryset = Rack.objects.prefetch_related("role")
+    non_filter_params = (
+        *generic.ObjectListView.non_filter_params,
+        "face",  # render front or rear of racks?
+        "reverse",  # control of ordering
+    )
 
     def get(self, request):
+        filter_params = self.get_filter_params(request)
+        filterset = filters.RackFilterSet(filter_params, self.queryset)
+        if filterset.is_valid():
+            racks = filterset.qs
+        else:
+            messages.error(
+                request,
+                mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+            )
+            racks = filterset.qs.none()
 
-        racks = filters.RackFilterSet(request.GET, self.queryset).qs
         total_count = racks.count()
 
         # Determine ordering
@@ -428,7 +443,7 @@ class RackElevationListView(generic.ObjectListView):
                 "total_count": total_count,
                 "reverse": reverse,
                 "rack_face": rack_face,
-                "filter_form": forms.RackElevationFilterForm(request.GET),
+                "filter_form": forms.RackElevationFilterForm(filter_params),
             },
         )
 
@@ -570,6 +585,7 @@ class ManufacturerListView(generic.ObjectListView):
         inventoryitem_count=count_related(InventoryItem, "manufacturer"),
         platform_count=count_related(Platform, "manufacturer"),
     )
+    filterset = filters.ManufacturerFilterSet
     table = tables.ManufacturerTable
 
 
@@ -1047,6 +1063,7 @@ class DeviceRoleListView(generic.ObjectListView):
         device_count=count_related(Device, "device_role"),
         vm_count=count_related(VirtualMachine, "role"),
     )
+    filterset = filters.DeviceRoleFilterSet
     table = tables.DeviceRoleTable
 
 
@@ -1106,6 +1123,7 @@ class PlatformListView(generic.ObjectListView):
         device_count=count_related(Device, "platform"),
         vm_count=count_related(VirtualMachine, "platform"),
     )
+    filterset = filters.PlatformFilterSet
     table = tables.PlatformTable
 
 
@@ -2549,6 +2567,8 @@ class InterfaceConnectionsListView(ConnectionsListView):
             # used for reverse querying.
             # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
             # we fix it up to be consistently (A, B) in queryset_to_csv_body_data().
+            # TODO: this is very problematic when filtering the view via FilterSet - if the filterset matches (A), then
+            #       the connection will appear in the table, but if it only matches (B) then the connection will not!
             _path__destination_type=ContentType.objects.get_for_model(Interface),
             pk__lt=F("_path__destination_id"),
         )

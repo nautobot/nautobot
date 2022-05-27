@@ -140,7 +140,45 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.3 (2022-MM-DD)
+## v1.3.5 (2022-MM-DD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- [#895](https://github.com/nautobot/nautobot/issues/895) - Fixed validation when creating `Interface` and `VMInterface` objects via the REST API while specifying `untagged_vlan` without `mode` also set in the payload. A 400 error will now be raised as expected.
+- [#1289](https://github.com/nautobot/nautobot/issues/1289) - Fixed issue where job result live pagination would reset to page 1 on refresh. The currently selected page will now persist until the job run completes.
+- [#1771](https://github.com/nautobot/nautobot/issues/1771) - Fix exception raised for RelationshipAssociation when updating source.
+- [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
+
+## v1.3.4 (2022-05-16)
+
+### Added
+
+- [#1766](https://github.com/nautobot/nautobot/pull/1766) - Added configuration for downloaded filename branding.
+- [#1752](https://github.com/nautobot/nautobot/pull/1752) - Added a new `SearchFilter` that is now used on all core filtersets to provide the `q=` search parameter for basic searching in list view of objects.
+
+### Changed
+
+- [#1744](https://github.com/nautobot/nautobot/issues/1744) - Updated REST API token provisioning docs to include added in version.
+- [#1751](https://github.com/nautobot/nautobot/pull/1751) - Updated secrets documentation advisory notes.
+
+### Fixed
+
+- [#1263](https://github.com/nautobot/nautobot/issues/1263) - Rack device image toggle added back to detail UI.
+- [#1449](https://github.com/nautobot/nautobot/issues/1449) - Fixed a performance bug in `/api/dcim/devices/` and `/api/virtualization/virtual-machines/` relating to configuration contexts.
+- [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
+- [#1712](https://github.com/nautobot/nautobot/issues/1712) - Fixed circuit termination detail view getting 500 response when it's a provider network.
+- [#1755](https://github.com/nautobot/nautobot/issues/1755) - Fixed "Select All" helper widget from taking full UI height.
+- [#1761](https://github.com/nautobot/nautobot/pull/1761) - Fixed typo in upgrading documentation.
+
+### Security
+
+- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../configuration/optional-settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
+
+## v1.3.3 (2022-05-02)
 
 ### Added
 
@@ -149,6 +187,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#1481](https://github.com/nautobot/nautobot/issues/1481) - Docs link in footer now opens link to bundled documentation instead of Read the Docs.
 - [#1680](https://github.com/nautobot/nautobot/pull/1680) - Bump netutils dependency to 1.1.0.
 - [#1700](https://github.com/nautobot/nautobot/pull/1700) - Revert vendoring `drf-spectacular`.
 

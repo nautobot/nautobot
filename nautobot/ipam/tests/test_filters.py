@@ -1,7 +1,6 @@
 from unittest import skipIf
 
 import netaddr
-from django.test import TestCase
 from django.db import connection
 
 
@@ -28,8 +27,6 @@ from nautobot.ipam.filters import (
     VLANGroupFilterSet,
     VRFFilterSet,
 )
-
-
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
@@ -42,16 +39,17 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.testing import TestCase, FilterTestCases
 from nautobot.virtualization.models import (
     Cluster,
     ClusterType,
     VirtualMachine,
     VMInterface,
 )
-from nautobot.tenancy.models import Tenant, TenantGroup
 
 
-class VRFTestCase(TestCase):
+class VRFTestCase(FilterTestCases.FilterTestCase):
     queryset = VRF.objects.all()
     filterset = VRFFilterSet
 
@@ -90,10 +88,6 @@ class VRFTestCase(TestCase):
         vrfs[1].export_targets.add(route_targets[1])
         vrfs[2].import_targets.add(route_targets[2])
         vrfs[2].export_targets.add(route_targets[2])
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
         params = {"name": ["VRF 1", "VRF 2"]}
@@ -137,8 +131,13 @@ class VRFTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
-class RouteTargetTestCase(TestCase):
+
+class RouteTargetTestCase(FilterTestCases.FilterTestCase):
     queryset = RouteTarget.objects.all()
     filterset = RouteTargetFilterSet
 
@@ -182,10 +181,6 @@ class RouteTargetTestCase(TestCase):
         vrfs[1].import_targets.add(route_targets[4], route_targets[5])
         vrfs[1].export_targets.add(route_targets[6], route_targets[7])
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["65000:1001", "65000:1002", "65000:1003"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
@@ -218,8 +213,13 @@ class RouteTargetTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 8)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
-class RIRTestCase(TestCase):
+
+class RIRTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = RIR.objects.all()
     filterset = RIRFilterSet
 
@@ -233,18 +233,6 @@ class RIRTestCase(TestCase):
         RIR.objects.create(name="RIR 5", slug="rir-5", is_private=True, description="E"),
         RIR.objects.create(name="RIR 6", slug="rir-6", is_private=True, description="F"),
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["RIR 1", "RIR 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["rir-1", "rir-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -256,7 +244,7 @@ class RIRTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
-class AggregateTestCase(TestCase):
+class AggregateTestCase(FilterTestCases.FilterTestCase):
     queryset = Aggregate.objects.all()
     filterset = AggregateFilterSet
 
@@ -331,10 +319,6 @@ class AggregateTestCase(TestCase):
             params = {"q": value}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_family(self):
         params = {"family": "4"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
@@ -370,7 +354,7 @@ class AggregateTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
-class RoleTestCase(TestCase):
+class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Role.objects.all()
     filterset = RoleFilterSet
 
@@ -381,20 +365,8 @@ class RoleTestCase(TestCase):
         Role.objects.create(name="Role 2", slug="role-2"),
         Role.objects.create(name="Role 3", slug="role-3"),
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_name(self):
-        params = {"name": ["Role 1", "Role 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["role-1", "role-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-
-class PrefixTestCase(TestCase):
+class PrefixTestCase(FilterTestCases.FilterTestCase):
     queryset = Prefix.objects.all()
     filterset = PrefixFilterSet
 
@@ -544,10 +516,6 @@ class PrefixTestCase(TestCase):
             params = {"q": value}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_family(self):
         params = {"family": "6"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
@@ -639,7 +607,7 @@ class PrefixTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
-class IPAddressTestCase(TestCase):
+class IPAddressTestCase(FilterTestCases.FilterTestCase):
     queryset = IPAddress.objects.all()
     filterset = IPAddressFilterSet
 
@@ -830,10 +798,6 @@ class IPAddressTestCase(TestCase):
             params = {"q": term}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_family(self):
         params = {"family": "6"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
@@ -931,7 +895,7 @@ class IPAddressTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
-class VLANGroupTestCase(TestCase):
+class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = VLANGroup.objects.all()
     filterset = VLANGroupFilterSet
 
@@ -955,18 +919,6 @@ class VLANGroupTestCase(TestCase):
         VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=sites[2], description="C"),
         VLANGroup.objects.create(name="VLAN Group 4", slug="vlan-group-4", site=None),
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["VLAN Group 1", "VLAN Group 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["vlan-group-1", "vlan-group-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -986,7 +938,7 @@ class VLANGroupTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class VLANTestCase(TestCase):
+class VLANTestCase(FilterTestCases.FilterTestCase):
     queryset = VLAN.objects.all()
     filterset = VLANFilterSet
 
@@ -1087,10 +1039,6 @@ class VLANTestCase(TestCase):
             status=status_map["reserved"],
         )
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["VLAN 101", "VLAN 102"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -1145,8 +1093,13 @@ class VLANTestCase(TestCase):
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
-class ServiceTestCase(TestCase):
+
+class ServiceTestCase(FilterTestCases.FilterTestCase):
     queryset = Service.objects.all()
     filterset = ServiceFilterSet
 
@@ -1225,10 +1178,6 @@ class ServiceTestCase(TestCase):
             ports=[2003],
         ),
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:3]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
     def test_name(self):
         params = {"name": ["Service 1", "Service 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -1254,6 +1203,11 @@ class ServiceTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"virtual_machine": [vms[0].name, vms[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class IPAddressFilterTestCase(TestCase):

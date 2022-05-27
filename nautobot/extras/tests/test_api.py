@@ -207,12 +207,24 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(rendered_context["bar"], 456)
         self.assertEqual(rendered_context["baz"], 789)
 
+        # Test API response as well
+        self.add_permissions("dcim.view_device")
+        device_url = reverse("dcim-api:device-detail", kwargs={"pk": device.pk})
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"], {"foo": 123, "bar": 456, "baz": 789}, response.data)
+
         # Add another context specific to the site
         configcontext4 = ConfigContext(name="Config Context 4", data={"site_data": "ABC"})
         configcontext4.save()
         configcontext4.sites.add(site)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["site_data"], "ABC")
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"]["site_data"], "ABC", response.data["config_context"])
 
         # Override one of the default contexts
         configcontext5 = ConfigContext(name="Config Context 5", weight=2000, data={"foo": 999})
@@ -220,6 +232,10 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext5.sites.add(site)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["foo"], 999)
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"]["foo"], 999, response.data["config_context"])
 
         # Add a context which does NOT match our device and ensure it does not apply
         site2 = Site.objects.create(name="Site 2", slug="site-2")
@@ -228,6 +244,10 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext6.sites.add(site2)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["bar"], 456)
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"]["bar"], 456, response.data["config_context"])
 
     def test_schema_validation_pass(self):
         """
@@ -359,6 +379,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
@@ -367,6 +388,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
 
@@ -375,6 +397,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
@@ -383,6 +406,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
@@ -391,6 +415,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
 
@@ -399,6 +424,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
