@@ -155,13 +155,6 @@ class APISelect(SelectWithDisabled):
 
         self.attrs[key] = json.dumps(values, ensure_ascii=False)
 
-
-class APISelectMultiple(APISelect, forms.SelectMultiple):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.attrs["data-multiple"] = 1
-
     def get_context(self, name, value, attrs):
 
         # This adds null options to DynamicModelMultipleChoiceField selected choices
@@ -198,6 +191,13 @@ class APISelectMultiple(APISelect, forms.SelectMultiple):
             self.choices = choices
 
         return super().get_context(name, value, attrs)
+
+
+class APISelectMultiple(APISelect, forms.SelectMultiple):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.attrs["data-multiple"] = 1
 
 
 class DatePicker(forms.TextInput):
