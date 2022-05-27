@@ -426,13 +426,13 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
         choices=RackElevationDetailRenderChoices,
         default=RackElevationDetailRenderChoices.RENDER_JSON,
     )
-    host_only = serializers.BooleanField(required=False, default=False)
     unit_width = serializers.IntegerField(required=False)
     unit_height = serializers.IntegerField(required=False)
     legend_width = serializers.IntegerField(default=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT)
     exclude = serializers.UUIDField(required=False, default=None)
     expand_devices = serializers.BooleanField(required=False, default=True)
     include_images = serializers.BooleanField(required=False, default=True)
+    display_fullname = serializers.BooleanField(required=False, default=True)
 
     def validate(self, attrs):
         attrs.setdefault("unit_width", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH"))
