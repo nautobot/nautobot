@@ -169,7 +169,7 @@ class APISelect(SelectWithDisabled):
         # 3. if both value and choices are iterable
         if (
             self.attrs.get("data-null-option")
-            and isinstance(value, Iterable)
+            and isinstance(value, (list, tuple))
             and "null" in value
             and isinstance(self.choices, Iterable)
         ):
