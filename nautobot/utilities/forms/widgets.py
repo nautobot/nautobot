@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from urllib.parse import urljoin
 
 from django import forms
+from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
 
 from nautobot.utilities.choices import ColorChoices
@@ -179,12 +180,21 @@ class APISelectMultiple(APISelect, forms.SelectMultiple):
             and "null" in value
             and isinstance(self.choices, Iterable)
         ):
-            choices = list(self.choices)
-            null_instance = (
-                "null",
-                self.attrs.get("data-null-option"),
-            )
-            choices.insert(0, null_instance)
+
+            class ModelChoiceIteratorWithNullOption(ModelChoiceIterator):
+                def __init__(self, *args, **kwargs):
+                    self.null_options = kwargs.pop("null_option", None)
+                    super().__init__(*args, **kwargs)
+
+                def __iter__(self):
+                    # ModelChoiceIterator.__iter__() yields a tuple of (value, label)
+                    # using this approach first yield a tuple of (null(value), null_option(label))
+                    yield "null", self.null_options
+                    for item in super().__iter__():
+                        yield item
+
+            null_option = self.attrs.get("data-null-option")
+            choices = ModelChoiceIteratorWithNullOption(field=self.choices.field, null_option=null_option)
             self.choices = choices
 
         return super().get_context(name, value, attrs)
