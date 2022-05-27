@@ -140,14 +140,17 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.5 (2022-MM-DD)
+## v1.3.5 (2022-05-30)
 
 ### Added
 
 - [#1606](https://github.com/nautobot/nautobot/issues/1606) - Added best practices for working with FilterSet classes to developer documentation.
 - [#1796](https://github.com/nautobot/nautobot/issues/1796) - Added documentation for using Git Repositories behind/via proxies.
+- [#1811](https://github.com/nautobot/nautobot/pull/1811) - Added developer Docker container for running mkdocs instead of locally.
 
 ### Changed
+
+- [#1818](https://github.com/nautobot/nautobot/pull/1818) - Changed README.md to link to correct build status workflows.
 
 ### Fixed
 
