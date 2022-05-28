@@ -690,5 +690,7 @@ SHELL_PLUS_DONT_LOAD = ["taggit"]
 # UI settings
 #
 
+
 # UI_RACK_VIEW_TRUNCATE_FUNCTION
-UI_RACK_VIEW_TRUNCATE_FUNCTION = lambda n : str(n).split(".")[0]
+def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
+    return str(device_display_name).split(".")[0]

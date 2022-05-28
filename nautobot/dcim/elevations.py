@@ -95,8 +95,22 @@ class RackElevationSVG:
         link.set_desc(self._get_device_description(device))
         link.add(drawing.rect(start, end, style="fill: #{}".format(color), class_="slot"))
         hex_color = "#{}".format(foreground_color(color))
-        link.add(drawing.text(device_fullname, insert=text, class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}"))
-        link.add(drawing.text(device_shortname, insert=text, class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}"))
+        link.add(
+            drawing.text(
+                device_fullname,
+                insert=text,
+                fill=hex_color,
+                class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}",
+            )
+        )
+        link.add(
+            drawing.text(
+                device_shortname,
+                insert=text,
+                fill=hex_color,
+                class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
+            )
+        )
 
         # Embed front device type image if one exists
         if self.include_images and device.device_type.front_image:
@@ -117,8 +131,18 @@ class RackElevationSVG:
         device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device))
 
         drawing.add(rect)
-        drawing.add(drawing.text(device_fullname, insert=text, class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}"))
-        drawing.add(drawing.text(device_shortname, insert=text, class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}"))
+        drawing.add(
+            drawing.text(
+                device_fullname, insert=text, class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}"
+            )
+        )
+        drawing.add(
+            drawing.text(
+                device_shortname,
+                insert=text,
+                class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
+            )
+        )
 
         # Embed rear device type image if one exists
         if self.include_images and device.device_type.rear_image:
