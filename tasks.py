@@ -385,7 +385,7 @@ def post_upgrade(context):
 @task(help={"format": "Output serialization format for dumped data. (Choices: json, xml, yaml)"})
 def dumpdata(context, format="json"):
     """Dump data from database to db_output file."""
-    command = f"nautobot-server dumpdata --exclude extras.job --indent 4 --output db_output.{format} --format {format}"
+    command = f"nautobot-server dumpdata --exclude django_rq --indent 4 --output db_output.{format} --format {format}"
     run_command(context, command)
 
 

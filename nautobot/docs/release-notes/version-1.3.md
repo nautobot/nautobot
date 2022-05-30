@@ -140,6 +140,40 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.5 (2022-05-30)
+
+### Added
+
+- [#1606](https://github.com/nautobot/nautobot/issues/1606) - Added best practices for working with FilterSet classes to developer documentation.
+- [#1796](https://github.com/nautobot/nautobot/issues/1796) - Added documentation for using Git Repositories behind/via proxies.
+- [#1811](https://github.com/nautobot/nautobot/pull/1811) - Added developer Docker container for running mkdocs instead of locally.
+
+### Changed
+
+- [#1818](https://github.com/nautobot/nautobot/pull/1818) - Changed README.md to link to correct build status workflows.
+
+### Fixed
+
+- [#895](https://github.com/nautobot/nautobot/issues/895) - Fixed validation when creating `Interface` and `VMInterface` objects via the REST API while specifying `untagged_vlan` without `mode` also set in the payload. A 400 error will now be raised as expected.
+- [#1289](https://github.com/nautobot/nautobot/issues/1289) - Fixed issue where job result live pagination would reset to page 1 on refresh. The currently selected page will now persist until the job run completes.
+- [#1290](https://github.com/nautobot/nautobot/issues/1290) - Fix NAPALM enable password argument for devices using the eos NAPALM driver.
+- [#1427](https://github.com/nautobot/nautobot/issues/1427) - Fix NoReverseMatch exception when related views for action_buttons don't exist.
+- [#1428](https://github.com/nautobot/nautobot/issues/1428) - Fix IPAM prefix utilization sometimes showing greater than 100 percent for IPv4 prefixes.
+- [#1604](https://github.com/nautobot/nautobot/issues/1604) - Fix missing filter restriction enforcement on relationship association.
+- [#1771](https://github.com/nautobot/nautobot/issues/1771) - Fix exception raised for RelationshipAssociation when updating source.
+- [#1772](https://github.com/nautobot/nautobot/issues/1772) - Fix RelationshipAssociationSerializer not triggering model clean method.
+- [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
+- [#1805](https://github.com/nautobot/nautobot/pull/1805) - Fix git pre-commit hook incompatibility with dash shell and add warning on skipped tests.
+
+### Security
+
+!!! attention
+    `PyJWT` - Nautobot does not directly depend on `PyJWT` so your upgrading Nautobot via `pip` or other package management tools may not pick up the patched version (we are not pinning this dependency). However some tools support an "eager" upgrade policy as an option. For example, `pip install --upgrade --upgrade-strategy eager nautobot` will upgrade Nautobot and all it's dependencies to their latest compatible version. This may not work for all use cases so it may be safer to update Nautobot then perform `pip install --upgrade PyJWT`.
+
+    Docker containers published with this build will have PyJWT upgraded.
+
+- [#1808](https://github.com/nautobot/nautobot/pull/1808) - Bump PyJWT from 2.3.0 to 2.4.0
+
 ## v1.3.4 (2022-05-16)
 
 ### Added

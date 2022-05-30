@@ -20,7 +20,12 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer, NestedScheduledJobSerializer
-from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.choices import (
+    JobExecutionType,
+    RelationshipTypeChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -1892,15 +1897,15 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site_type = ContentType.objects.get_for_model(Site)
-        device_type = ContentType.objects.get_for_model(Device)
+        cls.site_type = ContentType.objects.get_for_model(Site)
+        cls.device_type = ContentType.objects.get_for_model(Device)
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
             slug="elsewhere-devices",
             type="many-to-many",
-            source_type=site_type,
-            destination_type=device_type,
+            source_type=cls.site_type,
+            destination_type=cls.device_type,
         )
         cls.relationship.validated_save()
         cls.sites = (
@@ -1919,23 +1924,23 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
         RelationshipAssociation(
             relationship=cls.relationship,
-            source_type=site_type,
+            source_type=cls.site_type,
             source_id=cls.sites[0].pk,
-            destination_type=device_type,
+            destination_type=cls.device_type,
             destination_id=cls.devices[0].pk,
         ).validated_save()
         RelationshipAssociation(
             relationship=cls.relationship,
-            source_type=site_type,
+            source_type=cls.site_type,
             source_id=cls.sites[0].pk,
-            destination_type=device_type,
+            destination_type=cls.device_type,
             destination_id=cls.devices[1].pk,
         ).validated_save()
         RelationshipAssociation(
             relationship=cls.relationship,
-            source_type=site_type,
+            source_type=cls.site_type,
             source_id=cls.sites[0].pk,
-            destination_type=device_type,
+            destination_type=cls.device_type,
             destination_id=cls.devices[2].pk,
         ).validated_save()
 
@@ -1962,6 +1967,74 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 "destination_id": cls.devices[2].pk,
             },
         ]
+
+    def test_create_invalid_relationship_association(self):
+        """Test creation of invalid relationship association restricted by destination/source filter."""
+
+        relationship = Relationship.objects.create(
+            name="Device to Site Rel 1",
+            slug="device-to-site-rel-1",
+            source_type=self.device_type,
+            source_filter={"name": [self.devices[0].name]},
+            destination_type=self.site_type,
+            destination_label="Primary Rack",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            destination_filter={"name": [self.sites[0].name]},
+        )
+
+        associations = [
+            (
+                "destination",  # side
+                self.sites[2].name,  # field name with an error
+                {
+                    "relationship": relationship.pk,
+                    "source_type": "dcim.device",
+                    "source_id": self.devices[0].pk,
+                    "destination_type": "dcim.site",
+                    "destination_id": self.sites[2].pk,
+                },
+            ),
+            (
+                "source",  # side
+                self.devices[1].name,  # field name with an error
+                {
+                    "relationship": relationship.pk,
+                    "source_type": "dcim.device",
+                    "source_id": self.devices[1].pk,
+                    "destination_type": "dcim.site",
+                    "destination_id": self.sites[0].pk,
+                },
+            ),
+        ]
+
+        self.add_permissions("extras.add_relationshipassociation")
+
+        for side, field_error_name, data in associations:
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.data[side],
+                [f"{field_error_name} violates {relationship.name} {side}_filter restriction"],
+            )
+
+    def test_model_clean_method_is_called(self):
+        """Validate RelationshipAssociation clean method is called"""
+
+        data = {
+            "relationship": self.relationship.pk,
+            "source_type": "dcim.device",
+            "source_id": self.sites[2].pk,
+            "destination_type": "dcim.device",
+            "destination_id": self.devices[2].pk,
+        }
+
+        self.add_permissions("extras.add_relationshipassociation")
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["source_type"], [f"source_type has a different value than defined in {self.relationship}"]
+        )
 
 
 class SecretTest(APIViewTestCases.APIViewTestCase):

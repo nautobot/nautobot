@@ -326,3 +326,24 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
                 "untagged_vlan": vlans[2].pk,
             },
         ]
+
+    def test_untagged_vlan_requires_mode(self):
+        """Test that when an `untagged_vlan` is specified, `mode` is also required."""
+        self.add_permissions("virtualization.add_vminterface")
+
+        vlan = VLAN.objects.first()
+        virtual_machine = VirtualMachine.objects.first()
+
+        # This will fail.
+        data = {
+            "virtual_machine": virtual_machine.pk,
+            "name": "expected-to-fail",
+            "untagged_vlan": vlan.pk,
+        }
+
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_400_BAD_REQUEST)
+
+        # Now let's add mode and it will work.
+        data["mode"] = InterfaceModeChoices.MODE_ACCESS
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
