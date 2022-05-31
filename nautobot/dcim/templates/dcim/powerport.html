@@ -9,9 +9,7 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Device</td>
-                        <td>
-                            <a href="{{ object.device.get_absolute_url }}">{{ object.device }}</a>
-                        </td>
+                        <td>{{ object.device|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Name</td>
@@ -51,7 +49,7 @@
                         <tr>
                             <td>Cable</td>
                             <td>
-                                <a href="{{ object.cable.get_absolute_url }}">{{ object.cable }}</a>
+                                {{ object.cable|hyperlinked_object }}
                                 <a href="{% url 'dcim:powerport_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
                                     <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                                 </a>
@@ -60,15 +58,11 @@
                         {% if object.connected_endpoint %}
                             <tr>
                                 <td>Device</td>
-                                <td>
-                                    <a href="{{ object.connected_endpoint.device.get_absolute_url }}">{{ object.connected_endpoint.device }}</a>
-                                </td>
+                                <td>{{ object.connected_endpoint.device|hyperlinked_object }}</td>
                             </tr>
                             <tr>
-                                <td>Name</td>
-                                <td>
-                                    <a href="{{ object.connected_endpoint.get_absolute_url }}">{{ object.connected_endpoint.name }}</a>
-                                </td>
+                                <td>Power Outlet / Feed</td>
+                                <td>{{ object.connected_endpoint|hyperlinked_object }}</td>
                             </tr>
                             <tr>
                                 <td>Type</td>

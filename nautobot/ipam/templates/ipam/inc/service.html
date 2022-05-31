@@ -1,10 +1,11 @@
+{% load helpers %}
 <tr>
     <td><a href="{{ service.get_absolute_url }}">{{ service.name }}</a></td>
     <td>{{ service.get_protocol_display }}</td>
     <td>{{ service.port_list }}</td>
     <td>
         {% for ip in service.ipaddresses.all %}
-            <a href="{{ ip.get_absolute_url }}">{{ ip.address.ip }}</a><br />
+            {{ ip|hyperlinked_object }}<br>
         {% empty %}
             <span class="text-muted">All IPs</span>
         {% endfor %}

@@ -29,11 +29,7 @@
             {% if object.source == "git" %}
                 <tr>
                     <td>Repository</td>
-                    {% if object.git_repository is not None %}
-                        <td><a href="{{ object.git_repository.get_absolute_url }}">{{ object.git_repository }}</a></td>
-                    {% else %}
-                        <td><span class="text-muted">&mdash;</span></td>
-                    {% endif %}
+                    <td>{{ object.git_repository|hyperlinked_object }}</td>
                 </tr>
             {% endif %}
             <tr>

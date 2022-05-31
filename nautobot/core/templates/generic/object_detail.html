@@ -19,11 +19,7 @@
                 </a></li>
                 {% endif %}
                 {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                {% if object.name %}
-                    <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
-                {% else %}
-                    <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
-                {% endif %}
+                <li>{{ object|hyperlinked_object }}</li>
             {% endblock breadcrumbs %}
             </ol>
         </div>

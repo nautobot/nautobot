@@ -9,9 +9,7 @@
             <table class="table table-hover panel-body attr-table">
                 <tr>
                     <td>Virtual Machine</td>
-                    <td>
-                        <a href="{{ object.virtual_machine.get_absolute_url }}">{{ object.virtual_machine }}</a>
-                    </td>
+                    <td>{{ object.virtual_machine|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Name</td>
