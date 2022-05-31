@@ -1212,7 +1212,7 @@ class ScheduledJobListView(generic.ObjectListView):
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
-    action_buttons = ("delete",)
+    action_buttons = ()
 
 
 class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
@@ -1581,10 +1581,7 @@ class SecretsGroupListView(generic.ObjectListView):
     filterset = filters.SecretsGroupFilterSet
     filterset_form = forms.SecretsGroupFilterForm
     table = tables.SecretsGroupTable
-    action_buttons = (
-        "add",
-        "delete",
-    )
+    action_buttons = ("add",)
 
 
 class SecretsGroupView(generic.ObjectView):

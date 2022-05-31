@@ -68,3 +68,228 @@ class ExampleModel(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from='name')
 ```
+
+## Filtering Models with FilterSets
+
+The following best practices must be considered when establishing new `FilterSet` classes for model classes.
+
+### Mapping Model Fields to Filters
+
+- Filtersets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.utilities.filters.BaseFilterSet`)
+    - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
+    - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
+- FIltersets **must** publish all model fields from a model, including related fields.
+    - All fields should be provided using `Meta.fields = "__all__"` and this would be preferable for the first and common case as it requires the least maintanence and overhead and asserts parity between the model fields and the filterset filters.
+    - In some cases simply excluding certain fields would be the next most preferable e.g. `Meta.exclude = ["unwanted_field", "other_unwanted_field"]`
+    - Finally, the last resort should be explicitly declaring the desired fields using `Meta.fields =`. This should be avoided because it incurs the highest technical debt in maintaining alignment between model fields and filters.
+- In the event that fields do need to be customized to extend lookup expressions, a [dictionary of field names mapped to a list of lookups](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#declaring-filterable-fields) **may** be used, however, this pattern is only compatible with explicitly declaring all fields, which should also be avoided for the common case. For example:
+
+```python
+class UserFilter(NautobotFilterSet):
+    class Meta:
+        model = User
+        fields = {
+            'username': ['exact', 'contains'],
+            'last_login': ['exact', 'year__gt'],
+        }
+```
+
+- It is acceptable that default filter mappings **may** need to be overridden with custom filter declarations, but [`filter_overrides`](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#customise-filter-generation-with-filter-overrides) (see below) should be used as a first resort.
+- Custom filter definitions **must not** shadow the name of an existing model field if it is also changing the type.
+    - For example `DeviceFilterSet.interfaces` is a `BooleanFilter` that is shadowing the `Device.interfaces` related manager. This introduces problems with automatic introspection of the filterset and this pattern **must** be avoided.
+- For foreign-key related fields, **on existing core models in the v1.3 release train**:
+    - The field **should** be shadowed, replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
+    - A PK-based filter **should** be made available as well, generally with a name suffixed by `_id`. For example:
+
+```python
+    provider = django_filters.ModelMultipleChoiceFilter(
+        field_name="provider__slug",
+        queryset=Provider.objects.all(),
+        to_field_name="slug",
+        label="Provider (slug)",
+    )
+    provider_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Provider.objects.all(),
+        label="Provider (ID)",
+    )
+```
+
+- For foreign-key related fields on **new core models for v1.4 or later:**
+    - The field **must** be shadowed utilizing a hybrid `NaturalKeyMultipleChoiceFilter`(yet to be implemented) which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
+    - In default settings for filtersets, when not using `NaturalKeyMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
+    - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. *We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release.*
+    - Using the previous field (`provider`) as an example, it would look something like this:
+
+```python
+    provider = NaturalKeyModelMultipleChoiceFilter(
+        queryset=Provider.objects.all(),
+        to_field_name="slug",
+        label="Provider (slug or ID)",
+    )
+```
+
+### Filter Naming and Definition
+
+- Boolean filters for membership **must** be named with `has_{related_name}` (e.g. `has_interfaces`)
+
+- Boolean filters for identity **must** be named with `is_{name}` (e.g. `is_virtual_chassis`) although this is semantically identical to `has_` filters, there may be occasions where naming the filter `is_` would be more intuitive.
+
+- Filters **must** declare [`field_name`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#field-name) when they have a different name than the underlying model field they are referencing. Where possible the suffix component of the filter name **must** map directly to the underlying field name.
+
+  For example, `DeviceFilterSet.has_console_ports` could be better named, to assert that the filter name following the `has_` prefix is a one-to-one mapping to the underlying model's related field name (`consoleports`) therefore `field_name` must point to the field name as defined on the model:
+
+```python
+    has_consoleports = BooleanFilter(field_name="consoleports")
+```
+
+- Filters **must** be declared using the appropriate lookup expression (`lookup_expr`) if any other expression than `exact` (the default) is required. For example:
+
+```python
+   has_consoleports = BooleanFilter(field_name="consoleports", lookup_expr="isnull")
+```
+
+- Filters **must** be declared using [`exclude=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#exclude) if a queryset `.exclude()` is required to be called vs. queryset `.filter()` which is the default when the filter default `exclude=False` is passed through. If you require `Foo.objects.exclude()`, you must pass `exclude=True` instead of defining a filterset method to explicitly hard-code such a query. For example:
+
+```python
+   has_consoleports = BooleanFilter(field_name="consoleports", lookup_expr="isnull", exclude=True)
+```
+
+- Filters **must** be declared using [`disinct=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#distinct) if a queryset `.distinct()`is required to be called on the queryset
+
+- Filters **must not** be set to be required using `required=True`
+
+- Filter methods defined using the [`method=`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#method) keyword argument **may only be used as a last resort** (see below) when correct usage of `field_name`, `lookup_expr`, `exclude`, or other filter keyword arguments do not suffice. In other words: filter methods should used as the exception and not the rule.
+
+- Use of [`filter_overrides`](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#filter-overrides) **must be considered** in cases where more-specific class-local overrides. The need may ocassionally arise to change certain filter-level arguments used for filter generation, such such as changing a filter class, or customizing a UI widget. Any `extra` arguments are sent to the filter as keyword arguments at instance creation time. (Hint: `extra` must be a callable)
+
+    For example:
+
+```python
+class ProductFilter(NautobotFilterSet):
+
+     class Meta:
+         model = Interface
+         fields = "__all__"
+         filter_overrides = {
+             # This would change the default to all CharFields to use lookup_expr="icontains". It
+             # would also pass in the custom `choices` generated by the `generate_choices()`
+             # function.
+             models.CharField: {
+                 "filter_class": filters.MultiValueCharFilter,
+                 "extra": lambda f: {
+                     "lookup_expr": "icontains",
+                     "choices": generate_choices(),
+                 },
+             },
+             # This would make BooleanFields use a radio select widget vs. the default of checkbox
+             models.BooleanField: {
+                 "extra": lambda f: {
+                     "widget": forms.RadioSelect,
+                 },
+             },
+         }
+```
+
+!!!warning
+    Existing features of filtersets and filters **must** be exhausted first using keyword arguments before resorting to customizing, re-declaring/overloading, or defining filter methods.
+
+### Filter Methods
+
+Filters on a filterset can reference a `method` (either a callable, or the name of a method on the filterset) to perform custom business logic for that filter field. However, many uses of filter methods in Nautobot are problematic because they break the ability for such filter fields to be properly reversible.
+
+Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_ports`:
+
+```python
+    # Filter field definition is a BooleanFilter, for which an "isnull" lookup_expr
+    # is the only valid filter expression
+    pass_through_ports = django_filters.BooleanFilter(
+        method="_pass_through_ports",
+        label="Has pass-through ports",
+    )
+
+    # Method definition loses context and further the field's lookup_expr
+    # falls back to the default of "exact" and the `name` value is irrelevant here.
+    def _pass_through_ports(self, queryset, name, value):
+        breakpoint()  # This was added to illustrate debugging with pdb below
+        return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
+```
+
+The default `lookup_expr` unless otherwise specified is “exact”, as seen in [django_filters.conf](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10):
+
+```python
+  'DEFAULT_LOOKUP_EXPR': 'exact',
+```
+
+When this method is called, the internal state is default, making reverse introspection impossible, because the `lookup_expr` is defaulting to “exact”:
+
+```python
+(Pdb) field = self.filters[name]
+(Pdb) field.exclude
+False
+(Pdb) field.lookup_expr
+'exact'
+```
+
+This means that the arguments for the field are being completely ignored and the hard-coded queryset `queryset.exclude(frontports__isnull=value, rearports__isnull=value)` is all that is being run when this method is called.
+
+Additionally, `name` variable that gets passed to the method cannot be used here because there are two field names at play (`frontports` and `rearports`). This hard-coding is impossible to introspect and therefore impossible to reverse.
+
+So while this filter definition coudl be improved like so, there is still no way to know what is going on in the method body:
+
+```python
+    pass_through_ports = django_filters.BooleanFilter(
+        method="_pass_through_ports",  # The method that is called
+        exclude=True,                  # Perform an `.exclude()` vs. `.filter()``
+        lookup_expr="isnull",          # Perform `isnull` vs. `exact``
+        label="Has pass-through ports",
+    )
+```
+
+For illustration, if we use another breakpoint, you can see that the filter field now has the correct attributes that can be used to help reverse this query:
+
+```python
+(Pdb) field = self.filters[name]
+(Pdb) field.exclude
+True
+(Pdb) field.lookup_expr
+'isnull'
+```
+
+Except that it stops there becuse of the method body. Here are the problems:
+
+- There's no way to identify either of the field names required here
+- The `name` that is incoming to the method is the filter name as defined (`pass_through_ports` in this case) does not map to an actual model field
+- So the filter can be introspected for `lookup_expr` value using `self.filters[name].lookup_expr`, but it would have to be assumed that applies to both fields.
+- Same with `exclude` (`self.filters[name].exclude`)
+
+It would be better to just eliminate `pass_through_ports=True` entirely in exchange for `front_ports=True&rear_ports=True` (current) or `has_frontports=True&has_rearports=True` (future).
+
+#### Generating Reversible Q Objects
+
+With consistent and proper use of filter field arguments when defining them on a fitlerset, a query could be constructed using the `field_name` and `lookup_expr` values. For example:
+
+```python
+    def generate_query(self, field, value):
+        query = Q()
+        predicate = {f"{field.field_name}__{field.lookup_expr}": value}
+        if field.exclude:
+            query |= ~Q(**predicate)
+        else:
+            query |= Q(**predicate)
+        return query
+
+
+## Somewhere else in business logic:
+field = filterset.filters[name]
+value = filterset.data[name]
+query = generate_query(field, value)
+filterset.qs.filter(query).count()  # 339
+```
+
+### Summary
+
+- For the vast majority of cases where we have method filters, it’s for Boolean filters
+- For the common case **method filters are unnecessary technical debt and should be eliminated where better suited by proper use of filter field arguments**
+- Reversibility may not always necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
+- For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
+- The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.

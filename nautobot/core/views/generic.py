@@ -37,6 +37,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
+from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     csv_format,
     normalize_querydict,
@@ -199,6 +200,22 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         return "\n".join(csv_data)
 
+    def validate_action_buttons(self, request):
+        """Verify actions in self.action_buttons are valid view actions."""
+
+        always_valid_actions = ("export",)
+        valid_actions = []
+        invalid_actions = []
+
+        for action in self.action_buttons:
+            if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
+                valid_actions.append(action)
+            else:
+                invalid_actions.append(action)
+        if invalid_actions:
+            messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
+        return valid_actions
+
     def get(self, request):
 
         model = self.queryset.model
@@ -278,11 +295,13 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 # Use unbound form with default (initial) values
                 filter_form = self.filterset_form(label_suffix="")
 
+        valid_actions = self.validate_action_buttons(request)
+
         context = {
             "content_type": content_type,
             "table": table,
             "permissions": permissions,
-            "action_buttons": self.action_buttons,
+            "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": filter_form,
         }

@@ -48,7 +48,7 @@ class RelationshipBaseTest(TestCase):
             slug="vlan-rack",
             source_type=self.rack_ct,
             source_label="My Vlans",
-            source_filter={"site": ["site-a"]},
+            source_filter={"site": ["site-a", "site-b", "site-c"]},
             destination_type=self.vlan_ct,
             destination_label="My Racks",
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -315,7 +315,7 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
-        self.assertEqual(field.query_params, {"site": ["site-a"]})
+        self.assertEqual(field.query_params, {"site": ["site-a", "site-b", "site-c"]})
 
         field = self.m2ms_1.to_form_field("peer")
         self.assertFalse(field.required)
@@ -383,6 +383,38 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         ]
         for cra in self.invalid_relationship_associations:
             cra.validated_save()
+
+    def test_create_invalid_relationship_association(self):
+        """Test creation of invalid relationship association restricted by destination/source filter."""
+
+        relationship = Relationship.objects.create(
+            name="Site to Rack Rel 1",
+            slug="site-to-rack-rel-1",
+            source_type=self.site_ct,
+            source_filter={"name": [self.sites[0].name]},
+            destination_type=self.rack_ct,
+            destination_label="Primary Rack",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            destination_filter={"name": [self.racks[0].name]},
+        )
+
+        associations = (
+            (
+                "source",
+                RelationshipAssociation(relationship=relationship, source=self.sites[1], destination=self.racks[0]),
+            ),
+            (
+                "destination",
+                RelationshipAssociation(relationship=relationship, source=self.sites[0], destination=self.racks[1]),
+            ),
+        )
+
+        for side_name, association in associations:
+            side = getattr(association, side_name)
+            with self.assertRaises(ValidationError) as handler:
+                association.validated_save()
+            expected_errors = {side_name: [f"{side} violates {relationship} {side_name}_filter restriction"]}
+            self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_exception_not_raised_when_updating_instance_with_relationship_type_o2o_or_o2m(self):
         """Validate 'Unable to create more than one relationship-association...' not raise when updating instance with
