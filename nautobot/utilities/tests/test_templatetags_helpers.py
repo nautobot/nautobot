@@ -50,7 +50,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         site.description = "An important site"
         site.save()
         self.assertEqual(
-            hyperlinked_object(site), '<a href="/dcim/sites/test-site" title="An important site">Test Site</a>'
+            hyperlinked_object(site), '<a href="/dcim/sites/test-site/" title="An important site">Test Site</a>'
         )
 
     def test_placeholder(self):
