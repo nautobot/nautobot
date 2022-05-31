@@ -1027,7 +1027,6 @@ class InterfaceSerializerVersion12(
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     device = NestedDeviceSerializer()
     type = ChoiceField(choices=InterfaceTypeChoices)
-    lag = NestedInterfaceSerializer(required=False, allow_null=True)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     untagged_vlan = NestedVLANSerializer(required=False, allow_null=True)
     tagged_vlans = SerializedPKRelatedField(
@@ -1038,6 +1037,9 @@ class InterfaceSerializerVersion12(
     )
     cable = NestedCableSerializer(read_only=True)
     count_ipaddresses = serializers.IntegerField(read_only=True)
+    parent_interface = NestedInterfaceSerializer(required=False, allow_null=True)
+    bridge = NestedInterfaceSerializer(required=False, allow_null=True)
+    lag = NestedInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Interface
@@ -1049,6 +1051,8 @@ class InterfaceSerializerVersion12(
             "label",
             "type",
             "enabled",
+            "parent_interface",
+            "bridge",
             "lag",
             "mtu",
             "mac_address",

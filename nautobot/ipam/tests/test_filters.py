@@ -1098,6 +1098,15 @@ class VLANTestCase(FilterTestCases.FilterTestCase):
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
+    def test_available_on_device(self):
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        site = Site.objects.get(slug="test-site-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        params = {"available_on_device": device.pk}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class ServiceTestCase(FilterTestCases.FilterTestCase):
     queryset = Service.objects.all()

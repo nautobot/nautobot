@@ -371,6 +371,10 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     def site(self):
         return self.cluster.site
 
+    @property
+    def site_id(self):
+        return self.cluster.site_id
+
 
 #
 # Interfaces
@@ -429,6 +433,8 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         "description",
         "mode",
         "status",
+        "parent_interface",
+        "bridge",
     ]
 
     class Meta:
@@ -452,22 +458,9 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.description,
             self.get_mode_display(),
             self.get_status_display(),
+            self.parent_interface.name if self.parent_interface else None,
+            self.bridge.name if self.bridge else None,
         )
-
-    def clean(self):
-        super().clean()
-
-        # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site not in [
-            self.virtual_machine.site,
-            None,
-        ]:
-            raise ValidationError(
-                {
-                    "untagged_vlan": f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the "
-                    f"interface's parent virtual machine, or it must be global"
-                }
-            )
 
     def to_objectchange(self, action):
 

@@ -2420,6 +2420,126 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"description": ["First", "Second"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_parent(self):
+        # Create child interfaces
+        parent_interface = Interface.objects.first()
+        child_interfaces = (
+            Interface(
+                device=parent_interface.device,
+                name="Child 1",
+                parent_interface=parent_interface,
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            ),
+            Interface(
+                device=parent_interface.device,
+                name="Child 2",
+                parent_interface=parent_interface,
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            ),
+            Interface(
+                device=parent_interface.device,
+                name="Child 3",
+                parent_interface=parent_interface,
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            ),
+        )
+        Interface.objects.bulk_create(child_interfaces)
+
+        params = {"parent_interface_id": [parent_interface.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_bridge(self):
+        # Create bridged interfaces
+        device = Interface.objects.first().device
+        bridge_interface = Interface.objects.create(
+            device=device,
+            name="Bridge 1",
+            type=InterfaceTypeChoices.TYPE_BRIDGE,
+        )
+        bridged_interfaces = (
+            Interface(
+                device=bridge_interface.device,
+                name="Bridged 1",
+                bridge=bridge_interface,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+            Interface(
+                device=bridge_interface.device,
+                name="Bridged 2",
+                bridge=bridge_interface,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+            Interface(
+                device=bridge_interface.device,
+                name="Bridged 3",
+                bridge=bridge_interface,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+        )
+        Interface.objects.bulk_create(bridged_interfaces)
+
+        params = {"bridge_id": [bridge_interface.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_lag(self):
+        # Create LAG members
+        device = Device.objects.first()
+        lag_interface = Interface(device=device, name="LAG", type=InterfaceTypeChoices.TYPE_LAG)
+        lag_interface.save()
+        lag_members = (
+            Interface(device=device, name="Member 1", lag=lag_interface, type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface(device=device, name="Member 2", lag=lag_interface, type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface(device=device, name="Member 3", lag=lag_interface, type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+        )
+        Interface.objects.bulk_create(lag_members)
+
+        params = {"lag_id": [lag_interface.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_device_with_common_vc(self):
+        """Assert only interfaces belonging to devices with common VC are returned"""
+        site = Site.objects.first()
+        device_type = DeviceType.objects.first()
+        device_role = DeviceRole.objects.first()
+        devices = (
+            Device.objects.create(
+                name="Device in vc 1",
+                device_type=device_type,
+                device_role=device_role,
+                site=site,
+            ),
+            Device.objects.create(
+                name="Device in vc 2",
+                device_type=device_type,
+                device_role=device_role,
+                site=site,
+            ),
+            Device.objects.create(
+                name="Device not in vc",
+                device_type=device_type,
+                device_role=device_role,
+                site=site,
+            ),
+        )
+
+        # VirtualChassis assignment for filtering
+        virtual_chassis = VirtualChassis.objects.create(master=devices[0])
+        Device.objects.filter(pk=devices[0].pk).update(virtual_chassis=virtual_chassis, vc_position=1, vc_priority=1)
+        Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis, vc_position=2, vc_priority=2)
+
+        Interface.objects.create(device=devices[0], name="int1")
+        Interface.objects.create(device=devices[0], name="int2")
+        Interface.objects.create(device=devices[1], name="int3")
+        Interface.objects.create(device=devices[2], name="int4")
+
+        params = {"device_with_common_vc": devices[0].pk}
+        queryset = self.filterset(params, self.queryset).qs
+        self.assertEqual(queryset.count(), 3)
+        # Assert interface of a device belonging to same VC as device[0] are returned
+        self.assertTrue(queryset.filter(name="int3").exists())
+        # Assert interface of a device not belonging as device[0] to same VC are not returned
+        self.assertFalse(queryset.filter(name="int4").exists())
+
     def test_region(self):
         regions = Region.objects.all()[:2]
         params = {"region_id": [regions[0].pk, regions[1].pk]}

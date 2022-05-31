@@ -862,13 +862,28 @@ class InterfaceFilterSet(
         field_name="pk",
         label="Device (ID)",
     )
+    device_with_common_vc = django_filters.UUIDFilter(
+        method="filter_device_common_vc_id",
+        field_name="pk",
+        label="Virtual Chassis member Device (ID)",
+    )
     kind = django_filters.CharFilter(
         method="filter_kind",
         label="Kind of interface",
     )
+    parent_interface_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="parent_interface",
+        queryset=Interface.objects.all(),
+        label="Parent interface (ID)",
+    )
+    bridge_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="bridge",
+        queryset=Interface.objects.all(),
+        label="Bridge interface (ID)",
+    )
     lag_id = django_filters.ModelMultipleChoiceFilter(
         field_name="lag",
-        queryset=Interface.objects.all(),
+        queryset=Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG),
         label="LAG interface (ID)",
     )
     mac_address = MultiValueMACAddressFilter()
@@ -908,6 +923,14 @@ class InterfaceFilterSet(
             for device in devices:
                 vc_interface_ids += device.vc_interfaces.values_list("id", flat=True)
             return queryset.filter(pk__in=vc_interface_ids)
+        except Device.DoesNotExist:
+            return queryset.none()
+
+    def filter_device_common_vc_id(self, queryset, name, value):
+        # Include interfaces that share common virtual chassis
+        try:
+            device = Device.objects.get(pk=value)
+            return queryset.filter(pk__in=device.common_vc_interfaces.values_list("pk", flat=True))
         except Device.DoesNotExist:
             return queryset.none()
 

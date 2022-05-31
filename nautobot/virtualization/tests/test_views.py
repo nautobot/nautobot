@@ -290,9 +290,12 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole),
         )
 
-        VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1")
-        VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2")
-        VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3")
+        interfaces = (
+            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1"),
+            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2"),
+            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3"),
+            VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE"),
+        )
 
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN1", site=site),
@@ -316,6 +319,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name": "Interface X",
             "status": status_active.pk,
             "enabled": False,
+            "bridge": interfaces[3].pk,
             "mac_address": EUI("01-02-03-04-05-06"),
             "mtu": 2000,
             "description": "New description",
@@ -330,6 +334,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "virtual_machine": virtualmachines[1].pk,
             "name_pattern": "Interface [4-6]",
             "enabled": False,
+            "bridge": interfaces[3].pk,
             "status": status_active.pk,
             "mac_address": EUI("01-02-03-04-05-06"),
             "mtu": 2000,

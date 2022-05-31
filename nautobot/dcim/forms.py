@@ -80,6 +80,7 @@ from .constants import (
     CABLE_TERMINATION_MODELS,
     INTERFACE_MTU_MAX,
     INTERFACE_MTU_MIN,
+    NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
@@ -2508,6 +2509,30 @@ class InterfaceFilterForm(DeviceComponentFilterForm, StatusFilterFormMixin):
 
 
 class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
+    parent_interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Parent interface",
+        query_params={
+            "kind": "physical",
+        },
+        help_text="Assigned parent interface",
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Bridge interface",
+        help_text="Assigned bridge interface",
+    )
+    lag = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="LAG interface",
+        query_params={
+            "type": InterfaceTypeChoices.TYPE_LAG,
+        },
+        help_text="Assigned LAG interface",
+    )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -2535,6 +2560,8 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "label",
             "type",
             "enabled",
+            "parent_interface",
+            "bridge",
             "lag",
             "mac_address",
             "mtu",
@@ -2549,7 +2576,6 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         widgets = {
             "device": forms.HiddenInput(),
             "type": StaticSelect2(),
-            "lag": StaticSelect2(),
             "mode": StaticSelect2(),
         }
         labels = {
@@ -2567,13 +2593,10 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         else:
             device = self.instance.device
 
-        # Limit LAG choices to interfaces belonging to this device or a peer VC member
-        device_query = Q(device=device)
-        if device.virtual_chassis:
-            device_query |= Q(device__virtual_chassis=device.virtual_chassis)
-        self.fields["lag"].queryset = Interface.objects.filter(
-            device_query, type=InterfaceTypeChoices.TYPE_LAG
-        ).exclude(pk=self.instance.pk)
+        # Restrict parent/bridge/LAG interface assignment by device
+        self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
+        self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
+        self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
         # Add current site to VLANs query params
         self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
@@ -2592,11 +2615,31 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         },
     )
     enabled = forms.BooleanField(required=False, initial=True)
-    lag = forms.ModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        label="Parent LAG",
-        widget=StaticSelect2(),
+        query_params={
+            "device_with_common_vc": "$device",
+            "kind": "physical",
+        },
+        help_text="Assigned parent interface",
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "device_with_common_vc": "$device",
+        },
+        help_text="Assigned bridge interface",
+    )
+    lag = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "device_with_common_vc": "$device",
+            "type": InterfaceTypeChoices.TYPE_LAG,
+        },
+        help_text="Assigned LAG interface",
     )
     mtu = forms.IntegerField(
         required=False,
@@ -2620,16 +2663,14 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "available_on_device": "$device",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         brief_mode=False,
-        query_params={
-            "site_id": "null",
-        },
+        query_params={"available_on_device": "$device"},
     )
     field_order = (
         "device",
@@ -2638,6 +2679,8 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "status",
         "type",
         "enabled",
+        "parent_interface",
+        "bridge",
         "lag",
         "mtu",
         "mac_address",
@@ -2648,20 +2691,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "tagged_vlans",
         "tags",
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit LAG choices to interfaces belonging to this device or a peer VC member
-        device = Device.objects.get(pk=self.initial.get("device") or self.data.get("device"))
-        device_query = Q(device=device)
-        if device.virtual_chassis:
-            device_query |= Q(device__virtual_chassis=device.virtual_chassis)
-        self.fields["lag"].queryset = Interface.objects.filter(device_query, type=InterfaceTypeChoices.TYPE_LAG)
-
-        # Add current site to VLANs query params
-        self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
-        self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
 
 
 class InterfaceBulkCreateForm(
@@ -2681,7 +2710,9 @@ class InterfaceBulkCreateForm(
 
 
 class InterfaceBulkEditForm(
-    form_from_model(Interface, ["label", "type", "lag", "mac_address", "mtu", "description", "mode"]),
+    form_from_model(
+        Interface, ["label", "type", "parent_interface", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
+    ),
     BootstrapMixin,
     AddRemoveTagsForm,
     StatusBulkEditFormMixin,
@@ -2695,6 +2726,24 @@ class InterfaceBulkEditForm(
         widget=forms.HiddenInput(),
     )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    parent_interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "kind": "physical",
+        },
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+    )
+    lag = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "type": InterfaceTypeChoices.TYPE_LAG,
+        },
+    )
     mgmt_only = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Management only")
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -2716,6 +2765,8 @@ class InterfaceBulkEditForm(
     class Meta:
         nullable_fields = [
             "label",
+            "parent_interface",
+            "bridge",
             "lag",
             "mac_address",
             "mtu",
@@ -2731,16 +2782,17 @@ class InterfaceBulkEditForm(
         # Limit LAG choices to interfaces which belong to the parent device (or VC master)
         if "device" in self.initial:
             device = Device.objects.filter(pk=self.initial["device"]).first()
-            self.fields["lag"].queryset = Interface.objects.filter(
-                device__in=[device, device.get_vc_master()],
-                type=InterfaceTypeChoices.TYPE_LAG,
-            )
+
+            # Restrict parent/bridge/LAG interface assignment by device
+            self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
+            self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
+            self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
             # Add current site to VLANs query params
             self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
             self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
         else:
-            # See 4523
+            # See netbox-community/netbox#4523
             if "pk" in self.initial:
                 site = None
                 interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).prefetch_related("device__site")
@@ -2758,6 +2810,10 @@ class InterfaceBulkEditForm(
                     self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
                     self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
+            self.fields["parent_interface"].choices = ()
+            self.fields["parent_interface"].widget.attrs["disabled"] = True
+            self.fields["bridge"].choices = ()
+            self.fields["bridge"].widget.attrs["disabled"] = True
             self.fields["lag"].choices = ()
             self.fields["lag"].widget.attrs["disabled"] = True
 
@@ -2775,6 +2831,12 @@ class InterfaceBulkEditForm(
 
 class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
+    parent_interface = CSVModelChoiceField(
+        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
+    )
+    bridge = CSVModelChoiceField(
+        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Bridge interface"
+    )
     lag = CSVModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
@@ -2788,29 +2850,37 @@ class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
         help_text="IEEE 802.1Q operational mode (for L2 interfaces)",
     )
 
+    def __init__(self, data=None, *args, **kwargs):
+        super().__init__(data, *args, **kwargs)
+
+        if data:
+            # Limit choices for parent, bridge, and LAG interfaces to the assigned device (or VC)
+            device_name = data.get("device")
+            if device_name is not None:
+                device = Device.objects.filter(name=device_name).first()
+
+                filter_by = Q(device=device)
+
+                if device and device.virtual_chassis:
+                    filter_by |= Q(device__virtual_chassis=device.virtual_chassis)
+
+                self.fields["parent_interface"].queryset = (
+                    self.fields["parent_interface"]
+                    .queryset.filter(Q(filter_by))
+                    .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+                )
+                self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(filter_by)
+
+                filter_by &= Q(type=InterfaceTypeChoices.TYPE_LAG)
+                self.fields["lag"].queryset = self.fields["lag"].queryset.filter(filter_by)
+            else:
+                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.none()
+                self.fields["bridge"].queryset = self.fields["bridge"].queryset.none()
+                self.fields["lag"].queryset = self.fields["lag"].queryset.none()
+
     class Meta:
         model = Interface
         fields = Interface.csv_headers
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit LAG choices to interfaces belonging to this device (or virtual chassis)
-        device = None
-        if self.is_bound and "device" in self.data:
-            try:
-                device = self.fields["device"].to_python(self.data["device"])
-            except forms.ValidationError:
-                pass
-        if device and device.virtual_chassis:
-            self.fields["lag"].queryset = Interface.objects.filter(
-                Q(device=device) | Q(device__virtual_chassis=device.virtual_chassis),
-                type=InterfaceTypeChoices.TYPE_LAG,
-            )
-        elif device:
-            self.fields["lag"].queryset = Interface.objects.filter(device=device, type=InterfaceTypeChoices.TYPE_LAG)
-        else:
-            self.fields["lag"].queryset = Interface.objects.none()
 
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data

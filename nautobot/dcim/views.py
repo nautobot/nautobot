@@ -1797,6 +1797,10 @@ class InterfaceView(generic.ObjectView):
             orderable=False,
         )
 
+        # Get child interfaces
+        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+        child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
+
         # Get assigned VLANs and annotate whether each is tagged or untagged
         vlans = []
         if instance.untagged_vlan is not None:
@@ -1811,6 +1815,7 @@ class InterfaceView(generic.ObjectView):
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
             "breadcrumb_url": "dcim:device_interfaces",
+            "child_interfaces_table": child_interfaces_tables,
         }
 
 
@@ -1829,6 +1834,7 @@ class InterfaceEditView(generic.ObjectEditView):
 
 class InterfaceDeleteView(generic.ObjectDeleteView):
     queryset = Interface.objects.all()
+    template_name = "dcim/device_interface_delete.html"
 
 
 class InterfaceBulkImportView(generic.BulkImportView):
@@ -1856,6 +1862,7 @@ class InterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = Interface.objects.all()
     filterset = filters.InterfaceFilterSet
     table = tables.InterfaceTable
+    template_name = "dcim/interface_bulk_delete.html"
 
 
 #

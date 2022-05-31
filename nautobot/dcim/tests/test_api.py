@@ -1454,11 +1454,31 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         site = Site.objects.create(name="Site 1", slug="site-1")
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        cls.devices = (
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site),
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 2", site=site),
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 3", site=site),
+        )
 
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t")
+        cls.virtualchassis = VirtualChassis.objects.create(
+            name="Virtual Chassis 1", master=cls.devices[0], domain="domain-1"
+        )
+        Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtualchassis, vc_position=1)
+        Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtualchassis, vc_position=2)
+
+        cls.interfaces = (
+            Interface.objects.create(device=cls.devices[0], name="Interface 1", type="1000base-t"),
+            Interface.objects.create(device=cls.devices[0], name="Interface 2", type="1000base-t"),
+            Interface.objects.create(device=cls.devices[0], name="Interface 3", type=InterfaceTypeChoices.TYPE_BRIDGE),
+            Interface.objects.create(
+                device=cls.devices[1], name="Interface 4", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+            ),
+            Interface.objects.create(device=cls.devices[1], name="Interface 5", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(device=cls.devices[2], name="Interface 6", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(
+                device=cls.devices[2], name="Interface 7", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+            ),
+        )
 
         vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
@@ -1468,26 +1488,28 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
 
         cls.create_data = [
             {
-                "device": device.pk,
-                "name": "Interface 4",
+                "device": cls.devices[0].pk,
+                "name": "Interface 8",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
             {
-                "device": device.pk,
-                "name": "Interface 5",
+                "device": cls.devices[0].pk,
+                "name": "Interface 9",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
             {
-                "device": device.pk,
-                "name": "Interface 6",
-                "type": "1000base-t",
+                "device": cls.devices[0].pk,
+                "name": "Interface 10",
+                "type": "virtual",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
@@ -1540,6 +1562,88 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         # Now let's add mode and it will work.
         data["mode"] = InterfaceModeChoices.MODE_ACCESS
         self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+    def test_interface_belonging_to_common_device_or_vc_allowed(self):
+        """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
+        self.add_permissions("dcim.add_interface")
+        data = {
+            "device": self.devices[0].pk,
+            "name": "interface test 1",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "parent_interface": self.interfaces[3].id,  # belongs to different device but same vc
+            "bridge": self.interfaces[2].id,  # belongs to different device but same vc
+        }
+
+        response = self.client.post(self._get_list_url(), data=data, format="json", **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        queryset = Interface.objects.get(name="interface test 1", device=self.devices[0])
+        self.assertEqual(queryset.parent_interface, self.interfaces[3])
+        self.assertEqual(queryset.bridge, self.interfaces[2])
+
+        # Assert LAG
+        self.add_permissions("dcim.add_interface")
+        data = {
+            "device": self.devices[0].pk,
+            "name": "interface test 2",
+            "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "lag": self.interfaces[4].id,  # belongs to different device but same vc
+        }
+
+        response = self.client.post(self._get_list_url(), data=data, format="json", **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        queryset = Interface.objects.get(name="interface test 2", device=self.devices[0])
+        self.assertEqual(queryset.lag, self.interfaces[4])
+
+    def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
+        """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
+
+        self.add_permissions("dcim.add_interface")
+
+        payloads = [
+            (
+                "parent",
+                {
+                    "device": self.devices[0].pk,
+                    "name": "interface test 1",
+                    "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "parent_interface": self.interfaces[6].id,  # do not belong to same device or vc
+                },
+            ),
+            (
+                "bridge",
+                {
+                    "device": self.devices[0].pk,
+                    "name": "interface test 2",
+                    "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "bridge": self.interfaces[6].id,  # does not belong to same device or vc
+                },
+            ),
+            (
+                "lag",
+                {
+                    "device": self.devices[0].pk,
+                    "name": "interface test 3",
+                    "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "lag": self.interfaces[6].id,  # does not belong to same device or vc
+                },
+            ),
+        ]
+
+        for name, payload in payloads:
+            response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+            field_name = name.upper() if name == "lag" else name
+            error_field_name = f"{name}_interface" if name == "parent" else name
+
+            interface = Interface.objects.get(id=payload[error_field_name])
+            self.assertEqual(
+                str(response.data[error_field_name][0]),
+                f"The selected {field_name} interface ({interface}) belongs to {interface.parent}, which is "
+                f"not part of virtual chassis {self.virtualchassis}.",
+            )
 
 
 class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):

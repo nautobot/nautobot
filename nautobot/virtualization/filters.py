@@ -220,6 +220,16 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         to_field_name="name",
         label="Virtual machine",
     )
+    parent_interface_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="parent_interface",
+        queryset=VMInterface.objects.all(),
+        label="Parent interface (ID)",
+    )
+    bridge_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="bridge",
+        queryset=VMInterface.objects.all(),
+        label="Bridge interface (ID)",
+    )
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
     )

@@ -295,9 +295,11 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         cluster = Cluster.objects.create(name="Test Cluster 1", type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
 
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1")
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2")
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3")
+        interfaces = (
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1"),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2"),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3"),
+        )
 
         vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
@@ -317,6 +319,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 5",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "bridge": interfaces[0].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
@@ -324,6 +327,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 6",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },

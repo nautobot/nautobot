@@ -837,6 +837,16 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             filter |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
         return Interface.objects.filter(filter)
 
+    @property
+    def common_vc_interfaces(self):
+        """
+        Return a QuerySet matching all Interfaces assigned to this Device or,
+        if this Device belongs to a VirtualChassis, it returns all interfaces belonging Devices with same VirtualChassis
+        """
+        if self.virtual_chassis:
+            return self.virtual_chassis.member_interfaces
+        return self.interfaces
+
     def get_cables(self, pk_list=False):
         """
         Return a QuerySet or PK list matching all Cables connected to a component of this Device.
@@ -907,6 +917,11 @@ class VirtualChassis(PrimaryModel):
 
     def get_absolute_url(self):
         return reverse("dcim:virtualchassis", kwargs={"pk": self.pk})
+
+    @property
+    def member_interfaces(self):
+        """Return a list of Interfaces common to all member devices."""
+        return Interface.objects.filter(pk__in=self.members.values_list("interfaces", flat=True))
 
     def clean(self):
         super().clean()

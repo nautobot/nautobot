@@ -613,6 +613,8 @@ class DeviceInterfaceTable(InterfaceTable):
         '{% endif %}"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
+    parent_interface = tables.Column(linkify=True, verbose_name="Parent")
+    bridge = tables.Column(linkify=True)
     lag = tables.Column(linkify=True, verbose_name="LAG")
     actions = ButtonsColumn(model=Interface, buttons=("edit", "delete"), prepend_template=INTERFACE_BUTTONS)
 
@@ -625,6 +627,8 @@ class DeviceInterfaceTable(InterfaceTable):
             "label",
             "enabled",
             "type",
+            "parent_interface",
+            "bridge",
             "lag",
             "mgmt_only",
             "mtu",
@@ -647,6 +651,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "label",
             "enabled",
             "type",
+            "parent_interface",
             "lag",
             "mtu",
             "mode",

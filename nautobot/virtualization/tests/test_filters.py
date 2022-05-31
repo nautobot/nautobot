@@ -479,6 +479,38 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"enabled": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_parent(self):
+        # Create child interfaces
+        parent_interface = VMInterface.objects.first()
+        child_interfaces = (
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 1", parent_interface=parent_interface
+            ),
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 2", parent_interface=parent_interface
+            ),
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 3", parent_interface=parent_interface
+            ),
+        )
+        VMInterface.objects.bulk_create(child_interfaces)
+
+        params = {"parent_interface_id": [parent_interface.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_bridge(self):
+        # Create bridged interfaces
+        bridge_interface = VMInterface.objects.first()
+        bridged_interfaces = (
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 1", bridge=bridge_interface),
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 2", bridge=bridge_interface),
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 3", bridge=bridge_interface),
+        )
+        VMInterface.objects.bulk_create(bridged_interfaces)
+
+        params = {"bridge_id": [bridge_interface.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
     def test_mtu(self):
         params = {"mtu": [100, 200]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
