@@ -15,6 +15,10 @@ Nautobot's UI now supports dark mode, both explicitly and via browser preference
 
 The "Theme" link in the footer provides a modal popup to select the preferred theme. This preference is saved per browser via `localStorage`.
 
+#### Parent Interfaces and Bridge Interfaces ([#1455](https://github.com/nautobot/nautobot/issues/1455))
+
+Interface and VMInterface models now have `parent_interface` and `bridge` keys. An interface of type `Virtual` can now associate to a parent physical interface on the same device, virtual chassis, or virtual machine, and an interface of any type can specify another interface as its associated bridge interface. (A new `Bridge` interface type has also been added, but the `bridge` interface property is not restricted to interfaces of this type.)
+
 #### Status Field on Interface, VMInterface Models ([#984](https://github.com/nautobot/nautobot/issues/984))
 
 Interface and VMInterface models now support a status. Default statuses that are available to be set are: Active, Planned, Maintenance, Failed, and Decommissioned. During migration all existing interfaces will be set to the status of "Active".
@@ -44,6 +48,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 - [#729](https://github.com/nautobot/nautobot/issues/729) - Added UI dark mode.
 - [#984](https://github.com/nautobot/nautobot/issues/984) - Added status field to Interface, VMInterface models.
+- [#1455](https://github.com/nautobot/nautobot/issues/1455) - Added `parent_interface` and `bridge` fields to Interface and VMInterface models.
 
 ### Changed
 
