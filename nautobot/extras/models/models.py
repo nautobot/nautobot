@@ -88,7 +88,6 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
 
     weight = models.PositiveSmallIntegerField(default=1000)
     description = models.CharField(max_length=200, blank=True)
-    # todoindex:
     is_active = models.BooleanField(
         default=True,
     )
@@ -663,19 +662,14 @@ class Webhook(BaseModel, ChangeLoggedModel):
         help_text="The object(s) to which this Webhook applies.",
     )
     name = models.CharField(max_length=150, unique=True)
-    # todoindex:
     type_create = models.BooleanField(default=False, help_text="Call this webhook when a matching object is created.")
-    # todoindex:
     type_update = models.BooleanField(default=False, help_text="Call this webhook when a matching object is updated.")
-    # todoindex:
     type_delete = models.BooleanField(default=False, help_text="Call this webhook when a matching object is deleted.")
-    # todoindex:
     payload_url = models.CharField(
         max_length=500,
         verbose_name="URL",
         help_text="A POST will be sent to this URL when the webhook is called.",
     )
-    # todoindex:
     enabled = models.BooleanField(default=True)
     http_method = models.CharField(
         max_length=30,

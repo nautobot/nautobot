@@ -116,7 +116,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
         default=POWERFEED_MAX_UTILIZATION_DEFAULT,
         help_text="Maximum permissible draw (percentage)",
     )
-    # todoindex:
     available_power = models.PositiveIntegerField(default=0, editable=False)
     comments = models.TextField(blank=True)
 

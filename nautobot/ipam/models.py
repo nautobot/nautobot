@@ -789,7 +789,6 @@ class IPAddress(PrimaryModel, StatusModel):
         help_text="Hostname or FQDN (not case-sensitive)",
         db_index=True,
     )
-    # todoindex:
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = [

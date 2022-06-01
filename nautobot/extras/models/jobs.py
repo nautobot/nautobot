@@ -758,7 +758,6 @@ class ScheduledJob(BaseModel):
     )
     # todoindex:
     approval_required = models.BooleanField(default=False)
-    # todoindex:
     approved_at = models.DateTimeField(
         editable=False,
         blank=True,

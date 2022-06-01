@@ -70,7 +70,6 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
-    # todoindex:
     advanced_ui = models.BooleanField(
         default=False,
         verbose_name="Move to Advanced tab",
@@ -302,7 +301,6 @@ class CustomField(BaseModel, ChangeLoggedModel):
         "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters. Regular "
         "expression on select and multi-select will be applied at <code>Custom Field Choices</code> definition.",
     )
-    # todoindex:
     advanced_ui = models.BooleanField(
         default=False,
         verbose_name="Move to Advanced tab",

@@ -295,7 +295,6 @@ class Relationship(BaseModel, ChangeLoggedModel):
         null=True,
         help_text="Queryset filter matching the applicable destination objects of the selected type",
     )
-    # todoindex:
     advanced_ui = models.BooleanField(
         default=False,
         verbose_name="Move to Advanced tab",

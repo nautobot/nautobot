@@ -99,11 +99,8 @@ class Provider(PrimaryModel):
     # todoindex:
     account = models.CharField(max_length=100, blank=True, verbose_name="Account number")
     portal_url = models.URLField(blank=True, verbose_name="Portal URL")
-    # todoindex:
     noc_contact = models.TextField(blank=True, verbose_name="NOC contact")
-    # todoindex:
     admin_contact = models.TextField(blank=True, verbose_name="Admin contact")
-    # todoindex:
     comments = models.TextField(blank=True)
 
     csv_headers = [
@@ -208,9 +205,7 @@ class Circuit(PrimaryModel, StatusModel):
     )
     install_date = models.DateField(blank=True, null=True, verbose_name="Date installed")
     commit_rate = models.PositiveIntegerField(blank=True, null=True, verbose_name="Commit rate (Kbps)")
-    # todoindex:
     description = models.CharField(max_length=200, blank=True)
-    # todoindex:
     comments = models.TextField(blank=True)
 
     # Cache associated CircuitTerminations
