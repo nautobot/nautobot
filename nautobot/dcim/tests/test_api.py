@@ -1489,6 +1489,28 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
             },
         ]
 
+    def test_untagged_vlan_requires_mode(self):
+        """Test that when an `untagged_vlan` is specified, `mode` is also required."""
+        self.add_permissions("dcim.add_interface")
+
+        vlan = VLAN.objects.first()
+        device = Device.objects.first()
+
+        # This will fail.
+        data = {
+            "device": device.pk,
+            "name": "expected-to-fail",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "untagged_vlan": vlan.pk,
+        }
+
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_400_BAD_REQUEST)
+
+        # Now let's add mode and it will work.
+        data["mode"] = InterfaceModeChoices.MODE_ACCESS
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
 
 class FrontPortTest(APIViewTestCases.APIViewTestCase):
     model = FrontPort

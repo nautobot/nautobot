@@ -48,7 +48,7 @@ class RelationshipBaseTest(TestCase):
             slug="vlan-rack",
             source_type=self.rack_ct,
             source_label="My Vlans",
-            source_filter={"site": ["site-a"]},
+            source_filter={"site": ["site-a", "site-b", "site-c"]},
             destination_type=self.vlan_ct,
             destination_label="My Racks",
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -315,7 +315,7 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
-        self.assertEqual(field.query_params, {"site": ["site-a"]})
+        self.assertEqual(field.query_params, {"site": ["site-a", "site-b", "site-c"]})
 
         field = self.m2ms_1.to_form_field("peer")
         self.assertFalse(field.required)
@@ -383,6 +383,81 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         ]
         for cra in self.invalid_relationship_associations:
             cra.validated_save()
+
+    def test_create_invalid_relationship_association(self):
+        """Test creation of invalid relationship association restricted by destination/source filter."""
+
+        relationship = Relationship.objects.create(
+            name="Site to Rack Rel 1",
+            slug="site-to-rack-rel-1",
+            source_type=self.site_ct,
+            source_filter={"name": [self.sites[0].name]},
+            destination_type=self.rack_ct,
+            destination_label="Primary Rack",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            destination_filter={"name": [self.racks[0].name]},
+        )
+
+        associations = (
+            (
+                "source",
+                RelationshipAssociation(relationship=relationship, source=self.sites[1], destination=self.racks[0]),
+            ),
+            (
+                "destination",
+                RelationshipAssociation(relationship=relationship, source=self.sites[0], destination=self.racks[1]),
+            ),
+        )
+
+        for side_name, association in associations:
+            side = getattr(association, side_name)
+            with self.assertRaises(ValidationError) as handler:
+                association.validated_save()
+            expected_errors = {side_name: [f"{side} violates {relationship} {side_name}_filter restriction"]}
+            self.assertEqual(handler.exception.message_dict, expected_errors)
+
+    def test_exception_not_raised_when_updating_instance_with_relationship_type_o2o_or_o2m(self):
+        """Validate 'Unable to create more than one relationship-association...' not raise when updating instance with
+        type one-to-one, symmetric-one-to-one, one-to-many relationship."""
+
+        # Assert Exception not raise updating source of RelationshipAssociation with one-to-many relationship type
+        cra_1 = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[1])
+        cra_1.validated_save()
+
+        cra_1.source = self.sites[1]
+        cra_1.validated_save()
+
+        self.assertEqual(cra_1.source, self.sites[1])
+
+        # Validate Exception not raised when calling .validated_save() on a RelationshipAssociation instance without making any update
+        cra_1.validated_save()
+
+        # Assert Exception not raise updating source of RelationshipAssociation with one-to-one relationship type
+        cra_2 = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0])
+        cra_2.validated_save()
+
+        cra_2.source = self.racks[1]
+        cra_2.validated_save()
+
+        self.assertEqual(cra_2.source, self.racks[1])
+
+        # Assert Exception not raise updating destination of RelationshipAssociation with one-to-one relationship type
+        cra_3 = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[2], destination=self.sites[2])
+        cra_3.validated_save()
+
+        cra_3.destination = self.sites[4]
+        cra_3.validated_save()
+
+        self.assertEqual(cra_3.destination, self.sites[4])
+
+        # Assert Exception not raise updating destination of RelationshipAssociation with symmetric-one-to-one relationship type
+        cra_4 = RelationshipAssociation(relationship=self.o2os_1, source=self.racks[0], destination=self.racks[2])
+        cra_4.validated_save()
+
+        cra_4.destination = self.racks[1]
+        cra_4.validated_save()
+
+        self.assertEqual(cra_4.destination, self.racks[1])
 
     def test_clean_wrong_type(self):
         # Create with the wrong source Type

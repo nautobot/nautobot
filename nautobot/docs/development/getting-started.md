@@ -113,6 +113,11 @@ $ ln -s ../../scripts/git-hooks/pre-commit
 
 Getting started with Nautobot development is pretty straightforward, and should feel very familiar to anyone with Django development experience. We can recommend either a [Docker Compose workflow](#docker-compose-workflow) (if you don't want to install dependencies such as PostgreSQL and Redis directly onto your system) or a [Python virtual environment workflow](#python-virtual-environment-workflow).
 
+### Windows Development
+
+Local development on Windows Subsystem for Linux (WSL) is not currently supported. When developing locally on Windows, we recommend
+using a virtual machine running an [officially supported operating system](../../installation/#installing-nautobot-dependencies).
+
 ### Docker Compose Workflow
 
 This workflow uses [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) and assumes that you have them installed.
@@ -183,24 +188,20 @@ A development environment can be easily started up from the root of the project 
 * `invoke build` - Builds Nautobot docker images
 * `invoke migrate` - Performs database migration operation in Django
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
-* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
+* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts all Docker containers (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
+!!! note
+    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
+    `invoke start` or `invoke debug` commands.
+
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
-
-!!! note
-    If you are making edits to Nautobot's documentation in the Docker Compose workflow or otherwise needing to serve the docs locally, it is necessary to run a Python virtual environment:
-
-    - Follow the steps in the Nautobot docs to [install poetry](#install-poetry)
-    - `poetry shell`
-    - `poetry install`
-    - `mkdocs serve`
 
 Proceed to the [Working in your Development Environment](#working-in-your-development-environment) section
 
@@ -605,20 +606,13 @@ When modifying model field attributes, modify the test data in the tests too to 
 
 Some features require documentation updates or new documentation to be written. The documentation files can be found in the `docs` directory. To preview these changes locally, you can use `mkdocs`.
 
-### Installing `mkdocs`
-
-If you are using the poetry-based workflow, `mkdocs` should already be installed in your environment. This section mostly applies if you are using Docker to manage your development environment.
-
-The `mkdocs` command can be installed via pip, either globally or in your virtual environment.
-
-```no-highlight
-$ pip3 install mkdocs mkdocs-include-markdown-plugin
-```
-
 ### Writing Documentation
 
-Once the `mkdocs` command has been installed, you can preview the documentation
-using `mkdocs serve`,  which should start a web server at `http://localhost:8001`.
+You can preview the documentation using the server built into mkdocs, which should start a web server at `http://localhost:8001`.
+
+| Docker Compose Workflow  | Virtual Environment Workflow |
+|--------------------------|------------------------------|
+| `invoke start -s mkdocs` | `mkdocs serve`               |
 
 Documentation is written in Markdown. If you need to add additional pages or sections to the documentation, you can add them to `mkdocs.yml` at the root of the repository.
 

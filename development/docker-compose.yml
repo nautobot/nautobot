@@ -90,3 +90,13 @@ services:
     ports:
         - "4444:4444"
     shm_size: 2g
+  mkdocs:
+    profiles:
+      - mkdocs
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "mkdocs serve -a '0.0.0.0:8001'"
+    healthcheck:
+      disable: true
+    tty: true
+    ports:
+      - "8001:8001"

@@ -501,8 +501,12 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
 
         # Get NAPALM enable-secret from the device if present
         if device.secrets_group:
+            # Work around inconsistent enable password arg in NAPALM drivers
+            enable_password_arg = "secret"
+            if device.platform.napalm_driver.lower() == "eos":
+                enable_password_arg = "enable_password"
             try:
-                optional_args["secret"] = device.secrets_group.get_secret_value(
+                optional_args[enable_password_arg] = device.secrets_group.get_secret_value(
                     SecretsGroupAccessTypeChoices.TYPE_GENERIC,
                     SecretsGroupSecretTypeChoices.TYPE_SECRET,
                     obj=device,
