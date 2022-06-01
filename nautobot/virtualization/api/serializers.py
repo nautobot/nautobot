@@ -286,6 +286,8 @@ class VMInterfaceSerializer(VMInterfaceSerializerVersion12, StatusModelSerialize
             "name",
             "status",
             "enabled",
+            "parent_interface",
+            "bridge",
             "mtu",
             "mac_address",
             "description",

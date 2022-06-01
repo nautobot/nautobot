@@ -1667,9 +1667,11 @@ class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
 
         status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
 
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t", status=status_active)
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t", status=status_active)
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t", status=status_active)
+        interfaces = (
+            Interface.objects.create(device=device, name="Interface 1", type="1000base-t", status=status_active),
+            Interface.objects.create(device=device, name="Interface 2", type="1000base-t", status=status_active),
+            Interface.objects.create(device=device, name="Interface 3", type="1000base-t", status=status_active),
+        )
 
         vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
@@ -1692,6 +1694,7 @@ class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
                 "name": "Interface 5",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "bridge": interfaces[0].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
                 "status": "active",
@@ -1699,8 +1702,9 @@ class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
             {
                 "device": device.pk,
                 "name": "Interface 6",
-                "type": "1000base-t",
+                "type": "virtual",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
                 "status": "active",

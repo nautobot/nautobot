@@ -397,9 +397,11 @@ class VMInterfaceTestVersion14(APIViewTestCases.APIViewTestCase):
 
         status_active = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
 
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1", status=status_active)
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2", status=status_active)
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3", status=status_active)
+        vminterfaces = (
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1", status=status_active),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2", status=status_active),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3", status=status_active),
+        )
 
         vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
@@ -422,6 +424,7 @@ class VMInterfaceTestVersion14(APIViewTestCases.APIViewTestCase):
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
+                "bridge": vminterfaces[0].pk,
                 "status": "active",
             },
             {
@@ -430,6 +433,7 @@ class VMInterfaceTestVersion14(APIViewTestCases.APIViewTestCase):
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
+                "parent_interface": vminterfaces[1].pk,
                 "status": "active",
             },
         ]

@@ -1117,6 +1117,8 @@ class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMix
             "label",
             "type",
             "enabled",
+            "parent_interface",
+            "bridge",
             "lag",
             "mtu",
             "mac_address",
