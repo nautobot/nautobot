@@ -109,7 +109,7 @@ class DeviceType(PrimaryModel):
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
-    # todoindex:
+    # TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     # todoindex:
     is_full_depth = models.BooleanField(
@@ -497,7 +497,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
-    # todoindex:
+    # TODO: Profile filtering on this field if it could benefit from an index
     position = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
@@ -537,7 +537,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
-    # todoindex:
+    # TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     comments = models.TextField(blank=True)
