@@ -49,16 +49,19 @@ The same sort of logic is in play when a user attempts to create or modify an ob
 
 ## Assigning Permissions
 
-Permissions can be applied directly to users or to groups of users.
+Permissions are implemented by assigning them to specific users and/or to groups of users. Users can have a combination of permissions and groups assigned to their account. All of the permissions granted to the user's groups and directly to the user's account will be used when determining authorization to access an object or view.
 
-### Permissions Assigned to Individual Users
+### Assigning Permissions to Individual Users
 
 Permissions can be related directly to users from the Admin UI or the API:
 
-| -                                                           | Admin UI | API |
-| ----------------------------------------------------------- | -------- | --- |
-| Superusers                                                  | Yes      | Yes |
-| Users with permission to add or change `users | permission` | No       | Yes |
+| -                                                                      | Admin UI | API |
+| ---------------------------------------------------------------------- | -------- | --- |
+| Superusers                                                             | Yes      | Yes |
+| Staff users with `users.add_permission` or `users.change_permission`   | Yes      | Yes |
+| Regular users with `users.add_permission` or `users.change_permission` | No       | Yes |
+
+Multiple permissions can be assigned to a user account.
 
 !!! info
 
@@ -66,21 +69,33 @@ Permissions can be related directly to users from the Admin UI or the API:
 
 !!! warning
 
-    Granting a user permission to add or change `users | permission` gives the user the ability to modify their own permissions. This permission should be restricted to trusted accounts and should be considered the same as giving a user full access.
+    Granting a user `users.change_permission` or `users.add_permission` gives the user the ability to modify their own permissions. This permission should be restricted to trusted accounts and should be considered the same as giving a user full access.
 
-### Group Creation
+### Creating Groups
 
-Groups can be created to provide role-based access control and simplify user permissions management. Permissions related to groups will apply to all users in the group. Groups can be created from the Admin UI or the API:
+Groups of users can be created to provide role-based access control and simplify user permissions management. Permissions related to a group will apply to all users in the group. A user can belong to any number of groups. Groups can be created from the Admin UI or the API:
 
 | -                                                           | Admin UI | API |
 | ----------------------------------------------------------- | -------- | --- |
 | Superusers                                                  | Yes      | Yes |
-| Users with permission to add or change `auth | group`       | No       | Yes |
+| Users with `auth.add_group` or `auth.change_group`          | No       | Yes |
+
+### Adding Users to Groups
+
+Users can be added to groups through the Admin UI by superusers or automatically assigned to externally authenticated users through the [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings/#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings/#external_auth_default_permissions) settings. Nautobot groups can optionally be mapped to LDAP groups when using [LDAP authentication](../../configuration/authentication/ldap/#user-groups-for-permissions)
+
+### Assigning Permissions to Groups
+
+Permissions can be related to groups by superusers or users with `users.add_permission` or `users.change_permission` permissions.
+
+| -                                                                      | Admin UI | API |
+| ---------------------------------------------------------------------- | -------- | --- |
+| Superusers                                                             | Yes      | Yes |
+| Staff users with `users.add_permission` or `users.change_permission`   | Yes      | Yes |
+| Regular users with `users.add_permission` or `users.change_permission` | No       | Yes |
+
+Multiple permissions can be assigned to a user group.
 
 !!! info
 
-    Group permission relationships can be managed in the Admin UI by modifying the group or the permission.
-
-### Group Assignment
-
-Users can be added to groups through the Admin UI by superusers or automatically assigned to externally authenticated users through the [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings/#external_auth_default_groups) setting.
+    Group permission relationships can be managed in the Admin UI by modifying the group (superusers only) or the permission.
