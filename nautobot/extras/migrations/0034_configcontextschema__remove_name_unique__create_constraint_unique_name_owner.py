@@ -6,17 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0033_add__optimized_indexing'),
+        ("extras", "0033_add__optimized_indexing"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='configcontextschema',
-            name='name',
+            model_name="configcontextschema",
+            name="name",
             field=models.CharField(max_length=200),
         ),
         migrations.AddConstraint(
-            model_name='configcontextschema',
-            constraint=models.UniqueConstraint(fields=('name', 'owner_content_type', 'owner_object_id'), name='unique_name_owner'),
+            model_name="configcontextschema",
+            constraint=models.UniqueConstraint(
+                fields=("name", "owner_content_type", "owner_object_id"), name="unique_name_owner"
+            ),
         ),
     ]
