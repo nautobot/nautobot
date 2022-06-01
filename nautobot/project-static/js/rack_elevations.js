@@ -29,10 +29,10 @@ function set_rack_device_fullname_state(display_fullname) {
 
     // First we update the button and stored state on button
     let toggle_button = document.querySelector('button.toggle-fullname')
-    let toggle_button_icon_classList = toggle_button.querySelector('.mdi').classList
+    let toggle_button_icon_classList = toggle_button.querySelector('.mdi').classList;
     toggle_button.setAttribute('selected', display_fullname);
-    toggle_button_icon_classList[(display_fullname && 'add') || 'remove']('mdi-checkbox-marked-circle-outline')
-    toggle_button_icon_classList[(display_fullname && 'remove') || 'add']('mdi-checkbox-blank-circle-outline')
+    toggle_button_icon_classList[(display_fullname && 'add') || 'remove']('mdi-checkbox-marked-circle-outline');
+    toggle_button_icon_classList[(display_fullname && 'remove') || 'add']('mdi-checkbox-blank-circle-outline');
 
     // Next update the rack elevations to match desired state
     document.querySelectorAll(".rack_elevation").forEach((rack_elevation) => {

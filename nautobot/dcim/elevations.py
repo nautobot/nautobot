@@ -79,7 +79,7 @@ class RackElevationSVG:
     def _draw_device_front(self, drawing, device, start, end, text):
         devicebay_details = ""
         if device.devicebay_count:
-            devicebay_details += " ({}/{})".format(device.get_children().count(), device.devicebay_count)
+            devicebay_details += f" ({device.get_children().count()}/{device.devicebay_count})"
 
         device_fullname = str(device) + devicebay_details
         device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + devicebay_details
