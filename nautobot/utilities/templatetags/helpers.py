@@ -45,12 +45,14 @@ def hyperlinked_object(value):
         str: String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
 
     Examples:
-        >>> maybe_object(device)
+        >>> hyperlinked_object(device)
         '<a href="/dcim/devices/3faafe8c-bdd6-4317-88dc-f791e6988caa/">Device 1</a>'
-        >>> maybe_object(None)
-        '<span class="text-muted">&mdash;</span>'
-        >>> maybe_object(device_role)
+        >>> hyperlinked_object(device_role)
         '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches">Router</a>'
+        >>> hyperlinked_object(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> hyperlinked_object("Hello")
+        'Hello'
     """
     if value is None:
         return placeholder(value)
