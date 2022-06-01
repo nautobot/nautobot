@@ -365,6 +365,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         user=request.user,
         approval_required=job_model.approval_required,
     )
+    scheduled_job.kwargs["scheduled_job_pk"] = scheduled_job.pk
     scheduled_job.save()
     return scheduled_job
 
