@@ -41,7 +41,7 @@ function set_rack_device_fullname_state(display_fullname) {
 
     // Update the "Save SVG" links to match the presented state
     document.querySelectorAll('.rack_elevation_save_svg_link').forEach((link_el) => {
-        let the_url = new URL(link_el.getAttribute('href'), window.location.href);
+        const the_url = new URL(link_el.getAttribute('href'), window.location.href);
         the_url.searchParams.set('display_fullname', display_fullname);
         link_el.setAttribute('href', the_url);
     })
@@ -64,7 +64,7 @@ function set_rack_device_fullname_display(rack_elevation, display_fullname) {
      */
     function set_device_text_display_state(state) {
         return (text_element) => {
-            let method = (state && 'remove') || 'add';
+            const method = (state && 'remove') || 'add';
             text_element.classList[method]('hidden');
         }
     }
