@@ -14,7 +14,7 @@ $('button.toggle-images').click(function() {
 
 
 // Key for localStorage to store preferred state for device name presentation
-let window_ls_rack_device_fullname_display_key = 'rack_elevation_device_fullname';
+const window_ls_rack_device_fullname_display_key = 'rack_elevation_device_fullname';
 
 // Default device name presentation: show untruncated name
 let default_rackview_fullname_state = true;
@@ -28,8 +28,8 @@ if(window.localStorage.getItem(window_ls_rack_device_fullname_display_key) != nu
 function set_rack_device_fullname_state(display_fullname) {
 
     // First we update the button and stored state on button
-    let toggle_button = document.querySelector('button.toggle-fullname')
-    let toggle_button_icon_classList = toggle_button.querySelector('.mdi').classList;
+    const toggle_button = document.querySelector('button.toggle-fullname')
+    const toggle_button_icon_classList = toggle_button.querySelector('.mdi').classList;
     toggle_button.setAttribute('selected', display_fullname);
     toggle_button_icon_classList[(display_fullname && 'add') || 'remove']('mdi-checkbox-marked-circle-outline');
     toggle_button_icon_classList[(display_fullname && 'remove') || 'add']('mdi-checkbox-blank-circle-outline');
