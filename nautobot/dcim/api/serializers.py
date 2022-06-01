@@ -1108,36 +1108,8 @@ class InterfaceSerializerVersion12(
 class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
     class Meta:
         model = Interface
-        fields = [
-            "id",
-            "url",
-            "device",
-            "name",
-            "status",
-            "label",
-            "type",
-            "enabled",
-            "parent_interface",
-            "bridge",
-            "lag",
-            "mtu",
-            "mac_address",
-            "mgmt_only",
-            "description",
-            "mode",
-            "untagged_vlan",
-            "tagged_vlans",
-            "cable",
-            "cable_peer",
-            "cable_peer_type",
-            "connected_endpoint",
-            "connected_endpoint_type",
-            "connected_endpoint_reachable",
-            "tags",
-            "count_ipaddresses",
-            "custom_fields",
-            "computed_fields",
-        ]
+        fields = InterfaceSerializerVersion12.Meta.fields.copy()
+        fields.insert(4, "status")
         opt_in_fields = ["computed_fields"]
 
 
