@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
 
+from .config import get_settings_or_config
 from .permissions import resolve_permission
 
 
@@ -40,6 +41,25 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
             return True
 
         return False
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.has_permission():
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class RestrictedUIPermissionMixin(AccessMixin):
+    """
+    Permission mixin to grant access to user if user is staff/superuser or HIDE_RESTRICTED_UI is False
+    """
+
+    def has_permission(self):
+        if get_settings_or_config("HIDE_RESTRICTED_UI") is True and (
+            not self.request.user.is_staff or not self.request.user.is_superuser
+        ):
+            return False
+        return True
 
     def dispatch(self, request, *args, **kwargs):
         if not self.has_permission():
