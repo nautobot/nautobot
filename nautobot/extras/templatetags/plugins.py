@@ -2,7 +2,6 @@ import logging
 
 from django import template as template_
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.plugins import PluginBanner, PluginTemplateExtension
