@@ -146,11 +146,13 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#1763](https://github.com/nautobot/nautobot/issues/1763) - Job testing documentation updated to include details around enabling jobs. Job logs database added to `TransactionTestCase`.
 - [#1829](https://github.com/nautobot/nautobot/pull/1829) - Change Docker build GitHub Action to cache with matrix awareness.
 
 ### Fixed
 
 - [#1409](https://github.com/nautobot/nautobot/issues/1409) - Fixed page title on device status (NAPALM) page template.
+- [#1524](https://github.com/nautobot/nautobot/issues/1524) - Fixed valid "None" option removed from search field upon display.
 
 ## v1.3.5 (2022-05-30)
 
