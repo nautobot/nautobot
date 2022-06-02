@@ -2,6 +2,7 @@ import logging
 
 from django import template as template_
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.plugins import PluginBanner, PluginTemplateExtension
@@ -13,12 +14,11 @@ register = template_.Library()
 logger = logging.getLogger("nautobot.plugins")
 
 
-def _get_registered_content(obj, method, template_context):
+def _get_registered_content(obj, method, template_context, return_html=True):
     """
     Given an object and a PluginTemplateExtension method name and the template context, return all the
     registered content for the object's model.
     """
-    html = ""
     context = {
         "object": obj,
         "request": template_context["request"],
@@ -29,6 +29,7 @@ def _get_registered_content(obj, method, template_context):
 
     model_name = obj._meta.label_lower
     template_extensions = registry["plugin_template_extensions"].get(model_name, [])
+    objects = []
     for template_extension in template_extensions:
 
         # If the class has not overridden the specified method, we can skip it (because we know it
@@ -43,9 +44,16 @@ def _get_registered_content(obj, method, template_context):
         # Call the method to render content
         instance = template_extension(context)
         content = getattr(instance, method)()
-        html += content
+        if isinstance(content, list):
+            for item in content:
+                objects.append(item)
+            continue
+        objects.append(content)
 
-    return mark_safe(html)
+    if not return_html:
+        return objects
+
+    return mark_safe(''.join(objects))
 
 
 @register.simple_tag(takes_context=True)
@@ -78,6 +86,17 @@ def plugin_full_width_page(context, obj):
     Render all full width page content registered by plugins
     """
     return _get_registered_content(obj, "full_width_page", context)
+
+
+@register.inclusion_tag("extras/templatetags/plugin_custom_tabs.html", takes_context=True)
+def plugin_custom_tabs(context, obj):
+    """
+    Render all custom tabs registered by plugins for the object detail view
+    """
+    return {
+        "active_tab": context["active_tab"],
+        "custom_tabs": _get_registered_content(obj, "custom_tabs", context, return_html=False)[0] or {},
+    }
 
 
 @register.inclusion_tag("extras/templatetags/plugin_banners.html", takes_context=True)

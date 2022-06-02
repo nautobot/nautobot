@@ -2,9 +2,28 @@ from django.shortcuts import render
 from django.views.generic import View
 
 from nautobot.core.views import generic
+from nautobot.dcim.views import DeviceView
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
+
+
+class ExampleCustomTab1View(DeviceView):
+    template_name = 'example_plugin/custom_device_tab_1.html'
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        context["active_tab"] = request.GET.get("tab", "")
+        return context
+
+
+class ExampleCustomTab2View(DeviceView):
+    template_name = 'example_plugin/custom_device_tab_2.html'
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        context["active_tab"] = request.GET.get("tab", "")
+        return context
 
 
 class ExamplePluginHomeView(View):
