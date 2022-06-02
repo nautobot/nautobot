@@ -87,6 +87,8 @@ class JobTest(TransactionTestCase):
         module = "test_pass"
         name = "TestPass"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = JobResult.objects.create(
             name=job_model.class_path,
