@@ -9,7 +9,7 @@ from example_plugin import filters, forms, tables
 
 
 class ExampleCustomTab1View(DeviceView):
-    template_name = 'example_plugin/custom_device_tab_1.html'
+    template_name = "example_plugin/custom_device_tab_1.html"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -18,7 +18,7 @@ class ExampleCustomTab1View(DeviceView):
 
 
 class ExampleCustomTab2View(DeviceView):
-    template_name = 'example_plugin/custom_device_tab_2.html'
+    template_name = "example_plugin/custom_device_tab_2.html"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

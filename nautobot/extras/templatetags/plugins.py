@@ -53,7 +53,7 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     if not return_html:
         return objects
 
-    return mark_safe(''.join(objects))
+    return mark_safe("".join(objects))
 
 
 @register.simple_tag(takes_context=True)
