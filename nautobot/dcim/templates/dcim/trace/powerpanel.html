@@ -1,5 +1,6 @@
+{% load helpers %}
 <div class="node">
-    <strong><a href="{{ powerpanel.get_absolute_url }}">{{ powerpanel }}</a></strong><br />
+    <strong>{{ powerpanel|hyperlinked_object }}</strong><br />
     Power Panel<br />
-    <a href="{{ powerpanel.site.get_absolute_url }}">{{ powerpanel.site }}</a>
+    {{ powerpanel.site|hyperlinked_object }}
 </div>
