@@ -1,4 +1,22 @@
+from django.urls import reverse
+
 from nautobot.extras.plugins import PluginTemplateExtension
+
+
+class DeviceContent(PluginTemplateExtension):
+    model = "dcim.device"
+
+    def custom_tabs(self):
+        return {
+            "ect1": {
+                "title": "Example Custom Tab 1",
+                "url": reverse("plugins:example_plugin:example_object_tab_1", args=[self.context["object"].pk]),
+            },
+            "ect2": {
+                "title": "Example Custom Tab 2",
+                "url": reverse("plugins:example_plugin:example_object_tab_2", args=[self.context["object"].pk]),
+            },
+        }
 
 
 class SiteContent(PluginTemplateExtension):
@@ -64,4 +82,4 @@ class ExampleModelContent(PluginTemplateExtension):
 
 
 # Don't forget to register your template extensions!
-template_extensions = [ExampleModelContent, SiteContent]
+template_extensions = [ExampleModelContent, SiteContent, DeviceContent]
