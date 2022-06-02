@@ -685,3 +685,20 @@ BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
 
 # Dont load the 'taggit' app, since we have our own custom `Tag` and `TaggedItem` models
 SHELL_PLUS_DONT_LOAD = ["taggit"]
+
+#
+# UI settings
+#
+
+
+# UI_RACK_VIEW_TRUNCATE_FUNCTION
+def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
+    """Given device display name, truncate to fit the rack elevation view.
+
+    :param device_display_name: Full display name of the device attempting to be rendered in the rack elevation.
+    :type device_display_name: str
+
+    :return: Truncated device name
+    :type: str
+    """
+    return str(device_display_name).split(".")[0]

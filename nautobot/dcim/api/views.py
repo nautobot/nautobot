@@ -220,6 +220,7 @@ class RackViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                 legend_width=data["legend_width"],
                 include_images=data["include_images"],
                 base_url=request.build_absolute_uri("/"),
+                display_fullname=data["display_fullname"],
             )
             return HttpResponse(drawing.tostring(), content_type="image/svg+xml")
 
