@@ -421,15 +421,17 @@ class Role(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
 )
 class Prefix(PrimaryModel, StatusModel):
     """
-    A Prefix represents an IPv4 or IPv6 network, including mask length. Prefixes can optionally be assigned to Sites and
-    VRFs. A Prefix must be assigned a status and may optionally be assigned a used-define Role. A Prefix can also be
-    assigned to a VLAN where appropriate.
+    A Prefix represents an IPv4 or IPv6 network, including mask length.
+    Prefixes can optionally be assigned to Sites or Locations and VRFs.
+    A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
+    A Prefix can also be assigned to a VLAN where appropriate.
     """
 
     network = VarbinaryIPField(
@@ -441,6 +443,13 @@ class Prefix(PrimaryModel, StatusModel):
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     site = models.ForeignKey(
         to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="prefixes",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="prefixes",
         blank=True,
@@ -1002,6 +1011,7 @@ class IPAddress(PrimaryModel, StatusModel):
     "custom_fields",
     "custom_validators",
     "graphql",
+    "locations",
     "relationships",
 )
 class VLANGroup(OrganizationalModel):
@@ -1014,6 +1024,13 @@ class VLANGroup(OrganizationalModel):
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(
         to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="vlan_groups",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="vlan_groups",
         blank=True,
@@ -1067,15 +1084,16 @@ class VLANGroup(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
 )
 class VLAN(PrimaryModel, StatusModel):
     """
-    A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094). Each VLAN must be assigned
-    to a Site, however VLAN IDs need not be unique within a Site. A VLAN may optionally be assigned to a VLANGroup,
-    within which all VLAN IDs and names but be unique.
+    A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
+    Each VLAN must be assigned to a Site or Location, however VLAN IDs need not be unique within a Site or Location.
+    A VLAN may optionally be assigned to a VLANGroup, within which all VLAN IDs and names but be unique.
 
     Like Prefixes, each VLAN is assigned an operational status and optionally a user-defined Role. A VLAN can have zero
     or more Prefixes assigned to it.
@@ -1083,6 +1101,13 @@ class VLAN(PrimaryModel, StatusModel):
 
     site = models.ForeignKey(
         to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="vlans",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="vlans",
         blank=True,

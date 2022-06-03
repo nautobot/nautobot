@@ -188,9 +188,10 @@ class CircuitType(OrganizationalModel):
 )
 class Circuit(PrimaryModel, StatusModel):
     """
-    A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
-    circuits. Each circuit is also assigned a CircuitType and a Site.  Circuit port speed and commit rate are measured
-    in Kbps.
+    A communications circuit connects two points.
+    Each Circuit belongs to a Provider; Providers may have multiple circuits.
+    Each circuit is also assigned a CircuitType.
+    Circuit port speed and commit rate are measured in Kbps.
     """
 
     cid = models.CharField(max_length=100, verbose_name="Circuit ID")
@@ -277,6 +278,7 @@ class Circuit(PrimaryModel, StatusModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
@@ -286,6 +288,13 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     site = models.ForeignKey(
         to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="circuit_terminations",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="circuit_terminations",
         blank=True,

@@ -49,6 +49,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     InventoryItem,
     Platform,
@@ -104,6 +106,8 @@ from .nested_serializers import (  # noqa: F401
     NestedInterfaceSerializer,
     NestedInterfaceTemplateSerializer,
     NestedInventoryItemSerializer,
+    NestedLocationSerializer,
+    NestedLocationTypeSerializer,
     NestedManufacturerSerializer,
     NestedPlatformSerializer,
     NestedPowerFeedSerializer,
@@ -249,6 +253,57 @@ class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "rack_count",
             "virtualmachine_count",
             "vlan_count",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+#
+# Locations
+#
+
+
+class LocationTypeSerializer(CustomFieldModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
+    parent = NestedLocationTypeSerializer(required=False, allow_null=True)
+
+    class Meta:
+        model = LocationType
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "parent",
+            "description",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
+    location_type = NestedLocationTypeSerializer()
+    parent = NestedLocationSerializer(required=False, allow_null=True)
+
+    class Meta:
+        model = Location
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "status",
+            "location_type",
+            "parent",
+            "description",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]

@@ -50,6 +50,8 @@ from .models import (
     Interface,
     InterfaceTemplate,
     InventoryItem,
+    Location,
+    LocationType,
     Manufacturer,
     Platform,
     PowerFeed,
@@ -89,6 +91,8 @@ __all__ = (
     "InterfaceFilterSet",
     "InterfaceTemplateFilterSet",
     "InventoryItemFilterSet",
+    "LocationFilterSet",
+    "LocationTypeFilterSet",
     "ManufacturerFilterSet",
     "PathEndpointFilterSet",
     "PlatformFilterSet",
@@ -175,6 +179,57 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "contact_phone",
             "contact_email",
         ]
+
+
+class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+    parent_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=LocationType.objects.all(),
+        label="Parent location type (ID)",
+    )
+    parent = django_filters.ModelMultipleChoiceFilter(
+        field_name="parent__slug",
+        queryset=LocationType.objects.all(),
+        to_field_name="slug",
+        label="Parent location type (slug)",
+    )
+
+    class Meta:
+        model = LocationType
+        fields = "__all__"
+
+
+class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
+    )
+    location_type_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=LocationType.objects.all(),
+        label="Location type (ID)",
+    )
+    location_type = django_filters.ModelMultipleChoiceFilter(
+        field_name="location_type__slug",
+        queryset = LocationType.objects.all(),
+        to_field_name="slug",
+        label="Location type (slug)",
+    )
+    parent_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Parent location (ID)",
+    )
+    parent = django_filters.ModelMultipleChoiceFilter(
+        field_name="parent__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Parent location (slug)",
+    )
+    tags = TagFilter()
+
+    class Meta:
+        model = Location
+        fields = "__all__"
 
 
 class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):

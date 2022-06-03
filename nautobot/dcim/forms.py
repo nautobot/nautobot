@@ -100,6 +100,8 @@ from .models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     InventoryItem,
     Platform,
@@ -388,6 +390,78 @@ class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
     field_order = ["q", "status", "region", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
+    tag = TagFilterField(model)
+
+
+#
+# LocationTypes
+#
+
+class LocationTypeForm(NautobotModelForm):
+    parent = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
+    slug = SlugField()
+
+    class Meta:
+        model = LocationType
+        fields = ("parent", "name", "slug", "description")
+
+
+class LocationTypeCSVForm(CustomFieldModelCSVForm):
+    parent = CSVModelChoiceField(
+        queryset=LocationType.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Name of parent location type",
+    )
+
+    class Meta:
+        model = LocationType
+        fields = LocationType.csv_headers
+
+
+class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = LocationType
+    q = forms.CharField(required=False, label="Search")
+
+
+#
+# Locations
+#
+
+class LocationForm(NautobotModelForm):
+    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
+    parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
+    slug = SlugField()
+
+    class Meta:
+        model = Location
+        fields = ["name", "slug", "status", "location_type", "parent", "description"]
+
+
+class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    location_type = CSVModelChoiceField(
+        queryset=LocationType.objects.all(),
+        to_field_name="name",
+        help_text="Location type",
+    )
+    parent = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Parent location",
+    )
+
+    class Meta:
+        model = Location
+        fields = Location.csv_headers
+
+
+class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilterForm):
+    model = Location
+    q = forms.CharField(required=False, label="Search")
+    location_type = DynamicModelMultipleChoiceField(
+        queryset=LocationType.objects.all(), to_field_name="slug", required=False
+    )
     tag = TagFilterField(model)
 
 

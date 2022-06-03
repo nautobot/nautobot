@@ -45,19 +45,31 @@ __all__ = (
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
 )
 class RackGroup(MPTTModel, OrganizationalModel):
     """
-    Racks can be grouped as subsets within a Site. The scope of a group will depend on how Sites are defined. For
-    example, if a Site spans a corporate campus, a RackGroup might be defined to represent each building within that
-    campus. If a Site instead represents a single building, a RackGroup might represent a single room or floor.
+    Racks can be grouped as subsets within a Site or Location.
     """
 
     name = models.CharField(max_length=100, db_index=True)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
+    site = models.ForeignKey(
+        to="dcim.Site",
+        on_delete=models.CASCADE,
+        related_name="rack_groups",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.CASCADE,
+        related_name="rack_groups",
+        blank=True,
+        null=True,
+    )
     parent = TreeForeignKey(
         to="self",
         on_delete=models.CASCADE,
@@ -155,6 +167,7 @@ class RackRole(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
@@ -174,7 +187,20 @@ class Rack(PrimaryModel, StatusModel):
         verbose_name="Facility ID",
         help_text="Locally-assigned identifier",
     )
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="racks")
+    site = models.ForeignKey(
+        to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="racks",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="racks",
+        blank=True,
+        null=True,
+    )
     group = models.ForeignKey(
         to="dcim.RackGroup",
         on_delete=models.SET_NULL,

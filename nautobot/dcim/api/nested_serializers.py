@@ -19,6 +19,8 @@ __all__ = [
     "NestedInterfaceSerializer",
     "NestedInterfaceTemplateSerializer",
     "NestedInventoryItemSerializer",
+    "NestedLocationSerializer",
+    "NestedLocationTypeSerializer",
     "NestedManufacturerSerializer",
     "NestedPlatformSerializer",
     "NestedPowerFeedSerializer",
@@ -59,6 +61,27 @@ class NestedSiteSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Site
+        fields = ["id", "url", "name", "slug"]
+
+
+#
+# Locations
+#
+
+
+class NestedLocationTypeSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
+
+    class Meta:
+        model = models.LocationType
+        fields = ["id", "url", "name", "slug"]
+
+
+class NestedLocationSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
+
+    class Meta:
+        model = models.Location
         fields = ["id", "url", "name", "slug"]
 
 

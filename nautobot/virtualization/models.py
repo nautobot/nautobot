@@ -121,6 +121,7 @@ class ClusterGroup(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "webhooks",
 )
@@ -147,6 +148,13 @@ class Cluster(PrimaryModel):
     )
     site = models.ForeignKey(
         to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="clusters",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="clusters",
         blank=True,

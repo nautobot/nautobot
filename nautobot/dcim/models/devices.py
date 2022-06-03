@@ -445,17 +445,19 @@ class Platform(OrganizationalModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
 )
 class Device(PrimaryModel, ConfigContextModel, StatusModel):
     """
-    A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
+    A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
-    Each Device must be assigned to a site, and optionally to a rack within that site. Associating a device with a
-    particular rack face or unit is optional (for example, vertically mounted PDUs do not consume rack units).
+    Each Device must be assigned to a Site or Location, and optionally to a Rack within that.
+    Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
+    do not consume rack units).
 
     When a new Device is created, console/power/interface/device bay components are created along with it as dictated
     by the component templates assigned to its DeviceType. Components can also be added, modified, or deleted after the
@@ -489,7 +491,20 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         verbose_name="Asset tag",
         help_text="A unique tag used to identify this device",
     )
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
+    site = models.ForeignKey(
+        to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="devices",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="devices",
+        blank=True,
+        null=True,
+    )
     rack = models.ForeignKey(
         to="dcim.Rack",
         on_delete=models.PROTECT,
