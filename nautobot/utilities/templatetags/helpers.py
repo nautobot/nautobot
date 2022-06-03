@@ -349,6 +349,10 @@ def has_one_or_more_perms(user, permissions_list):
     """
     Return True if the user has *at least one* permissions in the list.
     """
+    # Superusers implicitly have all permissions
+    if user.is_active and (user.is_superuser or user.is_staff):
+        return True
+
     for permission in permissions_list:
         if user.has_perm(permission):
             return True
