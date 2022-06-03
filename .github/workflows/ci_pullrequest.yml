@@ -119,7 +119,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.7" ]
+        python-version: [ "3.8" ]
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -150,7 +150,7 @@ jobs:
       - name: "Show Nautobot Version"
         run: "python -c \"from nautobot import __version__; print(__version__);\""
       - name: "Check Poetry Cache"
-        run: "ls /home/runner/.cache/pypoetry/virtualenvs/nautobot-zO_ZO7c3-py3.7/lib/python3.7/site-packages/nautobot*"
+        run: "ls /home/runner/.cache/pypoetry/virtualenvs/nautobot-zO_ZO7c3-py3.8/lib/python3.8/site-packages/nautobot*"
       - name: "Run unittest"
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
