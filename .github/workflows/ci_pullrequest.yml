@@ -146,9 +146,9 @@ jobs:
         with:
           python-version: "${{ matrix.python-version }}"
       - name: "Check Poetry Cache"
-        run: "ls .venv/lib/python3.8/site-packages/nautobot*.dist-info"
+        run: "poetry run pip show nautobot"
       - name: "Check Poetry Cache"
-        run: "poetry run pip show"
+        run: "ls ~/.cache/pypoetry/virtualenvs/**/nautobot*.dist-info"
       - name: "Run unittest"
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
