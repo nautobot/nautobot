@@ -2,6 +2,7 @@ import logging
 
 from django import template as template_
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.plugins import PluginBanner, PluginTemplateExtension
@@ -25,10 +26,13 @@ def _get_registered_content(obj, method, template_context, return_html=True):
         "csrf_token": template_context["csrf_token"],
         "perms": template_context["perms"],
     }
+    obj_ct = ContentType.objects.get_for_model(obj)
+    obj_namespace = f"{obj_ct.app_label}:{obj_ct.model}"
 
     model_name = obj._meta.label_lower
     template_extensions = registry["plugin_template_extensions"].get(model_name, [])
     objects = []
+    html = ""
     for template_extension in template_extensions:
 
         # If the class has not overridden the specified method, we can skip it (because we know it
@@ -43,16 +47,16 @@ def _get_registered_content(obj, method, template_context, return_html=True):
         # Call the method to render content
         instance = template_extension(context)
         content = getattr(instance, method)()
-        if isinstance(content, list):
-            for item in content:
-                objects.append(item)
+        if isinstance(content, dict):
+            for k, v in content.items():
+                objects.append({f"{plugin_name}:{obj_namespace}:{k}": v})
             continue
-        objects.append(content)
+        html += content
 
     if not return_html:
         return objects
 
-    return mark_safe("".join(objects))
+    return mark_safe(html)
 
 
 @register.simple_tag(takes_context=True)
