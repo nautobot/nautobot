@@ -6,14 +6,14 @@ from nautobot.extras.plugins import PluginTemplateExtension
 class DeviceContent(PluginTemplateExtension):
     model = "dcim.device"
 
-    def custom_tabs(self):
+    def plugin_nav_tabs(self):
         return {
             "ect1": {
-                "title": "Example Custom Tab 1",
+                "title": "Example Device Tab 1",
                 "url": reverse("plugins:example_plugin:example_object_tab_1", args=[self.context["object"].pk]),
             },
             "ect2": {
-                "title": "Example Custom Tab 2",
+                "title": "Example Device Tab 2",
                 "url": reverse("plugins:example_plugin:example_object_tab_2", args=[self.context["object"].pk]),
             },
         }

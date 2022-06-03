@@ -87,14 +87,14 @@ def plugin_full_width_page(context, obj):
     return _get_registered_content(obj, "full_width_page", context)
 
 
-@register.inclusion_tag("extras/templatetags/plugin_custom_tabs.html", takes_context=True)
-def plugin_custom_tabs(context, obj):
+@register.inclusion_tag("extras/templatetags/plugin_nav_tabs.html", takes_context=True)
+def plugin_nav_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
     return {
-        "active_tab": context["active_tab"],
-        "custom_tabs": _get_registered_content(obj, "custom_tabs", context, return_html=False)[0] or {},
+        "active_tab": context.get("active_tab", ""),
+        "plugin_nav_tabs": _get_registered_content(obj, "plugin_nav_tabs", context, return_html=False),
     }
 
 
