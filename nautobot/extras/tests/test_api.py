@@ -1446,6 +1446,13 @@ class JobTestVersion13(
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_future_schedule_kwargs_pk(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify that kwargs['scheduled_job_pk'] was set in the scheduled job."""
+        _, schedule = super().test_run_job_future()
+
+        self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_interval(self):
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_interval()
