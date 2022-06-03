@@ -2,7 +2,6 @@ import logging
 
 from django import template as template_
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.plugins import PluginBanner, PluginTemplateExtension
@@ -26,10 +25,9 @@ def _get_registered_content(obj, method, template_context, return_html=True):
         "csrf_token": template_context["csrf_token"],
         "perms": template_context["perms"],
     }
-    obj_ct = ContentType.objects.get_for_model(obj)
-    obj_namespace = f"{obj_ct.app_label}:{obj_ct.model}"
 
     model_name = obj._meta.label_lower
+    obj_namespace = f"{obj._meta.app_label}:{model_name}"
     template_extensions = registry["plugin_template_extensions"].get(model_name, [])
     objects = []
     html = ""
