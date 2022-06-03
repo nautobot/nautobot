@@ -349,9 +349,6 @@ def has_one_or_more_perms(user, permissions_list):
     """
     Return True if the user has *at least one* permissions in the list.
     """
-    # Superusers implicitly have all permissions
-    if user.is_active and (user.is_superuser or user.is_staff):
-        return True
 
     for permission in permissions_list:
         if user.has_perm(permission):
@@ -435,6 +432,24 @@ def get_item(d, key):
 def settings_or_config(key):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
     return get_settings_or_config(key)
+
+
+@library.filter()
+@register.filter()
+def hide_menu(user, admin_only=False):
+    """
+    Return True to hide a menu or False to show the menu in the UI.
+    """
+
+    # Superusers/Staff have access to all menus
+    if user.is_staff or user.is_superuser:
+        return False
+
+    # return False because user is not an admin and admin_only is set to True
+    if admin_only is True:
+        return True
+
+    return get_settings_or_config("HIDE_RESTRICTED_UI")
 
 
 @library.filter()
