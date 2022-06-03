@@ -547,6 +547,14 @@ class DynamicGroupEditView(generic.ObjectEditView):
 
         ctx["filter_form"] = filter_form
 
+        # FIXME(jathan): Editing filter or groups are distinct. Both should not
+        # be possible. For now let's just get it working.
+        formset_kwargs = {"instance": instance}
+        if request.POST:
+            formset_kwargs["data"] = request.POST
+
+        ctx["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
+
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -575,6 +583,13 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     obj.save()
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
+
+                    # Process the formsets for children
+                    children = ctx["children"]
+                    if children.is_valid():
+                        children.save()
+                    else:
+                        raise RuntimeError(children.errors)
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",

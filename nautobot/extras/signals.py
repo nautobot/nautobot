@@ -154,6 +154,39 @@ cache_invalidated.connect(cache_invalidated_collector)
 
 
 #
+# Dynamic Groups
+#
+
+
+# FIXME (jathan): This does not yet work. When `instance.groups.add(other_group,
+# through_defaults=...)` is called, this signal is fired, but `through_defaults` are not accessible,
+# and `instance` is `DynamicGroup`, so a `DynamicGroupMembership` object is not yet even available.
+#
+# At this time, DynamicGroupMembership.objects.create() should be used instead which will assert
+# that `DynamicGroupMembership.clean()` is called because `save()` is called.
+"""
+@receiver(m2m_changed, sender=DynamicGroup.groups.through)
+def dynamic_group_membership_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if action != "pre_add":
+        return
+
+    # Block invalid memberships on failed validation
+    breakpoint()
+    instance.full_clean()
+
+# Register dynamic_group_membership_changed -> DynamicGroup.groups
+# m2m_changed.connect(dynamic_group_membership_changed, sender=DynamicGroup.groups.through)
+j
+
+@receiver(pre_save, sender=DynamicGroup.groups.through)
+def dynamic_group_membership_changed(sender, instance, raw, using, update_fields, **kwargs):
+    # Block invalid memberships on failed validation
+    breakpoint()
+    print('hello')
+"""
+
+
+#
 # Datasources
 #
 

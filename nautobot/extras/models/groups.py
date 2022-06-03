@@ -15,9 +15,11 @@ from django.utils.functional import cached_property
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model, get_route_for_model
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +56,12 @@ class DynamicGroup(OrganizationalModel):
         default=dict,
         help_text="A JSON-encoded dictionary of filter parameters for group membership",
     )
-    groups = models.ManyToManyField(
+    children = models.ManyToManyField(
         "extras.DynamicGroup",
         help_text="Child DynamicGroups of filter parameters for group membership",
         through="extras.DynamicGroupMembership",
         through_fields=("parent_group", "group"),
-        related_name="dynamic_groups",
+        related_name="parents",
     )
 
     objects = DynamicGroupQuerySet.as_manager()
@@ -514,11 +516,50 @@ class DynamicGroup(OrganizationalModel):
         # return big_q
         return qs
 
+    def get_descendants(self, group=None, descendants=None):
+        """Return the children of all child groups."""
+        if group is None:
+            group = self
+        if descendants is None:
+            descendants = set()
 
-class DynamicGroupFilterActionChoices(models.TextChoices):
-    UNION = "union", "Union (OR)"
-    INTERSECTION = "intersection", "Intersection (AND)"
-    DIFFERENCE = "difference", "Difference (NOT)"
+        for child_group in group.children.all():
+            print(f"Processing group {child_group}...")
+            descendants.add(child_group.pk)
+            if child_group.children.exists():
+                self.get_descendants(child_group, descendants)
+
+        # TODO(jathan): Return a QuerySet with default ordering? Or a list that
+        # is explicitly ordered by distance from object.
+        return DynamicGroup.objects.filter(pk__in=descendants)
+
+    def get_ancestors(self, group=None, ancestors=None):
+        """Return the parents of all parent groups."""
+        if group is None:
+            group = self
+        if ancestors is None:
+            ancestors = set()
+
+        for parent_group in group.parents.all():
+            print(f"Processing group {parent_group}...")
+            ancestors.add(parent_group.pk)
+            if parent_group.parents.exists():
+                self.get_ancestors(parent_group, ancestors)
+
+        # TODO(jathan): Return a QuerySet with default ordering? Or a list that
+        # is explicitly ordered by distance from object.
+        return DynamicGroup.objects.filter(pk__in=ancestors)
+
+    def get_siblings(self, parent_group=None):
+        """Return groups that share the same parents."""
+        if parent_group is None:
+            parent_group = self
+
+        return DynamicGroup.objects.filter(parents=parent_group)
+
+    def is_leaf(self):
+        """Return whether this is a leaf node (has no children)."""
+        return not self.children.exists()
 
 
 class DynamicGroupMembership(BaseModel):
@@ -532,7 +573,7 @@ class DynamicGroupMembership(BaseModel):
     parent_group = models.ForeignKey(
         "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
     )
-    operator = models.CharField(choices=DynamicGroupFilterActionChoices.choices, max_length=12)
+    operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
     weight = models.PositiveSmallIntegerField()
 
     def __str__(self):
@@ -540,56 +581,19 @@ class DynamicGroupMembership(BaseModel):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["group", "parent_group"], name="group_to_filter_uniq"),
+            models.UniqueConstraint(
+                fields=["group", "parent_group", "operator", "weight"], name="group_to_filter_uniq"
+            ),
         ]
         ordering = ["parent_group", "weight", "group"]
 
     def clean(self):
         super().clean()
 
-        if all(
-            [
-                self.filter is not None,
-                self.group is not None,
-            ]
-        ):
-            raise ValidationError({"__all__": "Filter and group cannot both be set"})
+        # Enforce matching content_type
+        if self.parent_group.content_type != self.group.content_type:
+            raise ValidationError({"group": "ContentType for group and parent_group must match"})
 
-        if self.filter.content_type != self.parent_group.content_type:
-            raise ValidationError({"filter": "ContentType for filter and parent_group must match"})
-
-
-# Signals
-# This is forklifted from NSoT. Going to be used to enforce constraints on
-# `DynamicGroup` memberships to assert content_type's match or any other things.
-"""
-def dynamic_group_membership_changed(
-    sender, instance, action, reverse, model, pk_set, **kwargs
-):
-    if action == "pre_add":
-        # First filter in Protocol attributes.
-        if attrs.exclude(resource_name="Protocol").exists():
-            raise exc.ValidationError(
-                {"filter": "Only Protocol attributes are allowed"}
-            )
-
-        # Then make sure that they match the site of the incoming instance.
-        wrong_site = attrs.exclude(site_id=instance.site_id)
-        if wrong_site.exists():
-            bad_attrs = [str(w) for w in wrong_site]
-            raise exc.ValidationError(
-                {
-                    "required_attributes": (
-                        "Attributes must share the same site as "
-                        "ProtocolType.site. Got: %s" % bad_attrs
-                    )
-                }
-            )
-
-
-# Register required_attributes_changed -> ProtocolType.required_attributes
-models.signals.m2m_changed.connect(
-    dynamic_group_membership_changed,
-    sender=DynamicGroup.filters.through,
-)
-"""
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

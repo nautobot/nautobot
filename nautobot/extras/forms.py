@@ -53,6 +53,7 @@ from .models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -677,6 +678,22 @@ class DynamicGroupForm(NautobotModelForm):
             "description",
             "content_type",
         ]
+
+
+# Inline formset for use with providing dynamic rows when creating/editing memberships of child
+# DynamicGroups to a parent DynamicGroup.
+DynamicGroupMembershipFormSet = inlineformset_factory(
+    parent_model=DynamicGroup,
+    model=DynamicGroupMembership,
+    fields=("group", "operator", "weight"),
+    fk_name="parent_group",
+    extra=5,
+    widgets={
+        "operator": StaticSelect2,
+        # "weight": StaticSelect2,
+        "group": APISelect(api_url="/api/extras/dynamic-groups/"),
+    },
+)
 
 
 class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
