@@ -436,20 +436,20 @@ def settings_or_config(key):
 
 @library.filter()
 @register.filter()
-def hide_menu(user, admin_only=False):
+def should_show_restricted_ui(user, admin_only=False):
     """
-    Return True to hide a menu or False to show the menu in the UI.
+    Return True to show a menu or False to hide the menu in the UI.
     """
 
     # Superusers/Staff have access to all menus
     if user.is_staff or user.is_superuser:
-        return False
+        return True
 
     # return False because user is not an admin and admin_only is set to True
     if admin_only is True:
-        return True
+        return False
 
-    return get_settings_or_config("HIDE_RESTRICTED_UI")
+    return not get_settings_or_config("HIDE_RESTRICTED_UI")
 
 
 @library.filter()
