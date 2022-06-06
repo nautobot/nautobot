@@ -1619,6 +1619,25 @@ class JobTestCase(
             self.assertEqual(scheduled.name, "test")
             self.assertEqual(scheduled.start_time, start_time)
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_later_sets_scheduled_job_kwargs_pk(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+
+            scheduled = ScheduledJob.objects.last()
+            self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
+
 
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
