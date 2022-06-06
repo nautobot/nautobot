@@ -355,10 +355,6 @@ class PluginListViewTest(TestCase):
         # Redirects to the login page
         self.assertHttpStatus(response, 302)
 
-    @skipIf(
-        "example_plugin" not in settings.PLUGINS,
-        "example_plugin not in settings.PLUGINS",
-    )
     def test_list_plugins_authenticated_superuser(self):
         self.user.is_superuser = True
         self.user.save()
@@ -369,10 +365,6 @@ class PluginListViewTest(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example plugin", response_body, msg=response_body)
 
-    @skipIf(
-        "example_plugin" not in settings.PLUGINS,
-        "example_plugin not in settings.PLUGINS",
-    )
     def test_list_plugins_authenticated_not_admin(self):
         response = self.client.get(reverse("plugins:plugins_list"))
         # Access Denied
