@@ -28,25 +28,15 @@
                     <tr>
                         <td>Site</td>
                         <td>
-                            {% if object.site %}
-                                {% if object.site.region %}
-                                    <a href="{{ object.site.region.get_absolute_url }}">{{ object.site.region }}</a> /
-                                {% endif %}
-                                <a href="{% url 'dcim:site' slug=object.site.slug %}">{{ object.site }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
+                            {% if object.site and object.site.region %}
+                                {{ object.site.region|hyperlinked_object }} /
                             {% endif %}
+                            {{ object.site|hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
                         <td>Group</td>
-                        <td>
-                            {% if object.group %}
-                                <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.group|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>VLAN ID</td>
@@ -59,14 +49,10 @@
                     <tr>
                         <td>Tenant</td>
                         <td>
-                            {% if object.tenant %}
-                                {% if object.tenant.group %}
-                                    <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                                {% endif %}
-                                <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
+                            {% if object.tenant and object.tenant.group %}
+                                {{ object.tenant.group|hyperlinked_object }} /
                             {% endif %}
+                            {{ object.tenant|hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
@@ -77,13 +63,7 @@
                     </tr>
                     <tr>
                         <td>Role</td>
-                        <td>
-                            {% if object.role %}
-                                <a href="{{ object.role.get_absolute_url }}">{{ object.role }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.role|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Description</td>

@@ -1,5 +1,6 @@
 {% extends 'generic/object_edit.html' %}
 {% load form_helpers %}
+{% load helpers %}
 
 {% block form %}
     <div class="panel panel-default">
@@ -10,7 +11,7 @@
                     <label class="col-md-3 control-label required" for="id_device">Virtual Machine</label>
                     <div class="col-md-9">
                         <p class="form-control-static">
-                            <a href="{{ form.instance.virtual_machine.get_absolute_url }}">{{ form.instance.virtual_machine }}</a>
+                            {{ form.instance.virtual_machine|hyperlinked_object }}
                         </p>
                     </div>
                 </div>

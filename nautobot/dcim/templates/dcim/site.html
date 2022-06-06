@@ -19,25 +19,19 @@
                     <td>
                         {% if object.region %}
                             {% for region in object.region.get_ancestors %}
-                                <a href="{{ region.get_absolute_url }}">{{ region }}</a> /
+                                {{ region|hyperlinked_object }} /
                             {% endfor %}
-                            <a href="{{ object.region.get_absolute_url }}">{{ object.region }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
                         {% endif %}
+                        {{ object.region|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant %}
-                            {% if object.tenant.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
+                        {% if object.tenant and object.tenant.group %}
+                            {{ object.tenant.group|hyperlinked_object }} /
                         {% endif %}
+                        {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>

@@ -64,6 +64,11 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
     if data is None:
         data = {}
 
+    # Enable the job if it wasn't enabled before
+    if not job.enabled:
+        job.enabled = True
+        job.validated_save()
+
     # If the request has a user, ignore the username argument and use that user.
     if request and request.user:
         user_instance = request.user
@@ -97,6 +102,9 @@ class TransactionTestCase(_TransactionTestCase):
     """
     Base test case class using the TransactionTestCase for unit testing
     """
+
+    # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging
+    databases = ("default", "job_logs")
 
     def setUp(self):
         """Provide a clean, post-migration state before each test case.

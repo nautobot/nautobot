@@ -103,8 +103,8 @@ jobs:
           platforms: "linux/amd64,linux/arm64"
           tags: "${{ steps.dockermeta.outputs.tags }}"
           labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
@@ -135,8 +135,8 @@ jobs:
           platforms: "linux/amd64,linux/arm64"
           tags: "${{ steps.dockerdevmeta.outputs.tags }}"
           labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}

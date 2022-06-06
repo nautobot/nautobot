@@ -4,8 +4,8 @@
 {% block breadcrumbs %}
     <li><a href="{% url 'circuits:circuit_list' %}">Circuits</a></li>
     <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.circuit.provider.slug }}">{{ object.circuit.provider }}</a></li>
-    <li><a href="{% url 'circuits:circuit' pk=object.circuit.pk %}">{{ object.circuit }}</a></li>
-    <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
+    <li>{{ object.circuit|hyperlinked_object }}</li>
+    <li>{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
 
 {% block content_left_page %}
@@ -16,15 +16,15 @@
                         <td>Site</td>
                         <td>
                             {% if object.site.region %}
-                                <a href="{{ object.site.region.get_absolute_url }}">{{ object.site.region }}</a> /
+                                {{ object.site.region|hyperlinked_object }} /
                             {% endif %}
-                            <a href="{% url 'dcim:site' slug=object.site.slug %}">{{ object.site }}</a>
+                            {{ object.site|hyperlinked_object }}
                         </td>
                     {% endif %}
                     {% if object.provider_network %}
                         <td>Provider Network</td>
                         <td>
-                            <a href="{% url 'circuits:providernetwork' slug=object.provider_network.slug %}">{{ object.provider_network }}</a>
+                            {{ object.provider_network|hyperlinked_object }}
                         </td>
                     {% endif %}
                 </tr>
@@ -40,16 +40,16 @@
                                     </a>
                                 </div>
                             {% endif %}
-                            <a href="{{ object.cable.get_absolute_url }}">{{ object.cable }}</a>
+                            {{ object.cable|hyperlinked_object }}
                             <a href="{% url 'circuits:circuittermination_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
                                 <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                             </a>
                             {% with peer=object.get_cable_peer %}
                                 to
                                 {% if peer.device %}
-                                    <a href="{{ peer.device.get_absolute_url }}">{{ peer.device }}</a>
+                                    {{ peer.device|hyperlinked_object }}
                                 {% elif peer.circuit %}
-                                    <a href="{{ peer.circuit.get_absolute_url }}">{{ peer.circuit }}</a>
+                                    {{ peer.circuit|hyperlinked_object }}
                                 {% endif %}
                                 ({{ peer }})
                             {% endwith %}
@@ -93,7 +93,7 @@
                         {% if object.connected_endpoint %}
                             {% for ip in object.ip_addresses %}
                                 {% if not forloop.first %}<br />{% endif %}
-                                <a href="{% url 'ipam:ipaddress' pk=ip.pk %}">{{ ip }}</a> ({{ ip.vrf|default:"Global" }})
+                                {{ ip|hyperlinked_object }} ({{ ip.vrf|default:"Global" }})
                             {% empty %}
                                 <span class="text-muted">None</span>
                             {% endfor %}
