@@ -2542,7 +2542,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             f"A webhook already exists for update on dcim | device type to URL {self.webhooks[1].payload_url}",
         )
 
-    def test_patch_webhooks_with_same_content_type_same_url_diff_action(self):
+    def test_patch_webhooks(self):
         self.add_permissions("extras.change_webhook")
 
         instance = Webhook.objects.create(
@@ -2556,6 +2556,13 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         instance.content_types.set([ContentType.objects.get_for_model(DeviceType)])
 
         data = {"type_delete": True}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
+        data = {"content_types": ["dcim.device"]}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"payload_url": "http://example.com/test4"}
         response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
