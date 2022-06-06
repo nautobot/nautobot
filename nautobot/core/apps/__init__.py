@@ -443,14 +443,13 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         return {
             "weight": self.weight,
             "items": {},
-            "admin_only": self.admin_only,
         }
 
     @property
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, items=None, weight=1000, admin_only=False):
+    def __init__(self, name, items=None, weight=1000):
         """
         Ensure group properties.
 
@@ -458,11 +457,9 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
             name (str): The name of the group.
             items (list): List of items to be rendered in this group.
             weight (int): The weight of this group.
-            admin_only (bool): Restrict this group to only admin(staff, superuser).
         """
         self.name = name
         self.weight = weight
-        self.admin_only = admin_only
 
         if items is not None and not isinstance(items, (list, tuple)):
             raise TypeError("Items must be passed as a tuple or list.")
@@ -487,7 +484,6 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
-            "admin_only": self.admin_only,
         }
 
     @property
@@ -500,7 +496,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     permissions = []
     buttons = []
 
-    def __init__(self, link, name, permissions=None, buttons=(), weight=1000, admin_only=False):
+    def __init__(self, link, name, permissions=None, buttons=(), weight=1000):
         """
         Ensure item properties.
 
@@ -510,13 +506,11 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             permissions (list): The permissions required to view this item.
             buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.
-            admin_only (bool): Restrict this item to only admin(staff, superuser).
         """
         super().__init__(permissions)
         self.link = link
         self.name = name
         self.weight = weight
-        self.admin_only = admin_only
 
         if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")

@@ -436,24 +436,6 @@ def settings_or_config(key):
 
 @library.filter()
 @register.filter()
-def should_show_restricted_ui(user, admin_only=False):
-    """
-    Return True to show a menu or False to hide the menu in the UI.
-    """
-
-    # Superusers/Staff have access to all menus
-    if user.is_staff or user.is_superuser:
-        return True
-
-    # return False because user is not an admin and admin_only is set to True
-    if admin_only is True:
-        return False
-
-    return not get_settings_or_config("HIDE_RESTRICTED_UI")
-
-
-@library.filter()
-@register.filter()
 def quote_string(value):
     """Add literal quote characters around the provided value if it's a string."""
     if isinstance(value, str):

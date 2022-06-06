@@ -65,7 +65,9 @@ class NavRestrictedUI(TestCase):
     def make_request(self):
         response = self.client.get(reverse("home"))
         response_body = response.content.decode(response.charset).replace("\n", "")
-        return re.compile(r"<nav.*Installed Plugins.*</nav>").search(response_body)
+        return re.compile(r'<nav.*<li class="dropdown-header".*General</li>.*Installed Plugins.*</nav>').search(
+            response_body
+        )
 
     @override_settings(HIDE_RESTRICTED_UI=True)
     def test_installed_plugins_visible_to_admin_with_hide_restricted_ui_True(self):

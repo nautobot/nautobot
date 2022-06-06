@@ -54,7 +54,11 @@ class AdminRequiredMixin(AccessMixin):
     """
 
     def has_permission(self):
-        return bool(self.request.user and (self.request.user.is_staff or self.request.user.is_superuser))
+        return bool(
+            self.request.user
+            and self.request.user.is_active
+            and (self.request.user.is_staff or self.request.user.is_superuser)
+        )
 
     def dispatch(self, request, *args, **kwargs):
         if not self.has_permission():
