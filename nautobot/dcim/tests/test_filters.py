@@ -116,6 +116,12 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         Region.objects.create(name="Region 3A", slug="region-3a", parent=regions[2])
         Region.objects.create(name="Region 3B", slug="region-3b", parent=regions[2])
 
+        cls.sites = (
+            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
+            Site.objects.create(name="Site 2", slug="site-2", region=regions[0]),
+            Site.objects.create(name="Site 3", slug="site-3", region=regions[1]),
+        )
+
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -126,6 +132,38 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"parent": [parent_regions[0].slug, parent_regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_children(self):
+        parent_regions = Region.objects.filter(parent__isnull=True)[:2]
+        child_regions = [parent_regions[0].children.all(), parent_regions[1].children.all()]
+        params = {
+            "children_id": [
+                child_regions[0][0].pk,
+                child_regions[0][1].pk,
+                child_regions[1][0].pk,
+                child_regions[1][1].pk,
+            ]
+        }
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {
+            "children": [
+                child_regions[0][0].slug,
+                child_regions[0][1].slug,
+                child_regions[1][0].slug,
+                child_regions[1][1].slug,
+            ]
+        }
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_sites(self):
+        params = {"sites_id": [self.sites[0].pk, self.sites[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"sites": [self.sites[0].slug, self.sites[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"sites_id": [self.sites[1].pk, self.sites[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"sites": [self.sites[1].slug, self.sites[2].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
