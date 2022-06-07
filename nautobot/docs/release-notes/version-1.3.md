@@ -154,6 +154,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1409](https://github.com/nautobot/nautobot/issues/1409) - Fixed page title on device status (NAPALM) page template.
 - [#1524](https://github.com/nautobot/nautobot/issues/1524) - Fixed valid "None" option removed from search field upon display.
 - [#1787](https://github.com/nautobot/nautobot/issues/1787) - Fix scheduled jobs failing when scheduled from REST API.
+- [#1848](https://github.com/nautobot/nautobot/pull/1848) - Fix Poetry cache issue in CI causing version tests to fail in `next`.
 
 ## v1.3.5 (2022-05-30)
 
