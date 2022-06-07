@@ -2,6 +2,7 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
+from nautobot.circuits.models import CircuitTermination
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
@@ -158,6 +159,16 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         lookup_expr="in",
         to_field_name="slug",
         label="Region (slug)",
+    )
+    circuit_terminations = django_filters.ModelMultipleChoiceFilter(
+        queryset=CircuitTermination.objects.all(),
+        label="Circuit terminations",
+    )
+    has_circuit_terminations = django_filters.BooleanFilter(
+        field_name="circuit_terminations",
+        lookup_expr="isnull",
+        exclude=True,
+        label="Has circuit terminations",
     )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
