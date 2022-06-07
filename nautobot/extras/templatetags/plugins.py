@@ -45,11 +45,11 @@ def _get_registered_content(obj, method, template_context, return_html=True):
         # Call the method to render content
         instance = template_extension(context)
         content = getattr(instance, method)()
-        if isinstance(content, dict):
+        if not return_html:
             for k, v in content.items():
                 objects.append({f"{plugin_name}:{obj_namespace}:{k}": v})
-            continue
-        html += content
+        else:
+            html += content
 
     if not return_html:
         return objects
