@@ -975,3 +975,24 @@ Environment Variables:
 * `NAUTOBOT_SHORT_TIME_FORMAT`
 * `NAUTOBOT_DATETIME_FORMAT`
 * `NAUTOBOT_SHORT_DATETIME_FORMAT`
+
+---
+
+## UI_RACK_VIEW_TRUNCATE_FUNCTION
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.4.0_
+<!-- markdownlint-enable MD036 -->
+
+Default:
+
+```py
+def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
+    return str(device_display_name).split(".")[0]
+```
+
+This setting function is used to perform the rack elevation truncation feature. This provides a way to tailor the truncation behavior to best suit the needs of the installation.
+
+The function must take only one argument: the device display name, as a string, attempting to be rendered on the rack elevation.
+
+The function must return only one argument: a string of the truncated device display name.

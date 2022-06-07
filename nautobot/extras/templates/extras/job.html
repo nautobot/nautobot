@@ -10,7 +10,7 @@
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
                 <li>{{ job_model.grouping | bettertitle }}</li>
-                <li><a href="{{ job_model.get_absolute_url }}">{{ job_model }}</a></li>
+                <li>{{ job_model|hyperlinked_object }}</li>
                 <li>Submission and Scheduling</li>
             </ol>
         </div>
