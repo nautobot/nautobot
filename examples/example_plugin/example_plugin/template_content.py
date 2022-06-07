@@ -9,11 +9,11 @@ class DeviceContent(PluginTemplateExtension):
     def plugin_nav_tabs(self):
         return {
             "ect1": {
-                "title": "Example Device Tab 1",
+                "title": "Plugin Device Tab 1",
                 "url": reverse("plugins:example_plugin:example_object_tab_1", args=[self.context["object"].pk]),
             },
             "ect2": {
-                "title": "Example Device Tab 2",
+                "title": "Plugin Device Tab 2",
                 "url": reverse("plugins:example_plugin:example_object_tab_2", args=[self.context["object"].pk]),
             },
         }
