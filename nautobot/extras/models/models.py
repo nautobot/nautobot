@@ -771,10 +771,10 @@ class Webhook(BaseModel, ChangeLoggedModel):
         conflicts = {}
         webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
 
-        if content_types is None and instance is not None:
+        if instance is not None and instance.present_in_database:
             # This is a PATCH and might not include all relevant data e.g content_types, payload_url or actions
             # Therefore we get data not available from instance
-            content_types = instance.content_types.all()
+            content_types = instance.content_types.all() if content_types is None else content_types
             payload_url = instance.payload_url if payload_url is None else payload_url
             type_create = instance.type_create if type_create is None else type_create
             type_update = instance.type_update if type_update is None else type_update
