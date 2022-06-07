@@ -122,30 +122,6 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent region (slug)",
     )
-    children_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="children__id",
-        queryset=Region.objects.all(),
-        to_field_name="id",
-        label="Children (ID)",
-    )
-    children = django_filters.ModelMultipleChoiceFilter(
-        field_name="children__slug",
-        queryset=Region.objects.all(),
-        to_field_name="slug",
-        label="Children (slug)",
-    )
-    sites_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="sites__id",
-        queryset=Site.objects.all(),
-        to_field_name="id",
-        label="Sites (ID)",
-    )
-    sites = django_filters.ModelMultipleChoiceFilter(
-        field_name="sites__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Sites (slug)",
-    )
 
     class Meta:
         model = Region
