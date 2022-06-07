@@ -169,6 +169,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             contact_name="Contact 1",
             contact_phone="123-555-0001",
             contact_email="contact1@example.com",
+            comments="comment1",
         )
         Site.objects.create(
             name="Site 2",
@@ -183,6 +184,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             contact_name="Contact 2",
             contact_phone="123-555-0002",
             contact_email="contact2@example.com",
+            comments="comment2",
         )
         Site.objects.create(
             name="Site 3",
@@ -256,6 +258,14 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_comments(self):
+        params = {"comments": "comment"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"comments": "comment2"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"comments": "nomatch"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
 
 class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):

@@ -159,6 +159,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         to_field_name="slug",
         label="Region (slug)",
     )
+    comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
 
     class Meta:
