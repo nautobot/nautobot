@@ -681,7 +681,7 @@ class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
 
 class GitRepositoryListView(generic.ObjectListView):
     queryset = GitRepository.objects.all()
-    # filterset = filters.GitRepositoryFilterSet
+    filterset = filters.GitRepositoryFilterSet
     # filterset_form = forms.GitRepositoryFilterForm
     table = tables.GitRepositoryTable
     template_name = "extras/gitrepository_list.html"
@@ -1025,7 +1025,6 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     user=request.user,
                     approval_required=job_model.approval_required,
                 )
-                scheduled_job.kwargs["scheduled_job_pk"] = scheduled_job.pk
                 scheduled_job.save()
 
                 if job_model.approval_required:

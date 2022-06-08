@@ -384,6 +384,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
@@ -392,6 +393,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
 
@@ -400,6 +402,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
@@ -408,6 +411,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
@@ -416,6 +420,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
 
@@ -424,6 +429,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         url = reverse("dcim-api:rack-list")
         response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
@@ -1444,6 +1450,13 @@ class JobTestVersion13(
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
         self.assertIsNone(response.data["job_result"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_future_schedule_kwargs_pk(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify that kwargs['scheduled_job_pk'] was set in the scheduled job."""
+        _, schedule = super().test_run_job_future()
+
+        self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_interval(self):

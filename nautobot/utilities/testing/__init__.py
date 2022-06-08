@@ -15,6 +15,7 @@ from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
 
 from .api import APITestCase, APIViewTestCases
+from .filters import FilterTestCases
 from .utils import (
     post_data,
     create_test_user,
@@ -32,15 +33,16 @@ from .views import (
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
-    "post_data",
-    "create_test_user",
-    "extract_form_failures",
-    "extract_page_body",
-    "disable_warnings",
-    "TestCase",
+    "FilterTestCases",
     "ModelTestCase",
     "ModelViewTestCase",
+    "TestCase",
     "ViewTestCases",
+    "create_test_user",
+    "disable_warnings",
+    "extract_form_failures",
+    "extract_page_body",
+    "post_data",
     "run_job_for_testing",
 )
 
@@ -61,6 +63,11 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
     """
     if data is None:
         data = {}
+
+    # Enable the job if it wasn't enabled before
+    if not job.enabled:
+        job.enabled = True
+        job.validated_save()
 
     # If the request has a user, ignore the username argument and use that user.
     if request and request.user:
@@ -95,6 +102,9 @@ class TransactionTestCase(_TransactionTestCase):
     """
     Base test case class using the TransactionTestCase for unit testing
     """
+
+    # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging
+    databases = ("default", "job_logs")
 
     def setUp(self):
         """Provide a clean, post-migration state before each test case.
