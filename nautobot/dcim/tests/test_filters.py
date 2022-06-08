@@ -262,6 +262,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             ),
         )
 
+        cls.powerpanels = (
+            PowerPanel.objects.create(name="Power Panel 1", site=cls.sites[0]),
+            PowerPanel.objects.create(name="Power Panel 2", site=cls.sites[0]),
+            PowerPanel.objects.create(name="Power Panel 3", site=cls.sites[1]),
+        )
+
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -352,6 +358,18 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_devices": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_powerpanels(self):
+        params = {"powerpanels": [self.powerpanels[0].pk, self.powerpanels[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"powerpanels": [self.powerpanels[2].pk, self.powerpanels[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_powerpanels(self):
+        params = {"has_powerpanels": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_powerpanels": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 

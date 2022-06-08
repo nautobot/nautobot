@@ -189,6 +189,17 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         exclude=True,
         label="Has devices",
     )
+    powerpanels = django_filters.ModelMultipleChoiceFilter(
+        field_name="powerpanel",
+        queryset=PowerPanel.objects.all(),
+        label="Power panels",
+    )
+    has_powerpanels = django_filters.BooleanFilter(
+        field_name="powerpanel",
+        lookup_expr="isnull",
+        exclude=True,
+        label="Has power panels",
+    )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
 
