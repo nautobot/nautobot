@@ -293,6 +293,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=cls.sites[1]),
         )
 
+        cls.vlans = (
+            VLAN.objects.create(name="VLAN 101", vid=101, site=cls.sites[0]),
+            VLAN.objects.create(name="VLAN 102", vid=102, site=cls.sites[0]),
+            VLAN.objects.create(name="VLAN 103", vid=103, site=cls.sites[1]),
+        )
+
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -443,6 +449,18 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_vlan_groups": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_vlan_groups": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_vlans(self):
+        params = {"vlans": [self.vlans[0].pk, self.vlans[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"vlans": [self.vlans[0].pk, self.vlans[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_vlans(self):
+        params = {"has_vlans": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_vlans": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
