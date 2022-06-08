@@ -14,6 +14,7 @@ class DeviceDetailPluginTab(generic.ObjectView):
     This view's template extends the device detail template, therefore
     making it suitable to show as a tab on the device detail page.
     """
+
     queryset = Device.objects.all()
     template_name = "example_plugin/tab_device_detail.html"
 
@@ -23,6 +24,7 @@ class CircuitDetailPluginTab(generic.ObjectView):
     This view's template extends the circuit detail template, therefore
     making it suitable to show as a tab on the circuit detail page.
     """
+
     queryset = Circuit.objects.all()
     template_name = "example_plugin/tab_circuit_detail.html"
 
