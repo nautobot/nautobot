@@ -436,6 +436,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         null=True,
         related_name="poweroutlets",
     )
+    # todoindex:
     feed_leg = models.CharField(
         max_length=50,
         choices=PowerOutletFeedLegChoices,
@@ -569,7 +570,9 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         verbose_name="Parent LAG",
         help_text="Assigned LAG interface",
     )
+    # todoindex:
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
+    # todoindex:
     mgmt_only = models.BooleanField(
         default=False,
         verbose_name="Management only",
