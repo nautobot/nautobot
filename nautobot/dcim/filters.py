@@ -10,6 +10,7 @@ from nautobot.extras.filters import (
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
+from nautobot.ipam.models import Prefix
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
@@ -218,7 +219,17 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="racks",
         lookup_expr="isnull",
         exclude=True,
-        label="Has Racks",
+        label="Has racks",
+    )
+    prefixes = django_filters.ModelMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        label="Prefixes",
+    )
+    has_prefixes = django_filters.BooleanFilter(
+        field_name="prefixes",
+        lookup_expr="isnull",
+        exclude=True,
+        label="Has prefixes",
     )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()

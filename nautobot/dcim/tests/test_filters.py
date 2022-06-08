@@ -1,3 +1,4 @@
+import netaddr
 from django.contrib.auth import get_user_model
 
 from nautobot.dcim.choices import (
@@ -87,7 +88,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.extras.models import SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, VLAN, Prefix
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -280,6 +281,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             Rack.objects.create(name="Rack 3", site=cls.sites[1]),
         )
 
+        cls.prefixes = (
+            Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=cls.sites[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=cls.sites[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), site=cls.sites[1]),
+        )
+
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -406,6 +413,18 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_racks": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_racks": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_prefixes(self):
+        params = {"prefixes": [self.prefixes[0].pk, self.prefixes[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"prefixes": [self.prefixes[0].pk, self.prefixes[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_prefixes(self):
+        params = {"has_prefixes": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_prefixes": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
