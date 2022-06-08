@@ -148,6 +148,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#1763](https://github.com/nautobot/nautobot/issues/1763) - Job testing documentation updated to include details around enabling jobs. Job logs database added to `TransactionTestCase`.
 - [#1829](https://github.com/nautobot/nautobot/pull/1829) - Change Docker build GitHub Action to cache with matrix awareness.
+- [#1856](https://github.com/nautobot/nautobot/pull/1856) - Updated links to Slack community.
 
 ### Fixed
 
