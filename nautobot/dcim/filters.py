@@ -10,7 +10,7 @@ from nautobot.extras.filters import (
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
-from nautobot.ipam.models import Prefix
+from nautobot.ipam.models import Prefix, VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
@@ -230,6 +230,16 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         lookup_expr="isnull",
         exclude=True,
         label="Has prefixes",
+    )
+    vlan_groups = NaturalKeyMultipleChoiceFilter(
+        queryset=VLANGroup.objects.all(),
+        label="Vlan groups",
+    )
+    has_vlan_groups = django_filters.BooleanFilter(
+        field_name="vlan_groups",
+        lookup_expr="isnull",
+        exclude=True,
+        label="Has vlan groups",
     )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()

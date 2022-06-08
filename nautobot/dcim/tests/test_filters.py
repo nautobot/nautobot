@@ -88,7 +88,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.extras.models import SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN, Prefix
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -287,6 +287,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), site=cls.sites[1]),
         )
 
+        cls.vlan_groups = (
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites[0]),
+            VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=cls.sites[1]),
+        )
+
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -425,6 +431,18 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_prefixes": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_prefixes": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_vlan_groups(self):
+        params = {"vlan_groups": [self.vlan_groups[0].pk, self.vlan_groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"vlan_groups": [self.vlan_groups[0].slug, self.vlan_groups[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_vlan_groups(self):
+        params = {"has_vlan_groups": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_vlan_groups": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
