@@ -223,7 +223,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         label="Time zone",
         null_value="",
     )
-    comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
 
     class Meta:
@@ -232,17 +231,21 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "asn",
             "circuit_terminations",
             "clusters",
+            "comments",
             "contact_email",
             "contact_name",
             "contact_phone",
+            "description",
             "devices",
             "facility",
             "id",
             "latitude",
             "longitude",
             "name",
+            "physical_address",
             "prefixes",
             "racks",
+            "shipping_address",
             "slug",
             "vlans",
         ]
