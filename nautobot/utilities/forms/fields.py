@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
 from django.urls import reverse
 
@@ -666,3 +666,41 @@ class NumericArrayField(SimpleArrayField):
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)
+
+
+class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+    """
+    Filter field to support returning an object's `pk` or `slug` field. Returns the
+    field that matches the value provided or raises ValidationError. Matches `pk`
+    on the `iexact` lookup expression or `slug` on `icontains`.
+    """
+
+    def _check_values(self, values):
+        """
+        Given a list of possible values, return a QuerySet of the
+        corresponding objects. Raise a ValidationError if a given value is
+        not found in the queryset.
+        """
+        # deduplicate given values to avoid creating many querysets or
+        # requiring the database backend deduplicate efficiently.
+        try:
+            values = frozenset(values)
+        except TypeError:
+            # list of lists isn't hashable, for example
+            raise ValidationError(
+                self.error_messages["invalid_list"],
+                code="invalid_list",
+            )
+        for item in values:
+            qs = self.queryset.filter(Q(pk__iexact=str(item)) | Q(slug__icontains=str(item)))
+            if qs.count() == 0:
+                raise ValidationError(
+                    self.error_messages["invalid_choice"],
+                    code="invalid_choice",
+                    params={"value": item},
+                )
+        query = Q()
+        for item in values:
+            query |= Q(pk__iexact=str(item)) | Q(slug__icontains=str(item))
+        qs = self.queryset.filter(query)
+        return qs

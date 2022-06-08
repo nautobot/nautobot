@@ -20,6 +20,7 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
+from nautobot.utilities.forms.fields import NaturalKeyMultipleChoiceField
 
 
 logger = logging.getLogger(__name__)
@@ -413,6 +414,15 @@ class MappedPredicatesFilterMixin:
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
         return qs.distinct()
+
+
+class NaturalKeyMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter that supports filtering on the `pk` or the `slug` of a foreign-key related field.
+    Matches the `pk` field on the `iexact` lookup expression or the `slug` field on `icontains`.
+    """
+
+    field_class = NaturalKeyMultipleChoiceField
 
 
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
