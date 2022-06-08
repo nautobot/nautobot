@@ -27,7 +27,6 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     }
 
     model_name = obj._meta.label_lower
-    obj_namespace = f"{obj._meta.app_label}:{model_name}"
     template_extensions = registry["plugin_template_extensions"].get(model_name, [])
     objects = []
     html = ""
@@ -47,7 +46,7 @@ def _get_registered_content(obj, method, template_context, return_html=True):
         content = getattr(instance, method)()
         if not return_html:
             for k, v in content.items():
-                objects.append({f"{plugin_name}:{obj_namespace}:{k}": v})
+                objects.append({f"{plugin_name}:{k}": v})
         else:
             html += content
 
@@ -89,14 +88,14 @@ def plugin_full_width_page(context, obj):
     return _get_registered_content(obj, "full_width_page", context)
 
 
-@register.inclusion_tag("extras/templatetags/plugin_nav_tabs.html", takes_context=True)
-def plugin_nav_tabs(context, obj):
+@register.inclusion_tag("extras/templatetags/plugin_object_detail_tabs.html", takes_context=True)
+def plugin_object_detail_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
     return {
         "active_tab": context.get("active_tab", ""),
-        "plugin_nav_tabs": _get_registered_content(obj, "plugin_nav_tabs", context, return_html=False),
+        "plugin_object_detail_tabs": _get_registered_content(obj, "object_detail_tabs", context, return_html=False),
     }
 
 

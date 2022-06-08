@@ -2,20 +2,29 @@ from django.shortcuts import render
 from django.views.generic import View
 
 from nautobot.core.views import generic
+from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
 
 
-class ExampleTab1View(generic.ObjectView):
+class DeviceDetailPluginTab(generic.ObjectView):
+    """
+    This view's template extends the device detail template, therefore
+    making it suitable to show as a tab on the device detail page.
+    """
     queryset = Device.objects.all()
-    template_name = "example_plugin/device_nav_tab_1.html"
+    template_name = "example_plugin/tab_device_detail.html"
 
 
-class ExampleTab2View(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "example_plugin/device_nav_tab_2.html"
+class CircuitDetailPluginTab(generic.ObjectView):
+    """
+    This view's template extends the circuit detail template, therefore
+    making it suitable to show as a tab on the circuit detail page.
+    """
+    queryset = Circuit.objects.all()
+    template_name = "example_plugin/tab_circuit_detail.html"
 
 
 class ExamplePluginHomeView(View):

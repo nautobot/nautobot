@@ -307,7 +307,7 @@ class PluginTemplateExtension:
         """
         raise NotImplementedError
 
-    def plugin_nav_tabs(self):
+    def object_detail_tabs(self):
         """
         Tabs that will be rendered and added to the existing list of tabs on the detail page view. Content
         should be returned as a dict of dicts in the format:
