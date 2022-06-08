@@ -179,6 +179,16 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         exclude=True,
         label="Has circuit terminations",
     )
+    devices = django_filters.ModelMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices",
+    )
+    has_devices = django_filters.BooleanFilter(
+        field_name="devices",
+        lookup_expr="isnull",
+        exclude=True,
+        label="Has devices",
+    )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
 

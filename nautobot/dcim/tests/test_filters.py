@@ -232,6 +232,36 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             CircuitTermination.objects.create(circuit=circuit, site=cls.sites[1], term_side="Z"),
         )
 
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        device_statuses = Status.objects.get_for_model(Device)
+        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
+
+        cls.devices = (
+            Device.objects.create(
+                name="Device 1",
+                device_type=device_type,
+                device_role=device_role,
+                site=cls.sites[0],
+                status=device_status_map["active"],
+            ),
+            Device.objects.create(
+                name="Device 2",
+                device_type=device_type,
+                device_role=device_role,
+                site=cls.sites[0],
+                status=device_status_map["staged"],
+            ),
+            Device.objects.create(
+                name="Device 3",
+                device_type=device_type,
+                device_role=device_role,
+                site=cls.sites[1],
+                status=device_status_map["failed"],
+            ),
+        )
+
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -299,10 +329,10 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_circuit_terminations(self):
-        params = {"circuit_terminations": [str(self.circuit_terminations[0].pk)]}
+        params = {"circuit_terminations": [self.circuit_terminations[0].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         self.assertEqual(self.filterset(params, self.queryset).qs.first(), self.sites[0])
-        params = {"circuit_terminations": [str(self.circuit_terminations[1].pk)]}
+        params = {"circuit_terminations": [self.circuit_terminations[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         self.assertEqual(self.filterset(params, self.queryset).qs.first(), self.sites[1])
 
@@ -310,6 +340,18 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_circuit_terminations": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_circuit_terminations": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_devices(self):
+        params = {"devices": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"devices": [self.devices[2].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_devices": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
