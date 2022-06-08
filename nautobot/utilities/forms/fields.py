@@ -670,16 +670,16 @@ class NumericArrayField(SimpleArrayField):
 
 class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
-    Filter field to support returning an object's `pk` or `slug` field. Returns the
-    field that matches the value provided or raises ValidationError. Matches `pk`
-    on the `iexact` lookup expression or `slug` on `icontains`.
+    Field to support matching an object's `pk` or `slug` field depending on the value
+    supplied. Faises ValidationError if neither field matches. Matches `pk` on the
+    `iexact` lookup expression or `slug` on `icontains`.
     """
 
     def _check_values(self, values):
         """
-        Given a list of possible values, return a QuerySet of the
-        corresponding objects. Raise a ValidationError if a given value is
-        not found in the queryset.
+        This method overloads the grandparent method in `django.forms.models.ModelMultipleChoiceField`,
+        re-using some of that method's existing logic and adding support for coupling this field with
+        multiple model fields.
         """
         # deduplicate given values to avoid creating many querysets or
         # requiring the database backend deduplicate efficiently.
@@ -693,7 +693,7 @@ class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceFie
             )
         for item in values:
             qs = self.queryset.filter(Q(pk__iexact=str(item)) | Q(slug__icontains=str(item)))
-            if qs.count() == 0:
+            if not qs.exists():
                 raise ValidationError(
                     self.error_messages["invalid_choice"],
                     code="invalid_choice",
