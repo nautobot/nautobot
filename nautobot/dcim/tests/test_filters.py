@@ -299,6 +299,13 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             VLAN.objects.create(name="VLAN 103", vid=103, site=cls.sites[1]),
         )
 
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        cls.clusters = (
+            Cluster.objects.create(name="Cluster 1", type=cluster_type, site=cls.sites[0]),
+            Cluster.objects.create(name="Cluster 2", type=cluster_type, site=cls.sites[0]),
+            Cluster.objects.create(name="Cluster 3", type=cluster_type, site=cls.sites[1]),
+        )
+
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -461,6 +468,18 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_vlans": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_vlans": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_clusters(self):
+        params = {"clusters": [self.clusters[0].pk, self.clusters[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"clusters": [self.clusters[0].pk, self.clusters[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_clusters(self):
+        params = {"has_clusters": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_clusters": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 

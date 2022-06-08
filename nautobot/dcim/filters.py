@@ -235,6 +235,14 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="vlans",
         label="Has vlans",
     )
+    clusters = django_filters.ModelMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        label="Clusters",
+    )
+    has_clusters = RelatedMembershipBooleanFilter(
+        field_name="clusters",
+        label="Has clusters",
+    )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
 
