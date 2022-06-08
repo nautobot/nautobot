@@ -595,7 +595,7 @@ class NaturalKeyMultipleChoiceFieldTest(TestCase):
         input = [vlan_groups[0].pk, vlan_groups[1].slug]
         qs = field.clean(input)
         expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
-        self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x:x.pk)
+        self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x: x.pk)
 
         invalid_values = [
             "",
