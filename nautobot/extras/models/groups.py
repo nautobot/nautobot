@@ -268,12 +268,12 @@ class DynamicGroup(OrganizationalModel):
     @property
     def members(self):
         """Return the member objects for this group."""
-        return self.get_queryset()
+        return self.get_group_queryset()
 
     @property
     def count(self):
         """Return the number of member objects in this group."""
-        return self.get_queryset().count()
+        return self.get_group_queryset().count()
 
     def get_absolute_url(self):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
@@ -464,30 +464,30 @@ class DynamicGroup(OrganizationalModel):
 
         return q
 
-    def process_group_filters(self, qs=None, group=None):
+    def process_group_filters(self, group=None, qs=None):
         # Start with this group's base queryset
-        base_qs = self.get_queryset().clone()
+        base_qs = self.get_queryset()
         if qs is None:
             # Clone the base queryset so we can modify it.
-            qs = self.get_queryset().clone()
+            qs = self.get_queryset()
 
         if group is None:
             group = self
-            print(f"Processing group {group}...")
+            logger.debug("Processing group %s...", group)
 
         big_q = models.Q()
 
         # Enumerate the filters. Recursing into any groups of groups.
         for membership in group.dynamic_group_memberships.all():
             group = membership.group
-            print(f"Processing group {group}...")
+            logger.debug("Processing group %s...", group)
             child_memberships = group.dynamic_group_memberships.all()
             if child_memberships.exists():
-                qs = self.process_group_filters(qs, group)
+                qs = self.process_group_filters(group=group, qs=qs)
 
             operator = membership.operator
 
-            print(f"{group} -> {group.filter} -> {operator}")
+            logger.debug("%s -> %s -> %s", group, group.filter, operator)
 
             # The previous iteration that used set operations at the DB layer
             # but limited by not being able to do further filtering.
@@ -516,39 +516,46 @@ class DynamicGroup(OrganizationalModel):
         # return big_q
         return qs
 
+    def get_group_queryset(self):
+        return self.process_group_filters(group=self)
+
     def get_descendants(self, group=None, descendants=None):
         """Return the children of all child groups."""
         if group is None:
             group = self
         if descendants is None:
-            descendants = set()
+            descendants = []
 
         for child_group in group.children.all():
             print(f"Processing group {child_group}...")
-            descendants.add(child_group.pk)
+            # descendants.append(child_group.pk)
+            descendants.append(child_group)
             if child_group.children.exists():
                 self.get_descendants(child_group, descendants)
 
         # TODO(jathan): Return a QuerySet with default ordering? Or a list that
         # is explicitly ordered by distance from object.
-        return DynamicGroup.objects.filter(pk__in=descendants)
+        return descendants
+        # return DynamicGroup.objects.filter(pk__in=descendants)
 
     def get_ancestors(self, group=None, ancestors=None):
         """Return the parents of all parent groups."""
         if group is None:
             group = self
         if ancestors is None:
-            ancestors = set()
+            ancestors = []
 
         for parent_group in group.parents.all():
             print(f"Processing group {parent_group}...")
-            ancestors.add(parent_group.pk)
+            # ancestors.append(parent_group.pk)
+            ancestors.append(parent_group)
             if parent_group.parents.exists():
                 self.get_ancestors(parent_group, ancestors)
 
         # TODO(jathan): Return a QuerySet with default ordering? Or a list that
         # is explicitly ordered by distance from object.
-        return DynamicGroup.objects.filter(pk__in=ancestors)
+        return ancestors
+        # return DynamicGroup.objects.filter(pk__in=ancestors)
 
     def get_siblings(self, parent_group=None):
         """Return groups that share the same parents."""
@@ -569,6 +576,7 @@ class DynamicGroupMembership(BaseModel):
         "extras.DynamicGroup",
         on_delete=models.CASCADE,
         related_name="+",
+        limit_choices_to=lambda: models.Q(parents__content_type=models.F("content_type")),
     )
     parent_group = models.ForeignKey(
         "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
@@ -586,6 +594,24 @@ class DynamicGroupMembership(BaseModel):
             ),
         ]
         ordering = ["parent_group", "weight", "group"]
+
+    @property
+    def name(self):
+        return self.group.name
+
+    @property
+    def members(self):
+        return self.group.members
+
+    @property
+    def count(self):
+        return self.group.count
+
+    def get_absolute_url(self):
+        return reverse("extras:dynamicgroup", kwargs={"slug": self.group.slug})
+
+    def get_group_members_url(self):
+        return self.group.get_group_members_url()
 
     def clean(self):
         super().clean()

@@ -25,6 +25,7 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -289,6 +290,42 @@ class DynamicGroupTable(BaseTable):
         if not value:
             return value
         return format_html('<a href="{}">{}</a>', record.get_group_members_url(), value)
+
+
+GROUP_LINK = """
+{% load helpers %}
+{% with ancestors=record.get_ancestors %}
+{% for i in ancestors|length|as_range %}
+    {% if not forloop.first %}
+    <i class="mdi mdi-circle-small"></i>
+    {% endif %}
+{% endfor %}
+{% endwith %}
+<a href="{{ record.get_absolute_url }}">{{ record.slug }}</a>
+"""
+
+
+class NestedDynamicGroupTable(DynamicGroupTable):
+    """
+    Subclass of DynamicGroupTable used in detail views to show parenting heirarchy with dots.
+    """
+
+    name = tables.TemplateColumn(template_code=GROUP_LINK)
+
+    class Meta(DynamicGroupTable.Meta):
+        pass
+
+
+class DynamicGroupMembershipTable(DynamicGroupTable):
+    class Meta(BaseTable.Meta):
+        model = DynamicGroupMembership
+        fields = (
+            "name",
+            "members",
+            "operator",
+            "weight",
+        )
+        exclude = ("actions", "content_type", "description")
 
 
 class ExportTemplateTable(BaseTable):

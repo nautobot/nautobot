@@ -685,13 +685,12 @@ class DynamicGroupForm(NautobotModelForm):
 DynamicGroupMembershipFormSet = inlineformset_factory(
     parent_model=DynamicGroup,
     model=DynamicGroupMembership,
+    extra=1,
     fields=("group", "operator", "weight"),
     fk_name="parent_group",
-    extra=5,
     widgets={
         "operator": StaticSelect2,
-        # "weight": StaticSelect2,
-        "group": APISelect(api_url="/api/extras/dynamic-groups/"),
+        "group": StaticSelect2,
     },
 )
 

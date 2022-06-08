@@ -45,5 +45,7 @@
 {% else %}
     {% include table_template|default:'responsive_table.html' %}
 {% endif %}
+{% if not no_paginate %}
     {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
+{% endif %}
 <div class="clearfix"></div>

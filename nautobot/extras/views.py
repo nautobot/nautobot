@@ -24,6 +24,7 @@ from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.tables import NestedDynamicGroupTable
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -53,6 +54,7 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -503,14 +505,38 @@ class DynamicGroupListView(generic.ObjectListView):
 class DynamicGroupView(generic.ObjectView):
     queryset = DynamicGroup.objects.all()
 
+    def get_memberships(self, objects):
+        return DynamicGroupMembership.objects.filter(group__in=objects)
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         model = instance.content_type.model_class()
         table_class = get_table_for_model(model)
+        # dg_table_class = get_table_for_model(DynamicGroup)
+        dg_table_class = NestedDynamicGroupTable
+        dgm_table_class = get_table_for_model(DynamicGroupMembership)
 
         if table_class is not None:
-            members = instance.get_queryset()
-            members_table = table_class(members, orderable=False)
+            members_table = table_class(instance.members, orderable=False)
+
+            children = self.get_memberships(instance.children.all())
+            children_table = dgm_table_class(children, orderable=False)
+
+            descendants = instance.get_descendants()
+            descendants_table = dg_table_class(
+                descendants,
+                orderable=False,
+                sequence=["name", "members", "description"],
+                exclude=["content_type", "actions"],
+            )
+
+            ancestors = instance.get_ancestors()
+            ancestors_table = dg_table_class(
+                ancestors,
+                orderable=False,
+                sequence=["name", "members", "description"],
+                exclude=["content_type", "actions"],
+            )
 
             # Paginate the members table.
             paginate = {
@@ -520,6 +546,9 @@ class DynamicGroupView(generic.ObjectView):
             RequestConfig(request, paginate).configure(members_table)
 
             context["members_table"] = members_table
+            context["children_table"] = children_table
+            context["descendants_table"] = descendants_table
+            context["ancestors_table"] = ancestors_table
 
         return context
 

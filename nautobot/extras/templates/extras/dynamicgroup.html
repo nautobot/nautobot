@@ -33,6 +33,16 @@
             <pre>{{ object.filter | render_json }}</pre>
         </div>
     </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Child Groups</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'utilities/obj_table.html' with table=children_table table_template='panel_table.html' heading='Children' no_paginate=True %}
+            {% include 'utilities/obj_table.html' with table=descendants_table table_template='panel_table.html' heading='Descendants' no_paginate=True %}
+           {% include 'utilities/obj_table.html' with table=ancestors_table table_template='panel_table.html' heading='Ancestors' no_paginate=True %}
+        </div>
+    </div>
 {% endblock content_left_page %}
 
 {% block content_right_page %}
