@@ -210,6 +210,16 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         exclude=True,
         label="Has rack groups",
     )
+    racks = django_filters.ModelMultipleChoiceFilter(
+        queryset=Rack.objects.all(),
+        label="Racks",
+    )
+    has_racks = django_filters.BooleanFilter(
+        field_name="racks",
+        lookup_expr="isnull",
+        exclude=True,
+        label="Has Racks",
+    )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
 
