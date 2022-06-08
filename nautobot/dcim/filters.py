@@ -174,20 +174,16 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         queryset=CircuitTermination.objects.all(),
         label="Circuit terminations",
     )
-    has_circuit_terminations = django_filters.BooleanFilter(
+    has_circuit_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",
-        lookup_expr="isnull",
-        exclude=True,
         label="Has circuit terminations",
     )
     devices = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         label="Devices",
     )
-    has_devices = django_filters.BooleanFilter(
+    has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
-        lookup_expr="isnull",
-        exclude=True,
         label="Has devices",
     )
     powerpanels = django_filters.ModelMultipleChoiceFilter(
@@ -195,50 +191,40 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         queryset=PowerPanel.objects.all(),
         label="Power panels",
     )
-    has_powerpanels = django_filters.BooleanFilter(
+    has_powerpanels = RelatedMembershipBooleanFilter(
         field_name="powerpanel",
-        lookup_expr="isnull",
-        exclude=True,
         label="Has power panels",
     )
     rack_groups = NaturalKeyMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Rack groups (slug or ID)",
     )
-    has_rack_groups = django_filters.BooleanFilter(
+    has_rack_groups = RelatedMembershipBooleanFilter(
         field_name="rack_groups",
-        lookup_expr="isnull",
-        exclude=True,
         label="Has rack groups",
     )
     racks = django_filters.ModelMultipleChoiceFilter(
         queryset=Rack.objects.all(),
         label="Racks",
     )
-    has_racks = django_filters.BooleanFilter(
+    has_racks = RelatedMembershipBooleanFilter(
         field_name="racks",
-        lookup_expr="isnull",
-        exclude=True,
         label="Has racks",
     )
     prefixes = django_filters.ModelMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
         label="Prefixes",
     )
-    has_prefixes = django_filters.BooleanFilter(
+    has_prefixes = RelatedMembershipBooleanFilter(
         field_name="prefixes",
-        lookup_expr="isnull",
-        exclude=True,
         label="Has prefixes",
     )
     vlan_groups = NaturalKeyMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
         label="Vlan groups",
     )
-    has_vlan_groups = django_filters.BooleanFilter(
+    has_vlan_groups = RelatedMembershipBooleanFilter(
         field_name="vlan_groups",
-        lookup_expr="isnull",
-        exclude=True,
         label="Has vlan groups",
     )
     comments = django_filters.CharFilter(lookup_expr="icontains")
