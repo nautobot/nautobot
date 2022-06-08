@@ -53,6 +53,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ### Changed
 
 - [#1736](https://github.com/nautobot/nautobot/issues/1736) - `STRICT_FILTERING` setting is added and enabled by default.
+- [#1793](https://github.com/nautobot/nautobot/pull/1793) - Added index notes to fields from analysis, relaxed ConfigContextSchema constraint (unique on name, owner_content_type, owner_object_id instead of just name).
 
 ### Fixed
 
