@@ -104,18 +104,26 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
+        cls.parent_regions = (
             Region.objects.create(name="Region 1", slug="region-1", description="A"),
             Region.objects.create(name="Region 2", slug="region-2", description="B"),
             Region.objects.create(name="Region 3", slug="region-3", description="C"),
         )
 
-        Region.objects.create(name="Region 1A", slug="region-1a", parent=regions[0])
-        Region.objects.create(name="Region 1B", slug="region-1b", parent=regions[0])
-        Region.objects.create(name="Region 2A", slug="region-2a", parent=regions[1])
-        Region.objects.create(name="Region 2B", slug="region-2b", parent=regions[1])
-        Region.objects.create(name="Region 3A", slug="region-3a", parent=regions[2])
-        Region.objects.create(name="Region 3B", slug="region-3b", parent=regions[2])
+        cls.child_regions = (
+            Region.objects.create(name="Region 1A", slug="region-1a", parent=cls.parent_regions[0]),
+            Region.objects.create(name="Region 1B", slug="region-1b", parent=cls.parent_regions[0]),
+            Region.objects.create(name="Region 2A", slug="region-2a", parent=cls.parent_regions[1]),
+            Region.objects.create(name="Region 2B", slug="region-2b", parent=cls.parent_regions[1]),
+            Region.objects.create(name="Region 3A", slug="region-3a", parent=cls.parent_regions[2]),
+            Region.objects.create(name="Region 3B", slug="region-3b", parent=cls.parent_regions[2]),
+        )
+
+        cls.sites = (
+            Site.objects.create(name="Site 1", slug="site-1", region=cls.parent_regions[0]),
+            Site.objects.create(name="Site 2", slug="site-2", region=cls.parent_regions[0]),
+            Site.objects.create(name="Site 3", slug="site-3", region=cls.parent_regions[1]),
+        )
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -127,6 +135,18 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"parent": [parent_regions[0].slug, parent_regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_children(self):
+        params = {"children": [self.child_regions[0].pk, self.child_regions[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"children": [self.child_regions[1].slug, self.child_regions[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_sites(self):
+        params = {"sites": [self.sites[0].pk, self.sites[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"sites": [self.sites[1].slug, self.sites[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):

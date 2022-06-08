@@ -19,6 +19,7 @@ from nautobot.utilities.filters import (
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
@@ -122,6 +123,14 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         queryset=Region.objects.all(),
         to_field_name="slug",
         label="Parent region (slug)",
+    )
+    children = NaturalKeyMultipleChoiceFilter(
+        queryset=Region.objects.all(),
+        label="Children (slug or ID)",
+    )
+    sites = NaturalKeyMultipleChoiceFilter(
+        queryset=Site.objects.all(),
+        label="Site (slug or ID)",
     )
 
     class Meta:
