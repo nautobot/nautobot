@@ -200,6 +200,16 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         exclude=True,
         label="Has power panels",
     )
+    rack_groups = NaturalKeyMultipleChoiceFilter(
+        queryset=RackGroup.objects.all(),
+        label="Rack groups (slug or ID)",
+    )
+    has_rack_groups = django_filters.BooleanFilter(
+        field_name="rack_groups",
+        lookup_expr="isnull",
+        exclude=True,
+        label="Has rack groups",
+    )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
 

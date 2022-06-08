@@ -268,6 +268,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             PowerPanel.objects.create(name="Power Panel 3", site=cls.sites[1]),
         )
 
+        cls.rack_groups = (
+            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=cls.sites[0]),
+            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[0]),
+            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=cls.sites[1]),
+        )
+
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -370,6 +376,18 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_powerpanels": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_powerpanels": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_rack_groups(self):
+        params = {"rack_groups": [self.rack_groups[0].pk, self.rack_groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"rack_groups": [self.rack_groups[0].slug, self.rack_groups[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_rack_groups(self):
+        params = {"has_rack_groups": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_rack_groups": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
