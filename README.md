@@ -11,7 +11,7 @@ Nautobot runs as a web application atop the [Django](https://www.djangoproject.c
 
 The complete documentation for Nautobot can be found at [Read the Docs](https://nautobot.readthedocs.io/en/stable/).
 
-Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join us in the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com)!
+Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/)!
 
 ## Build Status
 
