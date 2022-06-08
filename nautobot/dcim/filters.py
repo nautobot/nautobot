@@ -2,7 +2,6 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-from nautobot.circuits.models import CircuitTermination
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
@@ -10,7 +9,7 @@ from nautobot.extras.filters import (
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
-from nautobot.ipam.models import Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
@@ -170,17 +169,9 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         to_field_name="slug",
         label="Region (slug)",
     )
-    circuit_terminations = django_filters.ModelMultipleChoiceFilter(
-        queryset=CircuitTermination.objects.all(),
-        label="Circuit terminations",
-    )
     has_circuit_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",
         label="Has circuit terminations",
-    )
-    devices = django_filters.ModelMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        label="Devices",
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -203,17 +194,9 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="rack_groups",
         label="Has rack groups",
     )
-    racks = django_filters.ModelMultipleChoiceFilter(
-        queryset=Rack.objects.all(),
-        label="Racks",
-    )
     has_racks = RelatedMembershipBooleanFilter(
         field_name="racks",
         label="Has racks",
-    )
-    prefixes = django_filters.ModelMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
-        label="Prefixes",
     )
     has_prefixes = RelatedMembershipBooleanFilter(
         field_name="prefixes",
@@ -227,21 +210,18 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="vlan_groups",
         label="Has vlan groups",
     )
-    vlans = django_filters.ModelMultipleChoiceFilter(
-        queryset=VLAN.objects.all(),
-        label="Vlans",
-    )
     has_vlans = RelatedMembershipBooleanFilter(
         field_name="vlans",
         label="Has vlans",
     )
-    clusters = django_filters.ModelMultipleChoiceFilter(
-        queryset=Cluster.objects.all(),
-        label="Clusters",
-    )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
         label="Has clusters",
+    )
+    time_zone = django_filters.MultipleChoiceFilter(
+        choices=Site._meta.get_field("time_zone").choices,
+        label="Time zone",
+        null_value="",
     )
     comments = django_filters.CharFilter(lookup_expr="icontains")
     tag = TagFilter()
@@ -249,16 +229,22 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     class Meta:
         model = Site
         fields = [
-            "id",
-            "name",
-            "slug",
-            "facility",
             "asn",
-            "latitude",
-            "longitude",
+            "circuit_terminations",
+            "clusters",
+            "contact_email",
             "contact_name",
             "contact_phone",
-            "contact_email",
+            "devices",
+            "facility",
+            "id",
+            "latitude",
+            "longitude",
+            "name",
+            "prefixes",
+            "racks",
+            "slug",
+            "vlans",
         ]
 
 

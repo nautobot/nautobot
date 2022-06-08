@@ -193,6 +193,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
                 contact_phone="123-555-0001",
                 contact_email="contact1@example.com",
                 comments="comment1",
+                time_zone="America/Chicago",
             ),
             Site.objects.create(
                 name="Site 2",
@@ -208,6 +209,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
                 contact_phone="123-555-0002",
                 contact_email="contact2@example.com",
                 comments="comment2",
+                time_zone="America/Chicago",
             ),
             Site.objects.create(
                 name="Site 3",
@@ -222,6 +224,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
                 contact_name="Contact 3",
                 contact_phone="123-555-0003",
                 contact_email="contact3@example.com",
+                time_zone="America/Detroit",
             ),
         )
 
@@ -481,6 +484,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_clusters": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_time_zone(self):
+        params = {"time_zone": [self.sites[0].time_zone]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"time_zone": [""]}
+        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
 
 class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
