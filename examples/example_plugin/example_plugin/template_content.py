@@ -3,18 +3,27 @@ from django.urls import reverse
 from nautobot.extras.plugins import PluginTemplateExtension
 
 
+class CircuitContent(PluginTemplateExtension):
+    model = "circuits.circuit"
+
+    def object_detail_tabs(self):
+        return {
+            "pct": {
+                "title": "Example Plugin Circuit Tab",
+                "url": reverse("plugins:example_plugin:circuit_detail_tab", args=[self.context["object"].pk]),
+            },
+        }
+
+
 class DeviceContent(PluginTemplateExtension):
     model = "dcim.device"
 
-    def plugin_nav_tabs(self):
+    def object_detail_tabs(self):
+        # You can define extra object detail page tabs within this file by
         return {
-            "ect1": {
-                "title": "Plugin Device Tab 1",
-                "url": reverse("plugins:example_plugin:example_object_tab_1", args=[self.context["object"].pk]),
-            },
-            "ect2": {
-                "title": "Plugin Device Tab 2",
-                "url": reverse("plugins:example_plugin:example_object_tab_2", args=[self.context["object"].pk]),
+            "pdt": {
+                "title": "Example Plugin Device Tab",
+                "url": reverse("plugins:example_plugin:device_detail_tab", args=[self.context["object"].pk]),
             },
         }
 
@@ -82,4 +91,4 @@ class ExampleModelContent(PluginTemplateExtension):
 
 
 # Don't forget to register your template extensions!
-template_extensions = [ExampleModelContent, SiteContent, DeviceContent]
+template_extensions = [ExampleModelContent, SiteContent, CircuitContent, DeviceContent]
