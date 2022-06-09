@@ -303,10 +303,14 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         field_name="powerpanel",
         label="Has power panels",
     )
+    has_racks = RelatedMembershipBooleanFilter(
+        field_name="racks",
+        label="Has power panels",
+    )
 
     class Meta:
         model = RackGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "slug", "description", "racks"]
 
 
 class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
