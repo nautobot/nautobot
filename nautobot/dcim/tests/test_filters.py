@@ -648,13 +648,33 @@ class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
-        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00")
-        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff")
+        site = Site.objects.create(name="Site 1", slug="site-1")
+
+        rackroles = (
+            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
+            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
+            RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff"),
+        )
+
+        cls.racks = (
+            Rack.objects.create(name="Rack 1", site=site, role=rackroles[0]),
+            Rack.objects.create(name="Rack 2", site=site, role=rackroles[0]),
+            Rack.objects.create(name="Rack 3", site=site, role=rackroles[1]),
+        )
 
     def test_color(self):
         params = {"color": ["ff0000", "00ff00"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_racks(self):
+        params = {"racks": [self.racks[0].pk, self.racks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"racks": [self.racks[2].pk, self.racks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_racks(self):
+        self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 1)
 
 
 class RackTestCase(FilterTestCases.FilterTestCase):

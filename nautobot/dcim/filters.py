@@ -278,13 +278,13 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Rack group (ID)",
+        label="Parent (ID)",
     )
     parent = django_filters.ModelMultipleChoiceFilter(
         field_name="parent__slug",
         queryset=RackGroup.objects.all(),
         to_field_name="slug",
-        label="Rack group (slug)",
+        label="Parent (slug)",
     )
     children = NaturalKeyMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -305,7 +305,7 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     has_racks = RelatedMembershipBooleanFilter(
         field_name="racks",
-        label="Has power panels",
+        label="Has racks",
     )
 
     class Meta:
@@ -314,9 +314,14 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+    has_racks = RelatedMembershipBooleanFilter(
+        field_name="racks",
+        label="Has racks",
+    )
+
     class Meta:
         model = RackRole
-        fields = ["id", "name", "slug", "color"]
+        fields = ["id", "name", "slug", "color", "description", "racks"]
 
 
 class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
