@@ -36,8 +36,8 @@ class DeviceContent(PluginTemplateExtension):
         For each of the tabs defined:
         - The title value will become the tab's title.
         - The url value is used to render the HTML link for the tab
-        These tabs will be visible (in this instance) on the Circuit model's detail page as
-        referenced here by the CircuitContent.model class property.
+        These tabs will be visible (in this instance) on the Device model's detail page as
+        referenced here by the DeviceContent.model class property.
         """
         return {
             "pdt": {
