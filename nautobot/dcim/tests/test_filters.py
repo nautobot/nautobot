@@ -504,23 +504,17 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"physical_address": self.sites[0].physical_address[:-2]}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
-        params = {"physical_address": str(self.sites[1].physical_address).upper()}
-        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_shipping_address(self):
         params = {"shipping_address": self.sites[0].shipping_address}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"shipping_address": self.sites[0].shipping_address[:-2]}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
-        params = {"shipping_address": str(self.sites[1].shipping_address).upper()}
-        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_description(self):
         params = {"description": self.sites[0].description}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"description": self.sites[0].shipping_address[:-2]}
-        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
-        params = {"description": str(self.sites[1].shipping_address).upper()}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
 
