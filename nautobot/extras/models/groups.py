@@ -569,6 +569,15 @@ class DynamicGroup(OrganizationalModel):
         return not self.children.exists()
 
 
+def limit_dynamic_group_by_parent_content_type():
+    """
+    Callback for use on `DynamicGroupMembership.group.limit_choices_to`.
+
+    This asserts that only Dynamic Groups matching the `content_type` of the `parent_group` can be selected.
+    """
+    return models.Q(parents__content_type=models.F("content_type"))
+
+
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
@@ -576,7 +585,7 @@ class DynamicGroupMembership(BaseModel):
         "extras.DynamicGroup",
         on_delete=models.CASCADE,
         related_name="+",
-        limit_choices_to=lambda: models.Q(parents__content_type=models.F("content_type")),
+        limit_choices_to=limit_dynamic_group_by_parent_content_type,
     )
     parent_group = models.ForeignKey(
         "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
