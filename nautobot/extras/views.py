@@ -949,9 +949,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
-
+        template_name = "extras/job.html"
         try:
-            job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+            job_class = job_model.job_class()
+            job_form = job_class.as_form(initial=normalize_querydict(request.GET))
+            if (hasattr(job_class, "template_name")):
+                template_name = job_class.template_name
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -960,7 +963,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
         return render(
             request,
-            "extras/job.html",  # 2.0 TODO: extras/job_submission.html
+            template_name,  # 2.0 TODO: extras/job_submission.html
             {
                 "job_model": job_model,
                 "job_form": job_form,
@@ -970,9 +973,14 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
     def post(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
+        template_name = "extras/job.html"
+
+        job_class = job_model.job_class()
+        if (hasattr(job_class, "template_name")):
+            template_name = job_class.template_name
 
         job_form = (
-            job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
+            job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         )
         schedule_form = forms.JobScheduleForm(request.POST)
 
@@ -1051,7 +1059,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
         return render(
             request,
-            "extras/job.html",
+            template_name,
             {
                 "job_model": job_model,
                 "job_form": job_form,
