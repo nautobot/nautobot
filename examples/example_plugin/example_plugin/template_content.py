@@ -7,6 +7,16 @@ class CircuitContent(PluginTemplateExtension):
     model = "circuits.circuit"
 
     def object_detail_tabs(self):
+        """
+        You may define extra tabs to render on a model's detail page by utilizing this method.
+        Each tab will have a tab_id which will be deduced from the keys of the returned dict.
+        The tab_id is used to set the active tab in the UI.
+        For each of the tabs defined:
+        - The title value will become the tab's title.
+        - The url value is used to render the HTML link for the tab
+        These tabs will be visible (in this instance) on the Circuit model's detail page as
+        referenced here by the CircuitContent.model class property.
+        """
         return {
             "pct": {
                 "title": "Example Plugin Circuit Tab",
@@ -19,7 +29,16 @@ class DeviceContent(PluginTemplateExtension):
     model = "dcim.device"
 
     def object_detail_tabs(self):
-        # You can define extra object detail page tabs within this file by
+        """
+        You may define extra tabs to render on a model's detail page by utilizing this method.
+        Each tab will have a tab_id which will be deduced from the keys of the returned dict.
+        The tab_id is used to set the active tab in the UI.
+        For each of the tabs defined:
+        - The title value will become the tab's title.
+        - The url value is used to render the HTML link for the tab
+        These tabs will be visible (in this instance) on the Circuit model's detail page as
+        referenced here by the CircuitContent.model class property.
+        """
         return {
             "pdt": {
                 "title": "Example Plugin Device Tab",
