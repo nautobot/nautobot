@@ -12,7 +12,7 @@ from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.choices import ColorChoices, ChoiceSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
@@ -219,7 +219,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         label="Has clusters",
     )
     time_zone = django_filters.MultipleChoiceFilter(
-        choices=Site._meta.get_field("time_zone").choices,
+        choices=ChoiceSet(Site._meta.get_field("time_zone").choices),
         label="Time zone",
         null_value="",
     )
