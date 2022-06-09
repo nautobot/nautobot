@@ -294,6 +294,15 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         field_name="children",
         label="Has children",
     )
+    powerpanels = django_filters.ModelMultipleChoiceFilter(
+        field_name="powerpanel",
+        queryset=PowerPanel.objects.all(),
+        label="Power panels",
+    )
+    has_powerpanels = RelatedMembershipBooleanFilter(
+        field_name="powerpanel",
+        label="Has power panels",
+    )
 
     class Meta:
         model = RackGroup
