@@ -1,7 +1,7 @@
 import django_tables2 as tables
 
 from nautobot.dcim.models import Location, LocationType
-from nautobot.dcim.tables.template_code import MPTT_LINK
+from nautobot.dcim.tables.template_code import TREE_LINK
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.utilities.tables import BaseTable, ButtonsColumn, TagColumn, ToggleColumn
 
@@ -13,7 +13,7 @@ __all__ = (
 
 class LocationTypeTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     # actions = ButtonsColumn(LocationType)
 
     class Meta(BaseTable.Meta):
@@ -24,7 +24,7 @@ class LocationTypeTable(BaseTable):
 
 class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     location_type = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:location_list")
 

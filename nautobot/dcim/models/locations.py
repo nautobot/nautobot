@@ -2,43 +2,21 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import reverse
 
+from tree_queries.models import TreeNode
+from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
+
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
+from nautobot.utilities.querysets import RestrictedQuerySet
 
 
-#
-# Note that although both LocationType and Location are tree-like models,
-# we do NOT currently use django-mptt for these models. This is a calculated decision based on the following factors:
-# 1) django-mptt is mostly unmaintained at this time and we want to get rid of it in Nautobot eventually
-# 2) Unlike IPAM models, the nesting of these models is expected to be quite shallow (max depth < 20, typically < 10)
-#    and so high efficiency of recursive lookups is not a tremendous concern at this time.
+class TreeQuerySet(TreeQuerySet_, RestrictedQuerySet):
+    pass
 
-class TreeModel(models.Model):
-
-    parent = models.ForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="children",
-        blank=True,
-        null=True,
-        db_index=True,
-    )
-
-    class Meta:
-        abstract = True
-
-    def get_ancestors(self):
-        if self.parent:
-            return self.parent.get_ancestors() + [self.parent]
-        return []
-
-    def get_descendants(self):
-        return {child: child.get_descendants() for child in self.children.all()}
-
-    def get_depth(self):
-        return len(self.get_ancestors())
+class TreeManager(models.Manager.from_queryset(TreeQuerySet), TreeManager_):
+    _with_tree_fields = True
 
 
 @extras_features(
@@ -50,7 +28,7 @@ class TreeModel(models.Model):
     "relationships",
     "webhooks",
 )
-class LocationType(TreeModel, OrganizationalModel):
+class LocationType(TreeNode, OrganizationalModel):
     """
     Definition of a category of Locations, including its hierarchical relationship to other LocationTypes.
     """
@@ -65,7 +43,12 @@ class LocationType(TreeModel, OrganizationalModel):
         help_text="The object type(s) that can be associated to a Location of this type.",
     )
 
+    objects = TreeManager()
+
     csv_headers = ["name", "slug", "parent", "description", "content_types"]
+
+    class Meta:
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -93,7 +76,7 @@ class LocationType(TreeModel, OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Location(TreeModel, StatusModel, PrimaryModel):
+class Location(TreeNode, StatusModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
     """
@@ -115,6 +98,8 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     # TODO images = GenericRelation(to="extras.ImageAttachment")
 
+    objects = TreeManager()
+
     csv_headers = [
         "name",
         "slug",
@@ -130,6 +115,9 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         "parent",
         "description",
     ]
+
+    class Meta:
+        ordering = ("name",)
 
     def __str__(self):
         return self.name

@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-    {% for ancestor in object.get_ancestors %}
+    {% for ancestor in object.ancestors %}
         <li>{{ ancestor|hyperlinked_object }}</li>
     {% endfor %}
 {% endblock %}
@@ -20,7 +20,7 @@
             <tr>
                 <td>Parent(s)</td>
                 <td>
-                    {% for ancestor in object.get_ancestors %}
+                    {% for ancestor in object.ancestors %}
                         {{ ancestor|hyperlinked_object }}{% if not forloop.last %} ← {% endif %}
                     {% empty %}
                         {{ None|placeholder }}

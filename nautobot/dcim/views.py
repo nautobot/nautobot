@@ -325,7 +325,7 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.order_by("parent__parent__parent__name", "parent__parent__name", "parent__name", "name")
+    queryset = Location.objects.all()
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
