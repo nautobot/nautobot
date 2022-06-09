@@ -564,6 +564,12 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
             parent=parent_rack_groups[2],
             description="C",
         )
+        RackGroup.objects.create(
+            name="Rack Group 4",
+            slug="rack-group-4",
+            site=sites[2],
+            description="C",
+        )
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -589,6 +595,18 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"parent": [parent_groups[0].slug, parent_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_children(self):
+        child_groups = RackGroup.objects.filter(name__startswith="Rack").filter(parent__isnull=False)[:2]
+        params = {"children": [child_groups[0].pk, child_groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        rack_group_4 = RackGroup.objects.filter(slug="rack-group-4")[0]
+        params = {"children": [rack_group_4.slug, rack_group_4.pk]}
+        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+    def test_has_children(self):
+        self.assertEqual(self.filterset({"has_children": True}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"has_children": False}, self.queryset).qs.count(), 4)
 
 
 class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):

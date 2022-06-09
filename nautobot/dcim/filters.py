@@ -205,7 +205,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     )
     vlan_groups = NaturalKeyMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Vlan groups",
+        label="Vlan groups (slug or ID)",
     )
     has_vlan_groups = RelatedMembershipBooleanFilter(
         field_name="vlan_groups",
@@ -285,6 +285,14 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         queryset=RackGroup.objects.all(),
         to_field_name="slug",
         label="Rack group (slug)",
+    )
+    children = NaturalKeyMultipleChoiceFilter(
+        queryset=RackGroup.objects.all(),
+        label="Children (slug or ID)",
+    )
+    has_children = RelatedMembershipBooleanFilter(
+        field_name="children",
+        label="Has children",
     )
 
     class Meta:
