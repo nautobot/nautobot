@@ -419,7 +419,7 @@ class MappedPredicatesFilterMixin:
 class NaturalKeyMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filter that supports filtering on the `pk` or the `slug` of a foreign-key related field.
-    Matches the `pk` field on the `iexact` lookup expression or the `slug` field on `icontains`.
+    Matches the `pk` field on the `iexact` lookup expression or the `slug` field on `exact`.
     """
 
     field_class = NaturalKeyMultipleChoiceField

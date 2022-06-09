@@ -672,7 +672,7 @@ class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceFie
     """
     Field to support matching an object's `pk` or `slug` field depending on the value
     supplied. Faises ValidationError if neither field matches. Matches `pk` on the
-    `iexact` lookup expression or `slug` on `icontains`.
+    `iexact` lookup expression or `slug` on `exact`.
     """
 
     def _check_values(self, values):
@@ -692,7 +692,7 @@ class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceFie
                 code="invalid_list",
             )
         for item in values:
-            qs = self.queryset.filter(Q(pk__iexact=str(item)) | Q(slug__icontains=str(item)))
+            qs = self.queryset.filter(Q(pk__iexact=str(item)) | Q(slug=str(item)))
             if not qs.exists():
                 raise ValidationError(
                     self.error_messages["invalid_choice"],
@@ -701,6 +701,6 @@ class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceFie
                 )
         query = Q()
         for item in values:
-            query |= Q(pk__iexact=str(item)) | Q(slug__icontains=str(item))
+            query |= Q(pk__iexact=str(item)) | Q(slug=str(item))
         qs = self.queryset.filter(query)
         return qs
