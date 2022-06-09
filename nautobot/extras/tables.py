@@ -307,7 +307,7 @@ GROUP_LINK = """
 
 class NestedDynamicGroupTable(DynamicGroupTable):
     """
-    Subclass of DynamicGroupTable used in detail views to show parenting heirarchy with dots.
+    Subclass of DynamicGroupTable used in detail views to show parenting hierarchy with dots.
     """
 
     name = tables.TemplateColumn(template_code=GROUP_LINK)

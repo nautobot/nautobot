@@ -560,12 +560,9 @@ class DynamicGroup(OrganizationalModel):
         return ancestors
         # return DynamicGroup.objects.filter(pk__in=ancestors)
 
-    def get_siblings(self, parent_group=None):
+    def get_siblings(self):
         """Return groups that share the same parents."""
-        if parent_group is None:
-            parent_group = self
-
-        return DynamicGroup.objects.filter(parents=parent_group)
+        return DynamicGroup.objects.filter(parents__in=self.parents.all())
 
     def is_leaf(self):
         """Return whether this is a leaf node (has no children)."""
@@ -638,7 +635,3 @@ class DynamicGroupMembership(BaseModel):
         # Enforce matching content_type
         if self.parent_group.content_type != self.group.content_type:
             raise ValidationError({"group": "ContentType for group and parent_group must match"})
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
