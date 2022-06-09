@@ -16,7 +16,7 @@ from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.querysets import DynamicGroupQuerySet
+from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model, get_route_for_model
 
@@ -78,7 +78,7 @@ class DynamicGroup(OrganizationalModel):
     # to dynamically change the widget if we decide we do want to support this field.
     #
     # Type: tuple
-    exclude_filter_fields = ("q", "cr", "cf", "comments")  # Must be a tuple
+    exclude_filter_fields = ("q", "cf_", "cr_", "cpf_", "comments")  # Must be a tuple
 
     class Meta:
         ordering = ["content_type", "name"]
@@ -89,6 +89,9 @@ class DynamicGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.slug,)
 
     @property
     def model(self):
@@ -593,8 +596,7 @@ class DynamicGroupMembership(BaseModel):
     operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
     weight = models.PositiveSmallIntegerField()
 
-    def __str__(self):
-        return f"{self.group}: {self.operator} ({self.weight})"
+    objects = DynamicGroupMembershipQuerySet.as_manager()
 
     class Meta:
         constraints = [
@@ -603,6 +605,14 @@ class DynamicGroupMembership(BaseModel):
             ),
         ]
         ordering = ["parent_group", "weight", "group"]
+
+    def __str__(self):
+        return f"{self.group}: {self.operator} ({self.weight})"
+
+    def natural_key(self):
+        return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
+
+    natural_key.dependencies = ["extras.dynamicgroup"]
 
     @property
     def name(self):
