@@ -470,6 +470,11 @@ class DynamicGroupTestCase(
             "slug": "new-dynamic-group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
+            # Management form fields required for the dynamic formset
+            "dynamic_group_memberships-TOTAL_FORMS": "0",
+            "dynamic_group_memberships-INITIAL_FORMS": "1",
+            "dynamic_group_memberships-MIN_NUM_FORMS": "0",
+            "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
 
 
