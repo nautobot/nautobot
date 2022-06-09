@@ -8,6 +8,7 @@ import nautobot.extras.models.groups
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0036_modify_dynamicgroup_groups__children"),
     ]
 
