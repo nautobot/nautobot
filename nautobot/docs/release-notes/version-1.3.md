@@ -147,8 +147,10 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#207](https://github.com/nautobot/nautobot/issues/207) - Update permissions documentation to add assigning permissions section.
+- [#1649](https://github.com/nautobot/nautobot/issues/1649) - Changed the incorrect view permission (circuits.view_vrf to ipam.view_vrf)
 - [#1763](https://github.com/nautobot/nautobot/issues/1763) - Job testing documentation updated to include details around enabling jobs. Job logs database added to `TransactionTestCase`.
 - [#1829](https://github.com/nautobot/nautobot/pull/1829) - Change Docker build GitHub Action to cache with matrix awareness.
+- [#1850](https://github.com/nautobot/nautobot/pull/1850) - Added {{block.super}} to negate the override from the js block in rack.html. This change fixed the issue of unable to navigate away from rack changelog tab.
 - [#1856](https://github.com/nautobot/nautobot/pull/1856) - Updated links to Slack community.
 
 ### Fixed
