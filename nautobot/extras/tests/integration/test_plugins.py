@@ -196,7 +196,7 @@ class PluginTabsTestCase(SeleniumTestCase):
     def test_circuit_detail_tab(self):
         # Set up the required objects:
         provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
-        provider_network = ProviderNetwork.objects.create(
+        ProviderNetwork.objects.create(
             name="Test Provider Network",
             slug="test-provider-network",
             provider=provider,
