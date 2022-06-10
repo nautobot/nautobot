@@ -699,7 +699,7 @@ class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceFie
                 isinstance(item, uuid.UUID) or uuid.UUID(item)
                 pk_values.add(item)
                 query |= Q(pk=item)
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
             query |= Q(slug=str(item))
             qs = self.queryset.filter(query)
