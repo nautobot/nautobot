@@ -143,11 +143,23 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"children": [self.child_regions[1].slug, self.child_regions[2].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_has_children(self):
+        params = {"has_children": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_children": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+
     def test_sites(self):
         params = {"sites": [self.sites[0].pk, self.sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"sites": [self.sites[1].slug, self.sites[2].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_sites(self):
+        params = {"has_sites": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_sites": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
 
 
 class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):

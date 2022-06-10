@@ -129,9 +129,17 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         queryset=Region.objects.all(),
         label="Children (slug or ID)",
     )
+    has_children = RelatedMembershipBooleanFilter(
+        field_name="children",
+        label="Has children",
+    )
     sites = NaturalKeyMultipleChoiceFilter(
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
+    )
+    has_sites = RelatedMembershipBooleanFilter(
+        field_name="sites",
+        label="Has sites",
     )
 
     class Meta:
