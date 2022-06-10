@@ -47,6 +47,7 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
+    MultipleContentTypeField,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -400,10 +401,13 @@ class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
 class LocationTypeForm(NautobotModelForm):
     parent = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
     slug = SlugField()
+    content_types = MultipleContentTypeField(
+        feature="locations", help_text="The object type(s) that can be associated to a Location of this type"
+    )
 
     class Meta:
         model = LocationType
-        fields = ("parent", "name", "slug", "description")
+        fields = ("parent", "name", "slug", "description", "content_types")
 
 
 class LocationTypeCSVForm(CustomFieldModelCSVForm):
@@ -430,7 +434,7 @@ class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
 class LocationForm(NautobotModelForm):
     location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
-    parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=Location.objects.all(), query_params={"child_location_type_id": "$location_type"}, required=False, brief_mode=False)
     slug = SlugField()
 
     class Meta:

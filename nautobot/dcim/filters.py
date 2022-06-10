@@ -211,7 +211,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     )
     location_type = django_filters.ModelMultipleChoiceFilter(
         field_name="location_type__slug",
-        queryset = LocationType.objects.all(),
+        queryset=LocationType.objects.all(),
         to_field_name="slug",
         label="Location type (slug)",
     )
@@ -224,6 +224,17 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         queryset=Location.objects.all(),
         to_field_name="slug",
         label="Parent location (slug)",
+    )
+    child_location_type_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="location_type__children",
+        queryset=LocationType.objects.all(),
+        label="Child location type (ID)",
+    )
+    child_location_type = django_filters.ModelMultipleChoiceFilter(
+        field_name="location_type__children__slug",
+        queryset=LocationType.objects.all(),
+        to_field_name="slug",
+        label="Child location type (slug)",
     )
     tags = TagFilter()
 

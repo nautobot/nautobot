@@ -260,7 +260,7 @@ class SiteBulkDeleteView(generic.BulkDeleteView):
 #
 
 class LocationTypeListView(generic.ObjectListView):
-    queryset = LocationType.objects.all()
+    queryset = LocationType.objects.with_tree_fields()
     filterset = filters.LocationTypeFilterSet
     filterset_form = forms.LocationTypeFilterForm
     table = tables.LocationTypeTable
@@ -325,7 +325,7 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.all()
+    queryset = Location.objects.with_tree_fields()
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable

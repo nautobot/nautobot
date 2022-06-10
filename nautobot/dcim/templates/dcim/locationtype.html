@@ -28,7 +28,21 @@
                 </td>
             </tr>
             <tr>
-                <td>Children</td>
+                <td>Content Type(s)</td>
+                <td>
+                    {% if object.content_types.all %}
+                        <ul>
+                            {% for content_type in object.content_types.all %}
+                                <li>{{ content_type }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Child Location Type(s)</td>
                 <td>
                     <a href="{% url 'dcim:locationtype_list' %}?parent={{ object.slug }}">{{ children_table.rows|length }}</a>
                 </td>
@@ -46,7 +60,7 @@
 {% block content_full_width_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
-            <strong>Children</strong>
+            <strong>Child Location Type(s)</strong>
         </div>
         {% include 'inc/table.html' with table=children_table %}
         {% if perms.dcim.add_locationtype %}
@@ -61,7 +75,7 @@
     <div class="row"></div>
     <div class="panel panel-default">
         <div class="panel-heading">
-            <strong>Locations</strong>
+            <strong>Location(s) of this Type</strong>
         </div>
         {% include 'inc/table.html' with table=locations_table %}
         {% if perms.dcim.add_location %}

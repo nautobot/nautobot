@@ -16,7 +16,7 @@ class TreeQuerySet(TreeQuerySet_, RestrictedQuerySet):
     pass
 
 class TreeManager(models.Manager.from_queryset(TreeQuerySet), TreeManager_):
-    _with_tree_fields = True
+    _with_tree_fields = False
 
 
 @extras_features(

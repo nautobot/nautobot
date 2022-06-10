@@ -678,7 +678,7 @@ rest_framework = ["djangorestframework (>=3.0.0)"]
 
 [[package]]
 name = "django-tree-queries"
-version = "0.10.0"
+version = "0.11.0"
 description = "Tree queries with explicit opt-in, without configurability"
 category = "main"
 optional = false
@@ -2243,7 +2243,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "6f61ab38f4aab2ccf7e739e8274e70e98bb3f91ec422b0cb1bab70717cd8756c"
+content-hash = "9e3e9cb972b6be2f8f61ef3848b5fd87311cf7c35f1fd6f34724cdc08bcb483f"
 
 [metadata.files]
 amqp = [
@@ -2581,8 +2581,8 @@ django-timezone-field = [
     {file = "django_timezone_field-4.1.2-py3-none-any.whl", hash = "sha256:897c06e40b619cf5731a30d6c156886a7c64cba3a90364832148da7ef32ccf36"},
 ]
 django-tree-queries = [
-    {file = "django_tree_queries-0.10.0-py3-none-any.whl", hash = "sha256:5209d38137e059fe0e73b1e05f50890b81c771a40017aac085d3ad43b0a708a1"},
-    {file = "django_tree_queries-0.10.0.tar.gz", hash = "sha256:d56a253bcf3b7a2ee47fdaab82f2f2541d9213947c1b5b8f824e6dd5e24b04b1"},
+    {file = "django_tree_queries-0.11.0-py3-none-any.whl", hash = "sha256:d74fe9e36dc67cb2c6f7df1969ef700627b0c49af2ada15990dd3ae44e4ddb23"},
+    {file = "django_tree_queries-0.11.0.tar.gz", hash = "sha256:768bc75fd5ab617e19bec5c7e207964d7f2f6155f5f3d8c3332b41d9d0e6b436"},
 ]
 django-webserver = [
     {file = "django-webserver-1.2.0.tar.gz", hash = "sha256:c976979d15b5ff9a212f7904d3b779e22219aebb4857860fcaf20e4e40f1da40"},
