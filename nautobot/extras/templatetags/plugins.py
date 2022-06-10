@@ -93,10 +93,9 @@ def plugin_object_detail_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
-    return {
-        "active_tab": context.get("active_tab", ""),
-        "plugin_object_detail_tabs": _get_registered_content(obj, "object_detail_tabs", context, return_html=False),
-    }
+    context["plugin_object_detail_tabs"] = _get_registered_content(obj, "object_detail_tabs", context,
+                                                                   return_html=False)
+    return context
 
 
 @register.inclusion_tag("extras/templatetags/plugin_banners.html", takes_context=True)
