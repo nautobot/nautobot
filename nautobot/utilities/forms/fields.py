@@ -1,6 +1,7 @@
 import csv
 import json
 import re
+import uuid
 from io import StringIO
 
 import django_filters
@@ -671,8 +672,7 @@ class NumericArrayField(SimpleArrayField):
 class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
     Field to support matching an object's `pk` or `slug` field depending on the value
-    supplied. Faises ValidationError if neither field matches. Matches `pk` on the
-    `iexact` lookup expression or `slug` on `exact`.
+    supplied. Faises ValidationError if neither field matches.
     """
 
     def _check_values(self, values):
@@ -691,16 +691,24 @@ class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceFie
                 self.error_messages["invalid_list"],
                 code="invalid_list",
             )
+        pk_values = set()
         for item in values:
-            qs = self.queryset.filter(Q(pk__iexact=str(item)) | Q(slug=str(item)))
+            query = Q()
+            try:
+                # query pk field if this is a uuid object or a valid uuid string
+                isinstance(item, uuid.UUID) or uuid.UUID(item)
+                pk_values.add(item)
+                query |= Q(pk=item)
+            except ValueError:
+                pass
+            query |= Q(slug=str(item))
+            qs = self.queryset.filter(query)
             if not qs.exists():
                 raise ValidationError(
                     self.error_messages["invalid_choice"],
                     code="invalid_choice",
                     params={"value": item},
                 )
-        query = Q()
-        for item in values:
-            query |= Q(pk__iexact=str(item)) | Q(slug=str(item))
+        query = Q(pk__in=pk_values) | Q(slug__in=values)
         qs = self.queryset.filter(query)
         return qs
