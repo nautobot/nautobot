@@ -279,18 +279,5 @@ class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSeria
 class VMInterfaceSerializer(VMInterfaceSerializerVersion12, StatusModelSerializerMixin):
     class Meta:
         model = VMInterface
-        fields = [
-            "id",
-            "url",
-            "virtual_machine",
-            "name",
-            "status",
-            "enabled",
-            "mtu",
-            "mac_address",
-            "description",
-            "mode",
-            "untagged_vlan",
-            "tagged_vlans",
-            "tags",
-        ]
+        fields = VMInterfaceSerializerVersion12.Meta.fields.copy()
+        fields.insert(4, "status")

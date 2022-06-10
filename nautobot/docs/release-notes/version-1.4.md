@@ -53,9 +53,11 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ### Changed
 
 - [#1736](https://github.com/nautobot/nautobot/issues/1736) - `STRICT_FILTERING` setting is added and enabled by default.
+- [#1793](https://github.com/nautobot/nautobot/pull/1793) - Added index notes to fields from analysis, relaxed ConfigContextSchema constraint (unique on name, owner_content_type, owner_object_id instead of just name).
 
 ### Fixed
 
 - [#1815](https://github.com/nautobot/nautobot/issues/1815) - Fix theme link style in footer.
+- [#1831](https://github.com/nautobot/nautobot/issues/1831) - Fixed missing `parent_interface` and `bridge` from 1.4 serializer of Interfaces.
 
 ### Removed
