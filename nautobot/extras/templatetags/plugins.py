@@ -93,8 +93,9 @@ def plugin_object_detail_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
-    context["plugin_object_detail_tabs"] = _get_registered_content(obj, "object_detail_tabs", context,
-                                                                   return_html=False)
+    context["plugin_object_detail_tabs"] = _get_registered_content(
+        obj, "object_detail_tabs", context, return_html=False
+    )
     return context
 
 
