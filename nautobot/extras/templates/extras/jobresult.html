@@ -1,6 +1,7 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
 {% load custom_links %}
+{% load url_encode %}
 {% load form_helpers %}
 {% load log_levels %}
 {% load plugins %}
@@ -41,6 +42,13 @@
             <a href="{% url 'extras:jobresult_delete' pk=result.pk %}" class="btn btn-danger">
                 <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
             </a>
+        {% endif %}
+        {% if perms.extras.run_job %}
+            {% if result.job_kwargs %}
+            <a href="/extras/jobs/{{result.name}}/?{% url_encode result.job_kwargs.data %}" class="btn btn-info">
+                <span class="mdi mdi-recycle" aria-hidden="true"></span> Re Run
+            </a>
+            {% endif %}
         {% endif %}
     </div>
     <h1>

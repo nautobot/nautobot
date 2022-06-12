@@ -532,6 +532,21 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+    actions = tables.TemplateColumn(
+        template_code="""
+            {% load url_encode %}
+            <div class="row">
+            {% if record.job_kwargs %}
+                <a href="/extras/jobs/{{record.name}}/?{% url_encode record.job_kwargs.data %}" class="btn btn-xs btn-info" title="re-run job">
+                    <i class="mdi mdi mdi-recycle"></i>
+                </a>
+            {% endif %}
+                <a href="/extras/job-results/{{ record.pk }}/delete/" class="btn btn-xs btn-danger" title="delete">
+                    <i class="mdi mdi mdi-minus-thick"></i>
+                </a>
+            </div>
+        """
+    )
 
     def order_linked_record(self, queryset, is_descending):
         return (
@@ -574,6 +589,7 @@ class JobResultTable(BaseTable):
             "user",
             "status",
             "summary",
+            "actions"
         )
         default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
 
