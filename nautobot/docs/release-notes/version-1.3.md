@@ -145,22 +145,22 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#207](https://github.com/nautobot/nautobot/issues/207) - Update permissions documentation to add assigning permissions section.
-- [#1649](https://github.com/nautobot/nautobot/issues/1649) - Changed the incorrect view permission (circuits.view_vrf to ipam.view_vrf)
 - [#1763](https://github.com/nautobot/nautobot/issues/1763) - Job testing documentation updated to include details around enabling jobs. Job logs database added to `TransactionTestCase`.
 - [#1829](https://github.com/nautobot/nautobot/pull/1829) - Change Docker build GitHub Action to cache with matrix awareness.
-- [#1850](https://github.com/nautobot/nautobot/pull/1850) - Added {{block.super}} to negate the override from the js block in rack.html. This change fixed the issue of unable to navigate away from rack changelog tab.
 - [#1856](https://github.com/nautobot/nautobot/pull/1856) - Updated links to Slack community.
-- [#1868](https://github.com/nautobot/nautobot/pull/1868) - Updated link to advanced Docker compose use in getting started guide.
 
 ### Fixed
 
 - [#1409](https://github.com/nautobot/nautobot/issues/1409) - Fixed page title on device status (NAPALM) page template.
 - [#1524](https://github.com/nautobot/nautobot/issues/1524) - Fixed valid "None" option removed from search field upon display.
+- [#1649](https://github.com/nautobot/nautobot/issues/1649) - Changed the incorrect view permission (circuits.view_vrf to ipam.view_vrf)
 - [#1750](https://github.com/nautobot/nautobot/issues/1750) - Fixed incorrect display of boolean value in Virtual Chassis display.
 - [#1759](https://github.com/nautobot/nautobot/issues/1759) - Fixed TypeError on webhook REST API PATCH.
 - [#1787](https://github.com/nautobot/nautobot/issues/1787) - Fix scheduled jobs failing when scheduled from REST API.
 - [#1841](https://github.com/nautobot/nautobot/issues/1841) - Fixed incorrect display of boolean values in Git Repository view.
 - [#1848](https://github.com/nautobot/nautobot/pull/1848) - Fix Poetry cache issue in CI causing version tests to fail in `next`.
+- [#1850](https://github.com/nautobot/nautobot/pull/1850) - Added {{block.super}} to negate the override from the js block in rack.html. This change fixed the issue of unable to navigate away from rack changelog tab.
+- [#1868](https://github.com/nautobot/nautobot/pull/1868) - Updated link to advanced Docker compose use in getting started guide.
 
 ## v1.3.5 (2022-05-30)
 
