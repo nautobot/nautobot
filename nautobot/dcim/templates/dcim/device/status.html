@@ -1,7 +1,7 @@
 {% extends 'dcim/device/base.html' %}
 {% load helpers %}
 
-{% block title %}{{ device }} - Status{% endblock %}
+{% block title %}{{ object }} - Status{% endblock %}
 
 {% block content %}
     {% include 'inc/ajax_loader.html' %}
@@ -113,18 +113,18 @@ $(document).ready(function() {
                 $.each(json['get_environment']['fans'], function(name, obj) {
                     var row;
                     if (obj['status']) {
-                        row = `<tr class="success"><td>${name}</td><td>{{ true | render_boolean }}</td></tr>`;
+                        row = `<tr class="success"><td>${name}</td><td>{{ True | render_boolean }}</td></tr>`;
                     } else {
-                        row = `<tr class="error"><td>${name}</td><td>{{ false | render_boolean }}</td></tr>`;
+                        row = `<tr class="error"><td>${name}</td><td>{{ False | render_boolean }}</td></tr>`;
                     }
                     $("#fans").after(row)
                 });
                 $.each(json['get_environment']['power'], function(name, obj) {
                     var row;
                     if (obj['status']) {
-                        row = `<tr class="success"><td>${name}</td><td>{{ true | render_boolean }}</td></tr>`;
+                        row = `<tr class="success"><td>${name}</td><td>{{ True | render_boolean }}</td></tr>`;
                     } else {
-                        row = `<tr class="danger"><td>${name}</td><td>{{ false | render_boolean }}</td></tr>`;
+                        row = `<tr class="danger"><td>${name}</td><td>{{ False | render_boolean }}</td></tr>`;
                     }
                     $("#power").after(row)
                 });
