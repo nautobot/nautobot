@@ -86,9 +86,10 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         Helper method to self.instantiate().
         """
         content_type = ContentType.objects.get_for_model(model)
-        fields = CustomField.objects.filter(pk=content_type.pk)
+        fields = CustomField.objects.filter(content_types=content_type)
         for field in fields:
             self._custom_field_data.setdefault(field.name, field.default)
+            print(field.name, field.default)
             self.save()
         return model(device=device, name=self.name, label=self.label, description=self.description, _custom_field_data=self._custom_field_data, **kwargs)
 
