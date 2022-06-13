@@ -42,7 +42,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 ### Removed
 
-## v1.4.0a1 (2022-MM-DD)
+## v1.4.0a1 (2022-06-13)
 
 ### Added
 
@@ -59,5 +59,3 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 - [#1815](https://github.com/nautobot/nautobot/issues/1815) - Fix theme link style in footer.
 - [#1831](https://github.com/nautobot/nautobot/issues/1831) - Fixed missing `parent_interface` and `bridge` from 1.4 serializer of Interfaces.
-
-### Removed
