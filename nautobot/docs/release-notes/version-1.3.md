@@ -140,9 +140,7 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.6 (2022-MM-DD)
-
-### Added
+## v1.3.6 (2022-06-13)
 
 ### Changed
 
