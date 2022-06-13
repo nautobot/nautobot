@@ -201,7 +201,7 @@ Additional useful commands for the development environment:
     `invoke start` or `invoke debug` commands.
 
 !!! tip
-    To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
+    To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](../docker-compose-advanced-use-cases) page.
 
 Proceed to the [Working in your Development Environment](#working-in-your-development-environment) section
 
