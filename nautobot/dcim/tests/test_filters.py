@@ -98,33 +98,252 @@ from nautobot.virtualization.models import Cluster, ClusterType
 User = get_user_model()
 
 
+def common_test_data(cls):
+
+    cls.tenant_groups = (
+        TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
+        TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
+        TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
+    )
+
+    cls.tenants = (
+        Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=cls.tenant_groups[0]),
+        Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=cls.tenant_groups[1]),
+        Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=cls.tenant_groups[2]),
+    )
+
+    cls.regions = [
+        Region.objects.create(name="Region 1", slug="region-1", description="A"),
+        Region.objects.create(name="Region 2", slug="region-2", description="B"),
+        Region.objects.create(name="Region 3", slug="region-3", description="C"),
+    ]
+
+    site_statuses = Status.objects.get_for_model(Site)
+    cls.site_status_map = {s.slug: s for s in site_statuses.all()}
+
+    cls.sites = [
+        Site.objects.create(
+            name="Site 1",
+            slug="site-1",
+            description="Site 1 description",
+            region=cls.regions[0],
+            tenant=cls.tenants[0],
+            status=cls.site_status_map["active"],
+            facility="Facility 1",
+            asn=65001,
+            latitude=10,
+            longitude=10,
+            contact_name="Contact 1",
+            contact_phone="123-555-0001",
+            contact_email="contact1@example.com",
+            physical_address="1 road st, albany, ny",
+            shipping_address="PO Box 1, albany, ny",
+            comments="comment1",
+            time_zone="America/Chicago",
+        ),
+        Site.objects.create(
+            name="Site 2",
+            slug="site-2",
+            description="Site 2 description",
+            region=cls.regions[1],
+            tenant=cls.tenants[1],
+            status=cls.site_status_map["planned"],
+            facility="Facility 2",
+            asn=65002,
+            latitude=20,
+            longitude=20,
+            contact_name="Contact 2",
+            contact_phone="123-555-0002",
+            contact_email="contact2@example.com",
+            physical_address="2 road st, albany, ny",
+            shipping_address="PO Box 2, albany, ny",
+            comments="comment2",
+            time_zone="America/Los_Angeles",
+        ),
+        Site.objects.create(
+            name="Site 3",
+            slug="site-3",
+            region=cls.regions[2],
+            tenant=cls.tenants[2],
+            status=cls.site_status_map["retired"],
+            facility="Facility 3",
+            asn=65003,
+            latitude=30,
+            longitude=30,
+            contact_name="Contact 3",
+            contact_phone="123-555-0003",
+            contact_email="contact3@example.com",
+            comments="comment3",
+            time_zone="America/Detroit",
+        ),
+    ]
+
+    provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
+    circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
+    circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Test Circuit 1")
+    cls.circuit_terminations = (
+        CircuitTermination.objects.create(circuit=circuit, site=cls.sites[0], term_side="A"),
+        CircuitTermination.objects.create(circuit=circuit, site=cls.sites[1], term_side="Z"),
+    )
+
+    manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+    device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
+    device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+    device_statuses = Status.objects.get_for_model(Device)
+    device_status_map = {ds.slug: ds for ds in device_statuses.all()}
+
+    cls.rack_groups = (
+        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=cls.sites[0]),
+        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[1]),
+        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=cls.sites[2]),
+    )
+
+    cls.powerpanels = (
+        PowerPanel.objects.create(name="Power Panel 1", site=cls.sites[0], rack_group=cls.rack_groups[0]),
+        PowerPanel.objects.create(name="Power Panel 2", site=cls.sites[1], rack_group=cls.rack_groups[1]),
+        PowerPanel.objects.create(name="Power Panel 3", site=cls.sites[2], rack_group=cls.rack_groups[2]),
+    )
+
+    cls.rackroles = (
+        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
+        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
+        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff"),
+    )
+
+    rack_statuses = Status.objects.get_for_model(Rack)
+    cls.rack_status_map = {s.slug: s for s in rack_statuses.all()}
+
+    cls.racks = (
+        Rack.objects.create(
+            name="Rack 1",
+            comments="comment1",
+            facility_id="rack-1",
+            site=cls.sites[0],
+            group=cls.rack_groups[0],
+            tenant=cls.tenants[0],
+            status=cls.rack_status_map["active"],
+            role=cls.rackroles[0],
+            serial="ABC",
+            asset_tag="1001",
+            type=RackTypeChoices.TYPE_2POST,
+            width=RackWidthChoices.WIDTH_19IN,
+            u_height=42,
+            desc_units=False,
+            outer_width=100,
+            outer_depth=100,
+            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+        ),
+        Rack.objects.create(
+            name="Rack 2",
+            comments="comment2",
+            facility_id="rack-2",
+            site=cls.sites[1],
+            group=cls.rack_groups[1],
+            tenant=cls.tenants[1],
+            status=cls.rack_status_map["planned"],
+            role=cls.rackroles[1],
+            serial="DEF",
+            asset_tag="1002",
+            type=RackTypeChoices.TYPE_4POST,
+            width=RackWidthChoices.WIDTH_21IN,
+            u_height=43,
+            desc_units=False,
+            outer_width=200,
+            outer_depth=200,
+            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+        ),
+        Rack.objects.create(
+            name="Rack 3",
+            comments="comment3",
+            facility_id="rack-3",
+            site=cls.sites[2],
+            group=cls.rack_groups[2],
+            tenant=cls.tenants[2],
+            status=cls.rack_status_map["reserved"],
+            role=cls.rackroles[2],
+            serial="GHI",
+            asset_tag="1003",
+            type=RackTypeChoices.TYPE_CABINET,
+            width=RackWidthChoices.WIDTH_23IN,
+            u_height=44,
+            desc_units=True,
+            outer_width=300,
+            outer_depth=300,
+            outer_unit=RackDimensionUnitChoices.UNIT_INCH,
+        ),
+    )
+
+    cls.devices = (
+        Device.objects.create(
+            name="Device 1",
+            device_type=device_type,
+            device_role=device_role,
+            rack=cls.racks[0],
+            site=cls.sites[0],
+            status=device_status_map["active"],
+        ),
+        Device.objects.create(
+            name="Device 2",
+            device_type=device_type,
+            device_role=device_role,
+            rack=cls.racks[1],
+            site=cls.sites[1],
+            status=device_status_map["staged"],
+        ),
+        Device.objects.create(
+            name="Device 3",
+            device_type=device_type,
+            device_role=device_role,
+            rack=cls.racks[2],
+            site=cls.sites[2],
+            status=device_status_map["failed"],
+        ),
+    )
+
+    cls.prefixes = (
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=cls.sites[0]),
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=cls.sites[1]),
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), site=cls.sites[2]),
+    )
+
+    cls.vlan_groups = (
+        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
+        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites[1]),
+        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=cls.sites[2]),
+    )
+
+    cls.vlans = (
+        VLAN.objects.create(name="VLAN 101", vid=101, site=cls.sites[0]),
+        VLAN.objects.create(name="VLAN 102", vid=102, site=cls.sites[1]),
+        VLAN.objects.create(name="VLAN 103", vid=103, site=cls.sites[2]),
+    )
+
+    cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+    cls.clusters = (
+        Cluster.objects.create(name="Cluster 1", type=cluster_type, site=cls.sites[0]),
+        Cluster.objects.create(name="Cluster 2", type=cluster_type, site=cls.sites[1]),
+        Cluster.objects.create(name="Cluster 3", type=cluster_type, site=cls.sites[2]),
+    )
+
+
 class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Region.objects.all()
     filterset = RegionFilterSet
 
     @classmethod
     def setUpTestData(cls):
-
-        cls.parent_regions = (
-            Region.objects.create(name="Region 1", slug="region-1", description="A"),
-            Region.objects.create(name="Region 2", slug="region-2", description="B"),
-            Region.objects.create(name="Region 3", slug="region-3", description="C"),
-        )
+        common_test_data(cls)
 
         cls.child_regions = (
-            Region.objects.create(name="Region 1A", slug="region-1a", parent=cls.parent_regions[0]),
-            Region.objects.create(name="Region 1B", slug="region-1b", parent=cls.parent_regions[0]),
-            Region.objects.create(name="Region 2A", slug="region-2a", parent=cls.parent_regions[1]),
-            Region.objects.create(name="Region 2B", slug="region-2b", parent=cls.parent_regions[1]),
-            Region.objects.create(name="Region 3A", slug="region-3a", parent=cls.parent_regions[2]),
-            Region.objects.create(name="Region 3B", slug="region-3b", parent=cls.parent_regions[2]),
+            Region.objects.create(name="Region 1A", slug="region-1a", parent=cls.regions[0]),
+            Region.objects.create(name="Region 1B", slug="region-1b", parent=cls.regions[0]),
+            Region.objects.create(name="Region 2A", slug="region-2a", parent=cls.regions[1]),
+            Region.objects.create(name="Region 2B", slug="region-2b", parent=cls.regions[1]),
+            Region.objects.create(name="Region 3A", slug="region-3a", parent=cls.regions[2]),
+            Region.objects.create(name="Region 3B", slug="region-3b", parent=cls.regions[2]),
         )
 
-        cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=cls.parent_regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=cls.parent_regions[0]),
-            Site.objects.create(name="Site 3", slug="site-3", region=cls.parent_regions[1]),
-        )
+        Site.objects.create(name="Site 4", slug="site-4", region=cls.regions[2])
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -150,16 +369,16 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
 
     def test_sites(self):
-        params = {"sites": [self.sites[0].pk, self.sites[1].slug]}
+        sites = Site.objects.filter(region__slug="region-3")
+        self.assertEqual(len(sites), 2)
+        params = {"sites": [sites[0].pk, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"sites": [self.sites[1].slug, self.sites[2].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_sites(self):
         params = {"has_sites": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_sites": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
 
 
 class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -168,164 +387,9 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
-
-        statuses = Status.objects.get_for_model(Site)
-        status_map = {s.slug: s for s in statuses.all()}
-
-        cls.sites = (
-            Site.objects.create(
-                name="Site 1",
-                slug="site-1",
-                description="Site 1 description",
-                region=regions[0],
-                tenant=tenants[0],
-                status=status_map["active"],
-                facility="Facility 1",
-                asn=65001,
-                latitude=10,
-                longitude=10,
-                contact_name="Contact 1",
-                contact_phone="123-555-0001",
-                contact_email="contact1@example.com",
-                physical_address="1 road st, albany, ny",
-                shipping_address="PO Box 1, albany, ny",
-                comments="comment1",
-                time_zone="America/Chicago",
-            ),
-            Site.objects.create(
-                name="Site 2",
-                slug="site-2",
-                description="Site 2 description",
-                region=regions[1],
-                tenant=tenants[1],
-                status=status_map["planned"],
-                facility="Facility 2",
-                asn=65002,
-                latitude=20,
-                longitude=20,
-                contact_name="Contact 2",
-                contact_phone="123-555-0002",
-                contact_email="contact2@example.com",
-                physical_address="2 road st, albany, ny",
-                shipping_address="PO Box 2, albany, ny",
-                comments="comment2",
-                time_zone="America/Chicago",
-            ),
-            Site.objects.create(
-                name="Site 3",
-                slug="site-3",
-                region=regions[2],
-                tenant=tenants[2],
-                status=status_map["retired"],
-                facility="Facility 3",
-                asn=65003,
-                latitude=30,
-                longitude=30,
-                contact_name="Contact 3",
-                contact_phone="123-555-0003",
-                contact_email="contact3@example.com",
-                time_zone="America/Detroit",
-            ),
-        )
-
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
-        circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
-        circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Test Circuit 1")
-        cls.circuit_terminations = (
-            CircuitTermination.objects.create(circuit=circuit, site=cls.sites[0], term_side="A"),
-            CircuitTermination.objects.create(circuit=circuit, site=cls.sites[1], term_side="Z"),
-        )
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        device_statuses = Status.objects.get_for_model(Device)
-        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
-
-        cls.devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=cls.sites[0],
-                status=device_status_map["active"],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=cls.sites[0],
-                status=device_status_map["staged"],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=cls.sites[1],
-                status=device_status_map["failed"],
-            ),
-        )
-
-        cls.powerpanels = (
-            PowerPanel.objects.create(name="Power Panel 1", site=cls.sites[0]),
-            PowerPanel.objects.create(name="Power Panel 2", site=cls.sites[0]),
-            PowerPanel.objects.create(name="Power Panel 3", site=cls.sites[1]),
-        )
-
-        cls.rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=cls.sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[0]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=cls.sites[1]),
-        )
-
-        cls.racks = (
-            Rack.objects.create(name="Rack 1", site=cls.sites[0]),
-            Rack.objects.create(name="Rack 2", site=cls.sites[0]),
-            Rack.objects.create(name="Rack 3", site=cls.sites[1]),
-        )
-
-        cls.prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=cls.sites[0]),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=cls.sites[0]),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), site=cls.sites[1]),
-        )
-
-        cls.vlan_groups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites[0]),
-            VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=cls.sites[1]),
-        )
-
-        cls.vlans = (
-            VLAN.objects.create(name="VLAN 101", vid=101, site=cls.sites[0]),
-            VLAN.objects.create(name="VLAN 102", vid=102, site=cls.sites[0]),
-            VLAN.objects.create(name="VLAN 103", vid=103, site=cls.sites[1]),
-        )
-
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cls.clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type, site=cls.sites[0]),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type, site=cls.sites[0]),
-            Cluster.objects.create(name="Cluster 3", type=cluster_type, site=cls.sites[1]),
-        )
+        Site.objects.create(name="Site 4", status=cls.site_status_map["retired"])
 
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
@@ -394,139 +458,126 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_circuit_terminations(self):
-        params = {"circuit_terminations": [self.circuit_terminations[0].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        self.assertEqual(self.filterset(params, self.queryset).qs.first(), self.sites[0])
-        params = {"circuit_terminations": [self.circuit_terminations[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        self.assertEqual(self.filterset(params, self.queryset).qs.first(), self.sites[1])
+        circuit_terminations = CircuitTermination.objects.all()[:2]
+        params = {"circuit_terminations": [circuit_terminations[0].pk, circuit_terminations[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_circuit_terminations(self):
         params = {"has_circuit_terminations": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"has_circuit_terminations": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_devices(self):
-        params = {"devices": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"devices": [self.devices[2].pk, self.devices[1].pk]}
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_devices(self):
         params = {"has_devices": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_devices": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_powerpanels(self):
-        params = {"powerpanels": [self.powerpanels[0].pk, self.powerpanels[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"powerpanels": [self.powerpanels[2].pk, self.powerpanels[1].pk]}
+        powerpanels = PowerPanel.objects.all()[:2]
+        params = {"powerpanels": [powerpanels[0].pk, powerpanels[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_powerpanels(self):
         params = {"has_powerpanels": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_powerpanels": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_rack_groups(self):
-        params = {"rack_groups": [self.rack_groups[0].pk, self.rack_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"rack_groups": [self.rack_groups[0].slug, self.rack_groups[2].pk]}
+        rack_groups = RackGroup.objects.all()[:2]
+        params = {"rack_groups": [rack_groups[0].pk, rack_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_rack_groups(self):
         params = {"has_rack_groups": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_rack_groups": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_racks(self):
-        params = {"racks": [self.racks[0].pk, self.racks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"racks": [self.racks[0].pk, self.racks[2].pk]}
+        racks = Rack.objects.all()[:2]
+        params = {"racks": [racks[0].pk, racks[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_racks(self):
         params = {"has_racks": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_racks": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_prefixes(self):
-        params = {"prefixes": [self.prefixes[0].pk, self.prefixes[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"prefixes": [self.prefixes[0].pk, self.prefixes[2].pk]}
+        prefixes = Prefix.objects.all()[:2]
+        params = {"prefixes": [prefixes[0].pk, prefixes[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_prefixes(self):
         params = {"has_prefixes": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_prefixes": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_vlan_groups(self):
-        params = {"vlan_groups": [self.vlan_groups[0].pk, self.vlan_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"vlan_groups": [self.vlan_groups[0].slug, self.vlan_groups[2].pk]}
+        vlan_groups = VLANGroup.objects.all()[:2]
+        params = {"vlan_groups": [vlan_groups[0].pk, vlan_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_vlan_groups(self):
         params = {"has_vlan_groups": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_vlan_groups": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_vlans(self):
-        params = {"vlans": [self.vlans[0].pk, self.vlans[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"vlans": [self.vlans[0].pk, self.vlans[2].pk]}
+        vlans = VLAN.objects.all()[:2]
+        params = {"vlans": [vlans[0].pk, vlans[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_vlans(self):
         params = {"has_vlans": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_vlans": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_clusters(self):
-        params = {"clusters": [self.clusters[0].pk, self.clusters[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"clusters": [self.clusters[0].pk, self.clusters[2].pk]}
+        clusters = Cluster.objects.all()[:2]
+        params = {"clusters": [clusters[0].pk, clusters[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_clusters(self):
         params = {"has_clusters": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_clusters": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_time_zone(self):
-        params = {"time_zone": [self.sites[0].time_zone]}
+        params = {"time_zone": ["America/Los_Angeles", "America/Chicago"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"time_zone": [self.sites[0].time_zone, self.sites[2].time_zone]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"time_zone": [""]}
-        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_physical_address(self):
-        params = {"physical_address": self.sites[0].physical_address}
+        params = {"physical_address": "1 road st, albany, ny"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"physical_address": self.sites[0].physical_address[:-2]}
+        params = {"physical_address": "nomatch"}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_shipping_address(self):
-        params = {"shipping_address": self.sites[0].shipping_address}
+        params = {"shipping_address": "PO Box 1, albany, ny"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"shipping_address": self.sites[0].shipping_address[:-2]}
+        params = {"shipping_address": "nomatch"}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_description(self):
-        params = {"description": self.sites[0].description}
+        params = {"description": "Site 1 description"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"description": self.sites[0].shipping_address[:-2]}
+        params = {"description": "nomatch"}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
 
@@ -536,63 +587,33 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-        )
-
-        parent_rack_groups = (
-            RackGroup.objects.create(name="Parent Rack Group 1", slug="parent-rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Parent Rack Group 2", slug="parent-rack-group-2", site=sites[1]),
-            RackGroup.objects.create(name="Parent Rack Group 3", slug="parent-rack-group-3", site=sites[2]),
-        )
+        common_test_data(cls)
 
         RackGroup.objects.create(
-            name="Rack Group 1",
-            slug="rack-group-1",
-            site=sites[0],
-            parent=parent_rack_groups[0],
+            name="Child Rack Group 1",
+            slug="rack-group-1c",
+            site=cls.sites[0],
+            parent=cls.rack_groups[0],
             description="A",
         )
         RackGroup.objects.create(
-            name="Rack Group 2",
-            slug="rack-group-2",
-            site=sites[1],
-            parent=parent_rack_groups[1],
+            name="Child Rack Group 2",
+            slug="rack-group-2c",
+            site=cls.sites[1],
+            parent=cls.rack_groups[1],
             description="B",
         )
         RackGroup.objects.create(
-            name="Rack Group 3",
-            slug="rack-group-3",
-            site=sites[2],
-            parent=parent_rack_groups[2],
+            name="Child Rack Group 3",
+            slug="rack-group-3c",
+            site=cls.sites[2],
+            parent=cls.rack_groups[2],
             description="C",
         )
         RackGroup.objects.create(
             name="Rack Group 4",
             slug="rack-group-4",
-            site=sites[2],
-            description="C",
-        )
-
-        cls.powerpanels = (
-            PowerPanel.objects.create(name="Power Panel 1", site=sites[0], rack_group=parent_rack_groups[0]),
-            PowerPanel.objects.create(name="Power Panel 2", site=sites[0], rack_group=parent_rack_groups[0]),
-            PowerPanel.objects.create(name="Power Panel 3", site=sites[1], rack_group=parent_rack_groups[1]),
-        )
-
-        cls.racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0], group=parent_rack_groups[0]),
-            Rack.objects.create(name="Rack 2", site=sites[0], group=parent_rack_groups[0]),
-            Rack.objects.create(name="Rack 3", site=sites[1], group=parent_rack_groups[1]),
+            site=cls.sites[2],
         )
 
     def test_description(self):
@@ -607,24 +628,24 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = Site.objects.filter(slug__in=["site-1", "site-2"])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_parent(self):
-        parent_groups = RackGroup.objects.filter(name__startswith="Parent")[:2]
-        params = {"parent_id": [parent_groups[0].pk, parent_groups[1].pk]}
+        parent_rack_groups = RackGroup.objects.filter(children__isnull=False)[:2]
+        params = {"parent_id": [parent_rack_groups[0].pk, parent_rack_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"parent": [parent_groups[0].slug, parent_groups[1].slug]}
+        params = {"parent": [parent_rack_groups[0].slug, parent_rack_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_children(self):
-        child_groups = RackGroup.objects.filter(name__startswith="Rack").filter(parent__isnull=False)[:2]
+        child_groups = RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2]
         params = {"children": [child_groups[0].pk, child_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        rack_group_4 = RackGroup.objects.filter(slug="rack-group-4")[0]
+        rack_group_4 = RackGroup.objects.filter(slug="rack-group-4").first()
         params = {"children": [rack_group_4.slug, rack_group_4.pk]}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
@@ -633,24 +654,22 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset({"has_children": False}, self.queryset).qs.count(), 4)
 
     def test_powerpanels(self):
-        params = {"powerpanels": [self.powerpanels[0].pk, self.powerpanels[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"powerpanels": [self.powerpanels[2].pk, self.powerpanels[1].pk]}
+        powerpanels = PowerPanel.objects.all()[:2]
+        params = {"powerpanels": [powerpanels[0].pk, powerpanels[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_powerpanels(self):
-        self.assertEqual(self.filterset({"has_powerpanels": True}, self.queryset).qs.count(), 2)
-        self.assertEqual(self.filterset({"has_powerpanels": False}, self.queryset).qs.count(), 5)
+        self.assertEqual(self.filterset({"has_powerpanels": True}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"has_powerpanels": False}, self.queryset).qs.count(), 4)
 
     def test_racks(self):
-        params = {"racks": [self.racks[0].pk, self.racks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"racks": [self.racks[2].pk, self.racks[1].pk]}
+        racks = Rack.objects.all()[:2]
+        params = {"racks": [racks[0].pk, racks[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_racks(self):
-        self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 2)
-        self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 5)
+        self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 4)
 
 
 class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -659,33 +678,21 @@ class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
-
-        rackroles = (
-            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
-            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
-            RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff"),
-        )
-
-        cls.racks = (
-            Rack.objects.create(name="Rack 1", site=site, role=rackroles[0]),
-            Rack.objects.create(name="Rack 2", site=site, role=rackroles[0]),
-            Rack.objects.create(name="Rack 3", site=site, role=rackroles[1]),
-        )
+        RackRole.objects.create(name="Rack Role 4", slug="rack-role-4", color="abcdef")
 
     def test_color(self):
         params = {"color": ["ff0000", "00ff00"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_racks(self):
-        params = {"racks": [self.racks[0].pk, self.racks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"racks": [self.racks[2].pk, self.racks[1].pk]}
+        racks = Rack.objects.all()[:2]
+        params = {"racks": [racks[0].pk, racks[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_racks(self):
-        self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 3)
         self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 1)
 
 
@@ -695,99 +702,24 @@ class RackTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-        )
-
-        rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[2]),
-        )
-
-        rack_roles = (
-            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1"),
-            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2"),
-            RackRole.objects.create(name="Rack Role 3", slug="rack-role-3"),
-        )
-
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
-
-        statuses = Status.objects.get_for_model(Rack)
-        status_map = {s.slug: s for s in statuses.all()}
+        common_test_data(cls)
 
         Rack.objects.create(
-            name="Rack 1",
-            facility_id="rack-1",
-            site=sites[0],
-            group=rack_groups[0],
-            tenant=tenants[0],
-            status=status_map["active"],
-            role=rack_roles[0],
-            serial="ABC",
-            asset_tag="1001",
+            name="Rack 4",
+            facility_id="rack-4",
+            site=cls.sites[2],
+            group=cls.rack_groups[2],
+            tenant=cls.tenants[2],
+            status=cls.rack_status_map["active"],
+            role=cls.rackroles[2],
+            serial="ABCDEF",
+            asset_tag="1004",
             type=RackTypeChoices.TYPE_2POST,
             width=RackWidthChoices.WIDTH_19IN,
             u_height=42,
             desc_units=False,
             outer_width=100,
             outer_depth=100,
-            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
-        )
-        Rack.objects.create(
-            name="Rack 2",
-            facility_id="rack-2",
-            site=sites[1],
-            group=rack_groups[1],
-            tenant=tenants[1],
-            status=status_map["planned"],
-            role=rack_roles[1],
-            serial="DEF",
-            asset_tag="1002",
-            type=RackTypeChoices.TYPE_4POST,
-            width=RackWidthChoices.WIDTH_21IN,
-            u_height=43,
-            desc_units=False,
-            outer_width=200,
-            outer_depth=200,
-            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
-        )
-        Rack.objects.create(
-            name="Rack 3",
-            facility_id="rack-3",
-            site=sites[2],
-            group=rack_groups[2],
-            tenant=tenants[2],
-            status=status_map["reserved"],
-            role=rack_roles[2],
-            serial="GHI",
-            asset_tag="1003",
-            type=RackTypeChoices.TYPE_CABINET,
-            width=RackWidthChoices.WIDTH_23IN,
-            u_height=44,
-            desc_units=True,
-            outer_width=300,
-            outer_depth=300,
-            outer_unit=RackDimensionUnitChoices.UNIT_INCH,
         )
 
     def test_name(self):
@@ -804,32 +736,32 @@ class RackTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         params = {"type": [RackTypeChoices.TYPE_2POST, RackTypeChoices.TYPE_4POST]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_width(self):
         params = {"width": [RackWidthChoices.WIDTH_19IN, RackWidthChoices.WIDTH_21IN]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_u_height(self):
         params = {"u_height": [42, 43]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_desc_units(self):
         params = {"desc_units": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"desc_units": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_outer_width(self):
         params = {"outer_width": [100, 200]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_outer_depth(self):
         params = {"outer_depth": [100, 200]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_outer_unit(self):
-        self.assertEqual(Rack.objects.filter(outer_unit__isnull=False).count(), 3)
+        self.assertEqual(Rack.objects.exclude(outer_unit="").count(), 3)
         params = {"outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
@@ -856,7 +788,7 @@ class RackTestCase(FilterTestCases.FilterTestCase):
 
     def test_status(self):
         params = {"status": ["active", "planned"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_role(self):
         roles = RackRole.objects.all()[:2]
