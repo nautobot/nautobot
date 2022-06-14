@@ -91,7 +91,14 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
             self._custom_field_data.setdefault(field.name, field.default)
             print(field.name, field.default)
             self.save()
-        return model(device=device, name=self.name, label=self.label, description=self.description, _custom_field_data=self._custom_field_data, **kwargs)
+        return model(
+            device=device,
+            name=self.name,
+            label=self.label,
+            description=self.description,
+            _custom_field_data=self._custom_field_data,
+            **kwargs,
+        )
 
 
 @extras_features(
