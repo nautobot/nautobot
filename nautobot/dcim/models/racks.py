@@ -469,6 +469,7 @@ class Rack(PrimaryModel, StatusModel):
         legend_width=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
         include_images=True,
         base_url=None,
+        display_fullname=True,
     ):
         """
         Return an SVG of the rack elevation
@@ -482,12 +483,17 @@ class Rack(PrimaryModel, StatusModel):
         :param legend_width: Width of the unit legend, in pixels
         :param include_images: Embed front/rear device images where available
         :param base_url: Base URL for links and images. If none, URLs will be relative.
+        :param display_fullname: Display the full name of devices in the rack elevation, hide the truncated.
+            Both full name and truncated name are generated. Alternates their hide/show state.
+            Defaults to True, showing device full name and hiding truncated.
         """
         if unit_width is None:
             unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH")
         if unit_height is None:
             unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
-        elevation = RackElevationSVG(self, user=user, include_images=include_images, base_url=base_url)
+        elevation = RackElevationSVG(
+            self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
+        )
 
         return elevation.render(face, unit_width, unit_height, legend_width)
 

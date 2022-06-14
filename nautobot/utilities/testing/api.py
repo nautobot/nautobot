@@ -10,6 +10,7 @@ from rest_framework.test import APIClient, APITransactionTestCase as _APITransac
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ObjectChange
+from nautobot.utilities.utils import get_filterset_for_model
 from .utils import disable_warnings
 from .views import ModelTestCase
 
@@ -150,6 +151,10 @@ class APIViewTestCases:
     class ListObjectsViewTestCase(APITestCase):
         brief_fields = []
         choices_fields = None
+        filterset = None
+
+        def get_filterset(self):
+            return self.filterset or get_filterset_for_model(self.model)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -165,6 +170,7 @@ class APIViewTestCases:
                 with disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
+                # TODO FIXME: if we're passing **self.header, we are *by definition* **NOT** anonymous!!
                 response = self.client.get(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertIsInstance(response.data, dict)
@@ -225,6 +231,60 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), 2)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_filtered(self):
+            """
+            GET a list of objects filtered by ID.
+            """
+            self.assertGreaterEqual(
+                self._get_queryset().count(),
+                3,
+                f"Test requires the creation of at least three {self.model} instances",
+            )
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            instance1, instance2 = self._get_queryset()[:2]
+            response = self.client.get(f"{self._get_list_url()}?id={instance1.pk}&id={instance2.pk}", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), 2)
+            for entry in response.data["results"]:
+                self.assertIn(str(entry["id"]), [str(instance1.pk), str(instance2.pk)])
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
+        def test_list_objects_unknown_filter_strict_filtering(self):
+            """
+            GET a list of objects with an unknown filter parameter and strict filtering, expect a 400 response.
+            """
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            with disable_warnings("django.request"):
+                response = self.client.get(f"{self._get_list_url()}?ice_cream_flavor=rocky-road", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("ice_cream_flavor", response.data)
+            self.assertIsInstance(response.data["ice_cream_flavor"], list)
+            self.assertEqual("Unknown filter field", str(response.data["ice_cream_flavor"][0]))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=False)
+        def test_list_objects_unknown_filter_no_strict_filtering(self):
+            """
+            GET a list of objects with an unknown filter parameter and no strict filtering, expect it to be ignored.
+            """
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            with self.assertLogs("nautobot.utilities.filters") as cm:
+                response = self.client.get(f"{self._get_list_url()}?ice_cream_flavor=rocky-road", **self.header)
+            self.assertEqual(
+                cm.output,
+                [
+                    f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
+                    'Unknown filter field "ice_cream_flavor"',
+                ],
+            )
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_options_objects(self):

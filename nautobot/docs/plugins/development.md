@@ -30,6 +30,8 @@ plugin_name/
     - custom_validators.py  # Custom Validators
     - datasources.py        # Loading Data from a Git Repository
     - filter_extensions.py  # Extending Filters
+    - filters.py            # Filtersets for UI, REST API, and GraphQL Model Filtering
+    - forms.py              # UI Forms and Filter Forms
     - graphql/
       - types.py            # GraphQL Type Objects
     - homepage.py           # Home Page Content

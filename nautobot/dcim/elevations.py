@@ -19,9 +19,10 @@ class RackElevationSVG:
     :param base_url: Base URL for links within the SVG document. If none, links will be relative.
     """
 
-    def __init__(self, rack, user=None, include_images=True, base_url=None):
+    def __init__(self, rack, user=None, include_images=True, base_url=None, display_fullname=True):
         self.rack = rack
         self.include_images = include_images
+        self.display_fullname = display_fullname
         if base_url is not None:
             self.base_url = base_url.rstrip("/")
         else:
@@ -76,9 +77,12 @@ class RackElevationSVG:
         return drawing
 
     def _draw_device_front(self, drawing, device, start, end, text):
-        name = str(device)
+        devicebay_details = ""
         if device.devicebay_count:
-            name += " ({}/{})".format(device.get_children().count(), device.devicebay_count)
+            devicebay_details += f" ({device.get_children().count()}/{device.devicebay_count})"
+
+        device_fullname = str(device) + devicebay_details
+        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + devicebay_details
 
         color = device.device_role.color
         link = drawing.add(
@@ -91,7 +95,22 @@ class RackElevationSVG:
         link.set_desc(self._get_device_description(device))
         link.add(drawing.rect(start, end, style="fill: #{}".format(color), class_="slot"))
         hex_color = "#{}".format(foreground_color(color))
-        link.add(drawing.text(str(name), insert=text, fill=hex_color))
+        link.add(
+            drawing.text(
+                device_fullname,
+                insert=text,
+                fill=hex_color,
+                class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}",
+            )
+        )
+        link.add(
+            drawing.text(
+                device_shortname,
+                insert=text,
+                fill=hex_color,
+                class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
+            )
+        )
 
         # Embed front device type image if one exists
         if self.include_images and device.device_type.front_image:
@@ -107,8 +126,23 @@ class RackElevationSVG:
     def _draw_device_rear(self, drawing, device, start, end, text):
         rect = drawing.rect(start, end, class_="slot blocked")
         rect.set_desc(self._get_device_description(device))
+
+        device_fullname = str(device)
+        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device))
+
         drawing.add(rect)
-        drawing.add(drawing.text(str(device), insert=text))
+        drawing.add(
+            drawing.text(
+                device_fullname, insert=text, class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}"
+            )
+        )
+        drawing.add(
+            drawing.text(
+                device_shortname,
+                insert=text,
+                class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
+            )
+        )
 
         # Embed rear device type image if one exists
         if self.include_images and device.device_type.rear_image:

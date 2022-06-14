@@ -16,6 +16,7 @@ from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
+from nautobot.core.api.filter_backends import NautobotFilterBackend
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
@@ -57,7 +58,12 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import copy_safe_request, count_related
+from nautobot.utilities.utils import (
+    copy_safe_request,
+    count_related,
+    SerializerForAPIVersions,
+    versioned_serializer_selector,
+)
 from . import nested_serializers, serializers
 
 
@@ -90,12 +96,30 @@ class ComputedFieldViewSet(ModelViewSet):
 #
 
 
+class ConfigContextFilterBackend(NautobotFilterBackend):
+    """
+    Used by views that work with config context models (device and virtual machine).
+
+    Recognizes that "exclude" is not a filterset parameter but rather a view parameter (see ConfigContextQuerySetMixin)
+    """
+
+    def get_filterset_kwargs(self, request, queryset, view):
+        kwargs = super().get_filterset_kwargs(request, queryset, view)
+        try:
+            kwargs["data"].pop("exclude")
+        except KeyError:
+            pass
+        return kwargs
+
+
 class ConfigContextQuerySetMixin:
     """
     Used by views that work with config context models (device and virtual machine).
     Provides a get_queryset() method which deals with adding the config context
     data annotation or not.
     """
+
+    filter_backends = [ConfigContextFilterBackend]
 
     def get_queryset(self):
         """
@@ -915,17 +939,12 @@ class TagViewSet(CustomFieldModelViewSet):
     filterset_class = filters.TagFilterSet
 
     def get_serializer_class(self):
-        if (
-            not self.brief
-            and not getattr(self, "swagger_fake_view", False)
-            and (
-                not hasattr(self.request, "major_version")
-                or self.request.major_version > 1
-                or (self.request.major_version == 1 and self.request.minor_version < 3)
-            )
-        ):
-            return serializers.TagSerializer
-        return super().get_serializer_class()
+        serializer_choices = (SerializerForAPIVersions(versions=["1.2"], serializer=serializers.TagSerializer),)
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )
 
 
 #

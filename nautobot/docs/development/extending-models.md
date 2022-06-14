@@ -58,7 +58,9 @@ Extend any forms to include the new field as appropriate. Common forms include:
 
 ## 7. Extend object filter set
 
-If the new field should be filterable, add it to the `FilterSet` for the model. If the field should be searchable, remember to reference it in the FilterSet's `search()` method.
+If the new field should be filterable, add it to the `FilterSet` for the model. If the field should be searchable, remember to reference it in the FilterSet's `SearchFilter` definition.
+
+All filtersets should inherit from `BaseFilterSet` or `NautobotFilterSet` as appropriate to the scope of the model's functionality.
 
 ## 8. Add column to object table
 

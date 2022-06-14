@@ -17,6 +17,7 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -73,6 +74,7 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
+from nautobot.extras.models import Status
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -430,6 +432,7 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
     exclude = serializers.UUIDField(required=False, default=None)
     expand_devices = serializers.BooleanField(required=False, default=True)
     include_images = serializers.BooleanField(required=False, default=True)
+    display_fullname = serializers.BooleanField(required=False, default=True)
 
     def validate(self, attrs):
         attrs.setdefault("unit_width", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH"))
@@ -1015,7 +1018,8 @@ class PowerPortSerializer(
         opt_in_fields = ["computed_fields"]
 
 
-class InterfaceSerializer(
+# TODO: collapse this with InterfaceSerializer in 2.0.
+class InterfaceSerializerVersion12(
     TaggedObjectSerializer,
     CableTerminationSerializer,
     ConnectedEndpointSerializer,
@@ -1024,7 +1028,6 @@ class InterfaceSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     device = NestedDeviceSerializer()
     type = ChoiceField(choices=InterfaceTypeChoices)
-    lag = NestedInterfaceSerializer(required=False, allow_null=True)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     untagged_vlan = NestedVLANSerializer(required=False, allow_null=True)
     tagged_vlans = SerializedPKRelatedField(
@@ -1035,6 +1038,9 @@ class InterfaceSerializer(
     )
     cable = NestedCableSerializer(read_only=True)
     count_ipaddresses = serializers.IntegerField(read_only=True)
+    parent_interface = NestedInterfaceSerializer(required=False, allow_null=True)
+    bridge = NestedInterfaceSerializer(required=False, allow_null=True)
+    lag = NestedInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Interface
@@ -1046,6 +1052,8 @@ class InterfaceSerializer(
             "label",
             "type",
             "enabled",
+            "parent_interface",
+            "bridge",
             "lag",
             "mtu",
             "mac_address",
@@ -1069,6 +1077,21 @@ class InterfaceSerializer(
 
     def validate(self, data):
 
+        # set interface status to active if status not provided
+        if not data.get("status"):
+            # status is currently required in the Interface model but not required in api_version < 1.3 serializers
+            # which raises an error when validating except status is explicitly set here
+            query = Status.objects.get_for_model(Interface)
+            try:
+                data["status"] = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "status": "Interface default status 'active' does not exist, "
+                        "create 'active' status for Interface or use the latest api_version"
+                    }
+                )
+
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
         for vlan in data.get("tagged_vlans", []):
@@ -1081,6 +1104,14 @@ class InterfaceSerializer(
                 )
 
         return super().validate(data)
+
+
+class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
+    class Meta:
+        model = Interface
+        fields = InterfaceSerializerVersion12.Meta.fields.copy()
+        fields.insert(4, "status")
+        opt_in_fields = ["computed_fields"]
 
 
 class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, CustomFieldModelSerializer):

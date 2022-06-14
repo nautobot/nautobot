@@ -18,6 +18,7 @@ from nautobot.extras.models import ChangeLoggedModel, ObjectChange, Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
+from nautobot.utilities.utils import get_filterset_for_model
 from .utils import disable_warnings, extract_form_failures, extract_page_body, post_data
 
 
@@ -705,12 +706,77 @@ class ViewTestCases:
         Retrieve multiple instances.
         """
 
+        filterset = None
+
+        def get_filterset(self):
+            return self.filterset or get_filterset_for_model(self.model)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             # Make the request as an unauthenticated user
             self.client.logout()
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_list_objects_filtered(self):
+            instance1, instance2 = self._get_queryset().all()[:2]
+            response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+            if hasattr(self.model, "name"):
+                self.assertIn(instance1.name, content, msg=content)
+                self.assertNotIn(instance2.name, content, msg=content)
+            try:
+                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
+                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
+            except NoReverseMatch:
+                pass
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
+        def test_list_objects_unknown_filter_strict_filtering(self):
+            """Verify that with STRICT_FILTERING, an unknown filter results in an error message and no matches."""
+            instance1, instance2 = self._get_queryset().all()[:2]
+            response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+            self.assertIn("Unknown filter field", content, msg=content)
+            if hasattr(self.model, "name"):
+                self.assertNotIn(instance1.name, content, msg=content)
+                self.assertNotIn(instance2.name, content, msg=content)
+            try:
+                self.assertNotIn(self._get_url("view", instance=instance1), content, msg=content)
+                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
+            except NoReverseMatch:
+                pass
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
+        def test_list_objects_unknown_filter_no_strict_filtering(self):
+            """Verify that without STRICT_FILTERING, an unknown filter is ignored."""
+            instance1, instance2 = self._get_queryset().all()[:2]
+            with self.assertLogs("nautobot.utilities.filters") as cm:
+                response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            self.assertEqual(
+                cm.output,
+                [
+                    f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
+                    'Unknown filter field "ice_cream_flavor"',
+                ],
+            )
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+            self.assertNotIn("Unknown filter field", content, msg=content)
+            if hasattr(self.model, "name"):
+                self.assertIn(instance1.name, content, msg=content)
+                self.assertIn(instance2.name, content, msg=content)
+            try:
+                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
+                self.assertIn(self._get_url("view", instance=instance2), content, msg=content)
+            except NoReverseMatch:
+                pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
