@@ -273,12 +273,14 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
+        lookup_expr="in",
         label="Location (ID)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         field_name="location__slug",
+        lookup_expr="in",
         queryset=Location.objects.all(),
         to_field_name="slug",
         label="Location (slug)",
@@ -344,13 +346,15 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
+        lookup_expr="in",
         label="Location (ID)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         field_name="location__slug",
         queryset=Location.objects.all(),
+        lookup_expr="in",
         to_field_name="slug",
         label="Location (slug)",
     )
@@ -699,14 +703,16 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         to_field_name="slug",
         label="Site name (slug)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
+        lookup_expr="in",
         label="Location (ID)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
-        field_name="location__slug",
+    location = TreeNodeMultipleChoiceFilter(
+        field_name="location",
         queryset=Location.objects.all(),
         to_field_name="slug",
+        lookup_expr="in",
         label="Location (slug)",
     )
     rack_group_id = TreeNodeMultipleChoiceFilter(

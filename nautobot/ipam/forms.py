@@ -1,7 +1,7 @@
 from django import forms
 from django.db.models import Q
 
-from nautobot.dcim.models import Device, Interface, Rack, Region, Site
+from nautobot.dcim.models import Device, Interface, Location, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
@@ -353,6 +353,11 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
         null_option="None",
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "ipam.prefix"},  # TODO base_site: $site
+    )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -378,6 +383,7 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
             "prefix",
             "vrf",
             "site",
+            "location",
             "vlan",
             "status",
             "role",
@@ -413,6 +419,12 @@ class PrefixCSVForm(PrefixFieldMixin, StatusModelCSVFormMixin, CustomFieldModelC
         required=False,
         to_field_name="name",
         help_text="Assigned site",
+    )
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Assigned location",
     )
     vlan_group = CSVModelChoiceField(
         queryset=VLANGroup.objects.all(),
@@ -454,6 +466,11 @@ class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMi
     pk = forms.ModelMultipleChoiceField(queryset=Prefix.objects.all(), widget=forms.MultipleHiddenInput())
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, to_field_name="slug")
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region": "$region"})
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "dcim.prefix"},  # TODO base_site: $site
+    )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -468,6 +485,7 @@ class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMi
     class Meta:
         nullable_fields = [
             "site",
+            "location",
             "vrf",
             "tenant",
             "role",
@@ -487,6 +505,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
         "status",
         "region",
         "site",
+        "location",
         "role",
         "tenant_group",
         "tenant",
@@ -530,6 +549,12 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
         required=False,
         null_option="None",
         query_params={"region": "$region"},
+    )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        # TODO query_params={"base_site": "$site"},
     )
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.all(),
@@ -984,6 +1009,11 @@ class VLANGroupForm(NautobotModelForm):
         required=False,
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "ipam.vlangroup"},  # TODO base_site: $site
+    )
     slug = SlugField()
 
     class Meta:
@@ -991,6 +1021,7 @@ class VLANGroupForm(NautobotModelForm):
         fields = [
             "region",
             "site",
+            "location",
             "name",
             "slug",
             "description",
@@ -1003,6 +1034,12 @@ class VLANGroupCSVForm(CustomFieldModelCSVForm):
         required=False,
         to_field_name="name",
         help_text="Assigned site",
+    )
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Assigned location",
     )
 
     class Meta:
@@ -1020,6 +1057,12 @@ class VLANGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
         null_option="None",
         query_params={"region": "$region"},
     )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        # TODO query_params={"base_site": "$site"},
+    )
 
 
 #
@@ -1035,6 +1078,11 @@ class VLANForm(NautobotModelForm, TenancyForm):
         null_option="None",
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "ipam.vlan"},  # TODO base_site: $site
+    )
     group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -1046,6 +1094,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
         model = VLAN
         fields = [
             "site",
+            "location",
             "group",
             "vid",
             "name",
@@ -1072,6 +1121,12 @@ class VLANCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         required=False,
         to_field_name="name",
         help_text="Assigned site",
+    )
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Assigned location",
     )
     group = CSVModelChoiceField(
         queryset=VLANGroup.objects.all(),
@@ -1114,6 +1169,11 @@ class VLANBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, to_field_name="slug")
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region": "$region"})
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "ipam.vlan"},  # TODO: base_site: $site
+    )
     group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -1126,6 +1186,7 @@ class VLANBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
     class Meta:
         nullable_fields = [
             "site",
+            "location",
             "group",
             "tenant",
             "role",
@@ -1139,6 +1200,7 @@ class VLANFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
         "q",
         "region",
         "site",
+        "location",
         "group_id",
         "status",
         "role",
@@ -1153,6 +1215,12 @@ class VLANFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
         required=False,
         null_option="None",
         query_params={"region": "$region"},
+    )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        # TODO query_params={"base_site": "$site"},
     )
     group_id = DynamicModelMultipleChoiceField(
         queryset=VLANGroup.objects.all(),

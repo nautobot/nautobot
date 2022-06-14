@@ -102,7 +102,7 @@ class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
         queryset=Location.objects.all(),
         to_field_name="slug",
         required=False,
-        query_params={"content_type": "circuits.circuittermination"},  # TODO: base_site: $site
+        # TODO query_params={"base_site": "$site"},
     )
     asn = forms.IntegerField(required=False, label="ASN")
     tag = TagFilterField(model)
@@ -312,7 +312,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
         queryset=Location.objects.all(),
         to_field_name="slug",
         required=False,
-        query_params={"content_type": "circuits.circuittermination"},  # TODO base_site: $site
+        # TODO query_params={"base_site": "$site"},
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
     tag = TagFilterField(model)
@@ -329,7 +329,7 @@ class CircuitTerminationForm(NautobotModelForm):
     location = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        query_params={"content_type": "circuits.circuittermination"},  # TODO: base_site: $site
+        # TODO query_params={"base_site": "$site"},
     )
     provider_network = DynamicModelChoiceField(
         queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"

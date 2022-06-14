@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
-from nautobot.dcim.models import Device, Interface, Region, Site
+from nautobot.dcim.models import Device, Interface, Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
@@ -250,6 +250,18 @@ class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, S
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        label="Location (ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        to_field_name="slug",
+        label="Location (slug)",
     )
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
@@ -500,6 +512,18 @@ class VLANGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
+    location_id = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        label="Location (ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        to_field_name="slug",
+        label="Location (slug)",
+    )
 
     class Meta:
         model = VLANGroup
@@ -539,6 +563,18 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        label="Location (ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        to_field_name="slug",
+        label="Location (slug)",
     )
     available_on_device = django_filters.UUIDFilter(
         method="get_for_device",

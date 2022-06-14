@@ -77,6 +77,7 @@ from nautobot.extras.api.serializers import (
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.extras.models import Status
+from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -266,6 +267,14 @@ class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
 class LocationTypeSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
     parent = NestedLocationTypeSerializer(required=False, allow_null=True)
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()).order_by("app_label", "model"),
+        many=True,
+    )
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    def get_tree_depth(self, obj):
+        return obj.tree_depth
 
     class Meta:
         model = LocationType
@@ -275,7 +284,9 @@ class LocationTypeSerializer(CustomFieldModelSerializer):
             "name",
             "slug",
             "parent",
+            "content_types",
             "description",
+            "tree_depth",
             "custom_fields",
             "created",
             "last_updated",
@@ -288,6 +299,11 @@ class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cus
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     location_type = NestedLocationTypeSerializer()
     parent = NestedLocationSerializer(required=False, allow_null=True)
+    site = NestedSiteSerializer(required=False, allow_null=True)
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    def get_tree_depth(self, obj):
+        return obj.tree_depth
 
     class Meta:
         model = Location
@@ -299,7 +315,9 @@ class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cus
             "status",
             "location_type",
             "parent",
+            "site",
             "description",
+            "tree_depth",
             "tags",
             "custom_fields",
             "created",

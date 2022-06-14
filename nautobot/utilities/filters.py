@@ -12,6 +12,9 @@ import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 
+from mptt.models import MPTTModel
+from tree_queries.models import TreeNode
+
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
 from nautobot.utilities.constants import (
@@ -154,7 +157,15 @@ class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
         return super().get_filter_predicate(v)
 
     def filter(self, qs, value):
-        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+        if value and not isinstance(value[0], str):
+            if isinstance(value[0], TreeNode):
+                # django-tree-queries
+                value = [node.descendants(include_self=True) for node in value]
+            elif isinstance(value[0], MPTTModel):
+                # django-mptt
+                value = [node.get_descendants(include_self=True) for node in value]
+            else:
+                raise RuntimeError(f"Unexpected model class {qs.model}")
         return super().filter(qs, value)
 
 

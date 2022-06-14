@@ -52,12 +52,12 @@ class ProviderFilterSet(NautobotFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = TreeNodeMultipleChoiceFilter(
         field_name="circuits__terminations__location",
         queryset=Location.objects.all(),
         label="Location (ID)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         field_name="circuits__terminations__location__slug",
         queryset=Location.objects.all(),
         to_field_name="slug",
@@ -163,12 +163,12 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = TreeNodeMultipleChoiceFilter(
         field_name="terminations__location",
         queryset=Location.objects.all(),
         label="Location (ID)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         field_name="terminations__location__slug",
         queryset=Location.objects.all(),
         to_field_name="slug",
@@ -217,11 +217,11 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Location (ID)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         field_name="location__slug",
         queryset=Location.objects.all(),
         to_field_name="slug",

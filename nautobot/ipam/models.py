@@ -500,6 +500,7 @@ class Prefix(PrimaryModel, StatusModel):
         "vrf",
         "tenant",
         "site",
+        "location",
         "vlan_group",
         "vlan",
         "status",
@@ -509,6 +510,7 @@ class Prefix(PrimaryModel, StatusModel):
     ]
     clone_fields = [
         "site",
+        "location",
         "vrf",
         "tenant",
         "vlan",
@@ -598,6 +600,7 @@ class Prefix(PrimaryModel, StatusModel):
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.site.name if self.site else None,
+            self.location.name if self.location else None,
             self.vlan.group.name if self.vlan and self.vlan.group else None,
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
@@ -1038,7 +1041,7 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "site", "description"]
+    csv_headers = ["name", "slug", "site", "location", "description"]
 
     class Meta:
         ordering = (
@@ -1064,6 +1067,7 @@ class VLANGroup(OrganizationalModel):
             self.name,
             self.slug,
             self.site.name if self.site else None,
+            self.location.name if self.location else None,
             self.description,
         )
 
@@ -1142,6 +1146,7 @@ class VLAN(PrimaryModel, StatusModel):
 
     csv_headers = [
         "site",
+        "location",
         "group",
         "vid",
         "name",
@@ -1152,6 +1157,7 @@ class VLAN(PrimaryModel, StatusModel):
     ]
     clone_fields = [
         "site",
+        "location",
         "group",
         "tenant",
         "status",
@@ -1185,9 +1191,20 @@ class VLAN(PrimaryModel, StatusModel):
         if self.group and self.group.site != self.site:
             raise ValidationError({"group": "VLAN group must belong to the assigned site ({}).".format(self.site)})
 
+        if (
+            self.group is not None
+            and self.location is not None
+            and self.group.location is not None
+            and self.group.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {"group": f"The assigned group belongs to a location that does not include {self.location}."}
+            )
+
     def to_csv(self):
         return (
             self.site.name if self.site else None,
+            self.location.name if self.location else None,
             self.group.name if self.group else None,
             self.vid,
             self.name,

@@ -165,7 +165,7 @@ class SiteViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 #
 
 class LocationTypeViewSet(CustomFieldModelViewSet):
-    queryset = LocationType.objects.prefetch_related("parent")
+    queryset = LocationType.objects.prefetch_related("parent", "content_types")
     serializer_class = serializers.LocationTypeSerializer
     filterset_class = filters.LocationTypeFilterSet
 
@@ -176,7 +176,7 @@ class LocationTypeViewSet(CustomFieldModelViewSet):
 
 
 class LocationViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
-    queryset = Location.objects.prefetch_related("location_type", "parent", "status")
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "status")
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
 

@@ -426,6 +426,9 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
 class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = LocationType
     q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        feature="locations", help_text="The object(s) that can belong to this location type."
+    )
 
 
 #
@@ -470,6 +473,9 @@ class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilte
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
         queryset=LocationType.objects.all(), to_field_name="slug", required=False
+    )
+    parent = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), to_field_name="slug", required=False
     )
     tag = TagFilterField(model)
 
@@ -543,7 +549,7 @@ class RackGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
         queryset=Location.objects.all(),
         to_field_name="slug",
         required=False,
-        query_params={"content_type": "dcim.rackgroup"},  # TODO base_site: $site
+        # TODO query_params={"base_site": "$site"},
     )
     parent = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
@@ -764,7 +770,7 @@ class RackFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
         queryset=Location.objects.all(),
         to_field_name="slug",
         required=False,
-        query_params={"content_type": "dcim.rack"},  # TODO base_site: $site
+        # TODO query_params={"base_site": "$site"},
     )
     group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
@@ -2170,7 +2176,7 @@ class DeviceFilterForm(
         queryset=Location.objects.all(),
         to_field_name="slug",
         required=False,
-        query_params={"content_type": "dcim.device"},  # TODO: base_site: $site
+        # TODO query_params={"base_site": "$site"},
     )
     rack_group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),

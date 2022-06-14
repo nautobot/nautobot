@@ -18,7 +18,7 @@ class TreeQuerySet(TreeQuerySet_, RestrictedQuerySet):
 
 
 class TreeManager(models.Manager.from_queryset(TreeQuerySet), TreeManager_):
-    _with_tree_fields = False
+    _with_tree_fields = True
 
 
 @extras_features(
@@ -83,7 +83,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, db_index=True)
     slug = AutoSlugField(populate_from="name")
     location_type = models.ForeignKey(
         to="dcim.LocationType",
@@ -122,6 +122,9 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
     class Meta:
         ordering = ("name",)
+        constraints = [
+            models.UniqueConstraint(name="unique_name_per_parent", fields=["parent", "name"]),
+        ]
 
     def __str__(self):
         return self.name
