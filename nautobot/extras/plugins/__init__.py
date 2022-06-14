@@ -307,16 +307,22 @@ class PluginTemplateExtension:
         """
         raise NotImplementedError
 
-    def object_detail_tabs(self):
+    def detail_tabs(self):
         """
-        Tabs that will be rendered and added to the existing list of tabs on the detail page view. Content
-        should be returned as a dict of dicts in the format:
-        {
-            "<tab_id>": {
-                "title": "<tab title>",
+        Tabs that will be rendered and added to the existing list of tabs on the detail page view.
+        Tabs will be ordered by their position in the list.
+
+        Content should be returned as a list of dicts in the format:
+        [
+            {
+                "title": "<title>",
                 "url": "<url for the tab link>",
             },
-        }
+            {
+                "title": "<title>",
+                "url": "<url for the tab link>",
+            },
+        ]
         """
         raise NotImplementedError
 

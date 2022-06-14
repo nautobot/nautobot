@@ -82,5 +82,6 @@ urlpatterns = [
         name="docs",
     ),
     path("circuit-detail-tab/<uuid:pk>/", views.CircuitDetailPluginTab.as_view(), name="circuit_detail_tab"),
-    path("device-detail-tab/<uuid:pk>/", views.DeviceDetailPluginTab.as_view(), name="device_detail_tab"),
+    path("device-detail-tab-one/<uuid:pk>/", views.DeviceDetailPluginTabOne.as_view(), name="device_detail_tab_1"),
+    path("device-detail-tab-two/<uuid:pk>/", views.DeviceDetailPluginTabTwo.as_view(), name="device_detail_tab_2"),
 ]
