@@ -85,20 +85,7 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         """
         Helper method to self.instantiate().
         """
-        content_type = ContentType.objects.get_for_model(model)
-        fields = CustomField.objects.filter(content_types=content_type)
-        for field in fields:
-            self._custom_field_data.setdefault(field.name, field.default)
-            print(field.name, field.default)
-            self.save()
-        return model(
-            device=device,
-            name=self.name,
-            label=self.label,
-            description=self.description,
-            _custom_field_data=self._custom_field_data,
-            **kwargs,
-        )
+        return model(device=device, name=self.name, label=self.label, description=self.description, **kwargs)
 
 
 @extras_features(
@@ -263,11 +250,35 @@ class InterfaceTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
+        record = {}
+        content_type = ContentType.objects.get_for_model(Interface)
+        fields = CustomField.objects.filter(content_types=content_type)
+        for field in fields:
+            record[field.name] = field.default
+
         return self.instantiate_model(
             model=Interface,
             device=device,
             type=self.type,
             mgmt_only=self.mgmt_only,
+            default_values=record,
+        )
+
+    def instantiate_model(self, model, device, **kwargs):
+        """
+        Helper method to self.instantiate().
+        """
+        if "default_values" in kwargs:
+            default_values = kwargs["default_values"]
+            kwargs.pop("default_values")
+
+        return model(
+            device=device,
+            name=self.name,
+            label=self.label,
+            description=self.description,
+            _custom_field_data=default_values,
+            **kwargs,
         )
 
 
