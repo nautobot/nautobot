@@ -22,7 +22,11 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import count_related
+from nautobot.utilities.utils import (
+    count_related,
+    SerializerForAPIVersions,
+    versioned_serializer_selector,
+)
 from . import serializers
 
 
@@ -316,27 +320,22 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 
+    def get_serializer_class(self):
+        serializer_choices = (
+            SerializerForAPIVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),
+        )
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )
+
     # 2.0 TODO: Remove exception class and overloaded methods below
     # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
     class NATOutsideIncompatibleLegacyBehavior(APIException):
         status_code = 412
         default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
         default_code = "precondition_failed"
-
-    def get_serializer_class(self):
-        if (
-            not self.brief
-            and not getattr(self, "swagger_fake_view", False)
-            and (
-                not hasattr(self.request, "major_version")
-                or self.request.major_version > 1
-                or (self.request.major_version == 1 and self.request.minor_version < 3)
-            )
-        ):
-            # API version 1.2 or earlier - use the legacy serializer
-            # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
-            return serializers.IPAddressSerializerLegacy
-        return super().get_serializer_class()
 
     def retrieve(self, request, pk=None):
         try:

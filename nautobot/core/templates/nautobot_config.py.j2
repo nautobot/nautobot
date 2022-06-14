@@ -236,6 +236,9 @@ SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
 # Configure SSO, for more information see docs/configuration/authentication/sso.md
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 
+# Reject invalid UI/API filter parameters, or discard them while logging a warning?
+STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
+
 # Time zone (default: UTC)
 TIME_ZONE = os.getenv("NAUTOBOT_TIME_ZONE", "UTC")
 

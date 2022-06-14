@@ -13,13 +13,7 @@
                 </tr>
                 <tr>
                     <td>Master</td>
-                    <td>
-                        {% if object.master %}
-                            <a href="{{ object.master.get_absolute_url }}">{{ object.master }}</a>
-                        {% else %}
-                            <span class="text-muted">&mdash;</span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.master|hyperlinked_object }}</td>
                 </tr>
             </table>
         </div>
@@ -39,11 +33,9 @@
                 </tr>
                 {% for vc_member in members %}
                     <tr{% if vc_member == device %} class="info"{% endif %}>
-                        <td>
-                            <a href="{{ vc_member.get_absolute_url }}">{{ vc_member }}</a>
-                        </td>
+                        <td>{{ vc_member|hyperlinked_object }}</td>
                         <td><span class="badge badge-default">{{ vc_member.vc_position }}</span></td>
-                        <td>{% if object.master == vc_member %}{{ true | render_boolean }}{% endif %}</td>
+                        <td>{% if object.master == vc_member %}{{ True | render_boolean }}{% endif %}</td>
                         <td>{{ vc_member.vc_priority|placeholder }}</td>
                     </tr>
                 {% endfor %}

@@ -7,9 +7,7 @@
             <table class="table table-hover panel-body">
                 {% for dg in dynamic_groups %}
                     <tr>
-                        <td>
-                           <a href="{{ dg.get_absolute_url }}" title="{{ dg.description }}">{{ dg }}</a>
-                        </td>
+                        <td>{{ dg|hyperlinked_object }}</td>
                     </tr>
                 {% endfor %}
             </table>

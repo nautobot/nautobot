@@ -1,5 +1,3 @@
-from django.test import TestCase
-
 from nautobot.circuits.filters import (
     CircuitFilterSet,
     CircuitTerminationFilterSet,
@@ -11,9 +9,10 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.testing import FilterTestCases
 
 
-class ProviderTestCase(TestCase):
+class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Provider.objects.all()
     filterset = ProviderFilterSet
 
@@ -57,18 +56,6 @@ class ProviderTestCase(TestCase):
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side="A")
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Provider 1", "Provider 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["provider-1", "provider-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_asn(self):
         params = {"asn": ["65001", "65002"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -92,7 +79,7 @@ class ProviderTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class CircuitTypeTestCase(TestCase):
+class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = CircuitType.objects.all()
     filterset = CircuitTypeFilterSet
 
@@ -103,20 +90,8 @@ class CircuitTypeTestCase(TestCase):
         CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
         CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
 
-    def test_id(self):
-        params = {"id": [self.queryset.first().pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_name(self):
-        params = {"name": ["Circuit Type 1"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_slug(self):
-        params = {"slug": ["circuit-type-1"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-
-class CircuitTestCase(TestCase):
+class CircuitTestCase(FilterTestCases.FilterTestCase):
     queryset = Circuit.objects.all()
     filterset = CircuitFilterSet
 
@@ -231,10 +206,6 @@ class CircuitTestCase(TestCase):
         CircuitTermination.objects.create(circuit=circuits[4], provider_network=provider_network[1], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[5], provider_network=provider_network[2], term_side="A")
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_cid(self):
         params = {"cid": ["Test Circuit 1", "Test Circuit 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -304,7 +275,7 @@ class CircuitTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class CircuitTerminationTestCase(TestCase):
+class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     queryset = CircuitTermination.objects.all()
     filterset = CircuitTerminationFilterSet
 
@@ -484,7 +455,7 @@ class CircuitTerminationTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
 
 
-class ProviderNetworkTestCase(TestCase):
+class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = ProviderNetwork.objects.all()
     filterset = ProviderNetworkFilterSet
 
@@ -504,14 +475,6 @@ class ProviderNetworkTestCase(TestCase):
             ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[2]),
         )
         ProviderNetwork.objects.bulk_create(provider_networks)
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Provider Network 1", "Provider Network 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_provider(self):
         providers = Provider.objects.all()[:2]

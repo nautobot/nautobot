@@ -717,7 +717,7 @@ class GraphQLQueryTest(TestCase):
             RearPort.objects.create(device=cls.device1, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
             RearPort.objects.create(device=cls.device1, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
             RearPort.objects.create(device=cls.device1, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P4C),
         )
 
         cls.device1_console_ports = (
@@ -765,7 +765,7 @@ class GraphQLQueryTest(TestCase):
             FrontPort.objects.create(
                 device=cls.device1,
                 name="Front Port 4",
-                type=PortTypeChoices.TYPE_8P8C,
+                type=PortTypeChoices.TYPE_8P4C,
                 rear_port=cls.device1_rear_ports[3],
             ),
         ]
@@ -1409,7 +1409,7 @@ query {
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
             (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
         for filter, nbr_expected_results in filters:
@@ -1426,7 +1426,7 @@ query {
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
             (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
         for filter, nbr_expected_results in filters:

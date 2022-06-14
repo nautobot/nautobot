@@ -1,6 +1,8 @@
 import json
+from unittest import skip
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
@@ -9,6 +11,7 @@ from constance.test import override_config
 
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
@@ -1197,9 +1200,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Check that config context data is included by default in the devices list.
         """
         self.add_permissions("dcim.view_device")
-        url = reverse("dcim-api:device-list") + "?slug=device-with-context-data"
+        url = reverse("dcim-api:device-list")
         response = self.client.get(url, **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["results"][0].get("config_context", {}).get("A"), 1)
 
     def test_config_context_excluded(self):
@@ -1210,6 +1214,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         url = reverse("dcim-api:device-list") + "?exclude=config_context"
         response = self.client.get(url, **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertFalse("config_context" in response.data["results"][0])
 
     def test_unique_name_per_site_constraint(self):
@@ -1435,14 +1440,14 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
         ]
 
 
-class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = Interface
     brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = Interface
-    choices_fields = ["mode", "type"]
+    choices_fields = ["mode", "type", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1450,13 +1455,33 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         site = Site.objects.create(name="Site 1", slug="site-1")
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        cls.devices = (
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site),
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 2", site=site),
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 3", site=site),
+        )
 
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t")
+        cls.virtualchassis = VirtualChassis.objects.create(
+            name="Virtual Chassis 1", master=cls.devices[0], domain="domain-1"
+        )
+        Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtualchassis, vc_position=1)
+        Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtualchassis, vc_position=2)
 
-        vlans = (
+        cls.interfaces = (
+            Interface.objects.create(device=cls.devices[0], name="Interface 1", type="1000base-t"),
+            Interface.objects.create(device=cls.devices[0], name="Interface 2", type="1000base-t"),
+            Interface.objects.create(device=cls.devices[0], name="Interface 3", type=InterfaceTypeChoices.TYPE_BRIDGE),
+            Interface.objects.create(
+                device=cls.devices[1], name="Interface 4", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+            ),
+            Interface.objects.create(device=cls.devices[1], name="Interface 5", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(device=cls.devices[2], name="Interface 6", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(
+                device=cls.devices[2], name="Interface 7", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+            ),
+        )
+
+        cls.vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
             VLAN.objects.create(name="VLAN 2", vid=2),
             VLAN.objects.create(name="VLAN 3", vid=3),
@@ -1464,52 +1489,195 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
 
         cls.create_data = [
             {
-                "device": device.pk,
-                "name": "Interface 4",
+                "device": cls.devices[0].pk,
+                "name": "Interface 8",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
+                "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
+                "untagged_vlan": cls.vlans[2].pk,
             },
             {
-                "device": device.pk,
-                "name": "Interface 5",
+                "device": cls.devices[0].pk,
+                "name": "Interface 9",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
+                "bridge": cls.interfaces[3].pk,
+                "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
+                "untagged_vlan": cls.vlans[2].pk,
             },
             {
-                "device": device.pk,
-                "name": "Interface 6",
-                "type": "1000base-t",
+                "device": cls.devices[0].pk,
+                "name": "Interface 10",
+                "type": "virtual",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
+                "parent_interface": cls.interfaces[1].pk,
+                "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
+                "untagged_vlan": cls.vlans[2].pk,
             },
         ]
+
+        cls.untagged_vlan_data = {
+            "device": cls.devices[0].pk,
+            "name": "expected-to-fail",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "untagged_vlan": cls.vlans[0].pk,
+        }
+
+        cls.common_device_or_vc_data = [
+            {
+                "device": cls.devices[0].pk,
+                "name": "interface test 1",
+                "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
+                "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "interface test 2",
+                "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                "lag": cls.interfaces[4].id,  # belongs to different device but same vc
+            },
+        ]
+
+        cls.interfaces_not_belonging_to_same_device_data = [
+            [
+                "parent",
+                {
+                    "device": cls.devices[0].pk,
+                    "name": "interface test 1",
+                    "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
+                },
+            ],
+            [
+                "bridge",
+                {
+                    "device": cls.devices[0].pk,
+                    "name": "interface test 2",
+                    "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
+                },
+            ],
+            [
+                "lag",
+                {
+                    "device": cls.devices[0].pk,
+                    "name": "interface test 3",
+                    "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "lag": cls.interfaces[6].id,  # does not belong to same device or vc
+                },
+            ],
+        ]
+
+    def test_active_status_not_found(self):
+        self.add_permissions("dcim.add_interface")
+
+        status = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        status.content_types.remove(interface_ct)
+        device = Device.objects.first()
+
+        data = {
+            "device": device.pk,
+            "name": "int-001",
+            "type": "1000base-t",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+        }
+
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            response.data["status"],
+            [
+                "Interface default status 'active' does not exist, create 'active' status for Interface or use the latest api_version"
+            ],
+        )
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface")
 
-        vlan = VLAN.objects.first()
-        device = Device.objects.first()
-
         # This will fail.
-        data = {
-            "device": device.pk,
-            "name": "expected-to-fail",
-            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-            "untagged_vlan": vlan.pk,
-        }
-
         url = self._get_list_url()
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_400_BAD_REQUEST)
+        self.assertHttpStatus(
+            self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_400_BAD_REQUEST
+        )
 
         # Now let's add mode and it will work.
-        data["mode"] = InterfaceModeChoices.MODE_ACCESS
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        self.untagged_vlan_data["mode"] = InterfaceModeChoices.MODE_ACCESS
+        self.assertHttpStatus(
+            self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_201_CREATED
+        )
+
+    def test_interface_belonging_to_common_device_or_vc_allowed(self):
+        """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
+        self.add_permissions("dcim.add_interface")
+
+        response = self.client.post(
+            self._get_list_url(), data=self.common_device_or_vc_data[0], format="json", **self.header
+        )
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        queryset = Interface.objects.get(name="interface test 1", device=self.devices[0])
+        self.assertEqual(queryset.parent_interface, self.interfaces[3])
+        self.assertEqual(queryset.bridge, self.interfaces[2])
+
+        # Assert LAG
+        self.add_permissions("dcim.add_interface")
+
+        response = self.client.post(
+            self._get_list_url(), data=self.common_device_or_vc_data[1], format="json", **self.header
+        )
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        queryset = Interface.objects.get(name="interface test 2", device=self.devices[0])
+        self.assertEqual(queryset.lag, self.interfaces[4])
+
+    def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
+        """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
+
+        self.add_permissions("dcim.add_interface")
+
+        for name, payload in self.interfaces_not_belonging_to_same_device_data:
+            response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+            field_name = name.upper() if name == "lag" else name
+            error_field_name = f"{name}_interface" if name == "parent" else name
+
+            interface = Interface.objects.get(id=payload[error_field_name])
+            self.assertEqual(
+                str(response.data[error_field_name][0]),
+                f"The selected {field_name} interface ({interface}) belongs to {interface.parent}, which is "
+                f"not part of virtual chassis {self.virtualchassis}.",
+            )
+
+
+class InterfaceTestVersion14(InterfaceTestVersion12):
+    api_version = "1.4"
+    validation_excluded_fields = ["status"]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        # Add status to all payload because status is required in v1.4
+        for i, _ in enumerate(cls.create_data):
+            cls.create_data[i]["status"] = "active"
+
+        cls.untagged_vlan_data["status"] = "active"
+
+        for i, _ in enumerate(cls.common_device_or_vc_data):
+            cls.common_device_or_vc_data[i]["status"] = "active"
+
+        for i, _ in enumerate(cls.interfaces_not_belonging_to_same_device_data):
+            cls.interfaces_not_belonging_to_same_device_data[i][1]["status"] = "active"
+
+    @skip("Test not required in v1.4")
+    def test_active_status_not_found(self):
+        pass
 
 
 class FrontPortTest(APIViewTestCases.APIViewTestCase):

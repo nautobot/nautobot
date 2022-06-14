@@ -142,6 +142,7 @@ PROMETHEUS_EXPORT_MIGRATIONS = False
 FILTERS_NULL_CHOICE_LABEL = "None"
 FILTERS_NULL_CHOICE_VALUE = "null"
 
+STRICT_FILTERING = True
 
 #
 # Django REST framework (API)
@@ -161,7 +162,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
-    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
@@ -220,6 +221,9 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
+        # Because Interface and VMInterface have the same set of default statuses, we get the error:
+        #   enum naming encountered a non-optimally resolvable collision for fields named "status"
+        "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
     },
 }
 
@@ -681,3 +685,20 @@ BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
 
 # Dont load the 'taggit' app, since we have our own custom `Tag` and `TaggedItem` models
 SHELL_PLUS_DONT_LOAD = ["taggit"]
+
+#
+# UI settings
+#
+
+
+# UI_RACK_VIEW_TRUNCATE_FUNCTION
+def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
+    """Given device display name, truncate to fit the rack elevation view.
+
+    :param device_display_name: Full display name of the device attempting to be rendered in the rack elevation.
+    :type device_display_name: str
+
+    :return: Truncated device name
+    :type: str
+    """
+    return str(device_display_name).split(".")[0]
