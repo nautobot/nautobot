@@ -545,7 +545,9 @@ class JobResult(BaseModel, CustomFieldModel):
         schedule: Optional ScheduledJob instance to link to the JobResult
         kwargs: additional kwargs passed to the callable
         """
-        job_result = cls.objects.create(name=name, job_kwargs=kwargs, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
+        job_result = cls.objects.create(
+            name=name, job_kwargs=kwargs, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule
+        )
 
         kwargs["job_result_pk"] = job_result.pk
 
