@@ -19,6 +19,14 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 Interface and VMInterface models now have `parent_interface` and `bridge` keys. An interface of type `Virtual` can now associate to a parent physical interface on the same device, virtual chassis, or virtual machine, and an interface of any type can specify another interface as its associated bridge interface. (A new `Bridge` interface type has also been added, but the `bridge` interface property is not restricted to interfaces of this type.)
 
+#### Rackview UI - Add Option to Truncate Device Name ([#1119](https://github.com/nautobot/nautobot/issues/1119))
+
+Users can now toggle device full name and truncated name in the rack elevation view. The truncating function is customizable in `nautobot_config.py` via defining `UI_RACK_VIEW_TRUNCATE_FUNCTION`. Default behavior is to split on `.` and return the first item in the list.
+
+"Save SVG" link presents the same view as what is currently displayed on screen
+
+Current preferred toggle state is preserved across tabs (requires refresh) and persists in-browser until local storage is cleared. This presents a consistent behavior when browsing between multiple racks.
+
 #### Status Field on Interface, VMInterface Models ([#984](https://github.com/nautobot/nautobot/issues/984))
 
 Interface and VMInterface models now support a status. Default statuses that are available to be set are: Active, Planned, Maintenance, Failed, and Decommissioned. During migration all existing interfaces will be set to the status of "Active".
@@ -42,12 +50,23 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 ### Removed
 
+## v1.4.0a2 (2022-MM-DD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
 ## v1.4.0a1 (2022-06-13)
 
 ### Added
 
 - [#729](https://github.com/nautobot/nautobot/issues/729) - Added UI dark mode.
 - [#984](https://github.com/nautobot/nautobot/issues/984) - Added status field to Interface, VMInterface models.
+- [#1119](https://github.com/nautobot/nautobot/issues/1119) - Added truncated device name functionality to Rackview UI.
 - [#1455](https://github.com/nautobot/nautobot/issues/1455) - Added `parent_interface` and `bridge` fields to Interface and VMInterface models.
 
 ### Changed
