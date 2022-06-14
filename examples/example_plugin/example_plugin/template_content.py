@@ -6,45 +6,55 @@ from nautobot.extras.plugins import PluginTemplateExtension
 class CircuitContent(PluginTemplateExtension):
     model = "circuits.circuit"
 
-    def object_detail_tabs(self):
+    def detail_tabs(self):
         """
         You may define extra tabs to render on a model's detail page by utilizing this method.
-        Each tab will have a tab_id which will be deduced from the keys of the returned dict.
-        The tab_id is used to set the active tab in the UI.
+        Each tab is defined as a dict in a list of dicts.
+
         For each of the tabs defined:
-        - The title value will become the tab's title.
-        - The url value is used to render the HTML link for the tab
+        - The <title> key's value will become the tab link's title.
+        - The <url> key's value is used to render the HTML link for the tab.
+
         These tabs will be visible (in this instance) on the Circuit model's detail page as
-        referenced here by the CircuitContent.model class property.
+        set by the CircuitContent.model attribute "circuits.circuit"
+
+        This example demonstrates defining one tab.
         """
-        return {
-            "pct": {
-                "title": "Example Plugin Circuit Tab",
+        return [
+            {
+                "title": "Plugin Tab",
                 "url": reverse("plugins:example_plugin:circuit_detail_tab", args=[self.context["object"].pk]),
             },
-        }
+        ]
 
 
 class DeviceContent(PluginTemplateExtension):
     model = "dcim.device"
 
-    def object_detail_tabs(self):
+    def detail_tabs(self):
         """
         You may define extra tabs to render on a model's detail page by utilizing this method.
-        Each tab will have a tab_id which will be deduced from the keys of the returned dict.
-        The tab_id is used to set the active tab in the UI.
+        Each tab is defined as a dict in a list of dicts.
+
         For each of the tabs defined:
-        - The title value will become the tab's title.
-        - The url value is used to render the HTML link for the tab
+        - The <title> key's value will become the tab link's title.
+        - The <url> key's value is used to render the HTML link for the tab
+
         These tabs will be visible (in this instance) on the Device model's detail page as
-        referenced here by the DeviceContent.model class property.
+        set by the DeviceContent.model attribute "dcim.device"
+
+        This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
         """
-        return {
-            "pdt": {
-                "title": "Example Plugin Device Tab",
-                "url": reverse("plugins:example_plugin:device_detail_tab", args=[self.context["object"].pk]),
+        return [
+            {
+                "title": "Plugin Tab 1",
+                "url": reverse("plugins:example_plugin:device_detail_tab_1", args=[self.context["object"].pk]),
             },
-        }
+            {
+                "title": "Plugin Tab 2",
+                "url": reverse("plugins:example_plugin:device_detail_tab_2", args=[self.context["object"].pk]),
+            },
+        ]
 
 
 class SiteContent(PluginTemplateExtension):

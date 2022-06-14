@@ -194,7 +194,6 @@ class PluginTabsTestCase(SeleniumTestCase):
         self.login(self.user.username, self.password)
 
     def test_circuit_detail_tab(self):
-        # Set up the required objects:
         provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
         ProviderNetwork.objects.create(
             name="Test Provider Network",
@@ -211,9 +210,9 @@ class PluginTabsTestCase(SeleniumTestCase):
         )
         # Visit the circuit's detail page and check that the tab is visible
         self.browser.visit(f'{self.live_server_url}{reverse("circuits:circuit", args=[str(circuit.pk)])}')
-        self.assertTrue(self.browser.is_text_present("Example Plugin Circuit Tab"))
+        self.assertTrue(self.browser.is_text_present("Plugin Tab"))
         # Visit the tab link and check the view content
-        self.browser.links.find_by_partial_text("Example Plugin Circuit Tab")[0].click()
+        self.browser.links.find_by_partial_text("Plugin Tab")[0].click()
         self.assertTrue(
             self.browser.is_text_present(
                 f"I am some content for the example plugin's circuit ({str(circuit.pk)}) detail tab."
@@ -221,15 +220,19 @@ class PluginTabsTestCase(SeleniumTestCase):
         )
 
     def test_device_detail_tab(self):
+        """
+        This test checks that both plugin device tabs from the example plugin are visible and render correctly.
+        """
         # Set up the required objects:
         device = create_test_device("Test Device")
         # Visit the device's detail page and check that the tab is visible
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", args=[str(device.pk)])}')
-        self.assertTrue(self.browser.is_text_present("Example Plugin Device Tab"))
-        # Visit the tab link and check the view content
-        self.browser.links.find_by_partial_text("Example Plugin Device Tab")[0].click()
-        self.assertTrue(
-            self.browser.is_text_present(
-                f"I am some content for the example plugin's device ({str(device.pk)}) detail tab."
+        for tab_i in [1, 2]:
+            self.assertTrue(self.browser.is_text_present(f"Plugin Tab {tab_i}"))
+            # Visit the tab link and check the view content
+            self.browser.links.find_by_partial_text(f"Plugin Tab {tab_i}")[0].click()
+            self.assertTrue(
+                self.browser.is_text_present(
+                    f"I am some content for the example plugin's device ({str(device.pk)}) detail tab {tab_i}."
+                )
             )
-        )

@@ -45,8 +45,8 @@ def _get_registered_content(obj, method, template_context, return_html=True):
         instance = template_extension(context)
         content = getattr(instance, method)()
         if not return_html:
-            for k, v in content.items():
-                objects.append({f"{plugin_name}:{k}": v})
+            for i, content in enumerate(content):
+                objects.append({f"{plugin_name}:{i+1}": content})
         else:
             html += content
 
@@ -93,9 +93,7 @@ def plugin_object_detail_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
-    context["plugin_object_detail_tabs"] = _get_registered_content(
-        obj, "object_detail_tabs", context, return_html=False
-    )
+    context["plugin_object_detail_tabs"] = _get_registered_content(obj, "detail_tabs", context, return_html=False)
     return context
 
 

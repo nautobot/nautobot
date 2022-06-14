@@ -9,19 +9,6 @@ from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
 
 
-class DeviceDetailPluginTab(generic.ObjectView):
-    """
-    This view's template extends the device detail template,
-    making it suitable to show as a tab on the device detail page.
-
-    Views that are intended to be for an object detail tab's content rendering must
-    always inherit from nautobot.core.views.generic.ObjectView.
-    """
-
-    queryset = Device.objects.all()
-    template_name = "example_plugin/tab_device_detail.html"
-
-
 class CircuitDetailPluginTab(generic.ObjectView):
     """
     This view's template extends the circuit detail template,
@@ -33,6 +20,28 @@ class CircuitDetailPluginTab(generic.ObjectView):
 
     queryset = Circuit.objects.all()
     template_name = "example_plugin/tab_circuit_detail.html"
+
+
+class DeviceDetailPluginTabOne(generic.ObjectView):
+    """
+    This view's template extends the device detail template,
+    making it suitable to show as a tab on the device detail page.
+
+    Views that are intended to be for an object detail tab's content rendering must
+    always inherit from nautobot.core.views.generic.ObjectView.
+    """
+
+    queryset = Device.objects.all()
+    template_name = "example_plugin/tab_device_detail_1.html"
+
+
+class DeviceDetailPluginTabTwo(generic.ObjectView):
+    """
+    Same DeviceDetailPluginTabOne view above but using a different template.
+    """
+
+    queryset = Device.objects.all()
+    template_name = "example_plugin/tab_device_detail_2.html"
 
 
 class ExamplePluginHomeView(View):
