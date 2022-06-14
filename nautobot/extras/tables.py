@@ -589,7 +589,7 @@ class JobResultTable(BaseTable):
             "user",
             "status",
             "summary",
-            "actions"
+            "actions",
         )
         default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
 
