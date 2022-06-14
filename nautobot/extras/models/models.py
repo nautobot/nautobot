@@ -766,7 +766,9 @@ class Webhook(BaseModel, ChangeLoggedModel):
         return reverse("extras:webhook", kwargs={"pk": self.pk})
 
     @classmethod
-    def check_for_conflicts(cls, instance, content_types, payload_url, type_create, type_update, type_delete):
+    def check_for_conflicts(
+        cls, instance=None, content_types=None, payload_url=None, type_create=None, type_update=None, type_delete=None
+    ):
         """
         Helper method for enforcing uniqueness.
 
@@ -777,28 +779,38 @@ class Webhook(BaseModel, ChangeLoggedModel):
         conflicts = {}
         webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
 
-        for content_type in content_types:
-            webhooks = cls.objects.filter(content_types__in=[content_type], payload_url=payload_url)
-            if instance and instance.present_in_database:
-                webhooks = webhooks.exclude(pk=instance.pk)
+        if instance is not None and instance.present_in_database:
+            # This is a PATCH and might not include all relevant data e.g content_types, payload_url or actions
+            # Therefore we get data not available from instance
+            content_types = instance.content_types.all() if content_types is None else content_types
+            payload_url = instance.payload_url if payload_url is None else payload_url
+            type_create = instance.type_create if type_create is None else type_create
+            type_update = instance.type_update if type_update is None else type_update
+            type_delete = instance.type_delete if type_delete is None else type_delete
 
-            existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
-            existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
-            existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
+        if content_types is not None:
+            for content_type in content_types:
+                webhooks = cls.objects.filter(content_types__in=[content_type], payload_url=payload_url)
+                if instance and instance.present_in_database:
+                    webhooks = webhooks.exclude(pk=instance.pk)
 
-            if existing_type_create:
-                conflicts.setdefault("type_create", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
-                )
+                existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
+                existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
+                existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
 
-            if existing_type_update:
-                conflicts.setdefault("type_update", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
-                )
+                if existing_type_create:
+                    conflicts.setdefault("type_create", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
+                    )
 
-            if existing_type_delete:
-                conflicts.setdefault("type_delete", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
-                )
+                if existing_type_update:
+                    conflicts.setdefault("type_update", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
+                    )
+
+                if existing_type_delete:
+                    conflicts.setdefault("type_delete", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
+                    )
 
         return conflicts

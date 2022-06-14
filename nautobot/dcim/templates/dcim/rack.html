@@ -320,5 +320,6 @@
 {% endblock content_right_page %}
 
 {% block javascript %}
+    {{block.super}}
     <script src="{% static 'js/rack_elevations.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock javascript %}

@@ -35,7 +35,7 @@
                     <tr{% if vc_member == device %} class="info"{% endif %}>
                         <td>{{ vc_member|hyperlinked_object }}</td>
                         <td><span class="badge badge-default">{{ vc_member.vc_position }}</span></td>
-                        <td>{% if object.master == vc_member %}{{ true | render_boolean }}{% endif %}</td>
+                        <td>{% if object.master == vc_member %}{{ True | render_boolean }}{% endif %}</td>
                         <td>{{ vc_member.vc_priority|placeholder }}</td>
                     </tr>
                 {% endfor %}

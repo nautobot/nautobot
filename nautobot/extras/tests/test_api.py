@@ -2532,3 +2532,82 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             response.data[0]["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )
+
+    def test_patch_webhooks_with_same_content_type_same_url_common_action(self):
+        self.add_permissions("extras.change_webhook")
+
+        self.webhooks[2].payload_url = self.webhooks[1].payload_url
+        self.webhooks[2].save()
+
+        data = {"type_update": True}
+
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEquals(
+            response.data["type_update"][0],
+            f"A webhook already exists for update on dcim | device type to URL {self.webhooks[1].payload_url}",
+        )
+
+    def test_patch_webhooks(self):
+        self.add_permissions("extras.change_webhook")
+
+        instance = Webhook.objects.create(
+            name="api-test-4",
+            type_update=True,
+            payload_url=self.webhooks[1].payload_url,
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance.content_types.set([ContentType.objects.get_for_model(DeviceType)])
+
+        data = {"type_delete": True}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"content_types": ["dcim.device"]}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"payload_url": "http://example.com/test4"}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_invalid_webhooks_patch(self):
+        self.add_permissions("extras.change_webhook")
+
+        # Test patch payload_url with conflicts
+        instance_1 = Webhook.objects.create(
+            name="api-test-4",
+            type_update=True,
+            payload_url="http://example.com/test4",
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance_1.content_types.set([ContentType.objects.get_for_model(DeviceType)])
+
+        data = {"payload_url": "http://example.com/test2"}
+        response = self.client.patch(self._get_detail_url(instance_1), data, format="json", **self.header)
+        self.assertEquals(
+            response.data["type_update"][0],
+            "A webhook already exists for update on dcim | device type to URL http://example.com/test2",
+        )
+
+        # Test patch content_types with conflicts
+        instance_2 = Webhook.objects.create(
+            name="api-test-5",
+            type_create=True,
+            payload_url="http://example.com/test1",
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance_2.content_types.set([ContentType.objects.get_for_model(Device)])
+
+        data = {"content_types": ["dcim.devicetype"]}
+        response = self.client.patch(self._get_detail_url(instance_2), data, format="json", **self.header)
+        self.assertEquals(
+            response.data["type_create"][0],
+            "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
+        )
