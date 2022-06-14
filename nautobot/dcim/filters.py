@@ -9,11 +9,13 @@ from nautobot.extras.filters import (
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
+from nautobot.extras.utils import FeatureQuery
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.filters import (
     BaseFilterSet,
+    ContentTypeChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
@@ -236,6 +238,10 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         to_field_name="slug",
         label="Child location type (slug)",
     )
+    content_type = ContentTypeChoiceFilter(
+        field_name="location_type__content_types",
+        choices=FeatureQuery("locations").get_choices,
+    )
     tags = TagFilter()
 
     class Meta:
@@ -266,6 +272,16 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug)",
     )
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -327,6 +343,16 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug)",
     )
     group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -672,6 +698,16 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site name (slug)",
+    )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug)",
     )
     rack_group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),

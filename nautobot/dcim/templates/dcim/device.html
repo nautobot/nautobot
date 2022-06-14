@@ -27,6 +27,12 @@
                                         </td>
                                     </tr>
                                     <tr>
+                                        <td>Location</td>
+                                        <td>
+                                            {{ object.location|hyperlinked_object }}
+                                        </td>
+                                    </tr>
+                                    <tr>
                                         <td>Rack</td>
                                         <td>
                                             {% if object.rack and object.rack_group %}

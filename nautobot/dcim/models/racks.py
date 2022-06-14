@@ -82,14 +82,16 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
     objects = TreeManager()
 
-    csv_headers = ["site", "parent", "name", "slug", "description"]
+    csv_headers = ["site", "location", "parent", "name", "slug", "description"]
 
     class Meta:
         ordering = ["site", "name"]
         unique_together = [
             ["site", "name"],
+            ["location", "name"],
             # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
+            ["location", "slug"],
         ]
 
     class MPTTMeta:
@@ -104,6 +106,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
     def to_csv(self):
         return (
             self.site,
+            self.location.name if self.location else None,
             self.parent.name if self.parent else "",
             self.name,
             self.slug,
@@ -117,9 +120,24 @@ class RackGroup(MPTTModel, OrganizationalModel):
     def clean(self):
         super().clean()
 
+        # Validate site/location combination:
+        if self.location is not None and self.site is not None and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+
         # Parent RackGroup (if any) must belong to the same Site
         if self.parent and self.parent.site != self.site:
             raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
+
+        # Parent RackGroup (if any) must belong to the same or ancestor Location
+        if (
+            self.parent is not None
+            and self.location is not None
+            and self.parent.location is not None
+            and self.parent.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {"parent": f"Parent rack group belongs to a location that does not contain {self.location}."}
+            )
 
 
 @extras_features(
@@ -263,6 +281,7 @@ class Rack(PrimaryModel, StatusModel):
 
     csv_headers = [
         "site",
+        "location",
         "group",
         "name",
         "facility_id",
@@ -282,6 +301,7 @@ class Rack(PrimaryModel, StatusModel):
     ]
     clone_fields = [
         "site",
+        "location",
         "group",
         "tenant",
         "status",
@@ -312,9 +332,24 @@ class Rack(PrimaryModel, StatusModel):
     def clean(self):
         super().clean()
 
+        # Validate site/location combination
+        if self.location and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+
         # Validate group/site assignment
         if self.site and self.group and self.group.site != self.site:
             raise ValidationError(f"Assigned rack group must belong to parent site ({self.site}).")
+
+        # Validate group/location assignment
+        if (
+            self.group is not None
+            and self.location is not None
+            and self.group.location is not None
+            and self.group.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {"group": f"The assigned rack group belongs to a location that does not include {self.location}."}
+            )
 
         # Validate outer dimensions and unit
         if (self.outer_width is not None or self.outer_depth is not None) and not self.outer_unit:
@@ -343,6 +378,7 @@ class Rack(PrimaryModel, StatusModel):
     def to_csv(self):
         return (
             self.site.name,
+            self.location.name if self.location else None,
             self.group.name if self.group else None,
             self.name,
             self.facility_id,

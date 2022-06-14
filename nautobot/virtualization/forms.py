@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
-from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
@@ -106,6 +106,11 @@ class ClusterForm(NautobotModelForm, TenancyForm):
         required=False,
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_types": "virtualization.cluster"},  # TODO: base_site: $site
+    )
     comments = CommentField()
 
     class Meta:
@@ -117,6 +122,7 @@ class ClusterForm(NautobotModelForm, TenancyForm):
             "tenant",
             "region",
             "site",
+            "location",
             "comments",
             "tags",
         )
@@ -140,6 +146,12 @@ class ClusterCSVForm(CustomFieldModelCSVForm):
         required=False,
         help_text="Assigned site",
     )
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        required=False,
+        help_text="Assigned location",
+    )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         to_field_name="name",
@@ -159,12 +171,18 @@ class ClusterBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdit
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, to_field_name="slug")
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region": "$region"})
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
         nullable_fields = [
             "group",
             "site",
+            "location",
             "comments",
             "tenant",
         ]
@@ -183,6 +201,13 @@ class ClusterFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm
         null_option="None",
         query_params={"region": "$region"},
     )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        null_option="None",
+        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
+    )
     group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
@@ -199,6 +224,11 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
+    )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
@@ -209,6 +239,7 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         queryset=Device.objects.all(),
         query_params={
             "site_id": "$site",
+            "location_id": "$location",
             "rack_id": "$rack",
             "cluster_id": "null",
         },
@@ -218,6 +249,7 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         fields = [
             "region",
             "site",
+            "location",
             "rack",
             "devices",
         ]
@@ -242,6 +274,17 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
                             "devices": "{} belongs to a different site ({}) than the cluster ({})".format(
                                 device, device.site, self.cluster.site
                             )
+                        }
+                    )
+
+        # If the Cluster is assigned to a Location, all Devices must exist within that Location
+        if self.cluster.location is not None:
+            for device in self.cleaned_data.get("devices", []):
+                if device.location and self.cluster.location not in device.location.ancestors(include_self=True):
+                    raise ValidationError(
+                        {
+                            "devices": f"{device} belongs to a location ({device.location}) that "
+                            f"does not fall within this cluster's location ({self.cluster.location})."
                         }
                     )
 

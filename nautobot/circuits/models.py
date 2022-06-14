@@ -331,11 +331,15 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     def clean(self):
         super().clean()
 
-        # Must define either site *or* provider network
-        if self.site is None and self.provider_network is None:
+        # Must define either (site *and/or* location) *or* provider network
+        if self.site is None and self.location is None and self.provider_network is None:
             raise ValidationError("A circuit termination must attach to either a site or a provider network.")
         if self.site and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
+        if self.location and self.provider_network:
+            raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
+        if self.location is not None and self.site is not None and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
     def to_objectchange(self, action):
 

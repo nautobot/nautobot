@@ -162,12 +162,13 @@ class Cluster(PrimaryModel):
     )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "type", "group", "site", "comments"]
+    csv_headers = ["name", "type", "group", "site", "location", "tenant", "comments"]
     clone_fields = [
         "type",
         "group",
         "tenant",
         "site",
+        "location",
     ]
 
     class Meta:
@@ -181,6 +182,10 @@ class Cluster(PrimaryModel):
 
     def clean(self):
         super().clean()
+
+        # Validate site/location combination
+        if self.location is not None and self.site is not None and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
         # If the Cluster is assigned to a Site, verify that all host Devices belong to that Site.
         if self.present_in_database and self.site:
@@ -200,6 +205,7 @@ class Cluster(PrimaryModel):
             self.type.name,
             self.group.name if self.group else None,
             self.site.name if self.site else None,
+            self.location.name if self.location else None,
             self.tenant.name if self.tenant else None,
             self.comments,
         )

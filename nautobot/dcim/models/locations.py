@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -14,6 +15,7 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 class TreeQuerySet(TreeQuerySet_, RestrictedQuerySet):
     pass
+
 
 class TreeManager(models.Manager.from_queryset(TreeQuerySet), TreeManager_):
     _with_tree_fields = False
@@ -104,6 +106,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         "name",
         "slug",
         "location_type",
+        "site",
         "status",
         "parent",
         "description",
@@ -111,6 +114,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
     clone_fields = [
         "location_type",
+        "site",
         "status",
         "parent",
         "description",
@@ -130,7 +134,45 @@ class Location(TreeNode, StatusModel, PrimaryModel):
             self.name,
             self.slug,
             self.location_type.name,
+            self.site.name if self.site else None,
             self.get_status_display(),
             self.parent.name if self.parent else None,
             self.description,
         )
+
+    @property
+    def base_site(self):
+        """The site that this Location belongs to, if any, or that its ancestor belongs to, if any."""
+        for location in self.ancestors(include_self=True).reverse():
+            if location.site is not None:
+                return location.site
+        return None
+
+    def clean(self):
+        super().clean()
+
+        if self.location_type.parent is not None:
+            # We must have a parent and it must match the parent location_type.
+            if self.parent is None or self.parent.location_type != self.location_type.parent:
+                raise ValidationError(
+                    {
+                        "parent": f"A Location of type {self.location_type} must have "
+                        f"a parent Location of type {self.location_type.parent}"
+                    }
+                )
+            # We must *not* have a site.
+            # In a future release, Site will become a kind of Location, and the resulting data migration will be
+            # much cleaner if it doesn't have to deal with Locations that have two "parents".
+            if self.site is not None:
+                raise ValidationError(
+                    {"site": f"A location of type {self.location_type} must not have an associated Site."}
+                )
+
+        # If this location_type does *not* have a parent type,
+        # this location must have an associated Site.
+        # This check will be removed in the future once Site and Region become special cases of Location;
+        # at that point a "root" LocationType will correctly have no parent (or site) associated.
+        if self.location_type.parent is None and self.site is None:
+            raise ValidationError(
+                {"site": f"A Location of type {self.location_type} has no parent Location, but must have a Site."}
+            )

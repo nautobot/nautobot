@@ -1,7 +1,7 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.dcim.models import DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, Location, Platform, Region, Site
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
@@ -69,6 +69,16 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug)",
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ClusterGroup.objects.all(),

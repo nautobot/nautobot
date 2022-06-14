@@ -455,7 +455,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
-    Each Device must be assigned to a Site or Location, and optionally to a Rack within that.
+    Each Device must be assigned to a Site and/or Location, and optionally to a Rack within that.
     Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
     do not consume rack units).
 
@@ -579,6 +579,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "asset_tag",
         "status",
         "site",
+        "location",
         "rack_group",
         "rack_name",
         "position",
@@ -593,6 +594,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "tenant",
         "platform",
         "site",
+        "location",
         "rack",
         "status",
         "cluster",
@@ -603,6 +605,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         ordering = ("_name",)  # Name may be null
         unique_together = (
             ("site", "tenant", "name"),  # See validate_unique below
+            ("location", "tenant", "name"),  # See validate_unique below
             ("rack", "position", "face"),
             ("virtual_chassis", "vc_position"),
         )
@@ -627,6 +630,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     def clean(self):
         super().clean()
 
+        # Validate site/location combination
+        if self.location and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+
         # Validate site/rack combination
         if self.rack and self.site != self.rack.site:
             raise ValidationError(
@@ -634,6 +641,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                     "rack": f"Rack {self.rack} does not belong to site {self.site}.",
                 }
             )
+
+        # Validate location/rack combination
+        if self.rack and self.location and self.rack.location and self.rack.location != self.location:
+            raise ValidationError({"rack": f"Rack {self.rack} does not belong to location {self.location}."})
 
         if self.rack is None:
             if self.face:
@@ -746,6 +757,17 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                 {"cluster": "The assigned cluster belongs to a different site ({})".format(self.cluster.site)}
             )
 
+        # A Device can only be assigned to a Cluster in the same location or parent location, if any
+        if (
+            self.cluster is not None
+            and self.location is not None
+            and self.cluster.location is not None
+            and self.cluster.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {"cluster": f"The assigned cluster belongs to a location that does not include {self.location}."}
+            )
+
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
             raise ValidationError(
@@ -802,6 +824,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.asset_tag,
             self.get_status_display(),
             self.site.name,
+            self.location.name if self.location else None,
             self.rack.group.name if self.rack and self.rack.group else None,
             self.rack.name if self.rack else None,
             self.position,

@@ -28,7 +28,13 @@
                         </td>
                     {% endif %}
                 </tr>
-                {% if object.site %}
+                {% if object.location %}
+                    <tr>
+                        <td>Location</td>
+                        <td>{{ object.location|hyperlinked_object }}</td>
+                    </tr>
+                {% endif %}
+                {% if object.site or object.location %}
                 <tr>
                     <td>Cable</td>
                     <td>

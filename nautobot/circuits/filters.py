@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import Q
 
 from nautobot.dcim.filters import CableTerminationFilterSet, PathEndpointFilterSet
-from nautobot.dcim.models import Region, Site
+from nautobot.dcim.models import Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
@@ -51,6 +51,17 @@ class ProviderFilterSet(NautobotFilterSet):
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="circuits__terminations__location",
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="circuits__terminations__location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug)",
     )
     tag = TagFilter()
 
@@ -152,6 +163,17 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
         to_field_name="slug",
         label="Site (slug)",
     )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="terminations__location",
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="terminations__location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug)",
+    )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="terminations__site__region",
@@ -195,7 +217,16 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
         to_field_name="slug",
         label="Site (slug)",
     )
-
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug)",
+    )
     provider_network_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID)",

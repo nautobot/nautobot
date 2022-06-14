@@ -433,13 +433,18 @@ class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 class LocationForm(NautobotModelForm):
-    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
-    parent = DynamicModelChoiceField(queryset=Location.objects.all(), query_params={"child_location_type_id": "$location_type"}, required=False, brief_mode=False)
     slug = SlugField()
+    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
+    parent = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        query_params={"child_location_type_id": "$location_type"},
+        required=False,
+    )
+    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
 
     class Meta:
         model = Location
-        fields = ["name", "slug", "status", "location_type", "parent", "description"]
+        fields = ["name", "slug", "status", "location_type", "parent", "site", "description"]
 
 
 class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -477,6 +482,11 @@ class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilte
 class RackGroupForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "dcim.rackgroup"},  # TODO base_site: $site
+    )
     parent = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -489,6 +499,7 @@ class RackGroupForm(NautobotModelForm):
         fields = (
             "region",
             "site",
+            "location",
             "parent",
             "name",
             "slug",
@@ -498,6 +509,12 @@ class RackGroupForm(NautobotModelForm):
 
 class RackGroupCSVForm(CustomFieldModelCSVForm):
     site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Assigned site")
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Location within the assigned site",
+    )
     parent = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -521,6 +538,12 @@ class RackGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
         to_field_name="slug",
         required=False,
         query_params={"region": "$region"},
+    )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        query_params={"content_type": "dcim.rackgroup"},  # TODO base_site: $site
     )
     parent = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
@@ -568,6 +591,11 @@ class RackRoleCSVForm(CustomFieldModelCSVForm):
 class RackForm(NautobotModelForm, TenancyForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        query_params={"content_type": "dcim.rack"},  # TODO: base_site: $site
+        required=False,
+    )
     group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -581,6 +609,7 @@ class RackForm(NautobotModelForm, TenancyForm):
         fields = [
             "region",
             "site",
+            "location",
             "group",
             "name",
             "facility_id",
@@ -602,6 +631,7 @@ class RackForm(NautobotModelForm, TenancyForm):
         ]
         help_texts = {
             "site": "The site at which the rack exists",
+            "location": "The specific location of the rack",
             "name": "Organizational rack name",
             "facility_id": "The unique rack ID assigned by the facility",
             "u_height": "Height in rack units",
@@ -615,6 +645,7 @@ class RackForm(NautobotModelForm, TenancyForm):
 
 class RackCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name")
+    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name")
     group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -658,6 +689,11 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         required=False,
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "dcim.rack"},  # TODO base_site_id: $site
+    )
     group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -690,6 +726,7 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
 
     class Meta:
         nullable_fields = [
+            "location",
             "group",
             "tenant",
             "role",
@@ -708,6 +745,7 @@ class RackFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
         "q",
         "region",
         "site",
+        "location",
         "group_id",
         "status",
         "role",
@@ -721,6 +759,12 @@ class RackFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
         to_field_name="slug",
         required=False,
         query_params={"region": "$region"},
+    )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        query_params={"content_type": "dcim.rack"},  # TODO base_site: $site
     )
     group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
@@ -1726,6 +1770,11 @@ class PlatformCSVForm(CustomFieldModelCSVForm):
 class DeviceForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        query_params={"content_type": "dcim.device"},  # TODO: base_site: $site
+        required=False,
+    )
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -1789,6 +1838,7 @@ class DeviceForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "serial",
             "asset_tag",
             "site",
+            "location",
             "rack",
             "position",
             "face",
@@ -1944,6 +1994,9 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 class DeviceCSVForm(BaseDeviceCSVForm):
     site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Assigned site")
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(), to_field_name="name", help_text="Assigned location"
+    )
     rack_group = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
@@ -1970,6 +2023,7 @@ class DeviceCSVForm(BaseDeviceCSVForm):
             "asset_tag",
             "status",
             "site",
+            "location",
             "rack_group",
             "rack",
             "position",
@@ -1993,6 +2047,8 @@ class DeviceCSVForm(BaseDeviceCSVForm):
                 f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
+
+            # TODO: limit location queryset by assigned site
 
 
 class ChildDeviceCSVForm(BaseDeviceCSVForm):
@@ -2049,6 +2105,9 @@ class DeviceBulkEditForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": "dcim.device"}
+    )
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
@@ -2065,6 +2124,7 @@ class DeviceBulkEditForm(
 
     class Meta:
         nullable_fields = [
+            "location",
             "tenant",
             "platform",
             "serial",
@@ -2086,6 +2146,7 @@ class DeviceFilterForm(
         "q",
         "region",
         "site",
+        "location",
         "rack_group_id",
         "rack_id",
         "status",
@@ -2104,6 +2165,12 @@ class DeviceFilterForm(
         to_field_name="slug",
         required=False,
         query_params={"region": "$region"},
+    )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        query_params={"content_type": "dcim.device"},  # TODO: base_site: $site
     )
     rack_group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
