@@ -8,7 +8,7 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 
 ### Extend the existing Nautobot UI
 
-* **Add content to existing model detail views.** A plugin can inject custom HTML content within the view of a core Nautobot model. This content can appear in the left column, right column, or full width of the page, can include custom buttons at the top of the page and can include extra tabs which appear at the end of object detail tabs list.
+* **Add content to existing model detail views.** A plugin can inject custom HTML content within the view of a core Nautobot model. This content can appear in the left column, right column, or full width of the page, can include custom buttons at the top of the page and can include extra tabs which appear at the end of the object detail tabs list.
 * **Add navigation menu items.** A plugin can extend the navigation menus with new links and buttons or even entirely new menus.
 * **Add a banner.** A plugin can add a custom banner to the top of any appropriate views.
 * **Add home page content.** A plugin can add custom items or custom panels to the Nautobot home page.
