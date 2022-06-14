@@ -397,6 +397,23 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         label="Role (slug)",
     )
     serial = django_filters.CharFilter(lookup_expr="iexact")
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    powerfeeds = django_filters.ModelMultipleChoiceFilter(
+        field_name="powerfeed",
+        queryset=PowerFeed.objects.all(),
+        label="Powerfeeds",
+    )
+    has_powerfeeds = RelatedMembershipBooleanFilter(
+        field_name="powerfeed",
+        label="Has powerfeeds",
+    )
+    has_reservations = RelatedMembershipBooleanFilter(
+        field_name="reservations",
+        label="Has reservations",
+    )
     tag = TagFilter()
 
     class Meta:
@@ -411,6 +428,9 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "outer_width",
             "outer_depth",
             "outer_unit",
+            "comments",
+            "devices",
+            "reservations",
         ]
 
 

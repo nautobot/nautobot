@@ -325,6 +325,24 @@ def common_test_data(cls):
         Cluster.objects.create(name="Cluster 3", type=cluster_type, site=cls.sites[2]),
     )
 
+    cls.powerfeeds = (
+        PowerFeed.objects.create(name="Powerfeed 1", rack=cls.racks[0], power_panel=cls.powerpanels[0]),
+        PowerFeed.objects.create(name="Powerfeed 1", rack=cls.racks[1], power_panel=cls.powerpanels[1]),
+        PowerFeed.objects.create(name="Powerfeed 1", rack=cls.racks[2], power_panel=cls.powerpanels[2]),
+    )
+
+    cls.users = (
+        User.objects.create(username="User 1"),
+        User.objects.create(username="User 2"),
+        User.objects.create(username="User 3"),
+    )
+
+    cls.rackreservations = (
+        RackReservation.objects.create(rack=cls.racks[0], units=(1, 2, 3), user=cls.users[0]),
+        RackReservation.objects.create(rack=cls.racks[1], units=(1, 2, 3), user=cls.users[1]),
+        RackReservation.objects.create(rack=cls.racks[2], units=(1, 2, 3), user=cls.users[2]),
+    )
+
 
 class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Region.objects.all()
@@ -821,6 +839,44 @@ class RackTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_comments(self):
+        rack_1 = Rack.objects.filter(name="Rack 1").first()
+        self.assertEqual(self.filterset({"comments": "comment1"}).qs.count(), 1)
+        self.assertEqual(self.filterset({"comments": "comment1"}).qs.first().pk, rack_1.pk)
+
+    def test_devices(self):
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_powerfeeds(self):
+        powerfeeds = PowerFeed.objects.all()[:2]
+        params = {"powerfeeds": [powerfeeds[0], powerfeeds[1]]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_powerfeeds(self):
+        params = {"has_powerfeeds": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_powerfeeds": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_reservations(self):
+        reservations = RackReservation.objects.all()[:2]
+        params = {"reservations": [reservations[0], reservations[1]]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_reservations(self):
+        params = {"has_reservations": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_reservations": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class RackReservationTestCase(FilterTestCases.FilterTestCase):
