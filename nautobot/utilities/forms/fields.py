@@ -669,10 +669,10 @@ class NumericArrayField(SimpleArrayField):
         return super().to_python(value)
 
 
-class NaturalKeyMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
     Field to support matching an object's `pk` or `slug` field depending on the value
-    supplied. Faises ValidationError if neither field matches.
+    supplied. Raises ValidationError if neither field matches.
     """
 
     def _check_values(self, values):
