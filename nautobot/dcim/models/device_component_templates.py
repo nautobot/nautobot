@@ -85,18 +85,18 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         """
         Helper method to self.instantiate().
         """
-        record = {}
+        custom_field_data = {}
         content_type = ContentType.objects.get_for_model(model)
         fields = CustomField.objects.filter(content_types=content_type)
         for field in fields:
-            record[field.name] = field.default
+            custom_field_data[field.name] = field.default
 
         return model(
             device=device,
             name=self.name,
             label=self.label,
             description=self.description,
-            _custom_field_data=record,
+            _custom_field_data=custom_field_data,
             **kwargs,
         )
 
@@ -263,7 +263,12 @@ class InterfaceTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
-        return self.instantiate_model(model=Interface, device=device, type=self.type, mgmt_only=self.mgmt_only)
+        return self.instantiate_model(
+            model=Interface,
+            device=device,
+            type=self.type,
+            mgmt_only=self.mgmt_only,
+        )
 
 
 @extras_features(
