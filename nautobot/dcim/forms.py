@@ -36,6 +36,7 @@ from nautobot.utilities.forms import (
     APISelect,
     APISelectMultiple,
     add_blank_choice,
+    BaseFilterForm,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     ColorSelect,
@@ -383,7 +384,7 @@ class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         ]
 
 
-class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class SiteFilterForm(BaseFilterForm, BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = Site
     field_order = ["q", "status", "region", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")

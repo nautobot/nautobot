@@ -14,7 +14,7 @@ from markdown import markdown
 from django_jinja import library
 
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.forms import TableConfigForm
+from nautobot.utilities.forms import FilterConfigForm, TableConfigForm
 from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
@@ -590,6 +590,14 @@ def table_config_form(table, table_name=None):
     return {
         "table_name": table_name or table.__class__.__name__,
         "table_config_form": TableConfigForm(table=table),
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/filter_form_config_form.html")
+def filter_form_config_form(filter_form, filter_form_name=None):
+    return {
+        "filter_form_name": filter_form_name or filter_form.__class__.__name__,
+        "filter_form_config_form": FilterConfigForm(form=filter_form),
     }
 
 

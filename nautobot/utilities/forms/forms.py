@@ -8,11 +8,13 @@ from nautobot.ipam.formfields import IPNetworkFormField
 
 __all__ = (
     "AddressFieldMixin",
+    "BaseFilterForm",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkRenameForm",
     "ConfirmationForm",
     "CSVModelForm",
+    "FilterConfigForm",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
@@ -72,6 +74,21 @@ class BootstrapMixin(forms.BaseForm):
                 field.widget.attrs["required"] = "required"
             if "placeholder" not in field.widget.attrs:
                 field.widget.attrs["placeholder"] = field.label
+
+
+class BaseFilterForm(forms.BaseForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.selected_fields = [field.name for field in self.visible_fields()]
+        self.form_fields = [(field.name, field.label) for field in self.visible_fields()]
+        if user is not None and user.is_authenticated:
+            columns = user.get_config(f"filter_form.{self.__class__.__name__}.columns")
+            if columns:
+                self.selected_fields = columns
+                fields_to_remove = [field for field in self.fields.keys() if field not in columns]
+                for field in fields_to_remove:
+                    self.fields.pop(field)
 
 
 class ReturnURLForm(forms.Form):
@@ -230,3 +247,29 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
+
+
+class FilterConfigForm(BootstrapMixin, forms.Form):
+    """
+    Form for configuring user's filter form preferences.
+    """
+
+    columns = forms.MultipleChoiceField(
+        choices=[],
+        required=False,
+        widget=forms.SelectMultiple(attrs={"size": 10}),
+        help_text="Use the buttons below to arrange columns in the desired order, then select all columns to display.",
+    )
+
+    def __init__(self, form, *args, **kwargs):
+        self.form = form
+
+        super().__init__(*args, **kwargs)
+
+        # Initialize columns field based on table attributes
+        self.fields["columns"].choices = form.form_fields
+        self.fields["columns"].initial = form.selected_fields
+
+    @property
+    def form_name(self):
+        return self.form.__class__.__name__

@@ -290,10 +290,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset_form:
             if request.GET:
                 # Bind form to the values specified in request.GET
-                filter_form = self.filterset_form(filter_params, label_suffix="")
+                filter_form = self.filterset_form(filter_params, label_suffix="", user=request.user)
             else:
                 # Use unbound form with default (initial) values
-                filter_form = self.filterset_form(label_suffix="")
+                filter_form = self.filterset_form(label_suffix="", user=request.user)
 
         valid_actions = self.validate_action_buttons(request)
 
