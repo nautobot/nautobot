@@ -15,7 +15,7 @@ class CircuitContent(PluginTemplateExtension):
         - The <title> key's value will become the tab link's title.
         - The <url> key's value is used to render the HTML link for the tab.
 
-        Since the `model` attribute of this class is set as "circuits.circuit", 
+        Since the `model` attribute of this class is set as "circuits.circuit",
         these tabs will be added to the Circuit model's detail page.
 
         This example demonstrates defining one tab.
@@ -40,7 +40,7 @@ class DeviceContent(PluginTemplateExtension):
         - The <title> key's value will become the tab link's title.
         - The <url> key's value is used to render the HTML link for the tab
 
-        Since the `model` attribute of this class is set as "dcim.device", 
+        Since the `model` attribute of this class is set as "dcim.device",
         these tabs will be added to the Device model's detail page.
 
         This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
