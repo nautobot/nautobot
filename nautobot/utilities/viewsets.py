@@ -1,24 +1,49 @@
+import logging
+
+from django.db.models import ManyToManyField, ProtectedError
 from django.views.generic import View
 from django.conf import settings
 from django.utils.http import is_safe_url
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 from django.contrib import messages
 from django.http import HttpResponse
+from django.core.exceptions import (
+    FieldDoesNotExist,
+    ObjectDoesNotExist,
+    ValidationError,
+)
 from django_tables2 import RequestConfig
 from rest_framework import viewsets
 
 from .permissions import resolve_permission
 from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.views import ObjectPermissionRequiredMixin
+from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.utils import csv_format
+from nautobot.utilities.error_handlers import handle_protectederror
+from nautobot.utilities.forms import (
+    BootstrapMixin,
+    BulkRenameForm,
+    ConfirmationForm,
+    CSVDataField,
+    CSVFileField,
+    ImportForm,
+    TableConfigForm,
+    restrict_form_fields,
+)
+from nautobot.utilities.utils import (
+    csv_format,
+    normalize_querydict,
+    prepare_cloned_fields,
+)
 
-class NautobotViewSet(viewsets.ModelViewSet, ObjectPermissionRequiredMixin, View):
+class NautobotViewSet(viewsets.ModelViewSet, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     queryset = None
     serializer_class = None
     template_name = None
@@ -26,8 +51,9 @@ class NautobotViewSet(viewsets.ModelViewSet, ObjectPermissionRequiredMixin, View
     filterset_form = None
     table = None
     action_buttons = None
+    model_form = None
 
-
+    ## Helper Methods
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
 
@@ -79,20 +105,6 @@ class NautobotViewSet(viewsets.ModelViewSet, ObjectPermissionRequiredMixin, View
         # This object likely doesn't have a changelog route defined.
         return None
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = get_object_or_404(self.queryset, **kwargs)
-        return render(
-            request,
-            self.get_template_name(),
-            {
-                "object": instance,
-                "verbose_name": self.queryset.model._meta.verbose_name,
-                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": self.get_changelog_url(instance),
-                **self.get_extra_context(request, instance),
-            },
-        )
-
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -100,7 +112,7 @@ class NautobotViewSet(viewsets.ModelViewSet, ObjectPermissionRequiredMixin, View
         yaml_data = [obj.to_yaml() for obj in self.queryset]
 
         return "---\n".join(yaml_data)
-
+    
     def queryset_to_csv(self):
         """
         Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
@@ -145,6 +157,47 @@ class NautobotViewSet(viewsets.ModelViewSet, ObjectPermissionRequiredMixin, View
         if invalid_actions:
             messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
         return valid_actions
+
+    def alter_queryset(self, request):
+        # .all() is necessary to avoid caching queries
+        return self.queryset.all()
+
+    def extra_context(self):
+        return {}
+    
+    def get_object(self, kwargs):
+        """Retrieve an object based on `kwargs`."""
+        # Look up an existing object by slug or PK, or name if provided.
+        for field in ("slug", "pk", "name"):
+            if field in kwargs:
+                return get_object_or_404(self.queryset, **{field: kwargs[field]})
+        return self.queryset.model()
+    
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
+        # given some parameter from the request URL.
+        return obj
+
+    def dispatch(self, request, *args, **kwargs):
+        # Determine required permission based on whether we are editing an existing object
+        self._permission_action = "change" if kwargs else "add"
+
+        return super().dispatch(request, *args, **kwargs)
+    ## Actual Methods: Detail, List, Edit, Delete Views.
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = get_object_or_404(self.queryset, **kwargs)
+        return render(
+            request,
+            self.get_template_name(),
+            {
+                "object": instance,
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                "changelog_url": self.get_changelog_url(instance),
+                **self.get_extra_context(request, instance),
+            },
+        )
     
     def list(self, request, *args, **kwargs):
         self.template_name = "generic/object_list.html"
@@ -232,9 +285,144 @@ class NautobotViewSet(viewsets.ModelViewSet, ObjectPermissionRequiredMixin, View
 
         return render(request, self.template_name, context)
 
-    def alter_queryset(self, request):
-        # .all() is necessary to avoid caching queries
-        return self.queryset.all()
+    def destroy(self, request, *args, **kwargs):
+        print("hey")
+        self.template_name = "generic/object_delete.html"
+        obj = self.get_object(kwargs)
+        print(request.GET)
+        form = ConfirmationForm(initial=request.GET)
 
-    def extra_context(self):
-        return {}
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "form": form,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "return_url": self.get_return_url(request, obj),
+            },
+        )
+
+    def perform_destroy(self, request, **kwargs):
+        logger = logging.getLogger("nautobot.views.ObjectDeleteView")
+        obj = self.get_object(kwargs)
+        form = ConfirmationForm(request.POST)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                obj.delete()
+            except ProtectedError as e:
+                logger.info("Caught ProtectedError while attempting to delete object")
+                handle_protectederror([obj], request, e)
+                return redirect(obj.get_absolute_url())
+
+            msg = "Deleted {} {}".format(self.queryset.model._meta.verbose_name, obj)
+            logger.info(msg)
+            messages.success(request, msg)
+
+            return_url = form.cleaned_data.get("return_url")
+            if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                return redirect(return_url)
+            else:
+                return redirect(self.get_return_url(request, obj))
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "form": form,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "return_url": self.get_return_url(request, obj),
+            },
+        )
+
+    def update(self, request, *args, **kwargs):
+        self.template_name = "generic/object_edit.html"
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+
+        initial_data = normalize_querydict(request.GET)
+        form = self.model_form(instance=obj, initial=initial_data)
+        restrict_form_fields(form, request.user)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+    
+    def perform_update(self, request, *args, **kwargs):
+        logger = logging.getLogger("nautobot.views.ObjectEditView")
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                msg = "{} {}".format(
+                    "Created" if object_created else "Modified",
+                    self.queryset.model._meta.verbose_name,
+                )
+                logger.info(f"{msg} {obj} (PK: {obj.pk})")
+                if hasattr(obj, "get_absolute_url"):
+                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                else:
+                    msg = "{} {}".format(msg, escape(obj))
+                messages.success(request, mark_safe(msg))
+
+                if "_addanother" in request.POST:
+
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(return_url)
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
