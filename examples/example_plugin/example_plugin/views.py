@@ -9,7 +9,7 @@ from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
 
 
-class CircuitDetailPluginTab(generic.ObjectView):
+class CircuitDetailPluginTabView(generic.ObjectView):
     """
     This view's template extends the circuit detail template,
     making it suitable to show as a tab on the circuit detail page.
@@ -22,7 +22,7 @@ class CircuitDetailPluginTab(generic.ObjectView):
     template_name = "example_plugin/tab_circuit_detail.html"
 
 
-class DeviceDetailPluginTabOne(generic.ObjectView):
+class DeviceDetailPluginTabOneView(generic.ObjectView):
     """
     This view's template extends the device detail template,
     making it suitable to show as a tab on the device detail page.
@@ -35,7 +35,7 @@ class DeviceDetailPluginTabOne(generic.ObjectView):
     template_name = "example_plugin/tab_device_detail_1.html"
 
 
-class DeviceDetailPluginTabTwo(generic.ObjectView):
+class DeviceDetailPluginTabTwoView(generic.ObjectView):
     """
     Same as DeviceDetailPluginTabOne view above but using a different template.
     """
