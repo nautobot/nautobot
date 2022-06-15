@@ -50,8 +50,6 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 ### Removed
 
-### Added
-
 ## v1.4.0a2 (2022-MM-DD)
 
 ### Added
