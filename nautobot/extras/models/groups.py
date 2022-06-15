@@ -11,6 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 from django.utils.functional import cached_property
+import networkx as nx
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
@@ -45,11 +46,6 @@ class DynamicGroup(OrganizationalModel):
         verbose_name="Object Type",
         help_text="The type of object for this Dynamic Group.",
     )
-    # TODO(jathan): Set editable=False that this field doesn't show up in forms.
-    # It's a complex field only modified by the DynamicGroupForm internals at
-    # this time. I am not happy with this pattern right now but due to the
-    # dynamism of the form by merging in the `FooFilterForm` fields, there's not
-    # currently an easy way to move this construction logic to the model.
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
         editable=False,
@@ -85,6 +81,8 @@ class DynamicGroup(OrganizationalModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Accessing this sets the dynamic attributes. Is there a better way? Maybe?
         getattr(self, "model")
 
     def __str__(self):
@@ -478,6 +476,14 @@ class DynamicGroup(OrganizationalModel):
             group = self
             logger.debug("Processing group %s...", group)
 
+        # FIXME(jathan): We need to decide if we want to emit a Q object and
+        # have the `get_group_queryset()` method pass this to `qs.filter()` that
+        # way we can assert some reversibility easier. For example:
+        #
+        # def get_group_queryset(self):
+        #     big_q = self.process_group_filters(group, qs)
+        #     qs = self.get_queryset()
+        #     return qs.filter(big_q)
         big_q = models.Q()
 
         # Enumerate the filters. Recursing into any groups of groups.
@@ -485,26 +491,14 @@ class DynamicGroup(OrganizationalModel):
             group = membership.group
             logger.debug("Processing group %s...", group)
             child_memberships = group.dynamic_group_memberships.all()
+
             if child_memberships.exists():
                 qs = self.process_group_filters(group=group, qs=qs)
 
             operator = membership.operator
-
             logger.debug("%s -> %s -> %s", group, group.filter, operator)
-
-            # The previous iteration that used set operations at the DB layer
-            # but limited by not being able to do further filtering.
-            """
-            fs = self.filterset_class(group.filter, self.get_queryset())
-            if operator == "union":
-                qs = qs.union(fs.qs)
-            elif operator == "difference":
-                qs = qs.difference(fs.qs)
-            elif operator == "intersection":
-                qs = qs.intersection(fs.qs)
-            """
             next_set = self.generate_query_for_group(group)
-            # print(next_set)
+
             if operator == "union":
                 big_q |= next_set
                 qs = qs | base_qs.filter(next_set)
@@ -568,6 +562,20 @@ class DynamicGroup(OrganizationalModel):
         """Return whether this is a leaf node (has no children)."""
         return not self.children.exists()
 
+    def get_graph(self, parent_group=None, graph=None):
+        if parent_group is None:
+            parent_group = self
+        if graph is None:
+            graph = nx.DiGraph()
+
+        for node in parent_group.dynamic_group_memberships.all():
+            group = node.group
+            graph.add_edge(parent_group, group, operator=node.operator, weight=node.weight)
+            if group.children.exists():
+                self.get_graph(parent_group=group, graph=graph)
+
+        return graph
+
 
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
@@ -619,6 +627,11 @@ class DynamicGroupMembership(BaseModel):
     def get_group_members_url(self):
         return self.group.get_group_members_url()
 
+    def get_graph(self):
+        graph = self.parent_group.get_graph()
+        graph.add_edge(self.parent_group, self.group, operator=self.operator, weight=self.weight)
+        return graph
+
     def clean(self):
         super().clean()
 
@@ -626,12 +639,8 @@ class DynamicGroupMembership(BaseModel):
         if self.parent_group.content_type != self.group.content_type:
             raise ValidationError({"group": "ContentType for group and parent_group must match"})
 
-        """
-        import networkx as nx
-        graph = nx.DiGraph()
-        graph.add_edges_from([self.parent_group, self.group])
+        # Assert that loops cannot be created (such as adding root parent as a nested child).
+        graph = self.get_graph()
         if not nx.is_directed_acyclic_graph(graph):
-            raise ValidationError({"group": "Graph contains a loop ad this is bad"})
             # graph.remove_edges_from([self.parent_group, self.group])
-
-        """
+            raise ValidationError({"group": "Graph contains a loop ad this is bad"})
