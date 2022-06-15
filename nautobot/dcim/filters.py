@@ -678,43 +678,85 @@ class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = ConsoleServerPortTemplate
-        fields = ["id", "name", "type"]
+        fields = ["id", "name", "type", "label", "description"]
 
 
 class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+    poweroutlet_templates = django_filters.ModelMultipleChoiceFilter(
+        queryset=PowerOutletTemplate.objects.all(),
+        label="Power outlet templates",
+    )
+    has_poweroutlet_templates = RelatedMembershipBooleanFilter(
+        field_name="poweroutlet_templates",
+        label="Has power outlet templates",
+    )
+
     class Meta:
         model = PowerPortTemplate
-        fields = ["id", "name", "type", "maximum_draw", "allocated_draw"]
+        fields = [
+            "id",
+            "name",
+            "type",
+            "maximum_draw",
+            "allocated_draw",
+            "label",
+            "description",
+        ]
 
 
 class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+    powerport_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="power_port",
+        queryset=PowerPortTemplate.objects.all(),
+        label="Power port templates",
+    )
+    has_powerport_templates = RelatedMembershipBooleanFilter(
+        field_name="power_port",
+        label="Has power port templates",
+    )
+
     class Meta:
         model = PowerOutletTemplate
-        fields = ["id", "name", "type", "feed_leg"]
+        fields = ["id", "name", "type", "feed_leg", "label", "description"]
 
 
 class InterfaceTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = InterfaceTemplate
-        fields = ["id", "name", "type", "mgmt_only"]
+        fields = ["id", "name", "type", "mgmt_only", "label", "description"]
 
 
 class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+    rearport_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="rear_port",
+        queryset=RearPortTemplate.objects.all(),
+        label="Rear port templates",
+    )
+
     class Meta:
         model = FrontPortTemplate
-        fields = ["id", "name", "type"]
+        fields = ["id", "name", "type", "rear_port_position", "label", "description"]
 
 
 class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+    frontport_templates = django_filters.ModelMultipleChoiceFilter(
+        queryset=FrontPortTemplate.objects.all(),
+        label="Front port templates",
+    )
+    has_frontport_templates = RelatedMembershipBooleanFilter(
+        field_name="frontport_templates",
+        label="Has front port templates",
+    )
+
     class Meta:
         model = RearPortTemplate
-        fields = ["id", "name", "type", "positions"]
+        fields = ["id", "name", "type", "positions", "label", "description"]
 
 
 class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = DeviceBayTemplate
-        fields = ["id", "name"]
+        fields = ["id", "name", "label", "description"]
 
 
 class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
