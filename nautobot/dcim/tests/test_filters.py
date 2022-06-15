@@ -100,34 +100,34 @@ User = get_user_model()
 
 def common_test_data(cls):
 
-    cls.tenant_groups = (
+    tenant_groups = (
         TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
         TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
         TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
     )
 
-    cls.tenants = (
-        Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=cls.tenant_groups[0]),
-        Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=cls.tenant_groups[1]),
-        Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=cls.tenant_groups[2]),
+    tenants = (
+        Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
+        Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
+        Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
     )
 
-    cls.regions = [
+    regions = (
         Region.objects.create(name="Region 1", slug="region-1", description="A"),
         Region.objects.create(name="Region 2", slug="region-2", description="B"),
         Region.objects.create(name="Region 3", slug="region-3", description="C"),
-    ]
+    )
 
     site_statuses = Status.objects.get_for_model(Site)
     cls.site_status_map = {s.slug: s for s in site_statuses.all()}
 
-    cls.sites = [
+    sites = (
         Site.objects.create(
             name="Site 1",
             slug="site-1",
             description="Site 1 description",
-            region=cls.regions[0],
-            tenant=cls.tenants[0],
+            region=regions[0],
+            tenant=tenants[0],
             status=cls.site_status_map["active"],
             facility="Facility 1",
             asn=65001,
@@ -145,8 +145,8 @@ def common_test_data(cls):
             name="Site 2",
             slug="site-2",
             description="Site 2 description",
-            region=cls.regions[1],
-            tenant=cls.tenants[1],
+            region=regions[1],
+            tenant=tenants[1],
             status=cls.site_status_map["planned"],
             facility="Facility 2",
             asn=65002,
@@ -163,8 +163,8 @@ def common_test_data(cls):
         Site.objects.create(
             name="Site 3",
             slug="site-3",
-            region=cls.regions[2],
-            tenant=cls.tenants[2],
+            region=regions[2],
+            tenant=tenants[2],
             status=cls.site_status_map["retired"],
             facility="Facility 3",
             asn=65003,
@@ -176,15 +176,13 @@ def common_test_data(cls):
             comments="comment3",
             time_zone="America/Detroit",
         ),
-    ]
+    )
 
     provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
     circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
     circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Test Circuit 1")
-    cls.circuit_terminations = (
-        CircuitTermination.objects.create(circuit=circuit, site=cls.sites[0], term_side="A"),
-        CircuitTermination.objects.create(circuit=circuit, site=cls.sites[1], term_side="Z"),
-    )
+    CircuitTermination.objects.create(circuit=circuit, site=sites[0], term_side="A")
+    CircuitTermination.objects.create(circuit=circuit, site=sites[1], term_side="Z")
 
     manufacturers = (
         Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
@@ -228,19 +226,19 @@ def common_test_data(cls):
     device_statuses = Status.objects.get_for_model(Device)
     device_status_map = {ds.slug: ds for ds in device_statuses.all()}
 
-    cls.rack_groups = (
-        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=cls.sites[0]),
-        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[1]),
-        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=cls.sites[2]),
+    rack_groups = (
+        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
+        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
+        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[2]),
     )
 
-    cls.powerpanels = (
-        PowerPanel.objects.create(name="Power Panel 1", site=cls.sites[0], rack_group=cls.rack_groups[0]),
-        PowerPanel.objects.create(name="Power Panel 2", site=cls.sites[1], rack_group=cls.rack_groups[1]),
-        PowerPanel.objects.create(name="Power Panel 3", site=cls.sites[2], rack_group=cls.rack_groups[2]),
+    powerpanels = (
+        PowerPanel.objects.create(name="Power Panel 1", site=sites[0], rack_group=rack_groups[0]),
+        PowerPanel.objects.create(name="Power Panel 2", site=sites[1], rack_group=rack_groups[1]),
+        PowerPanel.objects.create(name="Power Panel 3", site=sites[2], rack_group=rack_groups[2]),
     )
 
-    cls.rackroles = (
+    rackroles = (
         RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
         RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
         RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff"),
@@ -249,16 +247,16 @@ def common_test_data(cls):
     rack_statuses = Status.objects.get_for_model(Rack)
     cls.rack_status_map = {s.slug: s for s in rack_statuses.all()}
 
-    cls.racks = (
+    racks = (
         Rack.objects.create(
             name="Rack 1",
             comments="comment1",
             facility_id="rack-1",
-            site=cls.sites[0],
-            group=cls.rack_groups[0],
-            tenant=cls.tenants[0],
+            site=sites[0],
+            group=rack_groups[0],
+            tenant=tenants[0],
             status=cls.rack_status_map["active"],
-            role=cls.rackroles[0],
+            role=rackroles[0],
             serial="ABC",
             asset_tag="1001",
             type=RackTypeChoices.TYPE_2POST,
@@ -273,11 +271,11 @@ def common_test_data(cls):
             name="Rack 2",
             comments="comment2",
             facility_id="rack-2",
-            site=cls.sites[1],
-            group=cls.rack_groups[1],
-            tenant=cls.tenants[1],
+            site=sites[1],
+            group=rack_groups[1],
+            tenant=tenants[1],
             status=cls.rack_status_map["planned"],
-            role=cls.rackroles[1],
+            role=rackroles[1],
             serial="DEF",
             asset_tag="1002",
             type=RackTypeChoices.TYPE_4POST,
@@ -292,11 +290,11 @@ def common_test_data(cls):
             name="Rack 3",
             comments="comment3",
             facility_id="rack-3",
-            site=cls.sites[2],
-            group=cls.rack_groups[2],
-            tenant=cls.tenants[2],
+            site=sites[2],
+            group=rack_groups[2],
+            tenant=tenants[2],
             status=cls.rack_status_map["reserved"],
-            role=cls.rackroles[2],
+            role=rackroles[2],
             serial="GHI",
             asset_tag="1003",
             type=RackTypeChoices.TYPE_CABINET,
@@ -309,92 +307,78 @@ def common_test_data(cls):
         ),
     )
 
-    cls.devices = (
-        Device.objects.create(
-            name="Device 1",
-            device_type=device_types[0],
-            device_role=device_role,
-            rack=cls.racks[0],
-            site=cls.sites[0],
-            status=device_status_map["active"],
-        ),
-        Device.objects.create(
-            name="Device 2",
-            device_type=device_types[1],
-            device_role=device_role,
-            rack=cls.racks[1],
-            site=cls.sites[1],
-            status=device_status_map["staged"],
-        ),
-        Device.objects.create(
-            name="Device 3",
-            device_type=device_types[2],
-            device_role=device_role,
-            rack=cls.racks[2],
-            site=cls.sites[2],
-            status=device_status_map["failed"],
-        ),
+    Device.objects.create(
+        name="Device 1",
+        device_type=device_types[0],
+        device_role=device_role,
+        rack=racks[0],
+        site=sites[0],
+        status=device_status_map["active"],
+    )
+    Device.objects.create(
+        name="Device 2",
+        device_type=device_types[1],
+        device_role=device_role,
+        rack=racks[1],
+        site=sites[1],
+        status=device_status_map["staged"],
+    )
+    Device.objects.create(
+        name="Device 3",
+        device_type=device_types[2],
+        device_role=device_role,
+        rack=racks[2],
+        site=sites[2],
+        status=device_status_map["failed"],
     )
 
-    cls.prefixes = (
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=cls.sites[0]),
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=cls.sites[1]),
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), site=cls.sites[2]),
-    )
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=sites[0])
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=sites[1])
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), site=sites[2])
 
-    cls.vlan_groups = (
-        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
-        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites[1]),
-        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=cls.sites[2]),
-    )
+    VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0])
+    VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1])
+    VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=sites[2])
 
-    cls.vlans = (
-        VLAN.objects.create(name="VLAN 101", vid=101, site=cls.sites[0]),
-        VLAN.objects.create(name="VLAN 102", vid=102, site=cls.sites[1]),
-        VLAN.objects.create(name="VLAN 103", vid=103, site=cls.sites[2]),
-    )
+    VLAN.objects.create(name="VLAN 101", vid=101, site=sites[0])
+    VLAN.objects.create(name="VLAN 102", vid=102, site=sites[1])
+    VLAN.objects.create(name="VLAN 103", vid=103, site=sites[2])
 
     cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-    cls.clusters = (
-        Cluster.objects.create(name="Cluster 1", type=cluster_type, site=cls.sites[0]),
-        Cluster.objects.create(name="Cluster 2", type=cluster_type, site=cls.sites[1]),
-        Cluster.objects.create(name="Cluster 3", type=cluster_type, site=cls.sites[2]),
-    )
+    Cluster.objects.create(name="Cluster 1", type=cluster_type, site=sites[0])
+    Cluster.objects.create(name="Cluster 2", type=cluster_type, site=sites[1])
+    Cluster.objects.create(name="Cluster 3", type=cluster_type, site=sites[2])
 
-    cls.powerfeeds = (
-        PowerFeed.objects.create(name="Powerfeed 1", rack=cls.racks[0], power_panel=cls.powerpanels[0]),
-        PowerFeed.objects.create(name="Powerfeed 1", rack=cls.racks[1], power_panel=cls.powerpanels[1]),
-        PowerFeed.objects.create(name="Powerfeed 1", rack=cls.racks[2], power_panel=cls.powerpanels[2]),
-    )
+    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[0], power_panel=powerpanels[0])
+    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[1], power_panel=powerpanels[1])
+    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[2], power_panel=powerpanels[2])
 
-    cls.users = (
+    users = (
         User.objects.create_user(username="TestCaseUser 1"),
         User.objects.create_user(username="TestCaseUser 2"),
         User.objects.create_user(username="TestCaseUser 3"),
     )
 
-    cls.rackreservations = (
-        RackReservation.objects.create(
-            rack=cls.racks[0],
-            units=(1, 2, 3),
-            user=cls.users[0],
-            description="Rack Reservation 1",
-            tenant=cls.tenants[0],
-        ),
-        RackReservation.objects.create(
-            rack=cls.racks[1],
-            units=(4, 5, 6),
-            user=cls.users[1],
-            description="Rack Reservation 2",
-            tenant=cls.tenants[1],
-        ),
-        RackReservation.objects.create(
-            rack=cls.racks[2],
-            units=(7, 8, 9),
-            user=cls.users[2],
-            description="Rack Reservation 3",
-            tenant=cls.tenants[2],
-        ),
+    RackReservation.objects.create(
+        rack=racks[0],
+        units=(1, 2, 3),
+        user=users[0],
+        description="Rack Reservation 1",
+        tenant=tenants[0],
+    )
+    RackReservation.objects.create(
+        rack=racks[1],
+        units=(4, 5, 6),
+        user=users[1],
+        description="Rack Reservation 2",
+        tenant=tenants[1],
+    )
+    RackReservation.objects.create(
+        rack=racks[2],
+        units=(7, 8, 9),
+        user=users[2],
+        description="Rack Reservation 3",
+        tenant=tenants[2],
     )
 
     ConsolePortTemplate.objects.create(
@@ -425,16 +409,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        cls.child_regions = (
-            Region.objects.create(name="Region 1A", slug="region-1a", parent=cls.regions[0]),
-            Region.objects.create(name="Region 1B", slug="region-1b", parent=cls.regions[0]),
-            Region.objects.create(name="Region 2A", slug="region-2a", parent=cls.regions[1]),
-            Region.objects.create(name="Region 2B", slug="region-2b", parent=cls.regions[1]),
-            Region.objects.create(name="Region 3A", slug="region-3a", parent=cls.regions[2]),
-            Region.objects.create(name="Region 3B", slug="region-3b", parent=cls.regions[2]),
-        )
-
-        Site.objects.create(name="Site 4", slug="site-4", region=cls.regions[2])
+        parent_regions = Region.objects.filter(parent__isnull=True)
+        Region.objects.create(name="Region 1A", slug="region-1a", parent=parent_regions[0])
+        Region.objects.create(name="Region 1B", slug="region-1b", parent=parent_regions[0])
+        Region.objects.create(name="Region 2A", slug="region-2a", parent=parent_regions[1])
+        Region.objects.create(name="Region 2B", slug="region-2b", parent=parent_regions[1])
+        Region.objects.create(name="Region 3A", slug="region-3a", parent=parent_regions[2])
+        Region.objects.create(name="Region 3B", slug="region-3b", parent=parent_regions[2])
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -448,9 +429,12 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_children(self):
-        params = {"children": [self.child_regions[0].pk, self.child_regions[1].slug]}
+        child_region_1a = Region.objects.get(slug="region-1a")
+        child_region_1b = Region.objects.get(slug="region-1b")
+        child_region_2a = Region.objects.get(slug="region-2a")
+        params = {"children": [child_region_1a.pk, child_region_1b.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"children": [self.child_regions[1].slug, self.child_regions[2].pk]}
+        params = {"children": [child_region_1a.slug, child_region_2a.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_children(self):
@@ -460,10 +444,9 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
 
     def test_sites(self):
-        sites = Site.objects.filter(region__slug="region-3")
-        self.assertEqual(len(sites), 2)
+        sites = Site.objects.all()
         params = {"sites": [sites[0].pk, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_sites(self):
         params = {"has_sites": True}
@@ -680,31 +663,34 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
+        sites = Site.objects.all()
+        parent_rack_groups = RackGroup.objects.filter(parent__isnull=True)
+
         RackGroup.objects.create(
             name="Child Rack Group 1",
             slug="rack-group-1c",
-            site=cls.sites[0],
-            parent=cls.rack_groups[0],
+            site=sites[0],
+            parent=parent_rack_groups[0],
             description="A",
         )
         RackGroup.objects.create(
             name="Child Rack Group 2",
             slug="rack-group-2c",
-            site=cls.sites[1],
-            parent=cls.rack_groups[1],
+            site=sites[1],
+            parent=parent_rack_groups[1],
             description="B",
         )
         RackGroup.objects.create(
             name="Child Rack Group 3",
             slug="rack-group-3c",
-            site=cls.sites[2],
-            parent=cls.rack_groups[2],
+            site=sites[2],
+            parent=parent_rack_groups[2],
             description="C",
         )
         RackGroup.objects.create(
             name="Rack Group 4",
             slug="rack-group-4",
-            site=cls.sites[2],
+            site=sites[2],
         )
 
     def test_description(self):
@@ -795,14 +781,19 @@ class RackTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
+        site = Site.objects.get(slug="site-3")
+        rack_group = RackGroup.objects.get(slug="rack-group-3")
+        tenant = Tenant.objects.get(slug="tenant-3")
+        rack_role = RackRole.objects.get(slug="rack-role-3")
+
         Rack.objects.create(
             name="Rack 4",
             facility_id="rack-4",
-            site=cls.sites[2],
-            group=cls.rack_groups[2],
-            tenant=cls.tenants[2],
+            site=site,
+            group=rack_group,
+            tenant=tenant,
             status=cls.rack_status_map["active"],
-            role=cls.rackroles[2],
+            role=rack_role,
             serial="ABCDEF",
             asset_tag="1004",
             type=RackTypeChoices.TYPE_2POST,
