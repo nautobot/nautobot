@@ -37,7 +37,7 @@ class DeviceDetailPluginTabOneView(generic.ObjectView):
 
 class DeviceDetailPluginTabTwoView(generic.ObjectView):
     """
-    Same as DeviceDetailPluginTabOne view above but using a different template.
+    Same as DeviceDetailPluginTabOneView view above but using a different template.
     """
 
     queryset = Device.objects.all()
