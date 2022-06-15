@@ -111,6 +111,9 @@ napalm = {version = "~3.3.1", optional = true}
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.1.0"
+# LIbrary for creating and manipulating graphs and networks
+# NOTE: This exact version must be pinned as long as we support Python 3.7
+networkx = "2.6.3"
 # Image processing library
 Pillow = "~9.0.1"
 # PostgreSQL database adapter

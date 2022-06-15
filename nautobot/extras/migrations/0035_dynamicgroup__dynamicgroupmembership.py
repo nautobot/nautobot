@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.extras.models.groups
 import uuid
 
 
@@ -27,7 +26,6 @@ class Migration(migrations.Migration):
                 (
                     "group",
                     models.ForeignKey(
-                        limit_choices_to=nautobot.extras.models.groups.limit_dynamic_group_by_parent_content_type,
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="+",
                         to="extras.dynamicgroup",

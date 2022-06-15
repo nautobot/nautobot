@@ -665,8 +665,9 @@ class DynamicGroupForm(NautobotModelForm):
     """DynamicGroup model form."""
 
     slug = SlugField()
-    content_type = forms.ModelChoiceField(
+    content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+        required=False,
         label="Content Type",
     )
 
@@ -680,17 +681,30 @@ class DynamicGroupForm(NautobotModelForm):
         ]
 
 
+class DynamicGroupMembershipFormSetForm(forms.ModelForm):
+    """DynamicGroupMembership model form for use inline on DynamicGroupForm."""
+
+    group = DynamicModelChoiceField(
+        required=False,
+        queryset=DynamicGroup.objects.all(),
+        query_params={"content_type": "$content_type"},
+    )
+
+    class Meta:
+        model = DynamicGroupMembership
+        fields = ("group", "operator", "weight")
+
+
 # Inline formset for use with providing dynamic rows when creating/editing memberships of child
 # DynamicGroups to a parent DynamicGroup.
 DynamicGroupMembershipFormSet = inlineformset_factory(
     parent_model=DynamicGroup,
     model=DynamicGroupMembership,
+    form=DynamicGroupMembershipFormSetForm,
     extra=1,
-    fields=("group", "operator", "weight"),
     fk_name="parent_group",
     widgets={
         "operator": StaticSelect2,
-        "group": StaticSelect2,
     },
 )
 

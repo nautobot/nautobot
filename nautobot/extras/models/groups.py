@@ -569,15 +569,6 @@ class DynamicGroup(OrganizationalModel):
         return not self.children.exists()
 
 
-def limit_dynamic_group_by_parent_content_type():
-    """
-    Callback for use on `DynamicGroupMembership.group.limit_choices_to`.
-
-    This asserts that only Dynamic Groups matching the `content_type` of the `parent_group` can be selected.
-    """
-    return models.Q(parents__content_type=models.F("content_type"))
-
-
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
@@ -585,7 +576,6 @@ class DynamicGroupMembership(BaseModel):
         "extras.DynamicGroup",
         on_delete=models.CASCADE,
         related_name="+",
-        limit_choices_to=limit_dynamic_group_by_parent_content_type,
     )
     parent_group = models.ForeignKey(
         "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
@@ -635,3 +625,13 @@ class DynamicGroupMembership(BaseModel):
         # Enforce matching content_type
         if self.parent_group.content_type != self.group.content_type:
             raise ValidationError({"group": "ContentType for group and parent_group must match"})
+
+        """
+        import networkx as nx
+        graph = nx.DiGraph()
+        graph.add_edges_from([self.parent_group, self.group])
+        if not nx.is_directed_acyclic_graph(graph):
+            raise ValidationError({"group": "Graph contains a loop ad this is bad"})
+            # graph.remove_edges_from([self.parent_group, self.group])
+
+        """
