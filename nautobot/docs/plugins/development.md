@@ -253,7 +253,7 @@ from .models import Animal
 
 
 class SiteAnimalCount(PluginTemplateExtension):
-    """Template extension to display animal count on the right side of the page"""
+    """Template extension to display animal count on the right side of the page."""
 
     model = 'dcim.site'
 
@@ -266,7 +266,7 @@ class SiteAnimalCount(PluginTemplateExtension):
 class DeviceExtraTabs(PluginTemplateExtension):
     """Template extension to extra tabs to the object detail tabs."""
 
-    model = 'dcim.site'
+    model = 'dcim.device'
 
     def detail_tabs(self):
         """

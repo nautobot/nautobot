@@ -81,7 +81,7 @@ urlpatterns = [
         RedirectView.as_view(url=static("example_plugin/docs/index.html")),
         name="docs",
     ),
-    path("circuit-detail-tab/<uuid:pk>/", views.CircuitDetailPluginTab.as_view(), name="circuit_detail_tab"),
-    path("device-detail-tab-one/<uuid:pk>/", views.DeviceDetailPluginTabOne.as_view(), name="device_detail_tab_1"),
-    path("device-detail-tab-two/<uuid:pk>/", views.DeviceDetailPluginTabTwo.as_view(), name="device_detail_tab_2"),
+    path("circuits/<uuid:pk>/example-plugin-tab/", views.CircuitDetailPluginTab.as_view(), name="circuit_detail_tab"),
+    path("devices/<uuid:pk>/example-plugin-tab-1/", views.DeviceDetailPluginTabOne.as_view(), name="device_detail_tab_1"),
+    path("devices/<uuid:pk>/example-plugin-tab-2/", views.DeviceDetailPluginTabTwo.as_view(), name="device_detail_tab_2"),
 ]

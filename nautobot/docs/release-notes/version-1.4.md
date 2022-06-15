@@ -42,13 +42,18 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 ### Removed
 
+### Added
+
+## v1.4.0a2 (2022-??-??)
+
+- [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
+
 ## v1.4.0a1 (2022-06-13)
 
 ### Added
 
 - [#729](https://github.com/nautobot/nautobot/issues/729) - Added UI dark mode.
 - [#984](https://github.com/nautobot/nautobot/issues/984) - Added status field to Interface, VMInterface models.
-- [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
 - [#1455](https://github.com/nautobot/nautobot/issues/1455) - Added `parent_interface` and `bridge` fields to Interface and VMInterface models.
 
 ### Changed
