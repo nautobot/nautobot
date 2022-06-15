@@ -91,7 +91,7 @@ from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
-from nautobot.virtualization.models import Cluster, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 # Use the proper swappable User model
@@ -190,6 +190,33 @@ def common_test_data(cls):
         Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
     )
 
+    platforms = (
+        Platform.objects.create(
+            name="Platform 1",
+            slug="platform-1",
+            manufacturer=manufacturers[0],
+            napalm_driver="driver-1",
+            napalm_args=["--test", "--arg1"],
+            description="A",
+        ),
+        Platform.objects.create(
+            name="Platform 2",
+            slug="platform-2",
+            manufacturer=manufacturers[1],
+            napalm_driver="driver-2",
+            napalm_args=["--test", "--arg2"],
+            description="B",
+        ),
+        Platform.objects.create(
+            name="Platform 3",
+            slug="platform-3",
+            manufacturer=manufacturers[2],
+            napalm_driver="driver-3",
+            napalm_args=["--test", "--arg3"],
+            description="C",
+        ),
+    )
+
     device_types = (
         DeviceType.objects.create(
             manufacturer=manufacturers[0],
@@ -221,10 +248,6 @@ def common_test_data(cls):
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
         ),
     )
-
-    device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-    device_statuses = Status.objects.get_for_model(Device)
-    device_status_map = {ds.slug: ds for ds in device_statuses.all()}
 
     rack_groups = (
         RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
@@ -307,10 +330,38 @@ def common_test_data(cls):
         ),
     )
 
+    device_roles = (
+        DeviceRole.objects.create(
+            name="Device Role 1",
+            slug="device-role-1",
+            color="ff0000",
+            vm_role=False,
+            description="Device Role Description 1",
+        ),
+        DeviceRole.objects.create(
+            name="Device Role 2",
+            slug="device-role-2",
+            color="00ff00",
+            vm_role=False,
+            description="Device Role Description 2",
+        ),
+        DeviceRole.objects.create(
+            name="Device Role 3",
+            slug="device-role-3",
+            color="0000ff",
+            vm_role=False,
+            description="Device Role Description 3",
+        ),
+    )
+
+    device_statuses = Status.objects.get_for_model(Device)
+    device_status_map = {ds.slug: ds for ds in device_statuses.all()}
+
     Device.objects.create(
         name="Device 1",
         device_type=device_types[0],
-        device_role=device_role,
+        device_role=device_roles[0],
+        platform=platforms[0],
         rack=racks[0],
         site=sites[0],
         status=device_status_map["active"],
@@ -318,7 +369,8 @@ def common_test_data(cls):
     Device.objects.create(
         name="Device 2",
         device_type=device_types[1],
-        device_role=device_role,
+        device_role=device_roles[1],
+        platform=platforms[1],
         rack=racks[1],
         site=sites[1],
         status=device_status_map["staged"],
@@ -326,11 +378,23 @@ def common_test_data(cls):
     Device.objects.create(
         name="Device 3",
         device_type=device_types[2],
-        device_role=device_role,
+        device_role=device_roles[2],
+        platform=platforms[2],
         rack=racks[2],
         site=sites[2],
         status=device_status_map["failed"],
     )
+
+    cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+    clusters = (
+        Cluster.objects.create(name="Cluster 1", type=cluster_type, site=sites[0]),
+        Cluster.objects.create(name="Cluster 2", type=cluster_type, site=sites[1]),
+        Cluster.objects.create(name="Cluster 3", type=cluster_type, site=sites[2]),
+    )
+
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 1", role=device_roles[0], platform=platforms[0])
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 2", role=device_roles[1], platform=platforms[1])
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 3", role=device_roles[2], platform=platforms[2])
 
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=sites[0])
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=sites[1])
@@ -343,11 +407,6 @@ def common_test_data(cls):
     VLAN.objects.create(name="VLAN 101", vid=101, site=sites[0])
     VLAN.objects.create(name="VLAN 102", vid=102, site=sites[1])
     VLAN.objects.create(name="VLAN 103", vid=103, site=sites[2])
-
-    cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-    Cluster.objects.create(name="Cluster 1", type=cluster_type, site=sites[0])
-    Cluster.objects.create(name="Cluster 2", type=cluster_type, site=sites[1])
-    Cluster.objects.create(name="Cluster 3", type=cluster_type, site=sites[2])
 
     PowerFeed.objects.create(name="Powerfeed 1", rack=racks[0], power_panel=powerpanels[0])
     PowerFeed.objects.create(name="Powerfeed 1", rack=racks[1], power_panel=powerpanels[1])
@@ -1723,15 +1782,7 @@ class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000", vm_role=True)
-        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2", color="00ff00", vm_role=True)
-        DeviceRole.objects.create(
-            name="Device Role 3",
-            slug="device-role-3",
-            color="0000ff",
-            vm_role=False,
-        )
+        common_test_data(cls)
 
     def test_color(self):
         params = {"color": ["ff0000", "00ff00"]}
@@ -1739,9 +1790,36 @@ class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_vm_role(self):
         params = {"vm_role": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
         params = {"vm_role": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_description(self):
+        descriptions = ["Device Role Description 1", "Device Role Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_devices(self):
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_virtual_machines(self):
+        virtual_machines = VirtualMachine.objects.all()[:2]
+        params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_virtual_machines(self):
+        params = {"has_virtual_machines": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_virtual_machines": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
 
 class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -1750,34 +1828,7 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturers = (
-            Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
-            Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
-            Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
-        )
-
-        Platform.objects.create(
-            name="Platform 1",
-            slug="platform-1",
-            manufacturer=manufacturers[0],
-            napalm_driver="driver-1",
-            description="A",
-        )
-        Platform.objects.create(
-            name="Platform 2",
-            slug="platform-2",
-            manufacturer=manufacturers[1],
-            napalm_driver="driver-2",
-            description="B",
-        )
-        Platform.objects.create(
-            name="Platform 3",
-            slug="platform-3",
-            manufacturer=manufacturers[2],
-            napalm_driver="driver-3",
-            description="C",
-        )
+        common_test_data(cls)
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -1793,6 +1844,33 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"manufacturer": [manufacturers[0].slug, manufacturers[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_napalm_args(self):
+        napalm_args = ['["--test", "--arg1"]', '["--test", "--arg2"]']
+        params = {"napalm_args": napalm_args}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_devices(self):
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_virtual_machines(self):
+        virtual_machines = VirtualMachine.objects.all()[:2]
+        params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_virtual_machines(self):
+        params = {"has_virtual_machines": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_virtual_machines": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
 
 class DeviceTestCase(FilterTestCases.FilterTestCase):

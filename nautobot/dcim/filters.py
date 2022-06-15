@@ -545,7 +545,10 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         method="_device_bays",
         label="Has device bays",
     )
-    has_instances = RelatedMembershipBooleanFilter(field_name="instances", label="Has instances")
+    has_instances = RelatedMembershipBooleanFilter(
+        field_name="instances",
+        label="Has instances",
+    )
     consoleport_templates = django_filters.ModelMultipleChoiceFilter(
         field_name="consoleporttemplates",
         queryset=ConsolePortTemplate.objects.all(),
@@ -682,10 +685,6 @@ class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilte
 
 
 class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    poweroutlet_templates = django_filters.ModelMultipleChoiceFilter(
-        queryset=PowerOutletTemplate.objects.all(),
-        label="Power outlet templates",
-    )
     has_poweroutlet_templates = RelatedMembershipBooleanFilter(
         field_name="poweroutlet_templates",
         label="Has power outlet templates",
@@ -699,6 +698,7 @@ class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "poweroutlet_templates",
             "label",
             "description",
         ]
@@ -739,10 +739,6 @@ class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
 
 class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    frontport_templates = django_filters.ModelMultipleChoiceFilter(
-        queryset=FrontPortTemplate.objects.all(),
-        label="Front port templates",
-    )
     has_frontport_templates = RelatedMembershipBooleanFilter(
         field_name="frontport_templates",
         label="Has front port templates",
@@ -750,7 +746,7 @@ class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
     class Meta:
         model = RearPortTemplate
-        fields = ["id", "name", "type", "positions", "label", "description"]
+        fields = ["id", "name", "type", "positions", "label", "description", "frontport_templates"]
 
 
 class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
@@ -760,9 +756,18 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
 
 class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    has_virtual_machines = RelatedMembershipBooleanFilter(
+        field_name="virtual_machines",
+        label="Has virtual machines",
+    )
+
     class Meta:
         model = DeviceRole
-        fields = ["id", "name", "slug", "color", "vm_role"]
+        fields = ["id", "name", "slug", "color", "vm_role", "description", "devices", "virtual_machines"]
 
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
@@ -777,10 +782,27 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Manufacturer (slug)",
     )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    has_virtual_machines = RelatedMembershipBooleanFilter(
+        field_name="virtual_machines",
+        label="Has virtual machines",
+    )
 
     class Meta:
         model = Platform
-        fields = ["id", "name", "slug", "napalm_driver", "description"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "napalm_driver",
+            "description",
+            "napalm_args",
+            "devices",
+            "virtual_machines",
+        ]
 
 
 class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet, StatusModelFilterSetMixin):
