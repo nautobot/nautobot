@@ -345,9 +345,7 @@ urlpatterns = [
 ```
 
 !!! note
-    When naming tab view URLs, you may use any naming convention you like, but you must include `<uuid:pk>` in the path string. We recommend using this naming convention:
-
-    `path(“<model_name>/<uuid:pk>/tab-name-slug/”, view.as_view(), name=“any_unique_view_name”)`
+    For added tab views, we recommend for consistency that you follow the URL pattern established by the base model detail view and tabs (if any). For example, `nautobot/dcim/urls.py` references Device tab views with the URL pattern `devices/<uuid:pk>/TAB-NAME/`, so above we have followed that same pattern.
 
 ### Adding a Banner
 
