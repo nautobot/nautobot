@@ -670,18 +670,22 @@ class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilt
         queryset=DeviceType.objects.all(),
         label="Device type (Slug or ID)",
     )
+    label = MultiValueCharFilter(label="Label")
+    description = MultiValueCharFilter(label="Description")
+    id = MultiValueUUIDFilter(label="ID")
+    name = MultiValueCharFilter(label="Name")
 
 
 class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = ConsolePortTemplate
-        fields = ["id", "name", "type", "label", "description"]
+        fields = ["type"]
 
 
 class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = ConsoleServerPortTemplate
-        fields = ["id", "name", "type", "label", "description"]
+        fields = ["type"]
 
 
 class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
@@ -693,14 +697,10 @@ class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = PowerPortTemplate
         fields = [
-            "id",
-            "name",
             "type",
             "maximum_draw",
             "allocated_draw",
             "poweroutlet_templates",
-            "label",
-            "description",
         ]
 
 
@@ -717,13 +717,13 @@ class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
     class Meta:
         model = PowerOutletTemplate
-        fields = ["id", "name", "type", "feed_leg", "label", "description"]
+        fields = ["type", "feed_leg"]
 
 
 class InterfaceTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = InterfaceTemplate
-        fields = ["id", "name", "type", "mgmt_only", "label", "description"]
+        fields = ["type", "mgmt_only"]
 
 
 class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
@@ -735,7 +735,7 @@ class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
     class Meta:
         model = FrontPortTemplate
-        fields = ["id", "name", "type", "rear_port_position", "label", "description"]
+        fields = ["type", "rear_port_position"]
 
 
 class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
@@ -746,13 +746,13 @@ class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
     class Meta:
         model = RearPortTemplate
-        fields = ["id", "name", "type", "positions", "label", "description", "frontport_templates"]
+        fields = ["type", "positions", "frontport_templates"]
 
 
 class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = DeviceBayTemplate
-        fields = ["id", "name", "label", "description"]
+        fields = []
 
 
 class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
