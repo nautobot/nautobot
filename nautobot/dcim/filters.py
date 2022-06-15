@@ -545,6 +545,79 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         method="_device_bays",
         label="Has device bays",
     )
+    has_instances = RelatedMembershipBooleanFilter(field_name="instances", label="Has instances")
+    consoleport_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="consoleporttemplates",
+        queryset=ConsolePortTemplate.objects.all(),
+        label="Console port templates",
+    )
+    has_consoleport_templates = RelatedMembershipBooleanFilter(
+        field_name="consoleporttemplates",
+        label="Has console port templates",
+    )
+    consoleserverport_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="consoleserverporttemplates",
+        queryset=ConsoleServerPortTemplate.objects.all(),
+        label="Console server port templates",
+    )
+    has_consoleserverport_templates = RelatedMembershipBooleanFilter(
+        field_name="consoleserverporttemplates",
+        label="Has console server port templates",
+    )
+    powerport_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="powerporttemplates",
+        queryset=PowerPortTemplate.objects.all(),
+        label="Power Port Templates",
+    )
+    has_powerport_templates = RelatedMembershipBooleanFilter(
+        field_name="powerporttemplates",
+        label="Has power port templates",
+    )
+    poweroutlet_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="poweroutlettemplates",
+        queryset=PowerOutletTemplate.objects.all(),
+        label="Power Outlet Templates",
+    )
+    has_poweroutlet_templates = RelatedMembershipBooleanFilter(
+        field_name="poweroutlettemplates",
+        label="Has power outlet templates",
+    )
+    interface_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="interfacetemplates",
+        queryset=InterfaceTemplate.objects.all(),
+        label="Interface templates",
+    )
+    has_interface_templates = RelatedMembershipBooleanFilter(
+        field_name="interfacetemplates",
+        label="Has Interface templates",
+    )
+    frontport_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="frontporttemplates",
+        queryset=FrontPortTemplate.objects.all(),
+        label="Front port templates",
+    )
+    has_frontport_templates = RelatedMembershipBooleanFilter(
+        field_name="frontporttemplates",
+        label="Has front port templates",
+    )
+    rearport_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="rearporttemplates",
+        queryset=RearPortTemplate.objects.all(),
+        label="Rear port templates",
+    )
+    has_rearport_templates = RelatedMembershipBooleanFilter(
+        field_name="rearporttemplates",
+        label="Has rear port templates",
+    )
+    devicebay_templates = django_filters.ModelMultipleChoiceFilter(
+        field_name="devicebaytemplates",
+        queryset=DeviceBayTemplate.objects.all(),
+        label="Device bay templates",
+    )
+    has_devicebay_templates = RelatedMembershipBooleanFilter(
+        field_name="devicebaytemplates",
+        label="Has device bay templates",
+    )
     tag = TagFilter()
 
     class Meta:
@@ -557,6 +630,8 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "u_height",
             "is_full_depth",
             "subdevice_role",
+            "comments",
+            "instances",
         ]
 
     def _console_ports(self, queryset, name, value):

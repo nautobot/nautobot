@@ -186,8 +186,44 @@ def common_test_data(cls):
         CircuitTermination.objects.create(circuit=circuit, site=cls.sites[1], term_side="Z"),
     )
 
-    manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-    device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
+    manufacturers = (
+        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
+        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
+        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
+    )
+
+    device_types = (
+        DeviceType.objects.create(
+            manufacturer=manufacturers[0],
+            comments="Device type 1",
+            model="Model 1",
+            slug="model-1",
+            part_number="Part Number 1",
+            u_height=1,
+            is_full_depth=True,
+        ),
+        DeviceType.objects.create(
+            manufacturer=manufacturers[1],
+            comments="Device type 2",
+            model="Model 2",
+            slug="model-2",
+            part_number="Part Number 2",
+            u_height=2,
+            is_full_depth=True,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        ),
+        DeviceType.objects.create(
+            manufacturer=manufacturers[2],
+            comments="Device type 3",
+            model="Model 3",
+            slug="model-3",
+            part_number="Part Number 3",
+            u_height=3,
+            is_full_depth=False,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        ),
+    )
+
     device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
     device_statuses = Status.objects.get_for_model(Device)
     device_status_map = {ds.slug: ds for ds in device_statuses.all()}
@@ -276,7 +312,7 @@ def common_test_data(cls):
     cls.devices = (
         Device.objects.create(
             name="Device 1",
-            device_type=device_type,
+            device_type=device_types[0],
             device_role=device_role,
             rack=cls.racks[0],
             site=cls.sites[0],
@@ -284,7 +320,7 @@ def common_test_data(cls):
         ),
         Device.objects.create(
             name="Device 2",
-            device_type=device_type,
+            device_type=device_types[1],
             device_role=device_role,
             rack=cls.racks[1],
             site=cls.sites[1],
@@ -292,7 +328,7 @@ def common_test_data(cls):
         ),
         Device.objects.create(
             name="Device 3",
-            device_type=device_type,
+            device_type=device_types[2],
             device_role=device_role,
             rack=cls.racks[2],
             site=cls.sites[2],
@@ -981,41 +1017,9 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturers = (
-            Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
-            Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
-            Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
-        )
-
-        device_types = (
-            DeviceType.objects.create(
-                manufacturer=manufacturers[0],
-                model="Model 1",
-                slug="model-1",
-                part_number="Part Number 1",
-                u_height=1,
-                is_full_depth=True,
-            ),
-            DeviceType.objects.create(
-                manufacturer=manufacturers[1],
-                model="Model 2",
-                slug="model-2",
-                part_number="Part Number 2",
-                u_height=2,
-                is_full_depth=True,
-                subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
-            ),
-            DeviceType.objects.create(
-                manufacturer=manufacturers[2],
-                model="Model 3",
-                slug="model-3",
-                part_number="Part Number 3",
-                u_height=3,
-                is_full_depth=False,
-                subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
-            ),
-        )
+        device_types = DeviceType.objects.all()
 
         # Add component templates for filtering
         ConsolePortTemplate.objects.create(device_type=device_types[0], name="Console Port 1")
@@ -1141,6 +1145,109 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_comments(self):
+        params = {"comments": ["Device type 1", "Device type 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_instances(self):
+        instances = Device.objects.all()[:2]
+        params = {"instances": [instances[0].pk, instances[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_instances(self):
+        params = {"has_instances": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_instances": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_consoleport_templates(self):
+        consoleport_templates = ConsolePortTemplate.objects.all()[:2]
+        params = {"consoleport_templates": [consoleport_templates[0].pk, consoleport_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_consoleport_templates(self):
+        params = {"has_consoleport_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_consoleport_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_consoleserverport_templates(self):
+        csp_templates = ConsoleServerPortTemplate.objects.all()[:2]
+        params = {"consoleserverport_templates": [csp_templates[0].pk, csp_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_consoleserverport_templates(self):
+        params = {"has_consoleserverport_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_consoleserverport_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_powerport_templates(self):
+        powerport_templates = PowerPortTemplate.objects.all()[:2]
+        params = {"powerport_templates": [powerport_templates[0].pk, powerport_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_powerport_templates(self):
+        params = {"has_powerport_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_powerport_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_poweroutlet_templates(self):
+        poweroutlet_templates = PowerOutletTemplate.objects.all()[:2]
+        params = {"poweroutlet_templates": [poweroutlet_templates[0].pk, poweroutlet_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_poweroutlet_templates(self):
+        params = {"has_poweroutlet_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_poweroutlet_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_interface_templates(self):
+        interface_templates = InterfaceTemplate.objects.all()[:2]
+        params = {"interface_templates": [interface_templates[0].pk, interface_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_interface_templates(self):
+        params = {"has_interface_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_interface_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_frontport_templates(self):
+        frontport_templates = FrontPortTemplate.objects.all()[:2]
+        params = {"frontport_templates": [frontport_templates[0].pk, frontport_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_frontport_templates(self):
+        params = {"has_frontport_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_frontport_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_rearport_templates(self):
+        rearport_templates = RearPortTemplate.objects.all()[:2]
+        params = {"rearport_templates": [rearport_templates[0].pk, rearport_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_rearport_templates(self):
+        params = {"has_rearport_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_rearport_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_devicebay_templates(self):
+        devicebay_templates = DeviceBayTemplate.objects.all()[:2]
+        params = {"devicebay_templates": [devicebay_templates[0].pk, devicebay_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devicebay_templates(self):
+        params = {"has_devicebay_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_devicebay_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
