@@ -449,7 +449,7 @@ class LocationForm(NautobotModelForm):
 
     class Meta:
         model = Location
-        fields = ["name", "slug", "status", "location_type", "parent", "site", "description"]
+        fields = ["location_type", "parent", "site", "name", "slug", "status", "description"]
 
 
 class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):

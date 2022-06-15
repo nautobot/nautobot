@@ -1,6 +1,20 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
 
+{% block extra_styles %}
+    <style>
+        .location-hierarchy {
+            list-style-type: none;
+            padding-left: 0px;
+        }
+
+        .location-hierarchy ul {
+            list-style-type: "↳ ";
+            padding-left: 18px;
+        }
+    </style>
+{% endblock %}
+
 {% block extra_breadcrumbs %}
     {% for ancestor in object.ancestors %}
         <li>{{ ancestor|hyperlinked_object }}</li>
@@ -18,12 +32,17 @@
                 <td>{{ object.description|placeholder }}</td>
             </tr>
             <tr>
-                <td>Parent(s)</td>
+                <td>Hierarchy</td>
                 <td>
+                    <ul class="location-hierarchy">
                     {% for ancestor in object.ancestors %}
-                        {{ ancestor|hyperlinked_object }}{% if not forloop.last %} ← {% endif %}
-                    {% empty %}
-                        {{ None|placeholder }}
+                        <li>{{ ancestor|hyperlinked_object }}
+                            <ul>
+                    {% endfor %}
+                    <li><strong>{{ object }}</strong></li>
+                    {% for ancestor in object.ancestors %}
+                            </ul>
+                        </li>
                     {% endfor %}
                 </td>
             </tr>
