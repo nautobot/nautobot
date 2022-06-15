@@ -274,6 +274,7 @@ class LocationTypeSerializer(CustomFieldModelSerializer):
     tree_depth = serializers.SerializerMethodField(read_only=True)
 
     def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
         return obj.tree_depth
 
     class Meta:
@@ -303,6 +304,7 @@ class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cus
     tree_depth = serializers.SerializerMethodField(read_only=True)
 
     def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
         return obj.tree_depth
 
     class Meta:

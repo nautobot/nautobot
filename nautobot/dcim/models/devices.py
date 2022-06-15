@@ -491,13 +491,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         verbose_name="Asset tag",
         help_text="A unique tag used to identify this device",
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="devices",
-        blank=True,
-        null=True,
-    )
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -605,7 +599,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         ordering = ("_name",)  # Name may be null
         unique_together = (
             ("site", "tenant", "name"),  # See validate_unique below
-            ("location", "tenant", "name"),  # See validate_unique below
             ("rack", "position", "face"),
             ("virtual_chassis", "vc_position"),
         )
@@ -631,7 +624,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         super().clean()
 
         # Validate site/location combination
-        if self.location and self.location.base_site != self.site:
+        if self.location is not None and self.location.base_site != self.site:
             raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
         # Validate site/rack combination
@@ -643,7 +636,12 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             )
 
         # Validate location/rack combination
-        if self.rack and self.location and self.rack.location and self.rack.location != self.location:
+        if (
+            self.rack is not None
+            and self.location is not None
+            and self.rack.location is not None
+            and self.rack.location != self.location
+        ):
             raise ValidationError({"rack": f"Rack {self.rack} does not belong to location {self.location}."})
 
         if self.rack is None:

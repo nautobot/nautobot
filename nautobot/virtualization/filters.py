@@ -70,13 +70,15 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
+    location_id = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
+        lookup_expr="in",
         label="Location (ID)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         field_name="location__slug",
         queryset=Location.objects.all(),
+        lookup_expr="in",
         to_field_name="slug",
         label="Location (slug)",
     )

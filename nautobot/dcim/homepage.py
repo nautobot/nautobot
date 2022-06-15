@@ -21,7 +21,7 @@ layout = (
                 model=models.Location,
                 description="Hierarchical geographic locations",
                 permissions=["dcim.view_location"],
-                weight=150,
+                weight=200,
             ),
         ),
     ),

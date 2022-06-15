@@ -56,13 +56,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
     name = models.CharField(max_length=100, db_index=True)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.CASCADE,
-        related_name="rack_groups",
-        blank=True,
-        null=True,
-    )
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.CASCADE,
@@ -88,10 +82,8 @@ class RackGroup(MPTTModel, OrganizationalModel):
         ordering = ["site", "name"]
         unique_together = [
             ["site", "name"],
-            ["location", "name"],
             # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
-            ["location", "slug"],
         ]
 
     class MPTTMeta:
@@ -121,7 +113,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
         super().clean()
 
         # Validate site/location combination:
-        if self.location is not None and self.site is not None and self.location.base_site != self.site:
+        if self.location is not None and self.location.base_site != self.site:
             raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
         # Parent RackGroup (if any) must belong to the same Site
@@ -205,13 +197,7 @@ class Rack(PrimaryModel, StatusModel):
         verbose_name="Facility ID",
         help_text="Locally-assigned identifier",
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="racks",
-        blank=True,
-        null=True,
-    )
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="racks")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -333,7 +319,7 @@ class Rack(PrimaryModel, StatusModel):
         super().clean()
 
         # Validate site/location combination
-        if self.location and self.location.base_site != self.site:
+        if self.location is not None and self.location.base_site != self.site:
             raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
         # Validate group/site assignment

@@ -165,7 +165,7 @@ class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
                 # django-mptt
                 value = [node.get_descendants(include_self=True) for node in value]
             else:
-                raise RuntimeError(f"Unexpected model class {qs.model}")
+                raise RuntimeError(f"Unexpected value type {type(value[0])}")
         return super().filter(qs, value)
 
 

@@ -429,7 +429,7 @@ class Role(OrganizationalModel):
 class Prefix(PrimaryModel, StatusModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
-    Prefixes can optionally be assigned to Sites or Locations and VRFs.
+    Prefixes can optionally be assigned to Sites (and/or Locations) and VRFs.
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
     """
@@ -584,6 +584,10 @@ class Prefix(PrimaryModel, StatusModel):
                             )
                         }
                     )
+
+        # Validate site/location combination
+        if self.location is not None and self.site is not None and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
     def save(self, *args, **kwargs):
 
@@ -1049,12 +1053,21 @@ class VLANGroup(OrganizationalModel):
             "name",
         )  # (site, name) may be non-unique
         unique_together = [
+            # TODO: since site is nullable, and NULL != NULL, this means that we can have multiple non-Site VLANGroups
+            # with the same name. This should probably be fixed with a custom validate_unique() function!
             ["site", "name"],
             # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
+
+    def clean(self):
+        super().clean()
+
+        # Validate site/location combination
+        if self.location is not None and self.site is not None and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
     def __str__(self):
         return self.name
@@ -1172,6 +1185,8 @@ class VLAN(PrimaryModel, StatusModel):
             "vid",
         )  # (site, group, vid) may be non-unique
         unique_together = [
+            # TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
+            # the same vid and name. We should probably fix this with a custom validate_unique() function.
             ["group", "vid"],
             ["group", "name"],
         ]
@@ -1186,6 +1201,10 @@ class VLAN(PrimaryModel, StatusModel):
 
     def clean(self):
         super().clean()
+
+        # Validate site/location combination
+        if self.location is not None and self.site is not None and self.location.base_site != self.site:
+            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
 
         # Validate VLAN group
         if self.group and self.group.site != self.site:

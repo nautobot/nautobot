@@ -4,21 +4,12 @@ from django.db import models
 from django.urls import reverse
 
 from tree_queries.models import TreeNode
-from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
-from nautobot.utilities.querysets import RestrictedQuerySet
-
-
-class TreeQuerySet(TreeQuerySet_, RestrictedQuerySet):
-    pass
-
-
-class TreeManager(models.Manager.from_queryset(TreeQuerySet), TreeManager_):
-    _with_tree_fields = True
+from nautobot.utilities.tree_queries import TreeManager
 
 
 @extras_features(
@@ -33,7 +24,12 @@ class TreeManager(models.Manager.from_queryset(TreeQuerySet), TreeManager_):
 class LocationType(TreeNode, OrganizationalModel):
     """
     Definition of a category of Locations, including its hierarchical relationship to other LocationTypes.
+
+    A LocationType also specifies the content types that can be associated to a Location of this category.
+    For example a "Building" LocationType might allow Prefix and VLANGroup, but not Devices,
+    while a "Room" LocationType might allow Racks and Devices.
     """
+
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
@@ -81,10 +77,35 @@ class LocationType(TreeNode, OrganizationalModel):
 class Location(TreeNode, StatusModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
+
+    As presently implemented, Location is an intermediary model between Site and RackGroup - more specific than a Site,
+    less specific (and more broadly applicable) than a RackGroup:
+
+    Region
+      Region
+        Site
+          Location
+            Location
+              RackGroup
+                Rack
+                  Device
+              Device
+            Prefix
+            etc.
+          Device
+          Prefix
+          etc.
+
+    As such, as presently implemented, every Location either has a parent Location or a "parent" Site.
+
+    In the future, we plan to collapse Region and Site (and likely RackGroup as well) into the Location model.
     """
 
+    # A Location's name is unique within context of its parent, not globally unique.
+    # TODO: Like Site, we may want to add a `_name` NaturalOrderingField?
     name = models.CharField(max_length=100, db_index=True)
-    slug = AutoSlugField(populate_from="name")
+    # However a Location's slug *is* globally unique.
+    slug = AutoSlugField(populate_from=["parent__name", "name"])
     location_type = models.ForeignKey(
         to="dcim.LocationType",
         on_delete=models.PROTECT,
@@ -93,12 +114,13 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.CASCADE,
-        related_name="sites",
+        related_name="locations",
         blank=True,
         null=True,
     )
     description = models.CharField(max_length=200, blank=True)
     # TODO images = GenericRelation(to="extras.ImageAttachment")
+    # TODO: should a Location have a Tenant ForeignKey? Site does, but Region and RackGroup do not.
 
     objects = TreeManager()
 
@@ -145,11 +167,17 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
     @property
     def base_site(self):
-        """The site that this Location belongs to, if any, or that its ancestor belongs to, if any."""
-        for location in self.ancestors(include_self=True).reverse():
-            if location.site is not None:
-                return location.site
-        return None
+        """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
+        return self.site or self.ancestors()[0].site
+
+    def validate_unique(self, exclude=None):
+        # Check for a duplicate name on a Location with no parent.
+        # This is necessary because Django does not consider two NULL fields to be equal.
+        if self.parent is None:
+            if Location.objects.exclude(pk=self.pk).filter(parent__isnull=True, name=self.name).exists():
+                raise ValidationError({"name": "A root-level location with this name already exists."})
+
+        super().validate_unique(exclude=exclude)
 
     def clean(self):
         super().clean()

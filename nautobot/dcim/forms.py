@@ -398,6 +398,7 @@ class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, C
 # LocationTypes
 #
 
+
 class LocationTypeForm(NautobotModelForm):
     parent = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
     slug = SlugField()
@@ -434,6 +435,7 @@ class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 # Locations
 #
+
 
 class LocationForm(NautobotModelForm):
     slug = SlugField()
@@ -474,9 +476,7 @@ class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilte
     location_type = DynamicModelMultipleChoiceField(
         queryset=LocationType.objects.all(), to_field_name="slug", required=False
     )
-    parent = DynamicModelMultipleChoiceField(
-        queryset=Location.objects.all(), to_field_name="slug", required=False
-    )
+    parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     tag = TagFilterField(model)
 
 
@@ -2000,9 +2000,7 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 class DeviceCSVForm(BaseDeviceCSVForm):
     site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Assigned site")
-    location = CSVModelChoiceField(
-        queryset=Location.objects.all(), to_field_name="name", help_text="Assigned location"
-    )
+    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name", help_text="Assigned location")
     rack_group = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="name",

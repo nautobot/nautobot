@@ -16,12 +16,24 @@ class LocationTypeTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     content_types = ContentTypesColumn(truncate_words=15)
     parent = tables.Column(linkify=True)
-    # actions = ButtonsColumn(LocationType)
+    # actions = ButtonsColumn(LocationType) TODO ButtonsColumn only works when urls are PK-based, not slug-based?
 
     class Meta(BaseTable.Meta):
         model = LocationType
-        fields = ("pk", "name", "slug", "parent", "content_types", "description", )# "actions")
-        default_columns = ("pk", "name", "content_types", "description", ) # "actions")
+        fields = (
+            "pk",
+            "name",
+            "slug",
+            "parent",
+            "content_types",
+            "description",
+        )  # TODO "actions"
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "description",
+        )  # TODO "actions"
 
 
 class LocationTable(StatusTableMixin, BaseTable):

@@ -206,7 +206,7 @@ class ClusterFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm
         to_field_name="slug",
         required=False,
         null_option="None",
-        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
+        # TODO query_params={"base_site": "$site"},
     )
     group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),

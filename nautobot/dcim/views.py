@@ -259,6 +259,7 @@ class SiteBulkDeleteView(generic.BulkDeleteView):
 # LocationTypes
 #
 
+
 class LocationTypeListView(generic.ObjectListView):
     queryset = LocationType.objects.with_tree_fields()
     filterset = filters.LocationTypeFilterSet
@@ -271,9 +272,7 @@ class LocationTypeView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         children = (
-            LocationType.objects.restrict(request.user, "view")
-            .filter(parent=instance)
-            .prefetch_related("parent")
+            LocationType.objects.restrict(request.user, "view").filter(parent=instance).prefetch_related("parent")
         )
         locations = (
             Location.objects.restrict(request.user, "view")
