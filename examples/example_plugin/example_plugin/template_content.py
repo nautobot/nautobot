@@ -15,8 +15,8 @@ class CircuitContent(PluginTemplateExtension):
         - The <title> key's value will become the tab link's title.
         - The <url> key's value is used to render the HTML link for the tab.
 
-        These tabs will be visible (in this instance) on the Circuit model's detail page as
-        set by the CircuitContent.model attribute "circuits.circuit"
+        Since the `model` attribute of this class is set as "circuits.circuit", 
+        these tabs will be added to the Circuit model's detail page.
 
         This example demonstrates defining one tab.
         """
