@@ -40,8 +40,8 @@ class DeviceContent(PluginTemplateExtension):
         - The <title> key's value will become the tab link's title.
         - The <url> key's value is used to render the HTML link for the tab
 
-        These tabs will be visible (in this instance) on the Device model's detail page as
-        set by the DeviceContent.model attribute "dcim.device"
+        Since the `model` attribute of this class is set as "dcim.device", 
+        these tabs will be added to the Device model's detail page.
 
         This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
         """
