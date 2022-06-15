@@ -71,18 +71,28 @@ class NestedSiteSerializer(WritableNestedSerializer):
 
 class NestedLocationTypeSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)
 
     class Meta:
         model = models.LocationType
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name", "slug", "tree_depth"]
 
 
 class NestedLocationSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)
 
     class Meta:
         model = models.Location
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name", "slug", "tree_depth"]
 
 
 #

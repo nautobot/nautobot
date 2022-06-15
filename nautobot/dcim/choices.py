@@ -32,6 +32,36 @@ class SiteStatusChoices(ChoiceSet):
 
 
 #
+# Locations
+#
+
+
+class LocationStatusChoices(ChoiceSet):
+
+    STATUS_PLANNED = "planned"
+    STATUS_STAGING = "staging"
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONING = "decommissioning"
+    STATUS_RETIRED = "retired"
+
+    CHOICES = (
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_STAGING, "Staging"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+        (STATUS_RETIRED, "Retired"),
+    )
+
+    CSS_CLASSES = {
+        STATUS_PLANNED: "info",
+        STATUS_STAGING: "primary",
+        STATUS_ACTIVE: "success",
+        STATUS_DECOMMISSIONING: "warning",
+        STATUS_RETIRED: "danger",
+    }
+
+
+#
 # Racks
 #
 
