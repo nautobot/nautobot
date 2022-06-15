@@ -1,20 +1,6 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
 
-{% block extra_styles %}
-    <style>
-        .location-hierarchy {
-            list-style-type: none;
-            padding-left: 0px;
-        }
-
-        .location-hierarchy ul {
-            list-style-type: "↳ ";
-            padding-left: 18px;
-        }
-    </style>
-{% endblock %}
-
 {% block extra_breadcrumbs %}
     {% for ancestor in object.ancestors %}
         <li>{{ ancestor|hyperlinked_object }}</li>
@@ -40,33 +26,7 @@
             <tr>
                 <td>Hierarchy</td>
                 <td>
-                    <ul class="location-hierarchy">
-                        {% for region in object.base_site.region.get_ancestors %}
-                            <li>Region: {{ region|hyperlinked_object }}
-                                <ul>
-                        {% endfor %}
-                        {% if object.base_site.region %}
-                            <li>Region: {{ object.base_site.region|hyperlinked_object }}
-                                <ul>
-                        {% endif %}
-                            <li>Site: {{ object.base_site|hyperlinked_object }}
-                                <ul>
-                        {% for ancestor in object.ancestors %}
-                            <li>{{ancestor.location_type|hyperlinked_object }}: {{ ancestor|hyperlinked_object }}
-                                <ul>
-                        {% endfor %}
-                        <li><strong>{{ object.location_type }}: {{ object }}</strong></li>
-                        {% for ancestor in object.ancestors %}
-                                </ul>
-                            </li>
-                        {% endfor %}
-                                </ul>
-                            </li>
-                        {% for region in object.base_site.region.get_ancestors %}
-                                </ul>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    {% include 'dcim/inc/location_hierarchy.html' with location=object %}
                 </td>
             </tr>
             <tr>

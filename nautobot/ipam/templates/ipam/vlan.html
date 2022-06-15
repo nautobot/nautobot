@@ -41,7 +41,7 @@
                     </tr>
                     <tr>
                         <td>Location</td>
-                        <td>{{ object.location|hyperlinked_object }}</td>
+                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                     </tr>
                     <tr>
                         <td>Group</td>
@@ -90,7 +90,7 @@
                 {% include 'responsive_table.html' with table=prefix_table %}
                 {% if perms.ipam.add_prefix %}
                     <div class="panel-footer text-right noprint">
-                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}site={{ object.site.pk }}&location={{ object.location.pk }}&vlan={{ object.pk }}" class="btn btn-primary btn-xs">
+                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&vlan={{ object.pk }}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add a prefix
                         </a>

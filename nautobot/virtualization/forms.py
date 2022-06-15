@@ -109,7 +109,7 @@ class ClusterForm(NautobotModelForm, TenancyForm):
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        query_params={"content_types": "virtualization.cluster"},  # TODO: base_site: $site
+        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
     )
     comments = CommentField()
 

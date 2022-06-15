@@ -29,7 +29,7 @@
                                     <tr>
                                         <td>Location</td>
                                         <td>
-                                            {{ object.location|hyperlinked_object }}
+                                            {% include 'dcim/inc/location_hierarchy.html' with location=object.location %}
                                         </td>
                                     </tr>
                                     <tr>
