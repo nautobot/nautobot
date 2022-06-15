@@ -458,6 +458,7 @@ class VirtualMachineFilterForm(
         "role",
         "region",
         "site",
+        "location",
         "tenant_group",
         "tenant",
         "platform",
@@ -484,6 +485,13 @@ class VirtualMachineFilterForm(
         required=False,
         null_option="None",
         query_params={"region": "$region"},
+    )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        null_option="None",
+        # TODO query_params={"base_site": "$site"},
     )
     role = DynamicModelMultipleChoiceField(
         queryset=DeviceRole.objects.filter(vm_role=True),

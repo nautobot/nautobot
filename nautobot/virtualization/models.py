@@ -389,6 +389,14 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     def site_id(self):
         return self.cluster.site_id
 
+    @property
+    def location(self):
+        return self.cluster.location
+
+    @property
+    def location_id(self):
+        return self.cluster.location_id
+
 
 #
 # Interfaces

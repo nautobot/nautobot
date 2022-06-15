@@ -257,7 +257,6 @@ class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, S
         label="Location (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="location__slug",
         queryset=Location.objects.all(),
         lookup_expr="in",
         to_field_name="slug",
@@ -518,7 +517,6 @@ class VLANGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Location (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="location__slug",
         queryset=Location.objects.all(),
         lookup_expr="in",
         to_field_name="slug",
@@ -570,7 +568,6 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         label="Location (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="location__slug",
         queryset=Location.objects.all(),
         lookup_expr="in",
         to_field_name="slug",

@@ -142,6 +142,17 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
+            model_name="powerpanel",
+            name="location",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="powerpanels",
+                to="dcim.location",
+            ),
+        ),
+        migrations.AddField(
             model_name="rack",
             name="location",
             field=models.ForeignKey(

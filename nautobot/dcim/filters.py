@@ -279,9 +279,8 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         label="Location (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="location__slug",
-        lookup_expr="in",
         queryset=Location.objects.all(),
+        lookup_expr="in",
         to_field_name="slug",
         label="Location (slug)",
     )
@@ -352,7 +351,6 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         label="Location (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="location__slug",
         queryset=Location.objects.all(),
         lookup_expr="in",
         to_field_name="slug",
@@ -1312,6 +1310,17 @@ class PowerPanelFilterSet(NautobotFilterSet):
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site name (slug)",
+    )
+    location_id = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        label="Location (ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        lookup_expr="in",
+        to_field_name="slug",
+        label="Location (slug)",
     )
     rack_group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),

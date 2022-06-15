@@ -4207,6 +4207,11 @@ class VirtualChassisFilterForm(BootstrapMixin, CustomFieldFilterForm):
 class PowerPanelForm(NautobotModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        query_params={"content_type": "dcim.powerpanel"},  # TODO: base_site: $site
+        required=False,
+    )
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -4218,6 +4223,7 @@ class PowerPanelForm(NautobotModelForm):
         fields = [
             "region",
             "site",
+            "location",
             "rack_group",
             "name",
             "tags",
@@ -4230,6 +4236,7 @@ class PowerPanelCSVForm(CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Name of parent site",
     )
+    location = CSVModelChoiceField(queryset=Location.objects.all(), required=False, to_field_name="name")
     rack_group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
 
     class Meta:
@@ -4254,6 +4261,11 @@ class PowerPanelBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkE
         required=False,
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "dcim.powerpanel"},
+    )
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -4261,7 +4273,7 @@ class PowerPanelBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkE
     )
 
     class Meta:
-        nullable_fields = ["rack_group"]
+        nullable_fields = ["location", "rack_group"]
 
 
 class PowerPanelFilterForm(BootstrapMixin, CustomFieldFilterForm):
@@ -4273,6 +4285,12 @@ class PowerPanelFilterForm(BootstrapMixin, CustomFieldFilterForm):
         to_field_name="slug",
         required=False,
         query_params={"region": "$region"},
+    )
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        required=False,
+        # TODO query_params={"base_site": "$site"},
     )
     rack_group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
