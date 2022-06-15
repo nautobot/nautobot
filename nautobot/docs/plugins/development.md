@@ -285,11 +285,11 @@ class DeviceExtraTabs(PluginTemplateExtension):
         return [
             {
                 "title": "Plugin Tab 1",
-                "url": reverse("plugins:example_plugin:device_detail_tab_1", args=[self.context["object"].pk]),
+                "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
             },
             {
                 "title": "Plugin Tab 2",
-                "url": reverse("plugins:example_plugin:device_detail_tab_2", args=[self.context["object"].pk]),
+                "url": reverse("plugins:example_plugin:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
             },
         ]
 
