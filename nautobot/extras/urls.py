@@ -411,6 +411,11 @@ urlpatterns = [
         name="relationship_bulk_delete",
     ),
     path(
+        "relationships/<uuid:pk>/",
+        views.RelationshipView.as_view(),
+        name="relationship",
+    ),
+    path(
         "relationships/<uuid:pk>/edit/",
         views.RelationshipEditView.as_view(),
         name="relationship_edit",
