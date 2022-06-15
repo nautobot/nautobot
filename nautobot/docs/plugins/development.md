@@ -264,7 +264,7 @@ class SiteAnimalCount(PluginTemplateExtension):
 
 
 class DeviceExtraTabs(PluginTemplateExtension):
-    """Template extension to extra tabs to the object detail tabs."""
+    """Template extension to add extra tabs to the object detail tabs."""
 
     model = 'dcim.device'
 
@@ -330,7 +330,7 @@ class DeviceDetailPluginTabOne(generic.ObjectView):
     template_name = "example_plugin/tab_device_detail_1.html"
 ```
 
-You must also add the view to the `url_patterns` like so:
+You must also add the view to the `url_patterns` like so (make sure to read the note after this code snippet):
 
 ```python
 # urls.py
@@ -340,9 +340,13 @@ from example_plugin import views
 
 urlpatterns = [
     # ... previously defined urls
-    path("device-detail-tab-one/<uuid:pk>/", views.DeviceDetailPluginTabOne.as_view(), name="device_detail_tab_1"),
+    path("devices/<uuid:pk>/example-plugin-tab-1/", views.DeviceDetailPluginTabOne.as_view(), name="device_detail_tab_1"),
 ]
 ```
+
+!!! note 
+    When naming tab view URLs, you may use any naming convention you like, but you must include `<uuid:pk>` in the path string. We recommend using this naming convention:
+    `path(“<app_name>/<uuid:pk>/tab-name-slug/”, view.as_view(), name=“any_unique_view_name”)`
 
 ### Adding a Banner
 
