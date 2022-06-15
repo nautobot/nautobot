@@ -651,7 +651,7 @@ class RackForm(NautobotModelForm, TenancyForm):
 
 class RackCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name")
-    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name")
+    location = CSVModelChoiceField(queryset=Location.objects.all(), required=False, to_field_name="name")
     group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -2000,7 +2000,12 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 class DeviceCSVForm(BaseDeviceCSVForm):
     site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Assigned site")
-    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name", help_text="Assigned location")
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        required=False,
+        help_text="Assigned location",
+    )
     rack_group = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
