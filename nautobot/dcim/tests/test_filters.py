@@ -332,15 +332,33 @@ def common_test_data(cls):
     )
 
     cls.users = (
-        User.objects.create(username="User 1"),
-        User.objects.create(username="User 2"),
-        User.objects.create(username="User 3"),
+        User.objects.create_user(username="TestCaseUser 1"),
+        User.objects.create_user(username="TestCaseUser 2"),
+        User.objects.create_user(username="TestCaseUser 3"),
     )
 
     cls.rackreservations = (
-        RackReservation.objects.create(rack=cls.racks[0], units=(1, 2, 3), user=cls.users[0]),
-        RackReservation.objects.create(rack=cls.racks[1], units=(1, 2, 3), user=cls.users[1]),
-        RackReservation.objects.create(rack=cls.racks[2], units=(1, 2, 3), user=cls.users[2]),
+        RackReservation.objects.create(
+            rack=cls.racks[0],
+            units=(1, 2, 3),
+            user=cls.users[0],
+            description="Rack Reservation 1",
+            tenant=cls.tenants[0],
+        ),
+        RackReservation.objects.create(
+            rack=cls.racks[1],
+            units=(4, 5, 6),
+            user=cls.users[1],
+            description="Rack Reservation 2",
+            tenant=cls.tenants[1],
+        ),
+        RackReservation.objects.create(
+            rack=cls.racks[2],
+            units=(7, 8, 9),
+            user=cls.users[2],
+            description="Rack Reservation 3",
+            tenant=cls.tenants[2],
+        ),
     )
 
 
@@ -885,46 +903,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        )
-
-        rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[2]),
-        )
-
-        racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0], group=rack_groups[0]),
-            Rack.objects.create(name="Rack 2", site=sites[1], group=rack_groups[1]),
-            Rack.objects.create(name="Rack 3", site=sites[2], group=rack_groups[2]),
-        )
-
-        cls.users = (
-            User.objects.create(username="User 1"),
-            User.objects.create(username="User 2"),
-            User.objects.create(username="User 3"),
-        )
-
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
-
-        RackReservation.objects.create(rack=racks[0], units=[1, 2, 3], user=cls.users[0], tenant=tenants[0])
-        RackReservation.objects.create(rack=racks[1], units=[4, 5, 6], user=cls.users[1], tenant=tenants[1])
-        RackReservation.objects.create(rack=racks[2], units=[7, 8, 9], user=cls.users[2], tenant=tenants[2])
+        common_test_data(cls)
 
     def test_site(self):
         sites = Site.objects.all()[:2]
@@ -941,7 +920,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_user(self):
-        users = self.users[:2]
+        users = User.objects.filter(username__startswith="TestCaseUser")[:2]
         params = {"user_id": [users[0].pk, users[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"user": [users[0].username, users[1].username]}
@@ -965,6 +944,19 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_description(self):
+        params = {"description": "Rack Reservation 1"}
+        self.assertSequenceEqual(self.filterset(params, self.queryset).qs.first().units, (1, 2, 3))
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"description": "Rack Reservation 3"}
+        self.assertSequenceEqual(self.filterset(params, self.queryset).qs.first().units, (7, 8, 9))
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_rack(self):
+        racks = Rack.objects.filter(name__startswith="Rack ")[:2]
+        params = {"rack": [racks[0].pk, racks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):

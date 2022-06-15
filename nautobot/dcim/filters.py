@@ -481,11 +481,15 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="username",
         label="User (name)",
     )
+    rack = django_filters.ModelMultipleChoiceFilter(
+        queryset=Rack.objects.all(),
+        label="Rack",
+    )
     tag = TagFilter()
 
     class Meta:
         model = RackReservation
-        fields = ["id", "created"]
+        fields = ["id", "created", "description"]
 
 
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
