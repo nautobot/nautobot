@@ -16,7 +16,7 @@ class LocationTypeTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     content_types = ContentTypesColumn(truncate_words=15)
     parent = tables.Column(linkify=True)
-    # actions = ButtonsColumn(LocationType) TODO ButtonsColumn only works when urls are PK-based, not slug-based?
+    actions = ButtonsColumn(LocationType, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = LocationType
@@ -27,23 +27,29 @@ class LocationTypeTable(BaseTable):
             "parent",
             "content_types",
             "description",
-        )  # TODO "actions"
+            "actions",
+        )
         default_columns = (
             "pk",
             "name",
             "content_types",
             "description",
-        )  # TODO "actions"
+            "actions",
+        )
+        orderable = False
 
 
 class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     location_type = tables.Column(linkify=True)
+    site = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:location_list")
+    actions = ButtonsColumn(Location, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = Location
-        fields = ("pk", "name", "slug", "status", "location_type", "parent", "description", "tags")
-        default_columns = ("pk", "name", "status", "location_type", "description", "tags")
+        fields = ("pk", "name", "slug", "status", "site", "location_type", "parent", "description", "tags", "actions")
+        default_columns = ("pk", "name", "status", "site", "description", "tags", "actions")
+        orderable = False
