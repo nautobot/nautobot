@@ -397,6 +397,25 @@ def common_test_data(cls):
         ),
     )
 
+    ConsolePortTemplate.objects.create(
+        device_type=device_types[0],
+        name="Console Port 1",
+        label="console1",
+        description="Front Console Port 1",
+    )
+    ConsolePortTemplate.objects.create(
+        device_type=device_types[1],
+        name="Console Port 2",
+        label="console2",
+        description="Front Console Port 2",
+    )
+    ConsolePortTemplate.objects.create(
+        device_type=device_types[2],
+        name="Console Port 3",
+        label="console3",
+        description="Front Console Port 3",
+    )
+
 
 class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Region.objects.all()
@@ -1022,9 +1041,6 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         device_types = DeviceType.objects.all()
 
         # Add component templates for filtering
-        ConsolePortTemplate.objects.create(device_type=device_types[0], name="Console Port 1")
-        ConsolePortTemplate.objects.create(device_type=device_types[1], name="Console Port 2")
-
         ConsoleServerPortTemplate.objects.create(device_type=device_types[0], name="Console Server Port 1")
         ConsoleServerPortTemplate.objects.create(device_type=device_types[1], name="Console Server Port 2")
 
@@ -1101,9 +1117,9 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 
     def test_console_ports(self):
         params = {"console_ports": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"console_ports": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_console_server_ports(self):
         params = {"console_server_ports": "true"}
@@ -1168,9 +1184,9 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 
     def test_has_consoleport_templates(self):
         params = {"has_consoleport_templates": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_consoleport_templates": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_consoleserverport_templates(self):
         csp_templates = ConsoleServerPortTemplate.objects.all()[:2]
@@ -1256,18 +1272,7 @@ class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
-        ConsolePortTemplate.objects.create(device_type=device_types[0], name="Console Port 1")
-        ConsolePortTemplate.objects.create(device_type=device_types[1], name="Console Port 2")
-        ConsolePortTemplate.objects.create(device_type=device_types[2], name="Console Port 3")
+        common_test_data(cls)
 
     def test_name(self):
         params = {"name": ["Console Port 1", "Console Port 2"]}
@@ -1276,6 +1281,21 @@ class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
     def test_devicetype_id(self):
         device_types = DeviceType.objects.all()[:2]
         params = {"devicetype_id": [device_types[0].pk, device_types[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["console1", "console2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Front Console Port 1", "Front Console Port 2"]
+        params = {"description": descriptions}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
