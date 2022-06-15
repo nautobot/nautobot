@@ -344,10 +344,10 @@ urlpatterns = [
 ]
 ```
 
-!!! note 
+!!! note
     When naming tab view URLs, you may use any naming convention you like, but you must include `<uuid:pk>` in the path string. We recommend using this naming convention:
-    
-    `path(“<app_name>/<uuid:pk>/tab-name-slug/”, view.as_view(), name=“any_unique_view_name”)`
+
+    `path(“<model_name>/<uuid:pk>/tab-name-slug/”, view.as_view(), name=“any_unique_view_name”)`
 
 ### Adding a Banner
 
