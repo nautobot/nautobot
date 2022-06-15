@@ -663,14 +663,13 @@ class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilt
         field_name="device_type_id",
         label="Device type (ID)",
     )
-
-
-class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     device_type = SlugOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (Slug or ID)",
     )
 
+
+class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = ConsolePortTemplate
         fields = ["id", "name", "type", "label", "description"]

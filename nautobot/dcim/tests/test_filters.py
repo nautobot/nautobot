@@ -1305,14 +1305,9 @@ class ConsoleServerPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
+        device_types = DeviceType.objects.all()
 
         ConsoleServerPortTemplate.objects.create(device_type=device_types[0], name="Console Server Port 1")
         ConsoleServerPortTemplate.objects.create(device_type=device_types[1], name="Console Server Port 2")
@@ -1327,6 +1322,11 @@ class ConsoleServerPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"devicetype_id": [device_types[0].pk, device_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerPortTemplate.objects.all()
@@ -1334,14 +1334,9 @@ class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
+        device_types = DeviceType.objects.all()
 
         PowerPortTemplate.objects.create(
             device_type=device_types[0],
@@ -1379,6 +1374,11 @@ class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"allocated_draw": [50, 100]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerOutletTemplate.objects.all()
@@ -1386,14 +1386,9 @@ class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
+        device_types = DeviceType.objects.all()
 
         PowerOutletTemplate.objects.create(
             device_type=device_types[0],
@@ -1425,6 +1420,11 @@ class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = InterfaceTemplate.objects.all()
@@ -1432,14 +1432,9 @@ class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
+        device_types = DeviceType.objects.all()
 
         InterfaceTemplate.objects.create(
             device_type=device_types[0],
@@ -1480,6 +1475,11 @@ class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"mgmt_only": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = FrontPortTemplate.objects.all()
@@ -1487,14 +1487,9 @@ class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
+        device_types = DeviceType.objects.all()
 
         rear_ports = (
             RearPortTemplate.objects.create(
@@ -1547,6 +1542,11 @@ class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"type": PortTypeChoices.TYPE_8P8C}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = RearPortTemplate.objects.all()
@@ -1554,14 +1554,9 @@ class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
+        device_types = DeviceType.objects.all()
 
         RearPortTemplate.objects.create(
             device_type=device_types[0],
@@ -1600,6 +1595,11 @@ class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"positions": [1, 2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceBayTemplate.objects.all()
@@ -1607,14 +1607,9 @@ class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
+        device_types = DeviceType.objects.all()
 
         DeviceBayTemplate.objects.create(device_type=device_types[0], name="Device Bay 1")
         DeviceBayTemplate.objects.create(device_type=device_types[1], name="Device Bay 2")
@@ -1627,6 +1622,11 @@ class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
     def test_devicetype_id(self):
         device_types = DeviceType.objects.all()[:2]
         params = {"devicetype_id": [device_types[0].pk, device_types[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
