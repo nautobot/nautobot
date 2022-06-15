@@ -23,7 +23,7 @@ class CircuitContent(PluginTemplateExtension):
         return [
             {
                 "title": "Plugin Tab",
-                "url": reverse("plugins:example_plugin:circuit_detail_tab", args=[self.context["object"].pk]),
+                "url": reverse("plugins:example_plugin:circuit_detail_tab", kwargs={"pk": self.context["object"].pk}),
             },
         ]
 
