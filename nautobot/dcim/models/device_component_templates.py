@@ -15,7 +15,7 @@ from nautobot.dcim.choices import (
 
 from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel, CustomField
+from nautobot.extras.models import CustomField, CustomFieldModel, ObjectChange, RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface

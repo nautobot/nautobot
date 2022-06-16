@@ -5,9 +5,9 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.choices import (
     DeviceFaceChoices,
-    PowerOutletFeedLegChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerOutletFeedLegChoices,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -36,10 +36,9 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     Site,
 )
-from nautobot.extras.models import Status
-from nautobot.extras.models.customfields import CustomField
-from nautobot.tenancy.models import Tenant
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import CustomField, Status
+from nautobot.tenancy.models import Tenant
 
 
 class InterfaceTemplateCustomFieldTestCase(TestCase):
@@ -51,18 +50,13 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         site = Site.objects.create(name="Site 1", slug="site-1")
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
-        custom_field_1 = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"
-        )
-        custom_field_1.content_types.set([ContentType.objects.get_for_model(Interface)])
-        custom_field_2 = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"
-        )
-        custom_field_2.content_types.set([ContentType.objects.get_for_model(Interface)])
-        custom_field_3 = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"
-        )
-        custom_field_3.content_types.set([ContentType.objects.get_for_model(Interface)])
+        custom_fields = [
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"),
+        ]
+        for custom_field in custom_fields:
+            custom_field.content_types.set([ContentType.objects.get_for_model(Interface)])
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         interface_template_1 = InterfaceTemplate.objects.create(
             device_type=device_type,
