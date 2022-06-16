@@ -1,4 +1,5 @@
 {
+  "baseBranches": ["next"],
   "extends": [
     "config:base"
   ]
