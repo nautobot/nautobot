@@ -62,13 +62,13 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         interface_templates = [
             InterfaceTemplate.objects.create(
                 device_type=device_type,
-                name="Template_1",
+                name="Template 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 mgmt_only=True,
             ),
             InterfaceTemplate.objects.create(
                 device_type=device_type,
-                name="Template_2",
+                name="Template 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 mgmt_only=True,
             ),
@@ -78,7 +78,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
             device_type=device_type,
             device_role=device_role,
             status=statuses[0],
-            name="Device_01",
+            name="Test Device",
             site=site,
         )
         interfaces = Interface.objects.bulk_create(
