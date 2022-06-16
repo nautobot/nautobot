@@ -6,5 +6,11 @@
   "enabledManagers": ["pip_requirements", "poetry"],
   "extends": [
     "config:base"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
+      "dependencyDashboardApproval": true
+    }
   ]
 }
