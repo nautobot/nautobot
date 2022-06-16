@@ -1,3 +1,4 @@
+import re
 import urllib.parse
 
 from django.conf import settings
@@ -58,3 +59,46 @@ class ForceScriptNameTestcase(TestCase):
             set_script_prefix(original_prefix)
 
         self.assertEqual(get_script_prefix(), original_prefix)
+
+
+class NavRestrictedUI(TestCase):
+    def make_request(self):
+        response = self.client.get(reverse("home"))
+        response_body = response.content.decode(response.charset).replace("\n", "")
+        return re.compile(r'<nav.*<li class="dropdown-header".*General</li>.*Installed Plugins.*</nav>').search(
+            response_body
+        )
+
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_installed_plugins_visible_to_admin_with_hide_restricted_ui_True(self):
+        # Make user admin
+        self.user.is_staff = True
+        self.user.is_superuser = True
+        self.user.save()
+
+        search_result = self.make_request()
+
+        self.assertIsNotNone(search_result)
+
+    @override_settings(HIDE_RESTRICTED_UI=False)
+    def test_installed_plugins_visible_to_admin_with_hide_restricted_ui_False(self):
+        # Make user admin
+        self.user.is_staff = True
+        self.user.is_superuser = True
+        self.user.save()
+
+        search_result = self.make_request()
+
+        self.assertIsNotNone(search_result)
+
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_installed_plugins_not_visible_to_user_with_hide_restricted_ui_True(self):
+        search_result = self.make_request()
+
+        self.assertIsNone(search_result)
+
+    @override_settings(HIDE_RESTRICTED_UI=False)
+    def test_installed_plugins_not_visible_to_user_with_hide_restricted_ui_False(self):
+        search_result = self.make_request()
+
+        self.assertIsNone(search_result)
