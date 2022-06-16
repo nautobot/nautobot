@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.choices import DeviceFaceChoices, PowerOutletFeedLegChoices, InterfaceTypeChoices, PortTypeChoices
@@ -31,8 +32,57 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.models import Status
+from nautobot.extras.models.customfields import CustomField
 from nautobot.tenancy.models import Tenant
+from nautobot.extras.choices import CustomFieldTypeChoices
 
+class InterfaceTemplateCustomFieldTestCase(TestCase):
+
+    def test_instantiate_model(self):
+        """
+        Check that all _custom_field_data is present and all customfields are filled with the correct default values.
+        """
+        statuses = Status.objects.get_for_model(Device)
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        custom_field_1 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1")
+        custom_field_1.content_types.set([ContentType.objects.get_for_model(Interface)])
+        custom_field_2 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2")
+        custom_field_2.content_types.set([ContentType.objects.get_for_model(Interface)])
+        custom_field_3 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3")
+        custom_field_3.content_types.set([ContentType.objects.get_for_model(Interface)])
+
+        interface_templates = [
+            InterfaceTemplate.objects.create(
+                device_type=device_type,
+                name="Template_1",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                mgmt_only=True,
+            ),
+             InterfaceTemplate.objects.create(
+                device_type=device_type,
+                name="Template_2",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                mgmt_only=True,
+            ),
+        ]
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
+        device_type.interfacetemplates.set(interface_templates)
+        device = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            status=statuses[0],
+            name="Device_01",
+            site=site,
+        )
+        interfaces = Interface.objects.bulk_create([template.instantiate(device) for template in device_type.interfacetemplates.all()])
+        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_1"], "value_1")
+        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_2"], "value_2")
+        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_3"], "value_3")
+        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_1"], "value_1")
+        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_2"], "value_2")
+        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_3"], "value_3")
 
 class RackGroupTestCase(TestCase):
     def test_change_rackgroup_site(self):
