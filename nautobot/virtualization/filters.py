@@ -1,6 +1,7 @@
 import django_filters
 from django.db.models import Q
 
+from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.models import DeviceRole, Location, Platform, Region, Site
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
@@ -40,46 +41,12 @@ class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "description"]
 
 
-class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
+class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
             "comments": "icontains",
         },
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
-    )
-    location_id = TreeNodeMultipleChoiceFilter(
-        queryset=Location.objects.all(),
-        lookup_expr="in",
-        label="Location (ID)",
-    )
-    location = TreeNodeMultipleChoiceFilter(
-        queryset=Location.objects.all(),
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Location (slug)",
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ClusterGroup.objects.all(),

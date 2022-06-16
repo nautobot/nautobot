@@ -1,6 +1,7 @@
 import django_filters
 from django.db.models import Q
 
+from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.filters import CableTerminationFilterSet, PathEndpointFilterSet
 from nautobot.dcim.models import Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
@@ -194,7 +195,12 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
         fields = ["id", "cid", "install_date", "commit_rate"]
 
 
-class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, PathEndpointFilterSet):
+class CircuitTerminationFilterSet(
+    BaseFilterSet,
+    CableTerminationFilterSet,
+    LocatableModelFilterSetMixin,
+    PathEndpointFilterSet,
+):
     q = SearchFilter(
         filter_predicates={
             "circuit__cid": "icontains",
@@ -206,26 +212,6 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
     circuit_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Circuit.objects.all(),
         label="Circuit",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
-    )
-    location_id = TreeNodeMultipleChoiceFilter(
-        queryset=Location.objects.all(),
-        label="Location (ID)",
-    )
-    location = TreeNodeMultipleChoiceFilter(
-        field_name="location__slug",
-        queryset=Location.objects.all(),
-        to_field_name="slug",
-        label="Location (slug)",
     )
     provider_network_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),

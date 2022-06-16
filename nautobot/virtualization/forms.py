@@ -5,6 +5,12 @@ from django.core.exceptions import ValidationError
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelCSVFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
 from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
@@ -97,20 +103,9 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterForm(NautobotModelForm, TenancyForm):
+class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region_id": "$region"},
-    )
-    location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
-    )
     comments = CommentField()
 
     class Meta:
@@ -128,7 +123,7 @@ class ClusterForm(NautobotModelForm, TenancyForm):
         )
 
 
-class ClusterCSVForm(CustomFieldModelCSVForm):
+class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
     type = CSVModelChoiceField(
         queryset=ClusterType.objects.all(),
         to_field_name="name",
@@ -139,18 +134,6 @@ class ClusterCSVForm(CustomFieldModelCSVForm):
         to_field_name="name",
         required=False,
         help_text="Assigned cluster group",
-    )
-    site = CSVModelChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned site",
-    )
-    location = CSVModelChoiceField(
-        queryset=Location.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned location",
     )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -164,21 +147,20 @@ class ClusterCSVForm(CustomFieldModelCSVForm):
         fields = Cluster.csv_headers
 
 
-class ClusterBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class ClusterBulkEditForm(
+    BootstrapMixin,
+    AddRemoveTagsForm,
+    LocatableModelBulkEditFormMixin,
+    CustomFieldBulkEditForm,
+):
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, to_field_name="slug")
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region": "$region"})
-    location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
-    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
+        model = Cluster
         nullable_fields = [
             "group",
             "site",
@@ -188,26 +170,11 @@ class ClusterBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdit
         ]
 
 
-class ClusterFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class ClusterFilterForm(BootstrapMixin, LocatableModelFilterFormMixin, TenancyFilterForm, CustomFieldFilterForm):
     model = Cluster
     field_order = ["q", "type", "region", "site", "group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     type = DynamicModelMultipleChoiceField(queryset=ClusterType.objects.all(), to_field_name="slug", required=False)
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-        query_params={"region": "$region"},
-    )
-    location = DynamicModelMultipleChoiceField(
-        queryset=Location.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-        # TODO query_params={"base_site": "$site"},
-    )
     group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
@@ -233,7 +200,10 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={
+            "site_id": "$site",
+            "location_id": "$location",
+        },
     )
     devices = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
@@ -446,7 +416,12 @@ class VirtualMachineBulkEditForm(
 
 
 class VirtualMachineFilterForm(
-    BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm, LocalContextFilterForm
+    BootstrapMixin,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusFilterFormMixin,
+    CustomFieldFilterForm,
+    LocalContextFilterForm,
 ):
     model = VirtualMachine
     field_order = [
@@ -478,21 +453,6 @@ class VirtualMachineFilterForm(
         null_option="None",
     )
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-        query_params={"region": "$region"},
-    )
-    location = DynamicModelMultipleChoiceField(
-        queryset=Location.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-        # TODO query_params={"base_site": "$site"},
-    )
     role = DynamicModelMultipleChoiceField(
         queryset=DeviceRole.objects.filter(vm_role=True),
         to_field_name="slug",
