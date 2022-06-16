@@ -22,9 +22,7 @@
                     {% if object.owner %}
                         <tr>
                             <td>Owner</td>
-                            <td>
-                                <a href="{{ object.owner.get_absolute_url }}">{{ object.owner }}</a>
-                            </td>
+                            <td>{{ object.owner|hyperlinked_object }}</td>
                         </tr>
                     {% endif %}
                     <tr>

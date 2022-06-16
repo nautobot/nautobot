@@ -261,6 +261,7 @@ class CustomField(BaseModel, ChangeLoggedModel):
         default=False,
         help_text="If true, this field is required when creating new objects or editing an existing object.",
     )
+    # todoindex:
     filter_logic = models.CharField(
         max_length=50,
         choices=CustomFieldFilterLogicChoices,

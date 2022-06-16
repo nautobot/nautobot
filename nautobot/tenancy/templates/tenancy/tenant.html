@@ -15,13 +15,7 @@
             <table class="table table-hover panel-body attr-table">
                 <tr>
                     <td>Group</td>
-                    <td>
-                        {% if object.group %}
-                            <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.group|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Description</td>

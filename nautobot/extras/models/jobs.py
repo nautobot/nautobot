@@ -394,6 +394,7 @@ class JobResult(BaseModel, CustomFieldModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
+    # todoindex:
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
@@ -709,6 +710,7 @@ class ScheduledJob(BaseModel):
         verbose_name="Start Datetime",
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
+    # todoindex:
     enabled = models.BooleanField(
         default=True,
         verbose_name="Enabled",
@@ -754,6 +756,7 @@ class ScheduledJob(BaseModel):
         null=True,
         help_text="User that approved the schedule",
     )
+    # todoindex:
     approval_required = models.BooleanField(default=False)
     approved_at = models.DateTimeField(
         editable=False,

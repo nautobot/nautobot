@@ -31,6 +31,7 @@ DESCRIPTION_MAP = {
     "deprovisioning": "Circuit is being deprovisioned",
     "failed": "Unit has failed",
     "inventory": "Device is in inventory",
+    "maintenance": "Unit is under maintenance",
     "offline": "Unit is offline",
     "planned": "Unit has been planned",
     "provisioning": "Circuit is being provisioned",

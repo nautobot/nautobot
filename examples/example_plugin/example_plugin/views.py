@@ -2,9 +2,46 @@ from django.shortcuts import render
 from django.views.generic import View
 
 from nautobot.core.views import generic
+from nautobot.circuits.models import Circuit
+from nautobot.dcim.models import Device
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
+
+
+class CircuitDetailPluginTabView(generic.ObjectView):
+    """
+    This view's template extends the circuit detail template,
+    making it suitable to show as a tab on the circuit detail page.
+
+    Views that are intended to be for an object detail tab's content rendering must
+    always inherit from nautobot.core.views.generic.ObjectView.
+    """
+
+    queryset = Circuit.objects.all()
+    template_name = "example_plugin/tab_circuit_detail.html"
+
+
+class DeviceDetailPluginTabOneView(generic.ObjectView):
+    """
+    This view's template extends the device detail template,
+    making it suitable to show as a tab on the device detail page.
+
+    Views that are intended to be for an object detail tab's content rendering must
+    always inherit from nautobot.core.views.generic.ObjectView.
+    """
+
+    queryset = Device.objects.all()
+    template_name = "example_plugin/tab_device_detail_1.html"
+
+
+class DeviceDetailPluginTabTwoView(generic.ObjectView):
+    """
+    Same as DeviceDetailPluginTabOneView view above but using a different template.
+    """
+
+    queryset = Device.objects.all()
+    template_name = "example_plugin/tab_device_detail_2.html"
 
 
 class ExamplePluginHomeView(View):

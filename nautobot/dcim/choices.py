@@ -678,6 +678,7 @@ class InterfaceTypeChoices(ChoiceSet):
 
     # Virtual
     TYPE_VIRTUAL = "virtual"
+    TYPE_BRIDGE = "bridge"
     TYPE_LAG = "lag"
 
     # Ethernet
@@ -774,6 +775,7 @@ class InterfaceTypeChoices(ChoiceSet):
             "Virtual interfaces",
             (
                 (TYPE_VIRTUAL, "Virtual"),
+                (TYPE_BRIDGE, "Bridge"),
                 (TYPE_LAG, "Link Aggregation Group (LAG)"),
             ),
         ),
@@ -907,6 +909,31 @@ class InterfaceModeChoices(ChoiceSet):
         (MODE_TAGGED, "Tagged"),
         (MODE_TAGGED_ALL, "Tagged (All)"),
     )
+
+
+class InterfaceStatusChoices(ChoiceSet):
+
+    STATUS_PLANNED = "planned"
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONING = "decommissioning"
+    STATUS_FAILED = "failed"
+    STATUS_MAINTENANCE = "maintenance"
+
+    CHOICES = (
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+        (STATUS_MAINTENANCE, "Maintenance"),
+    )
+
+    CSS_CLASSES = {
+        STATUS_PLANNED: "info",
+        STATUS_FAILED: "danger",
+        STATUS_ACTIVE: "success",
+        STATUS_DECOMMISSIONING: "warning",
+        STATUS_MAINTENANCE: "default",
+    }
 
 
 #

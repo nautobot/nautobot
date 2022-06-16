@@ -8,6 +8,10 @@ Multiple parameters can be joined to further narrow results. For example, `GET /
 
 Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/sites/?region=north-america&region=south-america` will return sites in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/sites/?tag=foo&tag=bar` will return only sites which have both the "foo" _and_ "bar" tags applied.
 
+<!-- markdownlint-disable MD036 -->
+_Changed in version 1.4.0: If [STRICT_FILTERING](../configuration/optional-settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored._
+<!-- markdownlint-enable MD036 -->
+
 ### Filtering by Choice Field
 
 Some models have fields which are limited to specific choices, such as the `status` field on the Prefix model. To find all available choices for this field, make an authenticated `OPTIONS` request to the model's list endpoint, and use `jq` to extract the relevant parameters:
