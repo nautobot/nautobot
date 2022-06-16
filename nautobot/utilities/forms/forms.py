@@ -3,6 +3,8 @@ import re
 
 import yaml
 from django import forms
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields import related
 
 from nautobot.ipam.formfields import IPNetworkFormField
 
@@ -20,6 +22,9 @@ __all__ = (
     "ReturnURLForm",
     "TableConfigForm",
 )
+
+from nautobot.utilities.forms import DynamicModelMultipleChoiceField
+from nautobot.utilities.utils import get_filterset_for_model
 
 
 class AddressFieldMixin(forms.ModelForm):
@@ -80,8 +85,19 @@ class BaseFilterForm(forms.BaseForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.selected_fields = [field.name for field in self.visible_fields()]
-        self.form_fields = [(field.name, field.label) for field in self.visible_fields()]
+        current_fields = self.fields.copy()
+        visible_fields = [field.name for field in self.visible_fields()]
+        filterset_filters = get_filterset_for_model(self.model).get_filters()
+        filterset_fields = [(name, name) for name, item in filterset_filters.items() if name not in visible_fields]
+
+        self.selected_fields = visible_fields
+        self.form_fields = [(field.name, field.label) for field in self.visible_fields()] + filterset_fields
+
+        for name, item in filterset_filters.items():
+            if name not in visible_fields:
+                self.fields[name] = self.get_form_field(name, item)
+                self.fields[name].label = item.label
+
         if user is not None and user.is_authenticated:
             columns = user.get_config(f"filter_form.{self.__class__.__name__}.columns")
             if columns:
@@ -89,6 +105,32 @@ class BaseFilterForm(forms.BaseForm):
                 fields_to_remove = [field for field in self.fields.keys() if field not in columns]
                 for field in fields_to_remove:
                     self.fields.pop(field)
+            else:
+                self.fields = current_fields
+
+    def get_form_field(self, name, field):
+        """
+        Return the appropriate form field(e.g CharField, DynamicModelMultipleChoiceField, BooleanField) for `field`
+
+        Args:
+            name (str): Model field name
+            field (FilterSet): A FilterSet field instance
+        """
+        form = forms.CharField(required=False)
+
+        if "__" not in name:
+            try:
+                field_instance = self.model._meta.get_field(name)
+                if isinstance(field_instance, (related.ForeignKey, related.ManyToManyField)):
+                    related_model = getattr(field_instance, "related_model", None)
+                    form = DynamicModelMultipleChoiceField(queryset=related_model.objects.all(), required=False)
+                # TODO: Add check for other types eg Integer, boolean etc
+            except FieldDoesNotExist:
+                pass
+        else:
+            ...
+
+        return form
 
 
 class ReturnURLForm(forms.Form):

@@ -384,7 +384,7 @@ class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         ]
 
 
-class SiteFilterForm(BaseFilterForm, BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class SiteFilterForm(BootstrapMixin, BaseFilterForm, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = Site
     field_order = ["q", "status", "region", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
