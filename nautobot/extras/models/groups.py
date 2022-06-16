@@ -441,6 +441,9 @@ class DynamicGroup(OrganizationalModel):
 
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
+        # Getting the graph should result in a ValidationError if there's a loop
+        # detected.
+        self.get_graph()
 
         # Validate `filter` dict
         self.clean_filter()
@@ -568,10 +571,22 @@ class DynamicGroup(OrganizationalModel):
         if graph is None:
             graph = nx.DiGraph()
 
+        print(f"DG: Graphing {parent_group}...")
+
         for node in parent_group.dynamic_group_memberships.all():
             group = node.group
+            print(f"DG: Graphing {group}...")
             graph.add_edge(parent_group, group, operator=node.operator, weight=node.weight)
+
+            """
+            if not nx.is_directed_acyclic_graph(graph):
+                # graph.remove_edges_from([self.parent_group, self.group])
+                print(f"DG: Got loop when adding {group}")
+                raise ValidationError({"group": "Graph contains a loop and this is bad"})
+            """
+
             if group.children.exists():
+                print(f"DG: Enumerating {group} children...")
                 self.get_graph(parent_group=group, graph=graph)
 
         return graph
@@ -628,9 +643,22 @@ class DynamicGroupMembership(BaseModel):
         return self.group.get_group_members_url()
 
     def get_graph(self):
-        graph = self.parent_group.get_graph()
-        graph.add_edge(self.parent_group, self.group, operator=self.operator, weight=self.weight)
-        return graph
+        print("DGM: Getting graph from parent.")
+        parent_graph = self.parent_group.get_graph()
+        print(f"DGM: Adding self as child node. Parent; {self.parent_group}, Me: {self.group}")
+        parent_graph.add_edge(self.parent_group, self.group, operator=self.operator, weight=self.weight)
+        if not nx.is_directed_acyclic_graph(parent_graph):
+            print(f"DGM: Got loop when adding PARENT {self.group}")
+            # graph.remove_edges_from([self.parent_group, self.group])
+            raise ValidationError({"group": "Graph contains a loop and this is bad"})
+
+        child_graph = self.group.get_graph()
+        child_graph.add_edge(self.parent_group, self.group, operator=self.operator, weight=self.weight)
+        if not nx.is_directed_acyclic_graph(child_graph):
+            print(f"DGM: Got loop when adding CHILD {self.group}")
+            # graph.remove_edges_from([self.parent_group, self.group])
+            raise ValidationError({"group": "Graph contains a loop and this is bad"})
+        return parent_graph
 
     def clean(self):
         super().clean()
@@ -640,7 +668,14 @@ class DynamicGroupMembership(BaseModel):
             raise ValidationError({"group": "ContentType for group and parent_group must match"})
 
         # Assert that loops cannot be created (such as adding root parent as a nested child).
-        graph = self.get_graph()
+        print(f"DGM: Calling get_graph from parent: {self.parent_group}")
+        self.get_graph()  # Just calling this should be enough to raise an error.
+        # graph = self.get_graph()
+        # breakpoint()
+        print(f"DGM: Got graph from parent: {self.parent_group}")
+        """
         if not nx.is_directed_acyclic_graph(graph):
+            print(f"DGM: Got loop when adding {self.group}")
             # graph.remove_edges_from([self.parent_group, self.group])
-            raise ValidationError({"group": "Graph contains a loop ad this is bad"})
+            raise ValidationError({"group": "Graph contains a loop and this is bad"})
+        """
