@@ -12,5 +12,6 @@
       "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
       "dependencyDashboardApproval": true
     }
-  ]
+  ],
+  "rangeStrategy": "bump"
 }
