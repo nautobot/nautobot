@@ -85,17 +85,18 @@ class BaseFilterForm(forms.BaseForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        current_fields = self.fields.copy()
+        prev_fields = self.fields.copy()
         visible_fields = [field.name for field in self.visible_fields()]
-        filterset_filters = get_filterset_for_model(self.model).get_filters()
-        filterset_fields = [(name, name) for name, item in filterset_filters.items() if name not in visible_fields]
 
         self.selected_fields = visible_fields
-        self.form_fields = [(field.name, field.label) for field in self.visible_fields()] + filterset_fields
+
+        filterset_filters = get_filterset_for_model(self.model).get_filters()
+        filterset_fields = [(name, name) for name, item in filterset_filters.items() if name not in visible_fields]
+        self.columns_sequence = [(field.name, field.label) for field in self.visible_fields()] + filterset_fields
 
         for name, item in filterset_filters.items():
             if name not in visible_fields:
-                self.fields[name] = self.get_form_field(name, item)
+                self.fields[name] = self.get_form_field(name)
                 self.fields[name].label = item.label
 
         if user is not None and user.is_authenticated:
@@ -105,16 +106,35 @@ class BaseFilterForm(forms.BaseForm):
                 fields_to_remove = [field for field in self.fields.keys() if field not in columns]
                 for field in fields_to_remove:
                     self.fields.pop(field)
-            else:
-                self.fields = current_fields
 
-    def get_form_field(self, name, field):
+                self.order_fields(columns)
+                self.order_columns_sequence(columns)
+            else:
+                self.fields = prev_fields
+
+    def order_columns_sequence(self, field_order=None):
         """
-        Return the appropriate form field(e.g CharField, DynamicModelMultipleChoiceField, BooleanField) for `field`
+        Rearrange the columns_sequence according to field_order.
+
+        Args:
+            field_order (list): A list of field names specifying the order.
+        """
+        ordered_fields = {}
+        fields = dict(self.columns_sequence)
+
+        for key in field_order:
+            if key in fields:
+                ordered_fields[key] = fields.pop(key)
+
+        ordered_fields.update(fields)
+        self.columns_sequence = ordered_fields.items()
+
+    def get_form_field(self, name):
+        """
+        Return the appropriate form field(e.g CharField, DynamicModelMultipleChoiceField, BooleanField) for model field`
 
         Args:
             name (str): Model field name
-            field (FilterSet): A FilterSet field instance
         """
         form = forms.CharField(required=False)
 
@@ -309,7 +329,7 @@ class FilterConfigForm(BootstrapMixin, forms.Form):
         super().__init__(*args, **kwargs)
 
         # Initialize columns field based on table attributes
-        self.fields["columns"].choices = form.form_fields
+        self.fields["columns"].choices = form.columns_sequence
         self.fields["columns"].initial = form.selected_fields
 
     @property
