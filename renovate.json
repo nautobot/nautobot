@@ -1,10 +1,10 @@
 {
   "baseBranches": ["next"],
+  "constraints": {
+    "python": "3.7"
+  },
   "enabledManagers": ["pip_requirements", "poetry"],
   "extends": [
     "config:base"
   ],
-  "major": {
-    "enabled": false
-  }
 }
