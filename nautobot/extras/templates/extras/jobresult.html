@@ -81,6 +81,11 @@
                 <a href="#output" role="tab" data-toggle="tab">Output</a>
             </li>
         {% endif %}
+        {% if job %}
+            <li role="presentation">
+                <a href="#source" role="tab" data-toggle="tab">Source</a>
+            </li>
+        {% endif %}
     </ul>
 {% endblock %}
 
@@ -115,6 +120,12 @@
         {% if result.data.output %}
             <div role="tabpanel" class="tab-pane" id="output">
                 <pre>{{ result.data.output }}</pre>
+            </div>
+        {% endif %}
+        {% if job %}
+            <div role="tabpanel" class="tab-pane" id="source">
+                <p><code>{{ job.filename }}</code></p>
+                <pre>{{ job.source }}</pre>
             </div>
         {% endif %}
     </div>
