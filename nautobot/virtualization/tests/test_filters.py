@@ -1,9 +1,8 @@
-from django.test import TestCase
-
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
     ClusterGroupFilterSet,
@@ -20,7 +19,7 @@ from nautobot.virtualization.models import (
 )
 
 
-class ClusterTypeTestCase(TestCase):
+class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = ClusterType.objects.all()
     filterset = ClusterTypeFilterSet
 
@@ -31,24 +30,12 @@ class ClusterTypeTestCase(TestCase):
         ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2", description="B")
         ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3", description="C")
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Cluster Type 1", "Cluster Type 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["cluster-type-1", "cluster-type-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class ClusterGroupTestCase(TestCase):
+class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = ClusterGroup.objects.all()
     filterset = ClusterGroupFilterSet
 
@@ -59,24 +46,12 @@ class ClusterGroupTestCase(TestCase):
         ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2", description="B")
         ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3", description="C")
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_name(self):
-        params = {"name": ["Cluster Group 1", "Cluster Group 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["cluster-group-1", "cluster-group-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class ClusterTestCase(TestCase):
+class ClusterTestCase(FilterTestCases.FilterTestCase):
     queryset = Cluster.objects.all()
     filterset = ClusterFilterSet
 
@@ -141,10 +116,6 @@ class ClusterTestCase(TestCase):
             tenant=tenants[2],
         )
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["Cluster 1", "Cluster 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -197,7 +168,7 @@ class ClusterTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class VirtualMachineTestCase(TestCase):
+class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
     queryset = VirtualMachine.objects.all()
     filterset = VirtualMachineFilterSet
 
@@ -340,10 +311,6 @@ class VirtualMachineTestCase(TestCase):
         VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=ipaddresses[0])
         VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip4=ipaddresses[1])
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -450,7 +417,7 @@ class VirtualMachineTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class VMInterfaceTestCase(TestCase):
+class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
     queryset = VMInterface.objects.all()
     filterset = VMInterfaceFilterSet
 
@@ -475,12 +442,15 @@ class VMInterfaceTestCase(TestCase):
             VirtualMachine.objects.create(name="Virtual Machine 3", cluster=clusters[2]),
         )
 
+        statuses = Status.objects.get_for_model(VMInterface)
+
         VMInterface.objects.create(
             virtual_machine=vms[0],
             name="Interface 1",
             enabled=True,
             mtu=100,
             mac_address="00-00-00-00-00-01",
+            status=statuses.get(slug="active"),
         )
         VMInterface.objects.create(
             virtual_machine=vms[1],
@@ -488,6 +458,7 @@ class VMInterfaceTestCase(TestCase):
             enabled=True,
             mtu=200,
             mac_address="00-00-00-00-00-02",
+            status=statuses.get(slug="active"),
         )
         VMInterface.objects.create(
             virtual_machine=vms[2],
@@ -495,12 +466,8 @@ class VMInterfaceTestCase(TestCase):
             enabled=False,
             mtu=300,
             mac_address="00-00-00-00-00-03",
+            status=statuses.get(slug="planned"),
         )
-
-    def test_id(self):
-        id_list = self.queryset.values_list("id", flat=True)[:2]
-        params = {"id": [str(id) for id in id_list]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
         params = {"name": ["Interface 1", "Interface 2"]}
@@ -511,6 +478,38 @@ class VMInterfaceTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"enabled": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_parent(self):
+        # Create child interfaces
+        parent_interface = VMInterface.objects.first()
+        child_interfaces = (
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 1", parent_interface=parent_interface
+            ),
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 2", parent_interface=parent_interface
+            ),
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 3", parent_interface=parent_interface
+            ),
+        )
+        VMInterface.objects.bulk_create(child_interfaces)
+
+        params = {"parent_interface_id": [parent_interface.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_bridge(self):
+        # Create bridged interfaces
+        bridge_interface = VMInterface.objects.first()
+        bridged_interfaces = (
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 1", bridge=bridge_interface),
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 2", bridge=bridge_interface),
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 3", bridge=bridge_interface),
+        )
+        VMInterface.objects.bulk_create(bridged_interfaces)
+
+        params = {"bridge_id": [bridge_interface.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_mtu(self):
         params = {"mtu": [100, 200]}
@@ -525,6 +524,10 @@ class VMInterfaceTestCase(TestCase):
 
     def test_mac_address(self):
         params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_status(self):
+        params = {"status": ["active"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):

@@ -13,9 +13,7 @@
                 </tr>
                 <tr>
                     <td>Manufacturer</td>
-                    <td>
-                        <a href="{{ object.manufacturer.get_absolute_url }}">{{ object.manufacturer|placeholder }}</a>
-                    </td>
+                    <td>{{ object.manufacturer|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>NAPALM driver</td>

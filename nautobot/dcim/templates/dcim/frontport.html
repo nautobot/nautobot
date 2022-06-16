@@ -9,9 +9,7 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Device</td>
-                        <td>
-                            <a href="{{ object.device.get_absolute_url }}">{{ object.device }}</a>
-                        </td>
+                        <td>{{ object.device|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Name</td>
@@ -27,9 +25,7 @@
                     </tr>
                     <tr>
                         <td>Rear Port</td>
-                        <td>
-                            <a href="{{ object.rear_port.get_absolute_url }}">{{ object.rear_port }}</a>
-                        </td>
+                        <td>{{ object.rear_port|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Rear Port Position</td>
@@ -53,7 +49,7 @@
                         <tr>
                             <td>Cable</td>
                             <td>
-                                <a href="{{ object.cable.get_absolute_url }}">{{ object.cable }}</a>
+                                {{ object.cable|hyperlinked_object }}
                                 <a href="{% url 'dcim:frontport_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
                                     <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                                 </a>

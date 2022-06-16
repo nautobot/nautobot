@@ -32,3 +32,28 @@ class VirtualMachineStatusChoices(ChoiceSet):
         STATUS_FAILED: "danger",
         STATUS_DECOMMISSIONING: "warning",
     }
+
+
+class VMInterfaceStatusChoices(ChoiceSet):
+
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONING = "decommissioning"
+    STATUS_FAILED = "failed"
+    STATUS_MAINTENANCE = "maintenance"
+    STATUS_PLANNED = "planned"
+
+    CHOICES = (
+        (STATUS_FAILED, "Failed"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+        (STATUS_MAINTENANCE, "Maintenance"),
+        (STATUS_PLANNED, "Planned"),
+    )
+
+    CSS_CLASSES = {
+        STATUS_PLANNED: "info",
+        STATUS_FAILED: "danger",
+        STATUS_ACTIVE: "success",
+        STATUS_DECOMMISSIONING: "warning",
+        STATUS_MAINTENANCE: "default",
+    }
