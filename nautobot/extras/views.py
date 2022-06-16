@@ -876,6 +876,7 @@ class ImageAttachmentEditView(generic.ObjectEditView):
     Note that a URL kwargs parameter of "pk" identifies an existing ImageAttachment to edit,
     while kwargs of "object_id" or "slug" identify the parent model instance to attach an ImageAttachment to.
     """
+
     queryset = ImageAttachment.objects.all()
     model_form = forms.ImageAttachmentForm
 
