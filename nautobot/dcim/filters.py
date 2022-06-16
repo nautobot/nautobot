@@ -1048,6 +1048,8 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
         to_field_name="name",
         label="Device (name)",
     )
+    label = MultiValueCharFilter(label="Label")
+    description = MultiValueCharFilter(label="Description")
     tag = TagFilter()
 
 
@@ -1077,7 +1079,7 @@ class ConsolePortFilterSet(
 
     class Meta:
         model = ConsolePort
-        fields = ["id", "name", "description"]
+        fields = ["id", "name"]
 
 
 class ConsoleServerPortFilterSet(
@@ -1090,7 +1092,7 @@ class ConsoleServerPortFilterSet(
 
     class Meta:
         model = ConsoleServerPort
-        fields = ["id", "name", "description"]
+        fields = ["id", "name"]
 
 
 class PowerPortFilterSet(
@@ -1103,7 +1105,7 @@ class PowerPortFilterSet(
 
     class Meta:
         model = PowerPort
-        fields = ["id", "name", "maximum_draw", "allocated_draw", "description"]
+        fields = ["id", "name", "maximum_draw", "allocated_draw"]
 
 
 class PowerOutletFilterSet(
@@ -1116,7 +1118,7 @@ class PowerOutletFilterSet(
 
     class Meta:
         model = PowerOutlet
-        fields = ["id", "name", "feed_leg", "description"]
+        fields = ["id", "name", "feed_leg"]
 
 
 class InterfaceFilterSet(
@@ -1178,7 +1180,6 @@ class InterfaceFilterSet(
             "mtu",
             "mgmt_only",
             "mode",
-            "description",
         ]
 
     def filter_device(self, queryset, name, value):
@@ -1234,19 +1235,19 @@ class InterfaceFilterSet(
 class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
     class Meta:
         model = FrontPort
-        fields = ["id", "name", "type", "description"]
+        fields = ["id", "name", "type"]
 
 
 class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
     class Meta:
         model = RearPort
-        fields = ["id", "name", "type", "positions", "description"]
+        fields = ["id", "name", "type", "positions"]
 
 
 class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
     class Meta:
         model = DeviceBay
-        fields = ["id", "name", "description"]
+        fields = ["id", "name"]
 
 
 class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
