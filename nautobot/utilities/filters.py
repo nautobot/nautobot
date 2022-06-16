@@ -157,15 +157,15 @@ class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
         return super().get_filter_predicate(v)
 
     def filter(self, qs, value):
-        if value and not isinstance(value[0], str):
-            if isinstance(value[0], TreeNode):
+        if value:
+            if any(isinstance(node, TreeNode) for node in value):
                 # django-tree-queries
-                value = [node.descendants(include_self=True) for node in value]
-            elif isinstance(value[0], MPTTModel):
+                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            elif any(isinstance(node, MPTTModel) for node in value):
                 # django-mptt
-                value = [node.get_descendants(include_self=True) for node in value]
-            else:
-                raise RuntimeError(f"Unexpected value type {type(value[0])}")
+                value = [
+                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
+                ]
         return super().filter(qs, value)
 
 
