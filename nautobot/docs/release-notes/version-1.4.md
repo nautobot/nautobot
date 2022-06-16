@@ -35,6 +35,10 @@ A new version of the `/dcim/interfaces/*` REST API endpoints have been implement
 
 Visit the documentation on [REST API versioning](../rest-api/overview/#versioning) for more information on using the versioned APIs.
 
+#### Object Detail Tabs
+
+A plugin may now define extra tabs which will be appended to the object view's list of tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000)).
+
 ### Changed
 
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
@@ -53,6 +57,8 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ## v1.4.0a2 (2022-MM-DD)
 
 ### Added
+
+- [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
 
 ### Changed
 
