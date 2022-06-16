@@ -23,7 +23,10 @@ $(document).ready(function() {
         let field;
         $.each($(this).find('[id^="id_"]:input'), function(index, value) {
             field = $(value);
-            pointer[field.attr("name")] = field.val();
+            if(field.attr("type") == "checkbox")
+                pointer[field.attr("name")] = field.is(':checked')
+            else
+                pointer[field.attr("name")] = field.val();
         });
 
         // Make the REST API request
