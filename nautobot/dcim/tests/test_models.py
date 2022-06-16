@@ -58,7 +58,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
             type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"
         )
         custom_field_3.content_types.set([ContentType.objects.get_for_model(Interface)])
-
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         interface_templates = [
             InterfaceTemplate.objects.create(
                 device_type=device_type,
@@ -73,7 +73,6 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
                 mgmt_only=True,
             ),
         ]
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         device_type.interfacetemplates.set(interface_templates)
         device = Device.objects.create(
             device_type=device_type,
