@@ -26,6 +26,59 @@ class HomeViewTestCase(TestCase):
         response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
         self.assertHttpStatus(response, 200)
 
+    def make_request(self):
+        url = reverse("home")
+        response = self.client.get(url)
+
+        # Search bar in nav
+        nav_search_bar_pattern = re.compile(
+            '<nav.*<form action="/search/" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">.*</form>.*</nav>'
+        )
+        nav_search_bar_result = nav_search_bar_pattern.search(
+            response.content.decode(response.charset).replace("\n", "")
+        )
+
+        # Global search bar in body/container-fluid wrapper
+        body_search_bar_pattern = re.compile(
+            '<div class="container-fluid wrapper">.*<form action="/search/" method="get" class="form-inline">.*</form>.*</div>'
+        )
+        body_search_bar_result = body_search_bar_pattern.search(
+            response.content.decode(response.charset).replace("\n", "")
+        )
+
+        return nav_search_bar_result, body_search_bar_result
+
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_search_bar_not_visible_if_user_not_authenticated_and_hide_restricted_ui_True(self):
+        self.client.logout()
+
+        nav_search_bar_result, body_search_bar_result = self.make_request()
+
+        self.assertIsNone(nav_search_bar_result)
+        self.assertIsNone(body_search_bar_result)
+
+    @override_settings(HIDE_RESTRICTED_UI=False)
+    def test_search_bar_visible_if_user_authenticated_and_hide_restricted_ui_True(self):
+        nav_search_bar_result, body_search_bar_result = self.make_request()
+
+        self.assertIsNotNone(nav_search_bar_result)
+        self.assertIsNotNone(body_search_bar_result)
+
+    @override_settings(HIDE_RESTRICTED_UI=False)
+    def test_search_bar_visible_if_hide_restricted_ui_False(self):
+        # Assert if user is authenticated
+        nav_search_bar_result, body_search_bar_result = self.make_request()
+
+        self.assertIsNotNone(nav_search_bar_result)
+        self.assertIsNotNone(body_search_bar_result)
+
+        # Assert if user is logout
+        self.client.logout()
+        nav_search_bar_result, body_search_bar_result = self.make_request()
+
+        self.assertIsNotNone(nav_search_bar_result)
+        self.assertIsNotNone(body_search_bar_result)
+
 
 class ForceScriptNameTestcase(TestCase):
     """Basic test to assert that `settings.FORCE_SCRIPT_NAME` works as intended."""
