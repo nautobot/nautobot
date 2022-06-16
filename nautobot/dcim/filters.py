@@ -1048,8 +1048,6 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
         to_field_name="name",
         label="Device (name)",
     )
-    label = MultiValueCharFilter(label="Label")
-    description = MultiValueCharFilter(label="Description")
     tag = TagFilter()
 
 
@@ -1079,7 +1077,7 @@ class ConsolePortFilterSet(
 
     class Meta:
         model = ConsolePort
-        fields = ["id", "name"]
+        fields = "__all__"
 
 
 class ConsoleServerPortFilterSet(
@@ -1092,7 +1090,7 @@ class ConsoleServerPortFilterSet(
 
     class Meta:
         model = ConsoleServerPort
-        fields = ["id", "name"]
+        fields = "__all__"
 
 
 class PowerPortFilterSet(
@@ -1105,7 +1103,7 @@ class PowerPortFilterSet(
 
     class Meta:
         model = PowerPort
-        fields = ["id", "name", "maximum_draw", "allocated_draw"]
+        fields = "__all__"
 
 
 class PowerOutletFilterSet(
@@ -1118,7 +1116,7 @@ class PowerOutletFilterSet(
 
     class Meta:
         model = PowerOutlet
-        fields = ["id", "name", "feed_leg"]
+        fields = "__all__"
 
 
 class InterfaceFilterSet(
@@ -1172,15 +1170,7 @@ class InterfaceFilterSet(
 
     class Meta:
         model = Interface
-        fields = [
-            "id",
-            "name",
-            "type",
-            "enabled",
-            "mtu",
-            "mgmt_only",
-            "mode",
-        ]
+        fields = "__all__"
 
     def filter_device(self, queryset, name, value):
         try:
@@ -1233,21 +1223,43 @@ class InterfaceFilterSet(
 
 
 class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
+    rear_port = django_filters.ModelMultipleChoiceFilter(
+        field_name="rear_port",
+        queryset=RearPort.objects.all(),
+        label="Rear port",
+    )
+
     class Meta:
         model = FrontPort
-        fields = ["id", "name", "type"]
+        fields = "__all__"
 
 
 class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
+    frontports = django_filters.ModelMultipleChoiceFilter(
+        field_name="frontports",
+        queryset=FrontPort.objects.all(),
+        label="Front ports",
+    )
+    has_frontports = RelatedMembershipBooleanFilter(
+        field_name="frontports",
+        label="Has front ports",
+    )
+
     class Meta:
         model = RearPort
-        fields = ["id", "name", "type", "positions"]
+        fields = "__all__"
 
 
 class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
+    installed_device = django_filters.ModelMultipleChoiceFilter(
+        field_name="installed_device",
+        queryset=Device.objects.all(),
+        label="Installed device",
+    )
+
     class Meta:
         model = DeviceBay
-        fields = ["id", "name"]
+        fields = "__all__"
 
 
 class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
@@ -1303,6 +1315,12 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         queryset=InventoryItem.objects.all(),
         label="Parent inventory item (ID)",
     )
+    parent = TreeNodeMultipleChoiceFilter(
+        queryset=InventoryItem.objects.all(),
+        lookup_expr="in",
+        to_field_name="name",
+        label="Parent (name)",
+    )
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(),
         label="Manufacturer (ID)",
@@ -1317,7 +1335,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
 
     class Meta:
         model = InventoryItem
-        fields = ["id", "name", "part_id", "asset_tag", "discovered"]
+        fields = "__all__"
 
 
 class VirtualChassisFilterSet(NautobotFilterSet):

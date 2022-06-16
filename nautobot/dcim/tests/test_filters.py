@@ -3147,6 +3147,15 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         params = {"label": labels}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_rear_port(self):
+        rear_port = (RearPort.objects.get(name="Rear Port 1"), RearPort.objects.get(name="Rear Port 2"))
+        params = {"rear_port": [rear_port[0].pk, rear_port[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rear_port_position(self):
+        params = {"rear_port_position": [2, 3]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class RearPortTestCase(FilterTestCases.FilterTestCase):
     queryset = RearPort.objects.all()
@@ -3248,6 +3257,17 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
         params = {"label": labels}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_frontports(self):
+        frontports = (FrontPort.objects.get(name="Front Port 1"), FrontPort.objects.get(name="Front Port 2"))
+        params = {"frontports": [frontports[0].pk, frontports[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_frontports(self):
+        params = {"has_frontports": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_frontports": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class DeviceBayTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceBay.objects.all()
@@ -3257,13 +3277,64 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
+        device_role = DeviceRole.objects.first()
+        parent_device_type = DeviceType.objects.get(slug="model-2")
+        child_device_type = DeviceType.objects.get(slug="model-3")
+        site = Site.objects.get(name="Site 3")
+
+        device_statuses = Status.objects.get_for_model(Device)
+        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
+
+        child_devices = (
+            Device.objects.create(
+                name="Child Device 1",
+                device_type=child_device_type,
+                device_role=device_role,
+                site=site,
+                status=device_status_map["active"],
+            ),
+            Device.objects.create(
+                name="Child Device 2",
+                device_type=child_device_type,
+                device_role=device_role,
+                site=site,
+                status=device_status_map["active"],
+            ),
+        )
+
+        parent_devices = (
+            Device.objects.create(
+                name="Parent Device 1",
+                device_type=parent_device_type,
+                device_role=device_role,
+                site=site,
+                status=device_status_map["active"],
+            ),
+            Device.objects.create(
+                name="Parent Device 2",
+                device_type=parent_device_type,
+                device_role=device_role,
+                site=site,
+                status=device_status_map["active"],
+            ),
+        )
+
+        device_bays = (
+            parent_devices[0].devicebays.first(),
+            parent_devices[1].devicebays.first(),
+        )
+        device_bays[0].installed_device = child_devices[0]
+        device_bays[1].installed_device = child_devices[1]
+        device_bays[0].save()
+        device_bays[1].save()
+
     def test_name(self):
         params = {"name": ["Device Bay 1", "Device Bay 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_description(self):
         params = {"description": ["Device Bay Description 1", "Device Bay Description 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_region(self):
         regions = (Region.objects.get(name="Region 1"), Region.objects.get(name="Region 2"))
@@ -3292,6 +3363,11 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
     def test_label(self):
         labels = ["devicebay1", "devicebay2"]
         params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_installed_device(self):
+        installed_device = Device.objects.filter(name__startswith="Child")
+        params = {"installed_device": [installed_device[0], installed_device[1]]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -3399,6 +3475,11 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
     def test_parent_id(self):
         parent_items = InventoryItem.objects.filter(parent__isnull=True)[:2]
         params = {"parent_id": [parent_items[0].pk, parent_items[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_parent(self):
+        parent = InventoryItem.objects.exclude(name__contains="A")[:2]
+        params = {"parent": [parent[0].name, parent[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_manufacturer(self):
