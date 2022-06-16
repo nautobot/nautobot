@@ -856,6 +856,18 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         nullable_fields = ["secrets_group"]
 
 
+class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
+    model = GitRepository
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    branch = forms.CharField(required=False)
+    provided_contents = forms.ChoiceField(
+        required=False,
+        label="Provides",
+        choices=add_blank_choice(get_git_datasource_content_choices()),
+    )
+
+
 #
 # GraphQL saved queries
 #
