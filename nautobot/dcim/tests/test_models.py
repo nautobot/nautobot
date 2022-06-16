@@ -8,7 +8,6 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
-    SiteStatusChoices,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -49,7 +48,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         Check that all _custom_field_data is present and all customfields are filled with the correct default values.
         """
         statuses = Status.objects.get_for_model(Device)
-        site = Site.objects.create(name="Site 1", slug="site-1", status=SiteStatusChoices.STATUS_ACTIVE)
+        site = Site.objects.create(name="Site 1", slug="site-1")
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
         custom_field_1 = CustomField.objects.create(
