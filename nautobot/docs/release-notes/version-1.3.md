@@ -146,7 +146,12 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#1645](https://github.com/nautobot/nautobot/issues/1645) - Hide Search Bar if No AuthN and hide_restricted_ui is True
+
 ### Fixed
+
+- [#1677](https://github.com/nautobot/nautobot/issues/1677) - Fixed nested CustomFields (ex: on Interface) default value not applying upon Device creation.
+- [#1769](https://github.com/nautobot/nautobot/issues/1769) - Resolve missing menu 'General / Installed Plugins' in navbar if HIDE RESTRICTED UI is activated
 
 ## v1.3.6 (2022-06-13)
 
