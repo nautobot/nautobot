@@ -655,6 +655,7 @@ class RelationshipTable(BaseTable):
 class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
     actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
+    relationship = tables.Column(linkify=True)
 
     source_type = tables.Column()
     source = tables.Column(linkify=True, orderable=False, accessor="get_source")
