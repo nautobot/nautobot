@@ -1,0 +1,59 @@
+{% extends 'generic/object_detail.html' %}
+{% load buttons %}
+{% load plugins %}
+{% load perms %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Relationship</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <th>Description</th>
+                <td>{{ object.description | placeholder }}</td>
+            </tr>
+            <tr>
+                <th>Type</th>
+                <td>{{ object.type }}</td>
+            </tr>
+            <tr>
+                <th>On Advanced Tab</th>
+                <td>{{ object.advanced_ui | render_boolean }}</td>
+            </tr>
+            <tr>
+                <th>Source Content Type</th>
+                <td>{{ object.source_type }}</td>
+            </tr>
+            <tr>
+                <th>Source Label</th>
+                <td>{{ object.source_label | placeholder }}</td>
+            </tr>
+            <tr>
+                <th>Source Filter</th>
+                <td>{% if object.source_filter %}{{ object.source_filter | render_json  }}{% else %} {{ None | placeholder }}{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Hide on Source Object</th>
+                <td>{{ object.source_hidden | render_boolean }}</td>
+            </tr>
+            <tr>
+                <th>Destination Content Type</th>
+                <td>{{ object.destination_type }}</td>
+            </tr>
+            <tr>
+                <th>Destination Label</th>
+                <td>{{ object.destination_label | placeholder }}</td>
+            </tr>
+            <tr>
+                <th>Destination Filter</th>
+                <td>{% if object.destination_filter %}{{ object.destination_filter | render_json  }}{% else %} {{ None | placeholder }}{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Hide on Destination Object</th>
+                <td>{{ object.destination_hidden | render_boolean }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
