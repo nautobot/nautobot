@@ -319,7 +319,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         )
 
     def get_absolute_url(self):
-        return reverse("extras:relationship", args=[self.pk])
+        return reverse("extras:relationship", args=[self.slug])
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.

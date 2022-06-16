@@ -636,8 +636,8 @@ class ObjectChangeTable(BaseTable):
 
 class RelationshipTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:relationship", args=[tables.A("pk")])
-    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(Relationship, pk_field="slug", buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = Relationship

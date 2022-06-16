@@ -411,17 +411,17 @@ urlpatterns = [
         name="relationship_bulk_delete",
     ),
     path(
-        "relationships/<uuid:pk>/",
+        "relationships/<slug:slug>/",
         views.RelationshipView.as_view(),
         name="relationship",
     ),
     path(
-        "relationships/<uuid:pk>/edit/",
+        "relationships/<slug:slug>/edit/",
         views.RelationshipEditView.as_view(),
         name="relationship_edit",
     ),
     path(
-        "relationships/<uuid:pk>/delete/",
+        "relationships/<slug:slug>/delete/",
         views.RelationshipDeleteView.as_view(),
         name="relationship_delete",
     ),

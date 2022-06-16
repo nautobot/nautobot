@@ -4,20 +4,6 @@
 {% load perms %}
 {% load helpers %}
 
-{% block buttons %}
-    {% plugin_buttons object %}
-    {% block extra_buttons %}{% endblock extra_buttons %}
-    {% if object.clone_fields and user|can_add:object %}
-        {% clone_button object %}
-    {% endif %}
-    {% if user|can_change:object %}
-        {% edit_button object key='pk' %}
-    {% endif %}
-    {% if user|can_delete:object %}
-        {% delete_button object key='pk' %}
-    {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
