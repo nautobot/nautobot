@@ -36,8 +36,8 @@ from nautobot.extras.models.customfields import CustomField
 from nautobot.tenancy.models import Tenant
 from nautobot.extras.choices import CustomFieldTypeChoices
 
-class InterfaceTemplateCustomFieldTestCase(TestCase):
 
+class InterfaceTemplateCustomFieldTestCase(TestCase):
     def test_instantiate_model(self):
         """
         Check that all _custom_field_data is present and all customfields are filled with the correct default values.
@@ -46,11 +46,17 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         site = Site.objects.create(name="Site 1", slug="site-1")
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
-        custom_field_1 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1")
+        custom_field_1 = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"
+        )
         custom_field_1.content_types.set([ContentType.objects.get_for_model(Interface)])
-        custom_field_2 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2")
+        custom_field_2 = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"
+        )
         custom_field_2.content_types.set([ContentType.objects.get_for_model(Interface)])
-        custom_field_3 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3")
+        custom_field_3 = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"
+        )
         custom_field_3.content_types.set([ContentType.objects.get_for_model(Interface)])
 
         interface_templates = [
@@ -60,7 +66,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 mgmt_only=True,
             ),
-             InterfaceTemplate.objects.create(
+            InterfaceTemplate.objects.create(
                 device_type=device_type,
                 name="Template_2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
@@ -76,13 +82,16 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
             name="Device_01",
             site=site,
         )
-        interfaces = Interface.objects.bulk_create([template.instantiate(device) for template in device_type.interfacetemplates.all()])
+        interfaces = Interface.objects.bulk_create(
+            [template.instantiate(device) for template in device_type.interfacetemplates.all()]
+        )
         self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_1"], "value_1")
         self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_2"], "value_2")
         self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_3"], "value_3")
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_1"], "value_1")
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_2"], "value_2")
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_3"], "value_3")
+
 
 class RackGroupTestCase(TestCase):
     def test_change_rackgroup_site(self):
