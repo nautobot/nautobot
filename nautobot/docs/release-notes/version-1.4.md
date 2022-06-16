@@ -59,12 +59,15 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ### Added
 
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
+- [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.
 
 ### Changed
 
 ### Fixed
 
 ### Removed
+
+- [#1462](https://github.com/nautobot/nautobot/issues/1462) - Removed job source tab from Job and Job Result view.
 
 ## v1.4.0a1 (2022-06-13)
 
