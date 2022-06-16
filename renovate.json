@@ -9,7 +9,7 @@
   ],
   "packageRules": [
     {
-      "matchPackagePatterns": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
+      "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
       "dependencyDashboardApproval": true
     }
   ]
