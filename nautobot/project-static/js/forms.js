@@ -437,31 +437,42 @@ $(document).ready(function() {
     });
 
     // Rearrange options within a <select> list
-    $('#move-option-up').bind('click', function() {
+    $('.move-option-up').bind('click', function() {
+        var userconfigform = $(this).parents(".userconfigform")
         var select_id = '#' + $(this).attr('data-target');
-        $(select_id + ' option:selected').each(function () {
-            var newPos = $(select_id + ' option').index(this) - 1;
+        var selected_options = userconfigform.find(select_id + ' option:selected')
+        var all_options = userconfigform.find(select_id + ' option')
+        selected_options.each(function () {
+            var newPos = all_options.index(this) - 1;
             if (newPos > -1) {
-                $(select_id + ' option').eq(newPos).before("<option value='" + $(this).val() + "' selected='selected'>" + $(this).text() + "</option>");
-                $(this).remove();
+                var text = $(this).text()
+                var value = $(this).val()
+                all_options.eq(newPos).before(`<option value="${value}" selected="selected">${text}</option>`)
+                setTimeout(() => $(this).remove(), 1)
             }
         });
     });
-    $('#move-option-down').bind('click', function() {
+    $('.move-option-down').bind('click', function() {
+        var userconfigform = $(this).parents(".userconfigform")
         var select_id = '#' + $(this).attr('data-target');
-        var countOptions = $(select_id + ' option').length;
-        var countSelectedOptions = $(select_id + ' option:selected').length;
-        $(select_id + ' option:selected').each(function () {
-            var newPos = $(select_id + ' option').index(this) + countSelectedOptions;
+        var selected_options = userconfigform.find(select_id + ' option:selected')
+        var all_options = userconfigform.find(select_id + ' option')
+        var countOptions = all_options.length;
+        var countSelectedOptions = selected_options.length;
+        selected_options.each(function () {
+            var newPos = all_options.index(this) + countSelectedOptions;
             if (newPos < countOptions) {
-                $(select_id + ' option').eq(newPos).after("<option value='" + $(this).val() + "' selected='selected'>" + $(this).text() + "</option>");
-                $(this).remove();
+                var text = $(this).text()
+                var value = $(this).val()
+                all_options.eq(newPos).after(`<option value="${value}" selected="selected">${text}</option>`)
+                setTimeout(() => $(this).remove(), 1)
             }
         });
     });
-    $('#select-all-options').bind('click', function() {
+    $('.select-all-options').bind('click', function() {
         var select_id = '#' + $(this).attr('data-target');
-        $(select_id + ' option').prop('selected',true);
+        var userconfigform = $(this).parents(".userconfigform")
+        userconfigform.find(select_id + ' option').prop('selected',true);
     });
 
 });
