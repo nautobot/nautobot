@@ -356,6 +356,7 @@ class LocationView(generic.ObjectView):
 class LocationEditView(generic.ObjectEditView):
     queryset = Location.objects.all()
     model_form = forms.LocationForm
+    template_name = "dcim/location_edit.html"
 
 
 class LocationDeleteView(generic.ObjectDeleteView):

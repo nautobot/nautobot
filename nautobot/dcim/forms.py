@@ -443,7 +443,7 @@ class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class LocationForm(NautobotModelForm):
+class LocationForm(NautobotModelForm, TenancyForm):
     slug = SlugField()
     location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
     parent = DynamicModelChoiceField(
@@ -455,7 +455,7 @@ class LocationForm(NautobotModelForm):
 
     class Meta:
         model = Location
-        fields = ["location_type", "parent", "site", "name", "slug", "status", "description"]
+        fields = ["location_type", "parent", "site", "name", "slug", "status", "tenant_group", "tenant", "description"]
 
 
 class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -470,14 +470,22 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Parent location",
     )
+    tenant = CSVModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Assigned tenant",
+    )
 
     class Meta:
         model = Location
         fields = Location.csv_headers
 
 
-class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilterForm):
+class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, TenancyFilterForm, CustomFieldFilterForm):
     model = Location
+    field_order = ["q", "location_type", "parent", "status", "tenant_group", "tenant", "tag"]
+
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
         queryset=LocationType.objects.all(), to_field_name="slug", required=False

@@ -3,6 +3,7 @@ import django_tables2 as tables
 from nautobot.dcim.models import Location, LocationType
 from nautobot.dcim.tables.template_code import TREE_LINK
 from nautobot.extras.tables import StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import BaseTable, ButtonsColumn, ContentTypesColumn, TagColumn, ToggleColumn
 
 __all__ = (
@@ -45,11 +46,24 @@ class LocationTable(StatusTableMixin, BaseTable):
     location_type = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:location_list")
     actions = ButtonsColumn(Location, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = Location
-        fields = ("pk", "name", "slug", "status", "site", "location_type", "parent", "description", "tags", "actions")
-        default_columns = ("pk", "name", "status", "site", "description", "tags", "actions")
+        fields = (
+            "pk",
+            "name",
+            "slug",
+            "status",
+            "site",
+            "location_type",
+            "parent",
+            "tenant",
+            "description",
+            "tags",
+            "actions",
+        )
+        default_columns = ("pk", "name", "status", "site", "tenant", "description", "tags", "actions")
         orderable = False

@@ -7,6 +7,8 @@ import nautobot.core.fields
 import nautobot.extras.models.mixins
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
+import nautobot.utilities.fields
+import nautobot.utilities.ordering
 import taggit.managers
 import uuid
 
@@ -14,6 +16,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("tenancy", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0034_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
         ("dcim", "0012_interface_parent_bridge"),
@@ -82,6 +85,16 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(db_index=True, max_length=100)),
                 (
+                    "_name",
+                    nautobot.utilities.fields.NaturalOrderingField(
+                        "name",
+                        blank=True,
+                        db_index=True,
+                        max_length=100,
+                        naturalize_function=nautobot.utilities.ordering.naturalize,
+                    ),
+                ),
+                (
                     "slug",
                     nautobot.core.fields.AutoSlugField(
                         blank=True, max_length=100, populate_from=["parent__name", "name"], unique=True
@@ -124,9 +137,19 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
+                (
+                    "tenant",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="locations",
+                        to="tenancy.tenant",
+                    ),
+                ),
             ],
             options={
-                "ordering": ("name",),
+                "ordering": ("_name",),
             },
             bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin),
         ),

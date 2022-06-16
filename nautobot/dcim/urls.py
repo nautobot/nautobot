@@ -105,6 +105,12 @@ urlpatterns = [
         name="location_changelog",
         kwargs={"model": Location},
     ),
+    path(
+        "locations/<slug:slug>/images/add/",
+        ImageAttachmentEditView.as_view(),
+        name="location_add_image",
+        kwargs={"model": Location},
+    ),
     # Rack groups
     path("rack-groups/", views.RackGroupListView.as_view(), name="rackgroup_list"),
     path("rack-groups/add/", views.RackGroupEditView.as_view(), name="rackgroup_add"),

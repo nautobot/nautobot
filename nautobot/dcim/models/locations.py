@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -9,6 +10,7 @@ from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
+from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.tree_queries import TreeManager
 
 
@@ -92,7 +94,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
               Device
             Prefix
             etc.
-          Device
+          VLANGroup
           Prefix
           etc.
 
@@ -102,8 +104,8 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     """
 
     # A Location's name is unique within context of its parent, not globally unique.
-    # TODO: Like Site, we may want to add a `_name` NaturalOrderingField?
     name = models.CharField(max_length=100, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     # However a Location's slug *is* globally unique.
     slug = AutoSlugField(populate_from=["parent__name", "name"])
     location_type = models.ForeignKey(
@@ -118,9 +120,15 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         blank=True,
         null=True,
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="locations",
+        blank=True,
+        null=True,
+    )
     description = models.CharField(max_length=200, blank=True)
-    # TODO images = GenericRelation(to="extras.ImageAttachment")
-    # TODO: should a Location have a Tenant ForeignKey? Site does, but Region and RackGroup do not.
+    images = GenericRelation(to="extras.ImageAttachment")
 
     objects = TreeManager()
 
@@ -131,6 +139,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         "site",
         "status",
         "parent",
+        "tenant",
         "description",
     ]
 
@@ -139,11 +148,12 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         "site",
         "status",
         "parent",
+        "tenant",
         "description",
     ]
 
     class Meta:
-        ordering = ("name",)
+        ordering = ("_name",)
         constraints = [
             models.UniqueConstraint(name="unique_name_per_parent", fields=["parent", "name"]),
         ]
@@ -162,6 +172,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
             self.site.name if self.site else None,
             self.get_status_display(),
             self.parent.name if self.parent else None,
+            self.tenant.name if self.tenant else None,
             self.description,
         )
 
