@@ -3,7 +3,13 @@ from django.test import TestCase
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.choices import DeviceFaceChoices, PowerOutletFeedLegChoices, InterfaceTypeChoices, PortTypeChoices
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    PowerOutletFeedLegChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    SiteStatusChoices,
+)
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -43,7 +49,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         Check that all _custom_field_data is present and all customfields are filled with the correct default values.
         """
         statuses = Status.objects.get_for_model(Device)
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.create(name="Site 1", slug="site-1", status=SiteStatusChoices.STATUS_ACTIVE)
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
         custom_field_1 = CustomField.objects.create(
@@ -59,21 +65,21 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         )
         custom_field_3.content_types.set([ContentType.objects.get_for_model(Interface)])
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
-        interface_templates = [
-            InterfaceTemplate.objects.create(
-                device_type=device_type,
-                name="Template 1",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-                mgmt_only=True,
-            ),
-            InterfaceTemplate.objects.create(
-                device_type=device_type,
-                name="Template 2",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-                mgmt_only=True,
-            ),
-        ]
+        interface_template_1 = InterfaceTemplate.objects.create(
+            device_type=device_type,
+            name="Test_Template_1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+        interface_template_2 = InterfaceTemplate.objects.create(
+            device_type=device_type,
+            name="Test_Template_2",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+        interface_templates = [interface_template_1, interface_template_2]
         device_type.interfacetemplates.set(interface_templates)
+        # instantiate_model() is run when device is created
         device = Device.objects.create(
             device_type=device_type,
             device_role=device_role,
@@ -81,15 +87,13 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
             name="Test Device",
             site=site,
         )
-        interfaces = Interface.objects.bulk_create(
-            [template.instantiate(device) for template in device_type.interfacetemplates.all()]
-        )
-        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_1"], "value_1")
-        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_2"], "value_2")
-        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk, device=device).cf["field_3"], "value_3")
-        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_1"], "value_1")
-        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_2"], "value_2")
-        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk, device=device).cf["field_3"], "value_3")
+        interfaces = device.interfaces.all()
+        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk).cf["field_1"], "value_1")
+        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk).cf["field_2"], "value_2")
+        self.assertEqual(Interface.objects.get(pk=interfaces[0].pk).cf["field_3"], "value_3")
+        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_1"], "value_1")
+        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_2"], "value_2")
+        self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_3"], "value_3")
 
 
 class RackGroupTestCase(TestCase):
