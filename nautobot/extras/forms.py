@@ -601,10 +601,10 @@ class CustomFieldFilterForm(forms.Form):
             field_name = "cf_{}".format(cf.name)
             if cf.type == "json":
                 self.fields[field_name] = cf.to_form_field(
-                    set_initial=True, enforce_required=False, simple_json_filter=True
+                    set_initial=False, enforce_required=False, simple_json_filter=True
                 )
             else:
-                self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
+                self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
 
 
 #
