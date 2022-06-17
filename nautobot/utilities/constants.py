@@ -16,9 +16,10 @@ FILTER_CHAR_BASED_LOOKUP_MAP = dict(
     nre="regex",
     ire="iregex",
     nire="iregex",
+    null="isnull",
 )
 
-FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")
+FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt", null="isnull")
 
 FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
 
