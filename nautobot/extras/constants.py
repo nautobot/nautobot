@@ -3,6 +3,7 @@ HTTP_CONTENT_TYPE_JSON = "application/json"
 
 # Registerable extras features
 EXTRAS_FEATURES = [
+    "cable_terminations",
     "config_context_owners",
     "custom_fields",
     "custom_links",

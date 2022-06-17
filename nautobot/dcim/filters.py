@@ -10,12 +10,14 @@ from nautobot.extras.filters import (
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
+from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.filters import (
     BaseFilterSet,
+    ContentTypeMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
@@ -1410,6 +1412,14 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
+    termination_a_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("cable_terminations").get_choices,
+        conjoined=False,
+    )
+    termination_b_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("cable_terminations").get_choices,
+        conjoined=False,
+    )
     tag = TagFilter()
 
     class Meta:

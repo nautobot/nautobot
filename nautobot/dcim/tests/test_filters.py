@@ -608,6 +608,7 @@ def common_test_data(cls):
         platform=platforms[0],
         rack=racks[0],
         site=sites[0],
+        tenant=tenants[0],
         status=device_status_map["active"],
     )
     Device.objects.create(
@@ -617,6 +618,7 @@ def common_test_data(cls):
         platform=platforms[1],
         rack=racks[1],
         site=sites[1],
+        tenant=tenants[1],
         status=device_status_map["staged"],
     )
     Device.objects.create(
@@ -626,6 +628,7 @@ def common_test_data(cls):
         platform=platforms[2],
         rack=racks[2],
         site=sites[2],
+        tenant=tenants[2],
         status=device_status_map["failed"],
     )
 
@@ -3628,76 +3631,61 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        )
+        common_test_data(cls)
 
         tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1"),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2"),
+            Tenant.objects.get(name="Tenant 1"),
+            Tenant.objects.get(name="Tenant 2"),
+            Tenant.objects.get(name="Tenant 3"),
+        )
+
+        sites = (
+            Site.objects.get(name="Site 1"),
+            Site.objects.get(name="Site 2"),
+            Site.objects.get(name="Site 3"),
         )
 
         racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0]),
-            Rack.objects.create(name="Rack 2", site=sites[1]),
-            Rack.objects.create(name="Rack 3", site=sites[2]),
+            Rack.objects.get(name="Rack 1"),
+            Rack.objects.get(name="Rack 2"),
+            Rack.objects.get(name="Rack 3"),
         )
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        device_types = (
+            DeviceType.objects.get(slug="model-1"),
+            DeviceType.objects.get(slug="model-2"),
+            DeviceType.objects.get(slug="model-3"),
+        )
+
+        device_role = DeviceRole.objects.first()
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-                rack=racks[0],
-                position=1,
-                tenant=tenants[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-                rack=racks[0],
-                position=2,
-                tenant=tenants[0],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-                rack=racks[1],
-                position=1,
-                tenant=tenants[1],
-            ),
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
             Device.objects.create(
                 name="Device 4",
-                device_type=device_type,
+                device_type=device_types[0],
                 device_role=device_role,
-                site=sites[1],
-                rack=racks[1],
+                tenant=tenants[0],
+                site=sites[0],
+                rack=racks[0],
                 position=2,
             ),
             Device.objects.create(
                 name="Device 5",
-                device_type=device_type,
+                device_type=device_types[1],
                 device_role=device_role,
-                site=sites[2],
-                rack=racks[2],
+                tenant=tenants[1],
+                site=sites[1],
+                rack=racks[1],
                 position=1,
             ),
             Device.objects.create(
                 name="Device 6",
-                device_type=device_type,
+                device_type=device_types[2],
                 device_role=device_role,
+                tenant=tenants[2],
                 site=sites[2],
                 rack=racks[2],
                 position=2,
@@ -3705,58 +3693,34 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
 
         interfaces = (
+            Interface.objects.get(device__name="Device 1"),
+            Interface.objects.get(device__name="Device 2"),
+            Interface.objects.get(device__name="Device 3"),
+            Interface.objects.get(device__name="Device 4"),
+            Interface.objects.get(device__name="Device 5"),
+            Interface.objects.get(device__name="Device 6"),
             Interface.objects.create(
                 device=devices[0],
-                name="Interface 1",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface.objects.create(
-                device=devices[0],
-                name="Interface 2",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface.objects.create(
-                device=devices[1],
-                name="Interface 3",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface.objects.create(
-                device=devices[1],
-                name="Interface 4",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface.objects.create(
-                device=devices[2],
-                name="Interface 5",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface.objects.create(
-                device=devices[2],
-                name="Interface 6",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface.objects.create(
-                device=devices[3],
                 name="Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             ),
             Interface.objects.create(
-                device=devices[3],
+                device=devices[1],
                 name="Interface 8",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             ),
             Interface.objects.create(
-                device=devices[4],
+                device=devices[2],
                 name="Interface 9",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             ),
             Interface.objects.create(
-                device=devices[4],
+                device=devices[3],
                 name="Interface 10",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             ),
             Interface.objects.create(
-                device=devices[5],
+                device=devices[4],
                 name="Interface 11",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             ),
@@ -3773,28 +3737,28 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
         # Cables
         Cable.objects.create(
-            termination_a=interfaces[1],
-            termination_b=interfaces[2],
+            termination_a=interfaces[0],
+            termination_b=interfaces[3],
             label="Cable 1",
-            type=CableTypeChoices.TYPE_CAT3,
+            type=CableTypeChoices.TYPE_MMF,
             status=cls.status_connected,
             color="aa1409",
             length=10,
             length_unit=CableLengthUnitChoices.UNIT_FOOT,
         )
         Cable.objects.create(
-            termination_a=interfaces[3],
+            termination_a=interfaces[1],
             termination_b=interfaces[4],
             label="Cable 2",
-            type=CableTypeChoices.TYPE_CAT3,
+            type=CableTypeChoices.TYPE_MMF,
             status=cls.status_connected,
             color="aa1409",
             length=20,
             length_unit=CableLengthUnitChoices.UNIT_FOOT,
         )
         Cable.objects.create(
-            termination_a=interfaces[5],
-            termination_b=interfaces[6],
+            termination_a=interfaces[2],
+            termination_b=interfaces[5],
             label="Cable 3",
             type=CableTypeChoices.TYPE_CAT5E,
             status=cls.status_connected,
@@ -3803,8 +3767,8 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             length_unit=CableLengthUnitChoices.UNIT_FOOT,
         )
         Cable.objects.create(
-            termination_a=interfaces[7],
-            termination_b=interfaces[8],
+            termination_a=interfaces[6],
+            termination_b=interfaces[9],
             label="Cable 4",
             type=CableTypeChoices.TYPE_CAT5E,
             status=cls.status_planned,
@@ -3813,7 +3777,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             length_unit=CableLengthUnitChoices.UNIT_FOOT,
         )
         Cable.objects.create(
-            termination_a=interfaces[9],
+            termination_a=interfaces[7],
             termination_b=interfaces[10],
             label="Cable 5",
             type=CableTypeChoices.TYPE_CAT6,
@@ -3822,9 +3786,12 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             length=10,
             length_unit=CableLengthUnitChoices.UNIT_METER,
         )
+
+        console_port = ConsolePort.objects.filter(device=devices[2]).first()
+        console_server_port = ConsoleServerPort.objects.filter(device=devices[5]).first()
         Cable.objects.create(
-            termination_a=interfaces[11],
-            termination_b=interfaces[0],
+            termination_a=console_port,
+            termination_b=console_server_port,
             label="Cable 6",
             type=CableTypeChoices.TYPE_CAT6,
             status=cls.status_planned,
@@ -3846,7 +3813,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_type(self):
-        params = {"type": [CableTypeChoices.TYPE_CAT3, CableTypeChoices.TYPE_CAT5E]}
+        params = {"type": [CableTypeChoices.TYPE_MMF, CableTypeChoices.TYPE_CAT5E]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
@@ -3865,23 +3832,23 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Device.objects.get(name="Device 2"),
         ]
         params = {"device_id": [devices[0].pk, devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"device": [devices[0].name, devices[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_rack(self):
         racks = Rack.objects.all()[:2]
         params = {"rack_id": [racks[0].pk, racks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"rack": [racks[0].name, racks[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_site(self):
         site = Site.objects.all()[:2]
         params = {"site_id": [site[0].pk, site[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"site": [site[0].slug, site[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_tenant(self):
         tenant = Tenant.objects.all()[:2]
@@ -3889,6 +3856,19 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"tenant": [tenant[0].slug, tenant[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_termination_type(self):
+        type_interface = "dcim.interface"
+        type_console_port = "dcim.consoleport"
+        type_console_server_port = "dcim.consoleserverport"
+        params = {"termination_a_type": [type_interface, type_console_port]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+        params = {"termination_a_type": [type_interface]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        params = {"termination_b_type": [type_interface, type_console_server_port]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+        params = {"termination_b_type": [type_interface]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
 
 class PowerPanelTestCase(FilterTestCases.FilterTestCase):
