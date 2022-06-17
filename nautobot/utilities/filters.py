@@ -22,6 +22,8 @@ from nautobot.utilities.constants import (
 )
 from nautobot.utilities.forms.fields import SlugOrPKMultipleChoiceField
 
+from taggit.managers import TaggableManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -467,6 +469,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            TaggableManager: {"filter_class": TagFilter},
         }
     )
 
