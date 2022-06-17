@@ -1,805 +1,18 @@
-import itertools
-import logging
-import re
-from collections import OrderedDict, namedtuple
-from copy import deepcopy
-
-from django.contrib import messages
-from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import (
-    FieldDoesNotExist,
-    ImproperlyConfigured,
-    ObjectDoesNotExist,
-    ValidationError,
-)
-from django.db import transaction, IntegrityError
-from django.db.models import ManyToManyField, ProtectedError, query
-from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.html import escape
-from django.utils.http import is_safe_url
-from django.utils.safestring import mark_safe
-from django.views.generic import View
-from django_tables2 import RequestConfig
-
-from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.utilities.error_handlers import handle_protectederror
-from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.forms import (
-    BootstrapMixin,
-    BulkRenameForm,
-    ConfirmationForm,
-    CSVDataField,
-    ImportForm,
-    TableConfigForm,
-    restrict_form_fields,
-)
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.utils import (
-    csv_format,
-    normalize_querydict,
-    prepare_cloned_fields,
+from nautobot.utilities.views import (
+    ObjectPermissionRequiredMixin,
+    ObjectDetailViewMixin,
+    ObjectDeleteViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    BulkImportViewMixin,
+    BulkDeleteViewMixin,
+    BulkEditViewMixin,
+    View,
 )
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
-
 from rest_framework.routers import Route, SimpleRouter
 from rest_framework.viewsets import ViewSetMixin
 
-
-class ObjectDetailViewMixin:
-    """
-    Retrieve a single object for display.
-    queryset: The base queryset for retrieving the object
-    template_name: Name of the template to use
-    """
-
-    object_detail_queryset = None
-    object_detail_template_name = None
-
-    def get_template_name(self):
-        """
-        Return self.template_name if set. Otherwise, resolve the template path by model app_label and name.
-        """
-        if self.object_detail_template_name is not None:
-            return self.object_detail_template_name
-        model_opts = self.object_detail_queryset.model._meta
-        return f"{model_opts.app_label}/{model_opts.model_name}.html"
-
-    def get_template_name_for_detail(self):
-        return self.get_template_name()
-
-    def get_extra_context(self, request, instance):
-        """
-        Return any additional context data for the template.
-        request: The current request
-        instance: The object being viewed
-        """
-        return {}
-
-    def get_extra_context_for_detail(self, request, instance):
-        return self.get_extra_context(request, instance)
-
-    def handle_object_detail_get(self, request, *args, **kwargs):
-        """
-        Generic GET handler for accessing an object by PK or slug
-        """
-        instance = get_object_or_404(self.object_detail_queryset, **kwargs)
-
-        return render(
-            request,
-            self.get_template_name_for_detail(),
-            {
-                "object": instance,
-                **self.get_extra_context_for_detail(request, instance),
-            },
-        )
-
-
-class ObjectListViewMixin:
-    """
-    List a series of objects.
-    queryset: The queryset of objects to display. Note: Prefetching related objects is not necessary, as the
-      table will prefetch objects as needed depending on the columns being displayed.
-    filter: A django-filter FilterSet that is applied to the queryset
-    filter_form: The form used to render filter options
-    table: The django-tables2 Table used to render the objects list
-    template_name: The name of the template
-    """
-
-    object_list_queryset = None
-    object_list_filterset = None
-    object_list_filterset_form = None
-    object_list_table = None
-    object_list_template_name = "generic/object_list.html"
-    object_list_action_buttons = ("add", "import", "export")
-
-    def queryset_to_yaml(self):
-        """
-        Export the queryset of objects as concatenated YAML documents.
-        """
-        yaml_data = [obj.to_yaml() for obj in self.object_list_queryset]
-
-        return "---\n".join(yaml_data)
-
-    def queryset_to_csv(self):
-        """
-        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
-        """
-        csv_data = []
-        custom_fields = []
-
-        # Start with the column headers
-        headers = self.object_list_queryset.model.csv_headers.copy()
-
-        # Add custom field headers, if any
-        if hasattr(self.object_list_queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(self.object_list_queryset.model):
-                headers.append(custom_field.name)
-                custom_fields.append(custom_field.name)
-
-        csv_data.append(",".join(headers))
-
-        # Iterate through the queryset appending each object
-        for obj in self.object_list_queryset:
-            data = obj.to_csv()
-
-            for custom_field in custom_fields:
-                data += (obj.cf.get(custom_field, ""),)
-
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
-
-    def handle_object_list_get(self, request):
-
-        model = self.object_list_queryset.model
-        content_type = ContentType.objects.get_for_model(model)
-
-        if self.object_list_filterset:
-            self.object_list_queryset = self.object_list_filterset(request.GET, self.object_list_queryset).qs
-
-        # Check for export template rendering
-        if request.GET.get("export"):
-            et = get_object_or_404(
-                ExportTemplate,
-                content_type=content_type,
-                name=request.GET.get("export"),
-            )
-            try:
-                return et.render_to_response(self.object_list_queryset)
-            except Exception as e:
-                messages.error(
-                    request,
-                    "There was an error rendering the selected export template ({}): {}".format(et.name, e),
-                )
-
-        # Check for YAML export support
-        elif "export" in request.GET and hasattr(model, "to_yaml"):
-            response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
-            filename = "nautobot_{}.yaml".format(self.object_list_queryset.model._meta.verbose_name_plural)
-            response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
-            return response
-
-        # Fall back to built-in CSV formatting if export requested but no template specified
-        elif "export" in request.GET and hasattr(model, "to_csv"):
-            response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = "nautobot_{}.csv".format(self.object_list_queryset.model._meta.verbose_name_plural)
-            response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
-            return response
-
-        # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
-        self.object_list_queryset = self.alter_queryset_for_list(request)
-
-        # Compile a dictionary indicating which permissions are available to the current user for this model
-        permissions = {}
-        for action in ("add", "change", "delete", "view"):
-            perm_name = get_permission_for_model(model, action)
-            permissions[action] = request.user.has_perm(perm_name)
-
-        # Construct the objects table
-        table = self.object_list_table(self.object_list_queryset, user=request.user)
-        if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
-            table.columns.show("pk")
-
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(table)
-
-        context = {
-            "content_type": content_type,
-            "table": table,
-            "permissions": permissions,
-            "action_buttons": self.object_list_action_buttons,
-            "table_config_form": TableConfigForm(table=table),
-            "filter_form": self.object_list_filterset_form(request.GET, label_suffix="") if self.object_list_filterset_form else None,
-        }
-        context.update(self.extra_context_for_list())
-
-        return render(request, self.object_list_template_name, context)
-
-    def alter_queryset(self, request):
-        # .all() is necessary to avoid caching queries
-        return self.object_list_queryset.all()
-
-    def alter_queryset_for_list(self, request):
-        return self.alter_queryset(request)
-
-    def extra_context(self):
-        return {}
-
-    def extra_context_for_list(self):
-        return self.extra_context()
-
-
-class ObjectEditViewMixin(GetReturnURLMixin):
-    """
-    Create or edit a single object.
-    queryset: The base queryset for the object being modified
-    model_form: The form used to create or edit the object
-    template_name: The name of the template
-    """
-
-    object_edit_queryset = None
-    object_edit_model_form = None
-    object_edit_template_name = "generic/object_edit.html"
-
-    def get_object(self, kwargs):
-        # Look up an existing object by slug or PK, if provided.
-        if "slug" in kwargs:
-            return get_object_or_404(self.object_edit_queryset, slug=kwargs["slug"])
-        elif "pk" in kwargs:
-            return get_object_or_404(self.object_edit_queryset, pk=kwargs["pk"])
-        # Otherwise, return a new instance.
-        return self.object_edit_queryset.model()
-
-    def get_object_for_edit(self, kwargs):
-        return self.get_object(kwargs)
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
-        # given some parameter from the request URL.
-        return obj
-
-    def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
-        return self.alter_obj(obj, request, url_args, url_kwargs)
-
-    def handle_object_edit_get(self, request, *args, **kwargs):
-        obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
-
-        initial_data = normalize_querydict(request.GET)
-        form = self.object_edit_model_form(instance=obj, initial=initial_data)
-        restrict_form_fields(form, request.user)
-
-        return render(
-            request,
-            self.object_edit_template_name,
-            {
-                "obj": obj,
-                "obj_type": self.object_edit_queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-            },
-        )
-
-    def handle_object_edit_post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectEditView")
-        obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
-        form = self.object_edit_model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.object_edit_queryset.get(pk=obj.pk)
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.object_edit_queryset.model._meta.verbose_name,
-                )
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
-                else:
-                    msg = "{} {}".format(msg, escape(obj))
-                messages.success(request, mark_safe(msg))
-
-                if "_addanother" in request.POST:
-
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.object_edit_template_name,
-            {
-                "obj": obj,
-                "obj_type": self.object_edit_queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-            },
-        )
-
-
-class ObjectDeleteViewMixin(GetReturnURLMixin):
-    """
-    Delete a single object.
-    queryset: The base queryset for the object being deleted
-    template_name: The name of the template
-    """
-
-    object_delete_queryset = None
-    object_delete_template_name = "generic/object_delete.html"
-
-    def get_object(self, kwargs):
-        # Look up object by slug if one has been provided. Otherwise, use PK.
-        if "slug" in kwargs:
-            return get_object_or_404(self.object_delete_queryset, slug=kwargs["slug"])
-        else:
-            return get_object_or_404(self.object_delete_queryset, pk=kwargs["pk"])
-
-    def get_object_for_delete(self, kwargs):
-        return self.get_object(kwargs)
-
-    def handle_object_delete_get(self, request, **kwargs):
-        obj = self.get_object_for_delete(kwargs)
-        form = ConfirmationForm(initial=request.GET)
-
-        return render(
-            request,
-            self.object_delete_template_name,
-            {
-                "obj": obj,
-                "form": form,
-                "obj_type": self.object_delete_queryset.model._meta.verbose_name,
-                "return_url": self.get_return_url(request, obj),
-            },
-        )
-
-    def handle_object_delete_post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectDeleteView")
-        obj = self.get_object_for_delete(kwargs)
-        form = ConfirmationForm(request.POST)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                obj.delete()
-            except ProtectedError as e:
-                logger.info("Caught ProtectedError while attempting to delete object")
-                handle_protectederror([obj], request, e)
-                return redirect(obj.get_absolute_url())
-
-            msg = "Deleted {} {}".format(self.object_delete_queryset.model._meta.verbose_name, obj)
-            logger.info(msg)
-            messages.success(request, msg)
-
-            return_url = form.cleaned_data.get("return_url")
-            if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                return redirect(return_url)
-            else:
-                return redirect(self.get_return_url(request, obj))
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.object_delete_template_name,
-            {
-                "obj": obj,
-                "form": form,
-                "obj_type": self.object_delete_queryset.model._meta.verbose_name,
-                "return_url": self.get_return_url(request, obj),
-            },
-        )
-
-class BulkImportViewMixin(GetReturnURLMixin):
-    """
-    Import objects in bulk (CSV format).
-    queryset: Base queryset for the model
-    model_form: The form used to create each imported object
-    table: The django-tables2 Table used to render the list of imported objects
-    template_name: The name of the template
-    widget_attrs: A dict of attributes to apply to the import widget (e.g. to require a session key)
-    """
-
-    bulk_import_queryset = None
-    bulk_import_model_form = None
-    bulk_import_table = None
-    bulk_import_template_name = "generic/object_bulk_import.html"
-    bulk_import_widget_attrs = {}
-
-    def _import_form(self, *args, **kwargs):
-        class ImportForm(BootstrapMixin, Form):
-            csv = CSVDataField(from_form=self.bulk_import_model_form, widget=Textarea(attrs=self.bulk_import_widget_attrs))
-
-        return ImportForm(*args, **kwargs)
-
-    def _import_form_for_bulk_import(self, *args, **kwargs):
-        return self._import_form(*args, **kwargs)
-
-    def _save_obj(self, obj_form, request):
-        """
-        Provide a hook to modify the object immediately before saving it (e.g. to encrypt secret data).
-        """
-        return obj_form.save()
-
-    def _save_obj_for_bulk_import(self, obj_form, request):
-       return self._save_obj(obj_form, request)
-
-    def handle_bulk_import_get(self, request):
-
-        return render(
-            request,
-            self.bulk_import_template_name,
-            {
-                "form": self._import_form_for_bulk_import(),
-                "fields": self.bulk_import_model_form().fields,
-                "obj_type": self.bulk_import_model_form._meta.model._meta.verbose_name,
-                "return_url": self.get_return_url(request),
-            },
-        )
-
-    def handle_bulk_import_post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkImportView")
-        new_objs = []
-        form = self._import_form_for_bulk_import(request.POST)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                # Iterate through CSV data and bind each row to a new model form instance.
-                with transaction.atomic():
-                    headers, records = form.cleaned_data["csv"]
-                    for row, data in enumerate(records, start=1):
-                        obj_form = self.bulk_import_model_form(data, headers=headers)
-                        restrict_form_fields(obj_form, request.user)
-
-                        if obj_form.is_valid():
-                            obj = self._save_obj_for_bulk_import(obj_form, request)
-                            new_objs.append(obj)
-                        else:
-                            for field, err in obj_form.errors.items():
-                                form.add_error("csv", "Row {} {}: {}".format(row, field, err[0]))
-                            raise ValidationError("")
-
-                    # Enforce object-level permissions
-                    if self.bulk_import_queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
-                        raise ObjectDoesNotExist
-
-                # Compile a table containing the imported objects
-                obj_table = self.bulk_import_table(new_objs)
-
-                if new_objs:
-                    msg = "Imported {} {}".format(len(new_objs), new_objs[0]._meta.verbose_name_plural)
-                    logger.info(msg)
-                    messages.success(request, msg)
-
-                    return render(
-                        request,
-                        "import_success.html",
-                        {
-                            "table": obj_table,
-                            "return_url": self.get_return_url(request),
-                        },
-                    )
-
-            except ValidationError:
-                pass
-
-            except ObjectDoesNotExist:
-                msg = "Object import failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.bulk_import_template_name,
-            {
-                "form": form,
-                "fields": self.bulk_import_model_form().fields,
-                "obj_type": self.bulk_import_model_form._meta.model._meta.verbose_name,
-                "return_url": self.get_return_url(request),
-            },
-        )
-
-class BulkEditViewMixin(GetReturnURLMixin):
-    """
-    Edit objects in bulk.
-    queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
-    filter: FilterSet to apply when deleting by QuerySet
-    table: The table used to display devices being edited
-    form: The form class used to edit objects in bulk
-    template_name: The name of the template
-    """
-
-    bulk_edit_queryset = None
-    bulk_edit_filterset = None
-    bulk_edit_table = None
-    bulk_edit_form = None
-    bulk_edit_template_name = "generic/object_bulk_edit.html"
-
-    def handle_bulk_edit_get(self, request):
-        return redirect(self.get_return_url(request))
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # Allow views to add extra info to an object before it is processed.
-        # For example, a parent object can be defined given some parameter from the request URL.
-        return obj
-
-    def alter_obj_for_bulk_edit(self, obj, request, url_args, url_kwargs):
-        return self.alter_obj(obj, request, url_args, url_kwargs)
-
-    def handle_bulk_edit_post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.BulkEditView")
-        model = self.bulk_edit_queryset.model
-
-        # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if request.POST.get("_all") and self.bulk_edit_filterset is not None:
-            pk_list = [obj.pk for obj in self.bulk_edit_filterset(request.GET, self.bulk_edit_queryset.only("pk")).qs]
-        else:
-            pk_list = request.POST.getlist("pk")
-
-        if "_apply" in request.POST:
-            form = self.bulk_edit_form(model, request.POST)
-            restrict_form_fields(form, request.user)
-
-            if form.is_valid():
-                logger.debug("Form validation was successful")
-                custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
-                standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
-                nullified_fields = request.POST.getlist("_nullify")
-
-                try:
-
-                    with transaction.atomic():
-
-                        updated_objects = []
-                        for obj in self.bulk_edit_queryset.filter(pk__in=form.cleaned_data["pk"]):
-
-                            obj = self.alter_obj_for_bulk_edit(obj, request, [], kwargs)
-
-                            # Update standard fields. If a field is listed in _nullify, delete its value.
-                            for name in standard_fields:
-
-                                try:
-                                    model_field = model._meta.get_field(name)
-                                except FieldDoesNotExist:
-                                    # This form field is used to modify a field rather than set its value directly
-                                    model_field = None
-
-                                # Handle nullification
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    if isinstance(model_field, ManyToManyField):
-                                        getattr(obj, name).set([])
-                                    else:
-                                        setattr(obj, name, None if model_field.null else "")
-
-                                # ManyToManyFields
-                                elif isinstance(model_field, ManyToManyField):
-                                    if form.cleaned_data[name]:
-                                        getattr(obj, name).set(form.cleaned_data[name])
-                                # Normal fields
-                                elif form.cleaned_data[name] not in (None, ""):
-                                    setattr(obj, name, form.cleaned_data[name])
-
-                            # Update custom fields
-                            for name in custom_fields:
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    obj.cf[name] = None
-                                elif form.cleaned_data.get(name) not in (None, ""):
-                                    obj.cf[name] = form.cleaned_data[name]
-
-                            obj.full_clean()
-                            obj.save()
-                            updated_objects.append(obj)
-                            logger.debug(f"Saved {obj} (PK: {obj.pk})")
-
-                            # Add/remove tags
-                            if form.cleaned_data.get("add_tags", None):
-                                obj.tags.add(*form.cleaned_data["add_tags"])
-                            if form.cleaned_data.get("remove_tags", None):
-                                obj.tags.remove(*form.cleaned_data["remove_tags"])
-
-                        # Enforce object-level permissions
-                        if self.bulk_edit_queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
-                            updated_objects
-                        ):
-                            raise ObjectDoesNotExist
-
-                    if updated_objects:
-                        msg = "Updated {} {}".format(len(updated_objects), model._meta.verbose_name_plural)
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-
-                    return redirect(self.get_return_url(request))
-
-                except ValidationError as e:
-                    messages.error(self.request, "{} failed validation: {}".format(obj, e))
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    logger.debug(msg)
-                    form.add_error(None, msg)
-
-            else:
-                logger.debug("Form validation failed")
-
-        else:
-            # Include the PK list as initial data for the form
-            initial_data = {"pk": pk_list}
-
-            # Check for other contextual data needed for the form. We avoid passing all of request.GET because the
-            # filter values will conflict with the bulk edit form fields.
-            # TODO: Find a better way to accomplish this
-            if "device" in request.GET:
-                initial_data["device"] = request.GET.get("device")
-            elif "device_type" in request.GET:
-                initial_data["device_type"] = request.GET.get("device_type")
-
-            form = self.bulk_edit_form(model, initial=initial_data)
-            restrict_form_fields(form, request.user)
-
-        # Retrieve objects being edited
-        table = self.bulk_edit_table(self.bulk_edit_queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(request, "No {} were selected.".format(model._meta.verbose_name_plural))
-            return redirect(self.get_return_url(request))
-
-        context = {
-            "form": form,
-            "table": table,
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "return_url": self.get_return_url(request),
-        }
-        context.update(self.extra_context_for_bulk_edit())
-        return render(request, self.bulk_edit_template_name, context)
-
-    def extra_context(self):
-        return {}
-
-    def extra_context_for_bulk_edit(self):
-        return self.extra_context()
-
-class BulkDeleteViewMixin(GetReturnURLMixin):
-    """
-    Delete objects in bulk.
-    queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
-    filter: FilterSet to apply when deleting by QuerySet
-    table: The table used to display devices being deleted
-    form: The form class used to delete objects in bulk
-    template_name: The name of the template
-    """
-
-    bulk_delete_queryset = None
-    bulk_delete_filterset = None
-    bulk_delete_table = None
-    bulk_delete_form = None
-    bulk_delete_template_name = "generic/object_bulk_delete.html"
-
-    def handle_bulk_delete_get(self, request):
-        return redirect(self.get_return_url(request))
-
-    def handle_bulk_delete_post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.BulkDeleteView")
-        model = self.bulk_delete_queryset.model
-
-        # Are we deleting *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all"):
-            if self.bulk_delete_filterset is not None:
-                pk_list = [obj.pk for obj in self.bulk_delete_filterset(request.GET, model.objects.only("pk")).qs]
-            else:
-                pk_list = model.objects.values_list("pk", flat=True)
-        else:
-            pk_list = request.POST.getlist("pk")
-
-        form_cls = self.get_form_for_bulk_delete()
-
-        if "_confirm" in request.POST:
-            form = form_cls(request.POST)
-            if form.is_valid():
-                logger.debug("Form validation was successful")
-
-                # Delete objects
-                queryset = self.bulk_delete_queryset.filter(pk__in=pk_list)
-                try:
-                    deleted_count = queryset.delete()[1][model._meta.label]
-                except ProtectedError as e:
-                    logger.info("Caught ProtectedError while attempting to delete objects")
-                    handle_protectederror(queryset, request, e)
-                    return redirect(self.get_return_url(request))
-
-                msg = "Deleted {} {}".format(deleted_count, model._meta.verbose_name_plural)
-                logger.info(msg)
-                messages.success(request, msg)
-                return redirect(self.get_return_url(request))
-
-            else:
-                logger.debug("Form validation failed")
-
-        else:
-            form = form_cls(
-                initial={
-                    "pk": pk_list,
-                    "return_url": self.get_return_url(request),
-                }
-            )
-
-        # Retrieve objects being deleted
-        table = self.bulk_delete_table(self.bulk_delete_queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                "No {} were selected for deletion.".format(model._meta.verbose_name_plural),
-            )
-            return redirect(self.get_return_url(request))
-
-        context = {
-            "form": form,
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "table": table,
-            "return_url": self.get_return_url(request),
-        }
-        context.update(self.extra_context_for_bulk_delete())
-        return render(request, self.bulk_delete_template_name, context)
-
-    def extra_context(self):
-        return {}
-
-    def extra_context_for_bulk_delete(self):
-        return self.extra_context()
-
-    def get_form(self):
-        """
-        Provide a standard bulk delete form if none has been specified for the view
-        """
-
-        class BulkDeleteForm(ConfirmationForm):
-            pk = ModelMultipleChoiceField(queryset=self.bulk_delete_queryset, widget=MultipleHiddenInput)
-
-        if self.bulk_delete_form:
-            return self.bulk_delete_form
-
-        return BulkDeleteForm
-
-    def get_form_for_bulk_delete(self):
-        return self.get_form()
 
 class NautobotViewSet(
     ObjectPermissionRequiredMixin,
@@ -870,84 +83,85 @@ class NautobotViewSet(
     def get_required_permission(self):
         return get_permission_for_model(self.get_queryset_for_action(self.action).model)
 
+
 class NautobotRouter(SimpleRouter):
     routes = [
         Route(
-            url=r'^{prefix}/$',
+            url=r"^{prefix}/$",
             mapping={
-                'get': 'handle_object_list_get',
+                "get": "handle_object_list_get",
             },
-            name='{basename}_list',
+            name="{basename}_list",
             detail=False,
-            initkwargs={'suffix': 'List'}
+            initkwargs={"suffix": "List"},
         ),
         Route(
-            url=r'^{prefix}/add/$',
+            url=r"^{prefix}/add/$",
             mapping={
-                'get': 'handle_object_edit_get',
-                'post': 'handle_object_edit_post',
+                "get": "handle_object_edit_get",
+                "post": "handle_object_edit_post",
             },
-            name='{basename}_add',
+            name="{basename}_add",
             detail=False,
-            initkwargs={'suffix': 'Add'}
+            initkwargs={"suffix": "Add"},
         ),
         Route(
-            url=r'^{prefix}/import/$',
+            url=r"^{prefix}/import/$",
             mapping={
-                'get': 'handle_bulk_import_get',
-                'post': 'handle_bulk_import_post',
+                "get": "handle_bulk_import_get",
+                "post": "handle_bulk_import_post",
             },
-            name='{basename}_import',
+            name="{basename}_import",
             detail=False,
-            initkwargs={'suffix': 'Import'}
+            initkwargs={"suffix": "Import"},
         ),
         Route(
-            url=r'^{prefix}/edit/$',
+            url=r"^{prefix}/edit/$",
             mapping={
-                'get': 'handle_bulk_edit_get',
-                'post': 'handle_bulk_edit_post',
+                "get": "handle_bulk_edit_get",
+                "post": "handle_bulk_edit_post",
             },
-            name='{basename}_bulk_edit',
+            name="{basename}_bulk_edit",
             detail=False,
-            initkwargs={'suffix': 'Bulk Edit'}
+            initkwargs={"suffix": "Bulk Edit"},
         ),
         Route(
-            url=r'^{prefix}/delete/$',
+            url=r"^{prefix}/delete/$",
             mapping={
-                'get': 'handle_bulk_delete_get',
-                'post': 'handle_bulk_delete_post',
+                "get": "handle_bulk_delete_get",
+                "post": "handle_bulk_delete_post",
             },
-            name='{basename}_bulk_delete',
+            name="{basename}_bulk_delete",
             detail=False,
-            initkwargs={'suffix': 'Bulk Delete'}
+            initkwargs={"suffix": "Bulk Delete"},
         ),
         Route(
-            url=r'^{prefix}/{lookup}/$',
+            url=r"^{prefix}/{lookup}/$",
             mapping={
-                'get': 'handle_object_detail_get',
+                "get": "handle_object_detail_get",
             },
-            name='{basename}',
+            name="{basename}",
             detail=True,
-            initkwargs={'suffix': 'Detail'}
+            initkwargs={"suffix": "Detail"},
         ),
         Route(
-            url=r'^{prefix}/{lookup}/edit/$',
+            url=r"^{prefix}/{lookup}/edit/$",
             mapping={
-                'get': 'handle_object_edit_get',
-                'post': 'handle_object_edit_post',
+                "get": "handle_object_edit_get",
+                "post": "handle_object_edit_post",
             },
-            name='{basename}_edit',
+            name="{basename}_edit",
             detail=True,
-            initkwargs={'suffix': 'Edit'}
+            initkwargs={"suffix": "Edit"},
         ),
         Route(
-            url=r'^{prefix}/{lookup}/edit/$',
+            url=r"^{prefix}/{lookup}/edit/$",
             mapping={
-                'get': 'handle_object_delete_get',
-                'post': 'handle_object_delete_post',
+                "get": "handle_object_delete_get",
+                "post": "handle_object_delete_post",
             },
-            name='{basename}_delete',
+            name="{basename}_delete",
             detail=True,
-            initkwargs={'suffix': 'Delete'}
+            initkwargs={"suffix": "Delete"},
         ),
     ]
