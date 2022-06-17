@@ -951,10 +951,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, slug)
         template_name = "extras/job.html"
         try:
-            job_class = job_model.job_class()
-            job_form = job_class.as_form(initial=normalize_querydict(request.GET))
-            if hasattr(job_class, "template_name"):
-                template_name = job_class.template_name
+            job_cls = job_model.job_class()
+            job_form = job_cls.as_form(initial=normalize_querydict(request.GET))
+            if hasattr(job_cls, "template_name"):
+                template_name = job_cls.template_name
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -975,11 +975,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, slug)
         template_name = "extras/job.html"
 
-        job_class = job_model.job_class()
-        if hasattr(job_class, "template_name"):
-            template_name = job_class.template_name
+        job_cls = job_model.job_class()
+        if hasattr(job_cls, "template_name"):
+            template_name = job_cls.template_name
 
-        job_form = job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
+        job_form = job_cls.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
 
         # Allow execution only if a worker process is running and the job is runnable.
