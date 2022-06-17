@@ -1,0 +1,17 @@
+{
+  "baseBranches": ["next"],
+  "constraints": {
+    "python": "3.7"
+  },
+  "enabledManagers": ["pip_requirements", "poetry"],
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
+      "dependencyDashboardApproval": true
+    }
+  ],
+  "rangeStrategy": "bump"
+}
