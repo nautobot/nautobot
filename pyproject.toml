@@ -102,7 +102,7 @@ jsonschema = "~4.4.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.7"
 # Escape text to use HTML and XML
-MarkupSafe = "~2.1.0"
+MarkupSafe = "~2.1.1"
 # MySQL database adapter
 mysqlclient = {version = "~2.1.0", optional = true}
 # NAPALM automation library
