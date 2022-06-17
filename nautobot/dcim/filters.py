@@ -1077,7 +1077,7 @@ class ConsolePortFilterSet(
 
     class Meta:
         model = ConsolePort
-        fields = "__all__"
+        fields = ["id", "name", "description", "label"]
 
 
 class ConsoleServerPortFilterSet(
@@ -1090,7 +1090,7 @@ class ConsoleServerPortFilterSet(
 
     class Meta:
         model = ConsoleServerPort
-        fields = "__all__"
+        fields = ["id", "name", "description", "label"]
 
 
 class PowerPortFilterSet(
@@ -1103,7 +1103,7 @@ class PowerPortFilterSet(
 
     class Meta:
         model = PowerPort
-        fields = "__all__"
+        fields = ["id", "name", "maximum_draw", "allocated_draw", "description", "label"]
 
 
 class PowerOutletFilterSet(
@@ -1116,7 +1116,7 @@ class PowerOutletFilterSet(
 
     class Meta:
         model = PowerOutlet
-        fields = "__all__"
+        fields = ["id", "name", "feed_leg", "description", "label"]
 
 
 class InterfaceFilterSet(
@@ -1170,7 +1170,17 @@ class InterfaceFilterSet(
 
     class Meta:
         model = Interface
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "type",
+            "enabled",
+            "mtu",
+            "mgmt_only",
+            "mode",
+            "description",
+            "label",
+        ]
 
     def filter_device(self, queryset, name, value):
         try:
@@ -1231,7 +1241,7 @@ class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminati
 
     class Meta:
         model = FrontPort
-        fields = "__all__"
+        fields = ["id", "name", "type", "description", "label", "rear_port_position"]
 
 
 class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
@@ -1247,7 +1257,7 @@ class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminatio
 
     class Meta:
         model = RearPort
-        fields = "__all__"
+        fields = ["id", "name", "type", "positions", "description", "label"]
 
 
 class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
@@ -1259,7 +1269,7 @@ class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
 
     class Meta:
         model = DeviceBay
-        fields = "__all__"
+        fields = ["id", "name", "description", "label"]
 
 
 class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
@@ -1335,7 +1345,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
 
     class Meta:
         model = InventoryItem
-        fields = "__all__"
+        fields = ["id", "name", "part_id", "asset_tag", "discovered", "description", "label"]
 
 
 class VirtualChassisFilterSet(NautobotFilterSet):
