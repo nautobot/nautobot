@@ -606,6 +606,8 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         # Static mapping of models to their nested serializers
         if isinstance(obj.parent, Device):
             serializer = NestedDeviceSerializer
+        elif isinstance(obj.parent, Location):
+            serializer = NestedLocationSerializer
         elif isinstance(obj.parent, Rack):
             serializer = NestedRackSerializer
         elif isinstance(obj.parent, Site):

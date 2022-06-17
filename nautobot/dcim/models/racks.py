@@ -114,7 +114,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
         # Validate site/location combination:
         if self.location is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+            raise ValidationError({"location": f'Location "{self.location}" does not belong to site "{self.site}".'})
 
         # Parent RackGroup (if any) must belong to the same Site
         if self.parent and self.parent.site != self.site:
@@ -128,7 +128,10 @@ class RackGroup(MPTTModel, OrganizationalModel):
             and self.parent.location not in self.location.ancestors(include_self=True)
         ):
             raise ValidationError(
-                {"parent": f"Parent rack group belongs to a location that does not contain {self.location}."}
+                {
+                    "location": f'Location "{self.location}" is not descended from '
+                    f'parent rack group "{self.parent}" location "{self.parent.location}".'
+                }
             )
 
 

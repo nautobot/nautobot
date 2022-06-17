@@ -154,9 +154,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
     class Meta:
         ordering = ("_name",)
-        constraints = [
-            models.UniqueConstraint(name="unique_name_per_parent", fields=["parent", "name"]),
-        ]
+        unique_together = [["parent", "name"]]
 
     def __str__(self):
         return self.name

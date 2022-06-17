@@ -197,8 +197,8 @@ class Migration(migrations.Migration):
                 to="dcim.location",
             ),
         ),
-        migrations.AddConstraint(
-            model_name="location",
-            constraint=models.UniqueConstraint(fields=("parent", "name"), name="unique_name_per_parent"),
+        migrations.AlterUniqueTogether(
+            name="location",
+            unique_together={("parent", "name")},
         ),
     ]

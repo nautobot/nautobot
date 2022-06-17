@@ -266,9 +266,10 @@ class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
 
 class LocationTypeSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
-    parent = NestedLocationTypeSerializer(required=False, allow_null=True)
+    parent = NestedLocationTypeSerializer(required=False, allow_null=True, default=None)
     content_types = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()),
+        required=False,
         many=True,
     )
     tree_depth = serializers.SerializerMethodField(read_only=True)
@@ -301,6 +302,7 @@ class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cus
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     location_type = NestedLocationTypeSerializer()
     parent = NestedLocationSerializer(required=False, allow_null=True)
+    tenant = NestedTenantSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer(required=False, allow_null=True)
     tree_depth = serializers.SerializerMethodField(read_only=True)
 
@@ -320,6 +322,7 @@ class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cus
             "location_type",
             "parent",
             "site",
+            "tenant",
             "description",
             "tree_depth",
             "tags",
@@ -329,6 +332,18 @@ class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cus
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("parent") and data.get("name"):
+            validator = UniqueTogetherValidator(queryset=Location.objects.all(), fields=("parent", "name"))
+            validator(data, self)
+
+        super().validate(data)
+
+        return data
 
 
 #
