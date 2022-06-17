@@ -33,7 +33,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.7"
 # Background task processing
-celery = "~5.2.3"
+celery = "~5.2.7"
 # Fundamental web framework for Nautobot
 Django = "~3.2.13"
 # Adds AJAX capabilities to django-tables2
