@@ -186,6 +186,8 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="devices",
         label="Has devices",
     )
+    # The reverse relation here is misnamed as `powerpanel`, but fixing it would be a breaking API change.
+    # 2.0 TODO: fix the reverse relation name, at which point this filter can be deleted here and added to Meta.fields.
     powerpanels = django_filters.ModelMultipleChoiceFilter(
         field_name="powerpanel",
         queryset=PowerPanel.objects.all(),
@@ -401,6 +403,8 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="devices",
         label="Has devices",
     )
+    # The reverse relation here is misnamed as `powerfeed`, but fixing it would be a breaking API change.
+    # 2.0 TODO: fix the reverse relation name, at which point this filter can be deleted here and added to Meta.fields.
     powerfeeds = django_filters.ModelMultipleChoiceFilter(
         field_name="powerfeed",
         queryset=PowerFeed.objects.all(),
