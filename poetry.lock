@@ -522,7 +522,7 @@ django = ">=2.2"
 
 [[package]]
 name = "django-jinja"
-version = "2.10.0"
+version = "2.10.2"
 description = "Jinja2 templating language integrated in Django."
 category = "main"
 optional = false
@@ -2232,7 +2232,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "69610f8890cd34c14847d92ad5a13f32777d9eced80c2227e9475b4db01867dd"
+content-hash = "c237a0ff4a55f438cb3e76da5396c88a08164566114dd8f7b23a2af7c02bb36a"
 
 [metadata.files]
 amqp = [
@@ -2529,8 +2529,8 @@ django-health-check = [
     {file = "django_health_check-3.16.5-py2.py3-none-any.whl", hash = "sha256:8d66781a0ea82b1a8b44878187b38a27370e94f18287312e39be0593e72d8983"},
 ]
 django-jinja = [
-    {file = "django-jinja-2.10.0.tar.gz", hash = "sha256:ae6a3fdf1ffa7a9ef6fd2f0a59c1a68c96b29f7f00f5166375658ef392f1ed32"},
-    {file = "django_jinja-2.10.0-py3-none-any.whl", hash = "sha256:cce084eaf0be8a89f0955cde34cf33da7faaf6c68d05c076eda6fcd98481264c"},
+    {file = "django-jinja-2.10.2.tar.gz", hash = "sha256:bfdfbb55c1f5a679d69ad575d550c4707d386634009152efe014089f3c4d1412"},
+    {file = "django_jinja-2.10.2-py3-none-any.whl", hash = "sha256:dd003ec1c95c0989eb28a538831bced62b1b61da551cb44a5dfd708fcf75589f"},
 ]
 django-js-asset = [
     {file = "django_js_asset-2.0.0-py3-none-any.whl", hash = "sha256:86f9f300d682537ddaf0487dc2ab356581b8f50c069bdba91d334a46e449f923"},
