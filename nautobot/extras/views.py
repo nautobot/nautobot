@@ -24,7 +24,7 @@ from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from nautobot.extras.tables import NestedDynamicGroupTable
+from nautobot.extras.tables import NestedDynamicGroupAncestorsTable, NestedDynamicGroupDescendantsTable
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -512,8 +512,6 @@ class DynamicGroupView(generic.ObjectView):
         context = super().get_extra_context(request, instance)
         model = instance.content_type.model_class()
         table_class = get_table_for_model(model)
-        # dg_table_class = get_table_for_model(DynamicGroup)
-        dg_table_class = NestedDynamicGroupTable
         dgm_table_class = get_table_for_model(DynamicGroupMembership)
 
         if table_class is not None:
@@ -523,20 +521,24 @@ class DynamicGroupView(generic.ObjectView):
             children_table = dgm_table_class(children, orderable=False)
 
             descendants = instance.get_descendants()
-            descendants_table = dg_table_class(
+            descendants_table = NestedDynamicGroupDescendantsTable(
                 descendants,
                 orderable=False,
                 sequence=["name", "members", "description"],
                 exclude=["content_type", "actions"],
             )
+            descendants_tree = instance.flatten_tree(instance.descendants_tree())
+            descendants_map = {node.name: node.depth for node in descendants_tree}
 
             ancestors = instance.get_ancestors()
-            ancestors_table = dg_table_class(
+            ancestors_table = NestedDynamicGroupAncestorsTable(
                 ancestors,
                 orderable=False,
                 sequence=["name", "members", "description"],
                 exclude=["content_type", "actions"],
             )
+            ancestors_tree = instance.flatten_tree(instance.ancestors_tree(), descendants=False)
+            ancestors_map = {node.name: node.depth for node in ancestors_tree}
 
             # Paginate the members table.
             paginate = {
@@ -547,8 +549,10 @@ class DynamicGroupView(generic.ObjectView):
 
             context["members_table"] = members_table
             context["children_table"] = children_table
-            context["descendants_table"] = descendants_table
             context["ancestors_table"] = ancestors_table
+            context["ancestors_map"] = ancestors_map
+            context["descendants_table"] = descendants_table
+            context["descendants_map"] = descendants_map
 
         return context
 

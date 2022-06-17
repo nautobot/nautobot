@@ -441,14 +441,19 @@ class DynamicGroup(OrganizationalModel):
 
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
-        # Getting the graph should result in a ValidationError if there's a loop
-        # detected.
-        self.get_graph()
 
         # Validate `filter` dict
         self.clean_filter()
 
     def generate_query_for_filter(self, filter_field, value):
+        """
+        Return a `Q` object generated from the a `filter_field` and `value`.
+
+        :param filter_field:
+            Filter instance
+        :param value:
+            Value passed to the filter
+        """
         q = models.Q()
         if isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
@@ -458,8 +463,13 @@ class DynamicGroup(OrganizationalModel):
         return q
 
     def generate_query_for_group(self, group):
-        fs = group.filterset_class(group.filter, group.get_queryset())
+        """
+        Return a `Q` object generated from all filters for a `group`.
 
+        :param group:
+            DynamicGroup instance
+        """
+        fs = group.filterset_class(group.filter, group.get_queryset())
         q = models.Q()
 
         for field_name, value in fs.data.items():
@@ -469,10 +479,15 @@ class DynamicGroup(OrganizationalModel):
         return q
 
     def process_group_filters(self, group=None, qs=None):
-        # Start with this group's base queryset
-        base_qs = self.get_queryset()
+        """
+        Recursively process all filters for a dynamic group.
+
+        :param group:
+            DynamicGroup instance. If not provided, this group will be used.
+        :param qs:
+            Queryset to filter. If not provided, this group's queryset will be used.
+        """
         if qs is None:
-            # Clone the base queryset so we can modify it.
             qs = self.get_queryset()
 
         if group is None:
@@ -487,7 +502,10 @@ class DynamicGroup(OrganizationalModel):
         #     big_q = self.process_group_filters(group, qs)
         #     qs = self.get_queryset()
         #     return qs.filter(big_q)
-        big_q = models.Q()
+        # big_q = models.Q()
+
+        # Start with this group's base queryset
+        base_qs = self.get_queryset()
 
         # Enumerate the filters. Recursing into any groups of groups.
         for membership in group.dynamic_group_memberships.all():
@@ -503,13 +521,13 @@ class DynamicGroup(OrganizationalModel):
             next_set = self.generate_query_for_group(group)
 
             if operator == "union":
-                big_q |= next_set
+                # big_q |= next_set
                 qs = qs | base_qs.filter(next_set)
             elif operator == "difference":
-                big_q &= ~next_set
+                # big_q &= ~next_set
                 qs = qs.exclude(next_set)
             elif operator == "intersection":
-                big_q &= next_set
+                # big_q &= next_set
                 qs = qs.filter(next_set)
             # print(big_q)
 
@@ -517,10 +535,43 @@ class DynamicGroup(OrganizationalModel):
         return qs
 
     def get_group_queryset(self):
+        """Return a filtered queryset of all descendant groups."""
         return self.process_group_filters(group=self)
 
+    def add_child(self, child, operator, weight):
+        """
+        Add a child group including `operator` and `weight`.
+
+        :param child:
+            DynamicGroup instance
+        :param operator:
+            DynamicGroupOperatorChoices choice value used to dictate filtering behavior
+        :param weight:
+            Integer weight used to order filtering
+        """
+        instance = self.children.through(parent_group=self, group=child, operator=operator, weight=weight)
+        return instance.validated_save()
+
+    def remove_child(self, child):
+        """
+        Remove a child group.
+
+        :param child:
+            DynamicGroup instance
+        """
+        instance = self.children.through.objects.get(parent_group=self, group=child)
+        instance.delete()
+
     def get_descendants(self, group=None, descendants=None):
-        """Return the children of all child groups."""
+        """
+        Recursively return a list of the children of all child groups.
+
+        :param group:
+            DynamicGroup from which to traverse. If not set, this group is used.
+        :param descendants:
+            List of descendant objects used to iterate recursively. If not set,
+            defaults to an empty list.
+        """
         if group is None:
             group = self
         if descendants is None:
@@ -539,7 +590,15 @@ class DynamicGroup(OrganizationalModel):
         # return DynamicGroup.objects.filter(pk__in=descendants)
 
     def get_ancestors(self, group=None, ancestors=None):
-        """Return the parents of all parent groups."""
+        """
+        Recursively return a list of the parents of all parent groups.
+
+        :param group:
+            DynamicGroup from which to traverse. If not set, this group is used.
+        :param ancestors:
+            List of ancestor objects used to iterate recursively. If not set,
+            defaults to an empty list.
+        """
         if group is None:
             group = self
         if ancestors is None:
@@ -561,11 +620,116 @@ class DynamicGroup(OrganizationalModel):
         """Return groups that share the same parents."""
         return DynamicGroup.objects.filter(parents__in=self.parents.all())
 
+    def is_root(self):
+        """Return whether this is a root node (has children, but no parents)."""
+        return self.children.exists() and not self.parents.exists()
+
     def is_leaf(self):
-        """Return whether this is a leaf node (has no children)."""
-        return not self.children.exists()
+        """Return whether this is a leaf node (has parents, but no children)."""
+        return self.parents.exists() and not self.children.exists()
+
+    @property
+    def ancestors(self):
+        """Return a queryset of all ancestors."""
+        pks = [obj.pk for obj in self.get_ancestors()]
+        return self.ordered_queryset_from_pks(pks)
+
+    @property
+    def descendants(self):
+        """Return a queryset of all descendants."""
+        pks = [obj.pk for obj in self.get_descendants()]
+        return self.ordered_queryset_from_pks(pks)
+
+    def ancestors_tree(self):
+        """Return a nested mapping of ancestors `{parent: child}, ...}`."""
+        tree = {}
+        for f in self.parents.all():
+            tree[f] = f.ancestors_tree()
+        return tree
+
+    def descendants_tree(self):
+        """Return a nested mapping of descendants `{parent: child}, ...}`."""
+        tree = {}
+        for f in self.children.all():
+            tree[f] = f.descendants_tree()
+        return tree
+
+    def flatten_tree(self, tree, nodes=None, descendants=True, depth=1):
+        """
+        Recursively flatten a tree mapping to a list, adding a `depth` attribute to each instance in
+        the list that can be used for visualizing tree depth.
+
+        :param tree:
+            A nested dictionary tree
+        :param nodes:
+            An ordered list used to hold the flattened nodes
+        :param descendants:
+            Whether to traverse descendants or ancestors. If not set, defaults to descendants.
+        :param depth:
+            The tree traversal depth
+        """
+
+        if nodes is None:
+            nodes = []
+
+        if descendants:
+            method = "get_descendants"
+        else:
+            method = "get_ancestors"
+
+        for leaf in tree:
+            leaf.depth = depth
+            nodes.append(leaf)
+            leaves = getattr(leaf, method)()
+            self.flatten_tree(leaves, nodes=nodes, descendants=descendants, depth=depth + 1)
+
+        return nodes
+
+    def _ordered_filter(self, queryset, field_names, values):
+        """
+        Filters the provided queryset for `{field_name}__in` values for each given `field_name`. If  in [field_names] orders results in the same order as provided values
+
+        For example, would return an ordered queryset following the order in the list of "pk"
+        values:
+
+            self._ordered_filter(self.__class__.objects, ["pk"], pk_list)
+
+        :param queryset:
+            QuerySet object
+        :param field_names:
+            List of field names
+        :param values:
+            Ordered list of values corresponding values used to establish the queryset
+        """
+        if not isinstance(field_names, list):
+            raise TypeError("Field names must be a list")
+
+        case = []
+        for pos, value in enumerate(values):
+            when_condition = {field_names[0]: value, "then": pos}
+            case.append(models.When(**when_condition))
+        order_by = models.Case(*case)
+        filter_condition = {field_name + "__in": values for field_name in field_names}
+        return queryset.filter(**filter_condition).order_by(order_by)
+
+    def ordered_queryset_from_pks(self, pk_list):
+        """
+        Generates a queryset and ordered by the provided list of primary keys.
+
+        :param pk_list:
+            Ordered list of primary keys
+        """
+        return self._ordered_filter(self.__class__.objects, ["pk"], pk_list)
 
     def get_graph(self, parent_group=None, graph=None):
+        """
+        Recursively generate a NetworkX DiGraph from `parent_group` downward.
+
+        :param group:
+            DynamicGroup from which to traverse. If not set, this group is used.
+        :param graph:
+            NetworkX DiGraph object. If not set, a new instance is created.
+        """
         if parent_group is None:
             parent_group = self
         if graph is None:
@@ -577,13 +741,6 @@ class DynamicGroup(OrganizationalModel):
             group = node.group
             print(f"DG: Graphing {group}...")
             graph.add_edge(parent_group, group, operator=node.operator, weight=node.weight)
-
-            """
-            if not nx.is_directed_acyclic_graph(graph):
-                # graph.remove_edges_from([self.parent_group, self.group])
-                print(f"DG: Got loop when adding {group}")
-                raise ValidationError({"group": "Graph contains a loop and this is bad"})
-            """
 
             if group.children.exists():
                 print(f"DG: Enumerating {group} children...")
@@ -626,39 +783,25 @@ class DynamicGroupMembership(BaseModel):
 
     @property
     def name(self):
+        """Return the group name."""
         return self.group.name
 
     @property
     def members(self):
+        """Return the group members."""
         return self.group.members
 
     @property
     def count(self):
+        """Return the group count."""
         return self.group.count
 
     def get_absolute_url(self):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.group.slug})
 
     def get_group_members_url(self):
+        """Return the group members URL."""
         return self.group.get_group_members_url()
-
-    def get_graph(self):
-        print("DGM: Getting graph from parent.")
-        parent_graph = self.parent_group.get_graph()
-        print(f"DGM: Adding self as child node. Parent; {self.parent_group}, Me: {self.group}")
-        parent_graph.add_edge(self.parent_group, self.group, operator=self.operator, weight=self.weight)
-        if not nx.is_directed_acyclic_graph(parent_graph):
-            print(f"DGM: Got loop when adding PARENT {self.group}")
-            # graph.remove_edges_from([self.parent_group, self.group])
-            raise ValidationError({"group": "Graph contains a loop and this is bad"})
-
-        child_graph = self.group.get_graph()
-        child_graph.add_edge(self.parent_group, self.group, operator=self.operator, weight=self.weight)
-        if not nx.is_directed_acyclic_graph(child_graph):
-            print(f"DGM: Got loop when adding CHILD {self.group}")
-            # graph.remove_edges_from([self.parent_group, self.group])
-            raise ValidationError({"group": "Graph contains a loop and this is bad"})
-        return parent_graph
 
     def clean(self):
         super().clean()
@@ -668,14 +811,8 @@ class DynamicGroupMembership(BaseModel):
             raise ValidationError({"group": "ContentType for group and parent_group must match"})
 
         # Assert that loops cannot be created (such as adding root parent as a nested child).
-        print(f"DGM: Calling get_graph from parent: {self.parent_group}")
-        self.get_graph()  # Just calling this should be enough to raise an error.
-        # graph = self.get_graph()
-        # breakpoint()
-        print(f"DGM: Got graph from parent: {self.parent_group}")
-        """
-        if not nx.is_directed_acyclic_graph(graph):
-            print(f"DGM: Got loop when adding {self.group}")
-            # graph.remove_edges_from([self.parent_group, self.group])
-            raise ValidationError({"group": "Graph contains a loop and this is bad"})
-        """
+        if self.parent_group == self.group:
+            raise ValidationError({"group": "Cannot add group as a child of itself"})
+
+        if self.group in self.parent_group.get_ancestors():
+            raise ValidationError({"group": "Cannot add ancestor as a child"})

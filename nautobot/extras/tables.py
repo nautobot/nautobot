@@ -292,25 +292,56 @@ class DynamicGroupTable(BaseTable):
         return format_html('<a href="{}">{}</a>', record.get_group_members_url(), value)
 
 
-GROUP_LINK = """
+# FIXME(jathan): I'm not happy with having to duplicate the Ancestor/Descendant
+# tables just for the link code. I would like to go back to a single
+# `NestedDynamicGroupTable` with a extra parameter if possible.
+DESCENDANTS_LINK = """
 {% load helpers %}
-{% with ancestors=record.get_ancestors %}
-{% for i in ancestors|length|as_range %}
-    {% if not forloop.first %}
-    <i class="mdi mdi-circle-small"></i>
+{% for node, depth in descendants_map.items %}
+    {% if node == record.name %}
+        {% for i in depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
     {% endif %}
 {% endfor %}
-{% endwith %}
 <a href="{{ record.get_absolute_url }}">{{ record.slug }}</a>
 """
 
 
-class NestedDynamicGroupTable(DynamicGroupTable):
+class NestedDynamicGroupDescendantsTable(DynamicGroupTable):
     """
     Subclass of DynamicGroupTable used in detail views to show parenting hierarchy with dots.
     """
 
-    name = tables.TemplateColumn(template_code=GROUP_LINK)
+    name = tables.TemplateColumn(template_code=DESCENDANTS_LINK)
+
+    class Meta(DynamicGroupTable.Meta):
+        pass
+
+
+ANCESTORS_LINK = """
+{% load helpers %}
+{% for node, depth in ancestors_map.items %}
+    {% if node == record.name %}
+        {% for i in depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+<a href="{{ record.get_absolute_url }}">{{ record.slug }}</a>
+"""
+
+
+class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
+    """
+    Subclass of DynamicGroupTable used in detail views to show parenting hierarchy with dots.
+    """
+
+    name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
 
     class Meta(DynamicGroupTable.Meta):
         pass
