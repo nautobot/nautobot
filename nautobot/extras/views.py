@@ -979,7 +979,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
         if hasattr(job_cls, "template_name"):
             template_name = job_cls.template_name
 
-        job_form = job_cls.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
+        job_form = (
+            job_cls.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
+        )
         schedule_form = forms.JobScheduleForm(request.POST)
 
         # Allow execution only if a worker process is running and the job is runnable.
