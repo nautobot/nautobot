@@ -28,38 +28,20 @@ class NautobotViewSet(
 ):
     queryset = None
 
-    action_map = {
-        "object_detail": {
-            "queryset": "object_detail_queryset",
-            "action": "view",
-        },
-        "object_list": {
-            "queryset": "object_list_queryset",
-            "action": "view",
-        },
-        "object_edit": {
-            "queryset": "object_edit_queryset",
-            "action": "change",  # could be set to "add" based on request context
-        },
-        "object_delete": {
-            "queryset": "object_delete_queryset",
-            "action": "delete",
-        },
-        "bulk_edit": {
-            "queryset": "bulk_edit_queryset",
-            "action": "change",
-        },
-        "bulk_import": {
-            "queryset": "bulk_import_queryset",
-            "action": "add",
-        },
-        "bulk_delete": {
-            "queryset": "bulk_delete_queryset",
-            "action": "delete",
-        },
-    }
-
     def __init__(self, *args, **kwargs):
+        if kwargs.get("suffix") == "List":
+            self.action = "view"
+        elif kwargs.get("suffix") == "Detail":
+            self.action = "view"
+        elif kwargs.get("suffix") == "Add" or kwargs.get("suffix") == "Import":
+            self.action = "add"
+        elif kwargs.get("suffix") == "Edit" or kwargs.get("suffix") == "Bulk Edit":
+            self.action = "change"
+        elif kwargs.get("suffix") == "Delete" or kwargs.get("suffix") == "Bulk Delete":
+            self.action = "delete"
+        else:
+            self.action = "view"
+
         if self.queryset:
             if not self.object_detail_queryset:
                 self.object_detail_queryset = self.queryset
@@ -75,13 +57,17 @@ class NautobotViewSet(
                 self.bulk_edit_queryset = self.queryset
             if not self.bulk_delete_queryset:
                 self.bulk_delete_queryset = self.queryset
+
+        if self.object_edit_model_form:
+            if not self.bulk_import_model_form:
+                self.bulk_import_model_form = self.object_edit_model_form
+            if not self.bulk_edit_form:
+                self.bulk_edit_form = self.object_edit_model_form
+
         super().__init__(*args, **kwargs)
 
-    def get_queryset_for_action(self, action):
-        return self.action_map[action]["queryset"]
-
     def get_required_permission(self):
-        return get_permission_for_model(self.get_queryset_for_action(self.action).model)
+        return get_permission_for_model(self.queryset.model, self.action)
 
 
 class NautobotRouter(SimpleRouter):
@@ -155,7 +141,7 @@ class NautobotRouter(SimpleRouter):
             initkwargs={"suffix": "Edit"},
         ),
         Route(
-            url=r"^{prefix}/{lookup}/edit/$",
+            url=r"^{prefix}/{lookup}/delete/$",
             mapping={
                 "get": "handle_object_delete_get",
                 "post": "handle_object_delete_post",

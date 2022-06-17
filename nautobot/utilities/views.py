@@ -30,6 +30,7 @@ from nautobot.utilities.forms import (
     BootstrapMixin,
     ConfirmationForm,
     CSVDataField,
+    CSVFileField,
     TableConfigForm,
     restrict_form_fields,
 )
@@ -176,7 +177,7 @@ class ObjectDetailViewMixin:
     object_detail_queryset = None
     object_detail_template_name = None
 
-    def get_template_name(self):
+    def get_template_name_for_detail(self):
         """
         Return self.template_name if set. Otherwise, resolve the template path by model app_label and name.
         """
@@ -185,19 +186,13 @@ class ObjectDetailViewMixin:
         model_opts = self.object_detail_queryset.model._meta
         return f"{model_opts.app_label}/{model_opts.model_name}.html"
 
-    def get_template_name_for_detail(self):
-        return self.get_template_name()
-
-    def get_extra_context(self, request, instance):
+    def get_extra_context_for_detail(self, request, instance):
         """
         Return any additional context data for the template.
         request: The current request
         instance: The object being viewed
         """
         return {}
-
-    def get_extra_context_for_detail(self, request, instance):
-        return self.get_extra_context(request, instance)
 
     def handle_object_detail_get(self, request, *args, **kwargs):
         """
@@ -210,6 +205,8 @@ class ObjectDetailViewMixin:
             self.get_template_name_for_detail(),
             {
                 "object": instance,
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 **self.get_extra_context_for_detail(request, instance),
             },
         )
@@ -271,7 +268,6 @@ class ObjectListViewMixin:
         return "\n".join(csv_data)
 
     def handle_object_list_get(self, request):
-
         model = self.object_list_queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
@@ -342,18 +338,12 @@ class ObjectListViewMixin:
 
         return render(request, self.object_list_template_name, context)
 
-    def alter_queryset(self, request):
+    def alter_queryset_for_list(self, request):
         # .all() is necessary to avoid caching queries
         return self.object_list_queryset.all()
 
-    def alter_queryset_for_list(self, request):
-        return self.alter_queryset(request)
-
-    def extra_context(self):
-        return {}
-
     def extra_context_for_list(self):
-        return self.extra_context()
+        return {}
 
 
 class ObjectEditViewMixin(GetReturnURLMixin):
@@ -368,7 +358,7 @@ class ObjectEditViewMixin(GetReturnURLMixin):
     object_edit_model_form = None
     object_edit_template_name = "generic/object_edit.html"
 
-    def get_object(self, kwargs):
+    def get_object_for_edit(self, kwargs):
         # Look up an existing object by slug or PK, if provided.
         if "slug" in kwargs:
             return get_object_or_404(self.object_edit_queryset, slug=kwargs["slug"])
@@ -377,16 +367,10 @@ class ObjectEditViewMixin(GetReturnURLMixin):
         # Otherwise, return a new instance.
         return self.object_edit_queryset.model()
 
-    def get_object_for_edit(self, kwargs):
-        return self.get_object(kwargs)
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
+    def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
         # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
         # given some parameter from the request URL.
         return obj
-
-    def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
-        return self.alter_obj(obj, request, url_args, url_kwargs)
 
     def handle_object_edit_get(self, request, *args, **kwargs):
         obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
@@ -481,15 +465,12 @@ class ObjectDeleteViewMixin(GetReturnURLMixin):
     object_delete_queryset = None
     object_delete_template_name = "generic/object_delete.html"
 
-    def get_object(self, kwargs):
+    def get_object_for_delete(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
         if "slug" in kwargs:
             return get_object_or_404(self.object_delete_queryset, slug=kwargs["slug"])
         else:
             return get_object_or_404(self.object_delete_queryset, pk=kwargs["pk"])
-
-    def get_object_for_delete(self, kwargs):
-        return self.get_object(kwargs)
 
     def handle_object_delete_get(self, request, **kwargs):
         obj = self.get_object_for_delete(kwargs)
@@ -562,28 +543,23 @@ class BulkImportViewMixin(GetReturnURLMixin):
     bulk_import_template_name = "generic/object_bulk_import.html"
     bulk_import_widget_attrs = {}
 
-    def _import_form(self, *args, **kwargs):
+    def _import_form_for_bulk_import(self, *args, **kwargs):
         class ImportForm(BootstrapMixin, Form):
             csv = CSVDataField(
                 from_form=self.bulk_import_model_form, widget=Textarea(attrs=self.bulk_import_widget_attrs)
             )
+            csv_file = CSVFileField(from_form=self.bulk_import_model_form)
 
         return ImportForm(*args, **kwargs)
 
-    def _import_form_for_bulk_import(self, *args, **kwargs):
-        return self._import_form(*args, **kwargs)
-
-    def _save_obj(self, obj_form, request):
+    def _save_obj_for_bulk_import(self, obj_form, request):
         """
         Provide a hook to modify the object immediately before saving it (e.g. to encrypt secret data).
         """
         return obj_form.save()
 
-    def _save_obj_for_bulk_import(self, obj_form, request):
-        return self._save_obj(obj_form, request)
-
     def handle_bulk_import_get(self, request):
-
+        print(self._import_form_for_bulk_import().fields["csv"].widget)
         return render(
             request,
             self.bulk_import_template_name,
@@ -682,13 +658,10 @@ class BulkEditViewMixin(GetReturnURLMixin):
     def handle_bulk_edit_get(self, request):
         return redirect(self.get_return_url(request))
 
-    def alter_obj(self, obj, request, url_args, url_kwargs):
+    def alter_obj_for_bulk_edit(self, obj, request, url_args, url_kwargs):
         # Allow views to add extra info to an object before it is processed.
         # For example, a parent object can be defined given some parameter from the request URL.
         return obj
-
-    def alter_obj_for_bulk_edit(self, obj, request, url_args, url_kwargs):
-        return self.alter_obj(obj, request, url_args, url_kwargs)
 
     def handle_bulk_edit_post(self, request, **kwargs):
         logger = logging.getLogger("nautobot.views.BulkEditView")
@@ -815,11 +788,8 @@ class BulkEditViewMixin(GetReturnURLMixin):
         context.update(self.extra_context_for_bulk_edit())
         return render(request, self.bulk_edit_template_name, context)
 
-    def extra_context(self):
-        return {}
-
     def extra_context_for_bulk_edit(self):
-        return self.extra_context()
+        return {}
 
 
 class BulkDeleteViewMixin(GetReturnURLMixin):
@@ -904,13 +874,10 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
         context.update(self.extra_context_for_bulk_delete())
         return render(request, self.bulk_delete_template_name, context)
 
-    def extra_context(self):
+    def extra_context_for_bulk_delete(self):
         return {}
 
-    def extra_context_for_bulk_delete(self):
-        return self.extra_context()
-
-    def get_form(self):
+    def get_form_for_bulk_delete(self):
         """
         Provide a standard bulk delete form if none has been specified for the view
         """
@@ -922,9 +889,6 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
             return self.bulk_delete_form
 
         return BulkDeleteForm
-
-    def get_form_for_bulk_delete(self):
-        return self.get_form()
 
 
 #
