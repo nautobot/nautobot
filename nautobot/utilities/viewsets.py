@@ -64,6 +64,14 @@ class NautobotViewSet(
             if not self.bulk_edit_form:
                 self.bulk_edit_form = self.object_edit_model_form
 
+        if self.object_list_table:
+            if not self.bulk_import_table:
+                self.bulk_import_table = self.object_list_table
+            if not self.bulk_edit_table:
+                self.bulk_edit_table = self.object_list_table
+            if not self.bulk_edit_table:
+                self.bulk_edit_table = self.bulk_edit_table
+
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
