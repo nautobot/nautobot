@@ -148,7 +148,7 @@ black = "~22.3.0"
 # Test code coverage measurement
 coverage = "~6.3.2"
 # Tool for debugging Django
-django-debug-toolbar = "~3.2.4"
+django-debug-toolbar = "~3.4.0"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Code style checking and limited static analysis
