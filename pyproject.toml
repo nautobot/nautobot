@@ -39,7 +39,7 @@ Django = "~3.2.13"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~4.0.0", optional = true}
+django-auth-ldap = {version = "~4.1.0", optional = true}
 # Caching with Redis
 django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
