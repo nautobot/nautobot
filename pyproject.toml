@@ -47,7 +47,7 @@ django-celery-beat = "~2.2.1"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.8.0", extras = ["database"]}
 # Permit cross-domain API requests
-django-cors-headers = "~3.10.1"
+django-cors-headers = "~3.13.0"
 # Support for encrypted database fields
 django-cryptography = "~1.0"
 # Store files in the database for background tasks
