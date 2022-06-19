@@ -477,14 +477,14 @@ Django = "*"
 
 [[package]]
 name = "django-debug-toolbar"
-version = "3.2.4"
+version = "3.4.0"
 description = "A configurable set of panels that display various debug information about the current request/response."
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
-Django = ">=2.2"
+Django = ">=3.2"
 sqlparse = ">=0.2.0"
 
 [[package]]
@@ -2232,7 +2232,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "fc098a637abcdf1002f38f1a69424d93ec96954337cb1b5e235f1470a1201abd"
+content-hash = "179ab1f1edee39627e6c1f34b198ceb4c13c2797416cfd48c20b978c50a5b25f"
 
 [metadata.files]
 amqp = [
@@ -2513,8 +2513,8 @@ django-db-file-storage = [
     {file = "django-db-file-storage-0.5.5.tar.gz", hash = "sha256:5d5da694b78ab202accab4508b958e0e37b3d146310e76f6f6125e1bdeaaad14"},
 ]
 django-debug-toolbar = [
-    {file = "django-debug-toolbar-3.2.4.tar.gz", hash = "sha256:644bbd5c428d3283aa9115722471769cac1bec189edf3a0c855fd8ff870375a9"},
-    {file = "django_debug_toolbar-3.2.4-py3-none-any.whl", hash = "sha256:6b633b6cfee24f232d73569870f19aa86c819d750e7f3e833f2344a9eb4b4409"},
+    {file = "django-debug-toolbar-3.4.0.tar.gz", hash = "sha256:ae6bec2c1ce0e6900b0ab0443e1427eb233d8e6f57a84a0b2705eeecb8874e22"},
+    {file = "django_debug_toolbar-3.4.0-py3-none-any.whl", hash = "sha256:42c1c2e9dc05bb57b53d641e3a6d131fc031b92377b34ae32e604a1fe439bb83"},
 ]
 django-extensions = [
     {file = "django-extensions-3.1.5.tar.gz", hash = "sha256:28e1e1bf49f0e00307ba574d645b0af3564c981a6dfc87209d48cb98f77d0b1a"},
