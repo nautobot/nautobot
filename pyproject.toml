@@ -146,7 +146,7 @@ sso = ["social-auth-core"]
 # Code style enforcement
 black = "~22.3.0"
 # Test code coverage measurement
-coverage = "~6.3.2"
+coverage = "~6.4.1"
 # Tool for debugging Django
 django-debug-toolbar = "~3.4.0"
 # Nautobot example plugin used for testing
