@@ -18,6 +18,7 @@ __all__ = (
     "CSVModelForm",
     "FilterConfigForm",
     "ImportForm",
+    "LookUpFilterForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
     "TableConfigForm",
@@ -90,7 +91,6 @@ class BaseFilterForm(forms.BaseForm):
         self.columns_sequence = [
             (field.name, field.label) for field in self.visible_fields()
         ] + self.get_filterset_fields_name_and_label(self.selected_fields)
-        self.lookup_expr_value = False
 
         if user is not None and user.is_authenticated:
             user_config = f"filter_form.{self.__class__.__name__}"
@@ -104,47 +104,31 @@ class BaseFilterForm(forms.BaseForm):
                     self.get_filterset_fields(
                         default_visible_fields=[field.name for field in self.visible_fields()],
                         selected_fields=columns,
-                        include_lookup_expr_fields=lookup_expr,
                     )
                 )
                 fields_to_remove = [field for field in self.fields.keys() if field not in columns]
 
-            if lookup_expr is True:
-                self.lookup_expr_value = True
-                self.columns_sequence = self.columns_sequence + self.get_filterset_fields_name_and_label(
-                    default_visible_fields=[[field.name for field in self.visible_fields()]],
-                    include_lookup_expr_fields=True,
-                )
-
             for field in fields_to_remove:
                 self.fields.pop(field)
-
-        # self.update_fields_with_filterset_fields(self.selected_fields, self.lookup_expr_value)
 
         self.order_fields(self.selected_fields)
         self.order_columns_sequence(self.selected_fields)
 
-    def get_filterset_fields_name_and_label(self, default_visible_fields, include_lookup_expr_fields=False):
+    def get_filterset_fields_name_and_label(self, default_visible_fields):
         filters = get_filterset_for_model(self.model).get_filters()
         filters_fields = []
         for name, item in filters.items():
-            if name not in default_visible_fields and (
-                include_lookup_expr_fields is True or (include_lookup_expr_fields is False and "__" not in name)
-            ):
+            if name not in default_visible_fields and "__" not in name:
                 filters_fields.append((name, name))
 
         return filters_fields
 
-    def get_filterset_fields(self, default_visible_fields, selected_fields, include_lookup_expr_fields=False):
+    def get_filterset_fields(self, default_visible_fields, selected_fields):
         filters = get_filterset_for_model(self.model).get_filters()
         fields = {}
 
         for name, item in filters.items():
-            if (
-                name not in default_visible_fields
-                and name in selected_fields
-                and (include_lookup_expr_fields is True or (include_lookup_expr_fields is False and "__" not in name))
-            ):
+            if name not in default_visible_fields and name in selected_fields and "__" not in name:
                 fields[name] = self.get_form_field(name)
                 if "__" in name:
                     field_name = item.field_name[0].upper() + item.field_name[1:]
@@ -152,30 +136,6 @@ class BaseFilterForm(forms.BaseForm):
                 else:
                     fields[name].label = item.label
         return fields
-
-    def update_fields_with_filterset_fields(self, selected_fields, include_lookup_expr_fields):
-        filters = get_filterset_for_model(self.model).get_filters()
-        filters_fields = []
-
-        # Add lookup expr fields(e.g. id__in, id__icontains, etc.) to filters_fields
-        # if include_lookup_expr_fields is True
-        for name, item in filters.items():
-            if name not in selected_fields and (
-                include_lookup_expr_fields is True or (include_lookup_expr_fields is False and "__" not in name)
-            ):
-                filters_fields.append((name, name))
-
-                self.fields[name] = self.get_form_field(name)
-                if "__" in name:
-                    field_name = item.field_name[0].upper() + item.field_name[1:]
-                    self.fields[name].label = f"{field_name} {item.lookup_expr}"
-                else:
-                    self.fields[name].label = item.label
-
-        # Add it to Filter Form Columns field
-        self.columns_sequence = [(field.name, field.label) for field in self.visible_fields()] + filters_fields
-        self.selected_fields = selected_fields
-        self.lookup_expr_value = include_lookup_expr_fields
 
     def order_columns_sequence(self, field_order=None):
         """
@@ -387,10 +347,6 @@ class FilterConfigForm(BootstrapMixin, forms.Form):
         widget=forms.SelectMultiple(attrs={"size": 10}),
         help_text="Use the buttons below to arrange columns in the desired order, then select all columns to display.",
     )
-    lookup_expr = forms.BooleanField(
-        required=False,
-        help_text="Include lookup expr fields.",
-    )
 
     def __init__(self, form, *args, **kwargs):
         self.form = form
@@ -400,8 +356,50 @@ class FilterConfigForm(BootstrapMixin, forms.Form):
         # Initialize columns field based on table attributes
         self.fields["columns"].choices = form.columns_sequence
         self.fields["columns"].initial = form.selected_fields
-        self.fields["lookup_expr"].initial = form.lookup_expr_value
 
     @property
     def form_name(self):
         return self.form.__class__.__name__
+
+
+class LookUpFilterForm(BootstrapMixin, forms.Form):
+    """
+    Form for configuring user's filter form preferences.
+    """
+
+    lookup_field = forms.ChoiceField(
+        choices=[],
+        required=False,
+    )
+    lookup_type = forms.ChoiceField(
+        choices=[],
+        required=False,
+    )
+    lookup_value = forms.CharField(
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.model = kwargs.pop("model", None)
+
+        super().__init__(*args, **kwargs)
+
+        # Initialize columns field based on table attributes
+        lookup_field_choices = self.get_lookup_expr_choices()
+
+        self.fields["lookup_field"].choices = [(item, item) for item in lookup_field_choices.keys()]
+        self.fields["lookup_field"].widget.attrs["data-lookup-expr"] = json.dumps(lookup_field_choices)
+
+    def get_lookup_expr_choices(self):
+        filters = get_filterset_for_model(self.model).get_filters()
+        lookup_fields = {}
+        for name, item in filters.items():
+            if "__" in name:
+                data = {
+                    "name": name,
+                    "lookup_field": item.field_name,
+                    "lookup_type": item.lookup_expr,
+                    "lookup_label": name.split("__")[-1] + " - " + item.lookup_expr,
+                }
+                lookup_fields.setdefault(item.field_name, []).append(data)
+        return dict(sorted(lookup_fields.items(), key=lambda d: d[0]))

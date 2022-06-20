@@ -475,4 +475,39 @@ $(document).ready(function() {
         userconfigform.find(select_id + ' option').prop('selected',true);
     });
 
+    $("#id_lookup_value").after(`
+        <button type='button' class='btn btn-info btn-sm btn-block' id='lookup-submit-btn'>
+            <i class='glyphicon glyphicon-plus'></i> Add Field
+        </button>
+     `)
+
+    $("#id_lookup_field").change(function(){
+        var selected = $(this).val()
+        var lookup_expr_dataset = JSON.parse($(this).attr("data-lookup-expr"))[selected]
+        $("#id_lookup_type").find('option').remove()
+        lookup_expr_dataset.forEach(expr => {
+            $("#id_lookup_type").append("<option value='" + expr.name + "'>" + expr.lookup_label + "</option>")
+        })
+    })
+
+    $('#lookup-submit-btn').click(function(){
+        var textarea = $("#id_lookup_expr").val()
+        var key = $('#id_lookup_type').val()
+        var value = $('#id_lookup_value').val()
+        if(key.length && value.length){
+            data = `
+                <tr>
+                    <td>${key}</td>
+                    <td>${value}</td>
+                    <td><button class="btn btn-danger btn-sm btn-remove-lookup-expr" type="button"><i class="mdi mdi-trash-can-outline"></i></button></td>
+                </tr>
+            `
+            $("#lookup_filter_form_table").append(data)
+        }
+    })
+
+    $(document).on("click", ".btn-remove-lookup-expr", function() {
+        $(this).parents("tr").remove()
+    })
+
 });

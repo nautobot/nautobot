@@ -601,6 +601,15 @@ def filter_form_config_form(filter_form, filter_form_name=None):
     }
 
 
+@register.inclusion_tag("utilities/templatetags/filter_form.html")
+def filter_form_modal(filter_form, lookup_filter_form, filter_form_name=None):
+    return {
+        "filter_form": filter_form,
+        "lookup_filter_form": lookup_filter_form,
+        "filter_form_name": filter_form_name,
+    }
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.

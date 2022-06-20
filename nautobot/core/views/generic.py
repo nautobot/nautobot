@@ -35,6 +35,7 @@ from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
+from nautobot.utilities.forms import LookUpFilterForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
@@ -287,10 +288,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         RequestConfig(request, paginate).configure(table)
 
         filter_form = None
+        lookup_filter_form = LookUpFilterForm(label_suffix="", model=self.queryset.model)
         if self.filterset_form:
             if request.GET:
                 # Bind form to the values specified in request.GET
                 filter_form = self.filterset_form(filter_params, label_suffix="", user=request.user)
+                lookup_filter_form = LookUpFilterForm(filter_params, label_suffix="", model=self.queryset.model)
             else:
                 # Use unbound form with default (initial) values
                 filter_form = self.filterset_form(label_suffix="", user=request.user)
@@ -304,6 +307,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": filter_form,
+            "lookup_filter_form": lookup_filter_form,
         }
         context.update(self.extra_context())
 

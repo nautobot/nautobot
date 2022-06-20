@@ -10,6 +10,7 @@
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure Table</button>
     {% endif %}
     <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectFilterForm_config" title="Configure filter form"><i class="mdi mdi-form-dropdown"></i> Configure Filter Form</button>
+    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#LookupFilterForm_modal" title="Configure filter form"><i class="mdi mdi-form-dropdown"></i> Filter Form</button>
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
@@ -23,12 +24,6 @@
 <h1>{% block title %}{{ content_type.model_class|meta:"verbose_name_plural"|bettertitle }}{% endblock %}</h1>
 <div class="row">
     <div class="col-md-12">
-        {% if filter_form %}
-            <div class="col-md-3 pull-right right-side-panel noprint">
-                {% include 'inc/search_panel.html' %}
-                {% block sidebar %}{% endblock %}
-            </div>
-        {% endif %}
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
             <form method="post" class="form form-horizontal">
@@ -85,6 +80,7 @@
 </div>
 {% table_config_form table table_name="ObjectTable" %}
 {% filter_form_config_form filter_form filter_form_name="ObjectFilterForm" %}
+{% filter_form_modal filter_form=filter_form lookup_filter_form=lookup_filter_form filter_form_name="LookupFilterForm" %}
 {% endblock %}
 
 {% block javascript %}
