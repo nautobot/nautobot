@@ -155,7 +155,7 @@ example-plugin = {path = "examples/example_plugin", develop = true}
 # NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~1.6.0"
+invoke = "~1.7.1"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~3.2.3"
 # Rendering docs to HTML
