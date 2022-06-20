@@ -1859,7 +1859,7 @@ paramiko = "*"
 
 [[package]]
 name = "selenium"
-version = "4.1.3"
+version = "4.2.0"
 description = ""
 category = "dev"
 optional = false
@@ -2238,7 +2238,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "88cb0e7081bc774c25bf82db0c854a5351b578ce037822a60988c2d650a3622a"
+content-hash = "857f4378b94bded4089a9782f7b7299a148c2ddcbd0078b9d1ec444d20cb1177"
 
 [metadata.files]
 amqp = [
@@ -3294,7 +3294,7 @@ scp = [
     {file = "scp-0.14.4.tar.gz", hash = "sha256:54699b92cb68ae34b5928c48a888eab9722a212502cba89aa795bd56597505bd"},
 ]
 selenium = [
-    {file = "selenium-4.1.3-py3-none-any.whl", hash = "sha256:14d28a628c831c105d38305c881c9c7847199bfd728ec84240c5e86fa1c9bd5a"},
+    {file = "selenium-4.2.0-py3-none-any.whl", hash = "sha256:ba5b2633f43cf6fe9d308fa4a6996e00a101ab9cb1aad6fd91ae1f3dbe57f56f"},
 ]
 singledispatch = [
     {file = "singledispatch-3.7.0-py2.py3-none-any.whl", hash = "sha256:bc77afa97c8a22596d6d4fc20f1b7bdd2b86edc2a65a4262bdd7cc3cc19aa989"},
