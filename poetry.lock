@@ -1244,7 +1244,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "napalm"
-version = "3.3.1"
+version = "3.4.1"
 description = "Network Automation and Programmability Abstraction Layer with Multivendor support"
 category = "main"
 optional = true
@@ -1255,11 +1255,11 @@ cffi = ">=1.11.3"
 ciscoconfparse = "*"
 future = "*"
 jinja2 = "*"
-junos-eznc = ">=2.2.1"
+junos-eznc = ">=2.6.3"
 lxml = ">=4.3.0"
 ncclient = "*"
 netaddr = "*"
-netmiko = ">=3.1.0"
+netmiko = ">=3.3.0,<4.0.0"
 paramiko = ">=2.6.0"
 pyeapi = ">=0.8.2"
 pyYAML = "*"
@@ -1290,19 +1290,21 @@ python-versions = "*"
 
 [[package]]
 name = "netmiko"
-version = "4.0.0"
-description = "Multi-vendor library to simplify legacy CLI connections to network devices"
+version = "3.4.0"
+description = "Multi-vendor library to simplify Paramiko SSH connections to network devices"
 category = "main"
 optional = true
 python-versions = "*"
 
 [package.dependencies]
-ntc-templates = ">=2.0.0"
+ntc-templates = "*"
 paramiko = ">=2.6.0"
 pyserial = "*"
 scp = ">=0.13.2"
 tenacity = "*"
-textfsm = ">=1.1.2"
+
+[package.extras]
+test = ["pyyaml (>=5.1.2)", "pytest (>=5.1.2)"]
 
 [[package]]
 name = "netutils"
@@ -2236,7 +2238,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "7805f56756ace81f9c72601a1d5f53a4ed5853936e7b338d5196fd87fc8a8cb9"
+content-hash = "88cb0e7081bc774c25bf82db0c854a5351b578ce037822a60988c2d650a3622a"
 
 [metadata.files]
 amqp = [
@@ -2836,8 +2838,8 @@ mysqlclient = [
     {file = "mysqlclient-2.1.0.tar.gz", hash = "sha256:973235686f1b720536d417bf0a0d39b4ab3d5086b2b6ad5e6752393428c02b12"},
 ]
 napalm = [
-    {file = "napalm-3.3.1-py2.py3-none-any.whl", hash = "sha256:ffa7e0c459df2c048ee75fef3f88beaf5f5dc5aecdae67cb2e479a22e3a717e6"},
-    {file = "napalm-3.3.1.tar.gz", hash = "sha256:6fe46d5b4ca761a2bde8ea2bea3e0b808a907afc808c6c67178060eb323320e8"},
+    {file = "napalm-3.4.1-py2.py3-none-any.whl", hash = "sha256:c1ab88c8a7474d3657fed69afb2d94cef27f5d57bb1973ecba8def39a1990839"},
+    {file = "napalm-3.4.1.tar.gz", hash = "sha256:9a9673f79a1c257a23af62675689d0d34a8c7b1a98702f5c1aab841bf1a829cd"},
 ]
 ncclient = [
     {file = "ncclient-0.6.9.tar.gz", hash = "sha256:0112f2ad41fb658f52446d870853a63691d69299c73c7351c520d38dbd8dc0c4"},
@@ -2847,8 +2849,8 @@ netaddr = [
     {file = "netaddr-0.8.0.tar.gz", hash = "sha256:d6cc57c7a07b1d9d2e917aa8b36ae8ce61c35ba3fcd1b83ca31c5a0ee2b5a243"},
 ]
 netmiko = [
-    {file = "netmiko-4.0.0-py3-none-any.whl", hash = "sha256:6bc87c1dc2cba703be8701b7a1a83b047a3e2428e762dd9a803e7550759bc35a"},
-    {file = "netmiko-4.0.0.tar.gz", hash = "sha256:7d58419223b5269a8c205977db19704a378277b68e6e87173c0af4ebd7ca7667"},
+    {file = "netmiko-3.4.0-py3-none-any.whl", hash = "sha256:b66f25717db3609878f83c85604349dd40a0ab494d8eafd817dcde8388131136"},
+    {file = "netmiko-3.4.0.tar.gz", hash = "sha256:acadb9dd97864ee848e2032f1f0e301c7b31e7a4153757d98f5c8ba1b9614993"},
 ]
 netutils = [
     {file = "netutils-1.1.0-py3-none-any.whl", hash = "sha256:bcb4367689c773cd30bf898b15bed38f22dc8bd69e64f2272bb9dd4726bf41d4"},
