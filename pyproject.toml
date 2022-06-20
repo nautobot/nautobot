@@ -165,7 +165,7 @@ requests = "~2.27.1"
 # Selenium web drivers for live integration testing
 selenium = "~4.2.0"
 # Abstraction layer for working with Selenium
-splinter = "~0.17.0"
+splinter = "~0.18.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
