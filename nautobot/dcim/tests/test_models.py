@@ -41,6 +41,35 @@ from nautobot.extras.models import CustomField, Status
 from nautobot.tenancy.models import Tenant
 
 
+class CableLengthTestCase(TestCase):
+    def test_cable_validated_save(self):
+        interfaces = Interface.objects.filter(cable=None)
+        intf1, intf2 = interfaces[:2]
+        cable = Cable(
+            termination_a=intf1,
+            termination_b=intf2,
+            length_unit="ft",
+            length=1,
+            status=Status.objects.get(name="Connected"),
+        )
+        cable.validated_save()
+        cable.validated_save()
+
+    def test_cable_full_clean(self):
+        interfaces = Interface.objects.filter(cable=None)
+        intf1, intf2 = interfaces[:2]
+        cable = Cable(
+            termination_a=intf1,
+            termination_b=intf2,
+            length_unit="ft",
+            length=1,
+            status=Status.objects.get(name="Connected"),
+        )
+        cable.length = 2
+        cable.save()
+        cable.full_clean()
+
+
 class InterfaceTemplateCustomFieldTestCase(TestCase):
     def test_instantiate_model(self):
         """
