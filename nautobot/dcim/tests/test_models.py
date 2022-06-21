@@ -77,8 +77,8 @@ class CableLengthTestCase(TestCase):
             length=1,
             status=self.status,
         )
-        cable.validate_save()
-        cable.validate_save()
+        cable.validated_save()
+        cable.validated_save()
 
     def test_cable_full_clean(self):
         interface3 = Interface.objects.create(device=self.device1, name="eth1")
