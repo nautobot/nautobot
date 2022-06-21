@@ -1537,11 +1537,19 @@ class PowerPanelFilterSet(NautobotFilterSet):
         lookup_expr="in",
         label="Rack group (ID)",
     )
+    rack_group = SlugOrPKMultipleChoiceFilter(
+        queryset=RackGroup.objects.all(),
+        label="Rack group (slug or ID)",
+    )
+    has_powerfeeds = RelatedMembershipBooleanFilter(
+        field_name="powerfeeds",
+        label="Has powerfeeds",
+    )
     tag = TagFilter()
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name"]
+        fields = ["id", "name", "powerfeeds"]
 
 
 class PowerFeedFilterSet(

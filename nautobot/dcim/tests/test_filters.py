@@ -3937,28 +3937,10 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-        )
-
-        rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[2]),
-        )
-
-        PowerPanel.objects.create(name="Power Panel 1", site=sites[0], rack_group=rack_groups[0]),
-        PowerPanel.objects.create(name="Power Panel 2", site=sites[1], rack_group=rack_groups[1]),
-        PowerPanel.objects.create(name="Power Panel 3", site=sites[2], rack_group=rack_groups[2]),
+        site = Site.objects.create(name="Site 4")
+        PowerPanel.objects.create(name="Power Panel 4", site=site)
 
     def test_name(self):
         params = {"name": ["Power Panel 1", "Power Panel 2"]}
@@ -3982,6 +3964,19 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
         rack_groups = RackGroup.objects.all()[:2]
         params = {"rack_group_id": [rack_groups[0].pk, rack_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"rack_group": [rack_groups[0].slug, rack_groups[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_powerfeeds(self):
+        powerfeeds = PowerFeed.objects.all()[:2]
+        params = {"powerfeeds": [powerfeeds[0].pk, powerfeeds[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_powerfeeds(self):
+        params = {"has_powerfeeds": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_powerfeeds": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class PowerFeedTestCase(FilterTestCases.FilterTestCase):
