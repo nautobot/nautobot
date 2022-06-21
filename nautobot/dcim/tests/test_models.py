@@ -44,7 +44,7 @@ from nautobot.tenancy.models import Tenant
 class CableLengthTestCase(TestCase):
     def test_cable_validated_save(self):
         interfaces = Interface.objects.filter(cable=None)
-        intf1, intf2 = interfaces[:2]
+        intf1, intf2 = interfaces[0], interfaces[1]
         cable = Cable(
             termination_a=intf1,
             termination_b=intf2,
@@ -57,11 +57,11 @@ class CableLengthTestCase(TestCase):
 
     def test_cable_full_clean(self):
         interfaces = Interface.objects.filter(cable=None)
-        intf1, intf2 = interfaces[:2]
+        intf3, intf4 = interfaces[2], interfaces[3]
         cable = Cable(
-            termination_a=intf1,
-            termination_b=intf2,
-            length_unit="ft",
+            termination_a=intf3,
+            termination_b=intf4,
+            length_unit="in",
             length=1,
             status=Status.objects.get(name="Connected"),
         )
