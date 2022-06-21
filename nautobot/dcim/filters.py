@@ -1438,7 +1438,14 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     class Meta:
         model = Cable
-        fields = ["id", "label", "length", "length_unit"]
+        fields = [
+            "id",
+            "label",
+            "length",
+            "length_unit",
+            "termination_a_id",
+            "termination_b_id",
+        ]
 
     def filter_device(self, queryset, name, value):
         queryset = queryset.filter(
