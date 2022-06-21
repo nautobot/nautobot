@@ -1589,6 +1589,14 @@ class PowerFeedFilterSet(
         queryset=Rack.objects.all(),
         label="Rack (ID)",
     )
+    power_panel = django_filters.ModelMultipleChoiceFilter(
+        queryset=PowerPanel.objects.all(),
+        label="Power panel",
+    )
+    rack = django_filters.ModelMultipleChoiceFilter(
+        queryset=Rack.objects.all(),
+        label="Rack",
+    )
     tag = TagFilter()
 
     class Meta:
@@ -1603,4 +1611,6 @@ class PowerFeedFilterSet(
             "voltage",
             "amperage",
             "max_utilization",
+            "comments",
+            "available_power",
         ]

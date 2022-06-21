@@ -377,9 +377,9 @@ def common_test_data(cls):
     VLAN.objects.create(name="VLAN 102", vid=102, site=sites[1])
     VLAN.objects.create(name="VLAN 103", vid=103, site=sites[2])
 
-    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[0], power_panel=powerpanels[0])
-    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[1], power_panel=powerpanels[1])
-    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[2], power_panel=powerpanels[2])
+    PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=powerpanels[0])
+    PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=powerpanels[1])
+    PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=powerpanels[2])
 
     users = (
         User.objects.create_user(username="TestCaseUser 1"),
@@ -3985,85 +3985,58 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-        )
-
-        racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0]),
-            Rack.objects.create(name="Rack 2", site=sites[1]),
-            Rack.objects.create(name="Rack 3", site=sites[2]),
-        )
-
-        power_panels = (
-            PowerPanel.objects.create(name="Power Panel 1", site=sites[0]),
-            PowerPanel.objects.create(name="Power Panel 2", site=sites[1]),
-            PowerPanel.objects.create(name="Power Panel 3", site=sites[2]),
+        power_feeds = (
+            PowerFeed.objects.get(name="Power Feed 1"),
+            PowerFeed.objects.get(name="Power Feed 2"),
+            PowerFeed.objects.get(name="Power Feed 3"),
         )
 
         pf_statuses = Status.objects.get_for_model(PowerFeed)
         pf_status_map = {s.slug: s for s in pf_statuses.all()}
 
-        power_feeds = (
-            PowerFeed.objects.create(
-                power_panel=power_panels[0],
-                rack=racks[0],
-                name="Power Feed 1",
-                status=pf_status_map["active"],
-                type=PowerFeedTypeChoices.TYPE_PRIMARY,
-                supply=PowerFeedSupplyChoices.SUPPLY_AC,
-                phase=PowerFeedPhaseChoices.PHASE_3PHASE,
-                voltage=100,
-                amperage=100,
-                max_utilization=10,
-            ),
-            PowerFeed.objects.create(
-                power_panel=power_panels[1],
-                rack=racks[1],
-                name="Power Feed 2",
-                status=pf_status_map["failed"],
-                type=PowerFeedTypeChoices.TYPE_PRIMARY,
-                supply=PowerFeedSupplyChoices.SUPPLY_AC,
-                phase=PowerFeedPhaseChoices.PHASE_3PHASE,
-                voltage=200,
-                amperage=200,
-                max_utilization=20,
-            ),
-            PowerFeed.objects.create(
-                power_panel=power_panels[2],
-                rack=racks[2],
-                name="Power Feed 3",
-                status=pf_status_map["offline"],
-                type=PowerFeedTypeChoices.TYPE_REDUNDANT,
-                supply=PowerFeedSupplyChoices.SUPPLY_DC,
-                phase=PowerFeedPhaseChoices.PHASE_SINGLE,
-                voltage=300,
-                amperage=300,
-                max_utilization=30,
-            ),
+        PowerFeed.objects.filter(pk=power_feeds[0].pk).update(
+            status=pf_status_map["active"],
+            type=PowerFeedTypeChoices.TYPE_PRIMARY,
+            supply=PowerFeedSupplyChoices.SUPPLY_AC,
+            phase=PowerFeedPhaseChoices.PHASE_3PHASE,
+            voltage=100,
+            amperage=100,
+            max_utilization=10,
+            comments="PFA",
+        )
+        PowerFeed.objects.filter(pk=power_feeds[1].pk).update(
+            status=pf_status_map["failed"],
+            type=PowerFeedTypeChoices.TYPE_PRIMARY,
+            supply=PowerFeedSupplyChoices.SUPPLY_AC,
+            phase=PowerFeedPhaseChoices.PHASE_3PHASE,
+            voltage=200,
+            amperage=200,
+            max_utilization=20,
+            comments="PFB",
+        )
+        PowerFeed.objects.filter(pk=power_feeds[2].pk).update(
+            status=pf_status_map["offline"],
+            type=PowerFeedTypeChoices.TYPE_REDUNDANT,
+            supply=PowerFeedSupplyChoices.SUPPLY_DC,
+            phase=PowerFeedPhaseChoices.PHASE_SINGLE,
+            voltage=300,
+            amperage=300,
+            max_utilization=30,
+            comments="PFC",
         )
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model", slug="model")
-        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
-        device = Device.objects.create(
-            name="Device",
-            device_type=device_type,
-            device_role=device_role,
-            site=sites[0],
-        )
+        power_feeds[0].refresh_from_db()
+        power_feeds[1].refresh_from_db()
+        power_feeds[2].refresh_from_db()
+        power_feeds[0].validated_save()
+        power_feeds[1].validated_save()
+        power_feeds[2].validated_save()
+
         power_ports = (
-            PowerPort.objects.create(device=device, name="Power Port 1"),
-            PowerPort.objects.create(device=device, name="Power Port 2"),
+            PowerPort.objects.get(name="Power Port 1"),
+            PowerPort.objects.get(name="Power Port 2"),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -4147,6 +4120,24 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"connected": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_power_panel(self):
+        power_panel = PowerPanel.objects.all()[:2]
+        params = {"power_panel": [power_panel[0].pk, power_panel[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rack(self):
+        rack = Rack.objects.all()[:2]
+        params = {"rack": [rack[0].pk, rack[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_available_power(self):
+        params = {"available_power": [1732, 27000]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_comments(self):
+        params = {"comments": ["PFA", "PFC"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 # TODO: Connection filters
