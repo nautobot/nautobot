@@ -1716,9 +1716,9 @@ class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"rear_port_position": [1, 2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_rear_port_templates(self):
+    def test_rear_port_template(self):
         rear_port_templates = RearPortTemplate.objects.all()[:2]
-        params = {"rear_port_templates": [rear_port_templates[0].pk, rear_port_templates[1].pk]}
+        params = {"rear_port_template": [rear_port_templates[0].pk, rear_port_templates[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_label(self):

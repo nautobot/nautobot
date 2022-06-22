@@ -735,7 +735,7 @@ class InterfaceTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
 
 class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    rear_port_templates = django_filters.ModelMultipleChoiceFilter(
+    rear_port_template = django_filters.ModelMultipleChoiceFilter(
         field_name="rear_port",
         queryset=RearPortTemplate.objects.all(),
         label="Rear port templates",
