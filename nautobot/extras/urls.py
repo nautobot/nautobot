@@ -411,27 +411,32 @@ urlpatterns = [
         name="relationship_bulk_delete",
     ),
     path(
-        "relationships/<uuid:pk>/edit/",
+        "relationships/<slug:slug>/",
+        views.RelationshipView.as_view(),
+        name="relationship",
+    ),
+    path(
+        "relationships/<slug:slug>/edit/",
         views.RelationshipEditView.as_view(),
         name="relationship_edit",
     ),
     path(
-        "relationships/<uuid:pk>/delete/",
+        "relationships/<slug:slug>/delete/",
         views.RelationshipDeleteView.as_view(),
         name="relationship_delete",
     ),
     path(
-        "relationships/associations/",
+        "relationship-associations/",
         views.RelationshipAssociationListView.as_view(),
         name="relationshipassociation_list",
     ),
     path(
-        "relationships/associations/delete/",
+        "relationship-associations/delete/",
         views.RelationshipAssociationBulkDeleteView.as_view(),
         name="relationshipassociation_bulk_delete",
     ),
     path(
-        "relationships/associations/<uuid:pk>/delete/",
+        "relationship-associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
     ),
