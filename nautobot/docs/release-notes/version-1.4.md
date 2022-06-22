@@ -39,6 +39,10 @@ Visit the documentation on [REST API versioning](../rest-api/overview/#versionin
 
 A plugin may now define extra tabs which will be appended to the object view's list of tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000)).
 
+#### Improved Filter Coverage for DCIM models ([#1729](https://github.com/nautobot/nautobot/issues/1729))
+
+The DCIM FilterSets have been updated with 103 new filters, including hybrid filters that support filtering on both `pk` and `slug`. A new filter `SlugOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on foreign-key related fields that relate to models with `slug` fields. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
+
 ### Changed
 
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
@@ -59,6 +63,8 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ### Added
 
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
+- [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add new filter `SlugOrPKMultipleChoiceFilter` to `nautobot.utilities.filters`.
+- [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 103 new filters to `nautobot.dcim.filters` FilterSets.
 - [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.
 
 ### Changed
