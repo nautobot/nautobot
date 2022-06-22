@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
@@ -316,6 +317,9 @@ class Relationship(BaseModel, ChangeLoggedModel):
             RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
+
+    def get_absolute_url(self):
+        return reverse("extras:relationship", args=[self.slug])
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.
