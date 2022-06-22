@@ -22,6 +22,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from rest_framework.routers import Route
 
 from nautobot.utilities.permissions import get_permission_for_model, resolve_permission
 from nautobot.extras.models import CustomField, ExportTemplate
@@ -167,7 +168,15 @@ class GetReturnURLMixin:
         return reverse("home")
 
 
-class ObjectDetailViewMixin:
+class NautobotRouterMixin:
+
+    routes = None
+
+    def define_routes(self):
+        self.routes = []
+
+
+class ObjectDetailViewMixin(NautobotRouterMixin):
     """
     Retrieve a single object for display.
     queryset: The base queryset for retrieving the object
@@ -176,6 +185,20 @@ class ObjectDetailViewMixin:
 
     object_detail_queryset = None
     object_detail_template_name = None
+
+    def define_routes(self):
+        super().define_routes()
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/{lookup}/$",
+                mapping={
+                    "get": "handle_object_detail_get",
+                },
+                name="{basename}",
+                detail=True,
+                initkwargs={"suffix": "Detail"},
+            ),
+        )
 
     def get_template_name_for_detail(self):
         """
@@ -212,7 +235,7 @@ class ObjectDetailViewMixin:
         )
 
 
-class ObjectListViewMixin:
+class ObjectListViewMixin(NautobotRouterMixin):
     """
     List a series of objects.
     queryset: The queryset of objects to display. Note: Prefetching related objects is not necessary, as the
@@ -229,6 +252,20 @@ class ObjectListViewMixin:
     object_list_table = None
     object_list_template_name = "generic/object_list.html"
     object_list_action_buttons = ("add", "import", "export")
+
+    def define_routes(self):
+        super().define_routes()
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/$",
+                mapping={
+                    "get": "handle_object_list_get",
+                },
+                name="{basename}_list",
+                detail=False,
+                initkwargs={"suffix": "List"},
+            ),
+        )
 
     def queryset_to_yaml(self):
         """
@@ -346,7 +383,7 @@ class ObjectListViewMixin:
         return {}
 
 
-class ObjectEditViewMixin(GetReturnURLMixin):
+class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     """
     Create or edit a single object.
     queryset: The base queryset for the object being modified
@@ -357,6 +394,33 @@ class ObjectEditViewMixin(GetReturnURLMixin):
     object_edit_queryset = None
     object_edit_model_form = None
     object_edit_template_name = "generic/object_edit.html"
+
+    def define_routes(self):
+        super().define_routes()
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/add/$",
+                mapping={
+                    "get": "handle_object_edit_get",
+                    "post": "handle_object_edit_post",
+                },
+                name="{basename}_add",
+                detail=False,
+                initkwargs={"suffix": "Add"},
+            ),
+        )
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/{lookup}/edit/$",
+                mapping={
+                    "get": "handle_object_edit_get",
+                    "post": "handle_object_edit_post",
+                },
+                name="{basename}_edit",
+                detail=True,
+                initkwargs={"suffix": "Edit"},
+            ),
+        )
 
     def get_object_for_edit(self, kwargs):
         # Look up an existing object by slug or PK, if provided.
@@ -455,7 +519,7 @@ class ObjectEditViewMixin(GetReturnURLMixin):
         )
 
 
-class ObjectDeleteViewMixin(GetReturnURLMixin):
+class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     """
     Delete a single object.
     queryset: The base queryset for the object being deleted
@@ -464,6 +528,21 @@ class ObjectDeleteViewMixin(GetReturnURLMixin):
 
     object_delete_queryset = None
     object_delete_template_name = "generic/object_delete.html"
+
+    def define_routes(self):
+        super().define_routes()
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/{lookup}/delete/$",
+                mapping={
+                    "get": "handle_object_delete_get",
+                    "post": "handle_object_delete_post",
+                },
+                name="{basename}_delete",
+                detail=True,
+                initkwargs={"suffix": "Delete"},
+            ),
+        )
 
     def get_object_for_delete(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
@@ -527,7 +606,7 @@ class ObjectDeleteViewMixin(GetReturnURLMixin):
         )
 
 
-class BulkImportViewMixin(GetReturnURLMixin):
+class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     """
     Import objects in bulk (CSV format).
     queryset: Base queryset for the model
@@ -542,6 +621,21 @@ class BulkImportViewMixin(GetReturnURLMixin):
     bulk_import_table = None
     bulk_import_template_name = "generic/object_bulk_import.html"
     bulk_import_widget_attrs = {}
+
+    def define_routes(self):
+        super().define_routes()
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/import/$",
+                mapping={
+                    "get": "handle_bulk_import_get",
+                    "post": "handle_bulk_import_post",
+                },
+                name="{basename}_import",
+                detail=False,
+                initkwargs={"suffix": "Import"},
+            ),
+        )
 
     def _import_form_for_bulk_import(self, *args, **kwargs):
         class ImportForm(BootstrapMixin, Form):
@@ -654,6 +748,21 @@ class BulkEditViewMixin(GetReturnURLMixin):
     bulk_edit_table = None
     bulk_edit_form = None
     bulk_edit_template_name = "generic/object_bulk_edit.html"
+
+    def define_routes(self):
+        super().define_routes()
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/edit/$",
+                mapping={
+                    "get": "handle_bulk_edit_get",
+                    "post": "handle_bulk_edit_post",
+                },
+                name="{basename}_bulk_edit",
+                detail=False,
+                initkwargs={"suffix": "Bulk Edit"},
+            ),
+        )
 
     def handle_bulk_edit_get(self, request):
         return redirect(self.get_return_url(request))
@@ -807,6 +916,21 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
     bulk_delete_table = None
     bulk_delete_form = None
     bulk_delete_template_name = "generic/object_bulk_delete.html"
+
+    def define_routes(self):
+        super().define_routes()
+        self.routes.append(
+            Route(
+                url=r"^{prefix}/delete/$",
+                mapping={
+                    "get": "handle_bulk_delete_get",
+                    "post": "handle_bulk_delete_post",
+                },
+                name="{basename}_bulk_delete",
+                detail=False,
+                initkwargs={"suffix": "Bulk Delete"},
+            ),
+        )
 
     def handle_bulk_delete_get(self, request):
         return redirect(self.get_return_url(request))

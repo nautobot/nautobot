@@ -1,5 +1,6 @@
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.views import (
+    NautobotRouterMixin,
     ObjectPermissionRequiredMixin,
     ObjectDetailViewMixin,
     ObjectDeleteViewMixin,
@@ -10,7 +11,7 @@ from nautobot.utilities.views import (
     BulkEditViewMixin,
     View,
 )
-from rest_framework.routers import Route, SimpleRouter
+from rest_framework.routers import SimpleRouter
 from rest_framework.viewsets import ViewSetMixin
 
 
@@ -96,84 +97,7 @@ class NautobotViewSet(
         return get_permission_for_model(self.queryset.model, self.action)
 
 
-class NautobotRouter(SimpleRouter):
-    routes = [
-        Route(
-            url=r"^{prefix}/$",
-            mapping={
-                "get": "handle_object_list_get",
-            },
-            name="{basename}_list",
-            detail=False,
-            initkwargs={"suffix": "List"},
-        ),
-        Route(
-            url=r"^{prefix}/add/$",
-            mapping={
-                "get": "handle_object_edit_get",
-                "post": "handle_object_edit_post",
-            },
-            name="{basename}_add",
-            detail=False,
-            initkwargs={"suffix": "Add"},
-        ),
-        Route(
-            url=r"^{prefix}/import/$",
-            mapping={
-                "get": "handle_bulk_import_get",
-                "post": "handle_bulk_import_post",
-            },
-            name="{basename}_import",
-            detail=False,
-            initkwargs={"suffix": "Import"},
-        ),
-        Route(
-            url=r"^{prefix}/edit/$",
-            mapping={
-                "get": "handle_bulk_edit_get",
-                "post": "handle_bulk_edit_post",
-            },
-            name="{basename}_bulk_edit",
-            detail=False,
-            initkwargs={"suffix": "Bulk Edit"},
-        ),
-        Route(
-            url=r"^{prefix}/delete/$",
-            mapping={
-                "get": "handle_bulk_delete_get",
-                "post": "handle_bulk_delete_post",
-            },
-            name="{basename}_bulk_delete",
-            detail=False,
-            initkwargs={"suffix": "Bulk Delete"},
-        ),
-        Route(
-            url=r"^{prefix}/{lookup}/$",
-            mapping={
-                "get": "handle_object_detail_get",
-            },
-            name="{basename}",
-            detail=True,
-            initkwargs={"suffix": "Detail"},
-        ),
-        Route(
-            url=r"^{prefix}/{lookup}/edit/$",
-            mapping={
-                "get": "handle_object_edit_get",
-                "post": "handle_object_edit_post",
-            },
-            name="{basename}_edit",
-            detail=True,
-            initkwargs={"suffix": "Edit"},
-        ),
-        Route(
-            url=r"^{prefix}/{lookup}/delete/$",
-            mapping={
-                "get": "handle_object_delete_get",
-                "post": "handle_object_delete_post",
-            },
-            name="{basename}_delete",
-            detail=True,
-            initkwargs={"suffix": "Delete"},
-        ),
-    ]
+class NautobotRouter(SimpleRouter, NautobotRouterMixin):
+    def __init__(self):
+        self.define_routes()
+        super().__init__()
