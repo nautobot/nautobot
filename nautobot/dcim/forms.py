@@ -49,6 +49,7 @@ from nautobot.utilities.forms import (
     CSVChoiceField,
     CSVContentTypeField,
     CSVModelChoiceField,
+    CSVMultipleContentTypeField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
@@ -409,7 +410,9 @@ class LocationTypeForm(NautobotModelForm):
     parent = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
     slug = SlugField()
     content_types = MultipleContentTypeField(
-        feature="locations", help_text="The object type(s) that can be associated to a Location of this type"
+        feature="locations",
+        help_text="The object type(s) that can be associated to a Location of this type",
+        required=False,
     )
 
     class Meta:
@@ -423,6 +426,16 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
         required=False,
         to_field_name="name",
         help_text="Name of parent location type",
+    )
+    content_types = CSVMultipleContentTypeField(
+        feature="locations",
+        required=False,
+        choices_as_strings=True,
+        help_text=mark_safe(
+            "The object types to which this status applies. Multiple values "
+            "must be comma-separated and wrapped in double quotes. (e.g. "
+            '<code>"dcim.device,dcim.rack"</code>)'
+        ),
     )
 
     class Meta:
@@ -458,6 +471,23 @@ class LocationForm(NautobotModelForm, TenancyForm):
         fields = ["location_type", "parent", "site", "name", "slug", "status", "tenant_group", "tenant", "description"]
 
 
+class LocationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Location.objects.all(), widget=forms.MultipleHiddenInput)
+    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
+    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    description = forms.CharField(max_length=100, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "parent",
+            "site",
+            "tenant",
+            "description",
+        ]
+
+
 class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     location_type = CSVModelChoiceField(
         queryset=LocationType.objects.all(),
@@ -469,6 +499,12 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         required=False,
         to_field_name="name",
         help_text="Parent location",
+    )
+    site = CSVModelChoiceField(
+        queryset=Site.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Parent site",
     )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),

@@ -263,7 +263,8 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
 
     def prepare_value(self, value):
         """Parse a comma-separated string of model names into a list of PKs."""
-        if isinstance(value, str):
+        # "".split(",") yields [""] rather than [], which we don't want!
+        if isinstance(value, str) and value:
             value = value.split(",")
 
         # For each model name, retrieve the model object and extract its

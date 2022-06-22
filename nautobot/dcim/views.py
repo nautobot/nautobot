@@ -324,7 +324,7 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.with_tree_fields()
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
@@ -363,6 +363,13 @@ class LocationDeleteView(generic.ObjectDeleteView):
     queryset = Location.objects.all()
 
 
+class LocationBulkEditView(generic.BulkEditView):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
+    filterset = filters.LocationFilterSet
+    table = tables.LocationTable
+    form = forms.LocationBulkEditForm
+
+
 class LocationBulkImportView(generic.BulkImportView):
     queryset = Location.objects.all()
     model_form = forms.LocationCSVForm
@@ -370,7 +377,7 @@ class LocationBulkImportView(generic.BulkImportView):
 
 
 class LocationBulkDeleteView(generic.BulkDeleteView):
-    queryset = Location.objects.all()
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
     filterset = filters.LocationFilterSet
     table = tables.LocationTable
 
