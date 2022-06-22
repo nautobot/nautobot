@@ -560,7 +560,7 @@ class DynamicGroup(OrganizationalModel):
             DynamicGroup instance
         """
         instance = self.children.through.objects.get(parent_group=self, group=child)
-        instance.delete()
+        return instance.delete()
 
     def get_descendants(self, group=None, descendants=None):
         """
@@ -714,7 +714,7 @@ class DynamicGroup(OrganizationalModel):
 
     def ordered_queryset_from_pks(self, pk_list):
         """
-        Generates a queryset and ordered by the provided list of primary keys.
+        Generates a queryset ordered by the provided list of primary keys.
 
         :param pk_list:
             Ordered list of primary keys
