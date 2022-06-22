@@ -16,7 +16,7 @@ from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.filters import (
     BaseFilterSet,
-    ContentTypeChoiceFilter,
+    ContentTypeMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
@@ -166,6 +166,15 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         to_field_name="slug",
         label="Region (slug)",
     )
+    # TODO change to SlugOrPKMultipleChoiceFilter
+    locations = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Locations within this Site",
+    )
+    has_locations = RelatedMembershipBooleanFilter(
+        field_name="locations",
+        label="Has locations",
+    )
     tag = TagFilter()
 
     class Meta:
@@ -185,6 +194,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
 
 
 class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+    # TODO consolidate with SlugOrPKMultipleChoiceFilter
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=LocationType.objects.all(),
         label="Parent location type (ID)",
@@ -195,19 +205,23 @@ class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent location type (slug)",
     )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("locations").get_choices,
+    )
 
     class Meta:
         model = LocationType
-        fields = "__all__"
+        fields = ["id", "name", "slug", "description"]
 
 
-class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
         },
     )
+    # TODO SlugOrPKMultipleChoiceFilter for the below fields
     location_type_id = django_filters.ModelMultipleChoiceFilter(
         queryset=LocationType.objects.all(),
         label="Location type (ID)",
@@ -239,7 +253,17 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         to_field_name="slug",
         label="Child location type (slug)",
     )
-    content_type = ContentTypeChoiceFilter(
+    site_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Site.objects.all(),
+        label="Site (ID)",
+    )
+    site = django_filters.ModelMultipleChoiceFilter(
+        field_name="site__slug",
+        queryset=Site.objects.all(),
+        to_field_name="slug",
+        label="Site (slug)",
+    )
+    content_type = ContentTypeMultipleChoiceFilter(
         field_name="location_type__content_types",
         choices=FeatureQuery("locations").get_choices,
     )
@@ -247,7 +271,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     class Meta:
         model = Location
-        fields = "__all__"
+        fields = ["id", "name", "slug", "description"]
 
 
 class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):

@@ -1,8 +1,10 @@
 import django_filters
 
+from nautobot.dcim.models import Location
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.utilities.filters import (
     NameSlugSearchFilterSet,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
@@ -55,6 +57,15 @@ class TenantFilterSet(NautobotFilterSet):
         lookup_expr="in",
         to_field_name="slug",
         label="Tenant group (slug)",
+    )
+    # TODO change to SlugOrPKMultipleChoiceFilter
+    locations = django_filters.ModelMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Locations",
+    )
+    has_locations = RelatedMembershipBooleanFilter(
+        field_name="locations",
+        label="Has locations",
     )
     tag = TagFilter()
 
