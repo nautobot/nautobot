@@ -1,6 +1,7 @@
 import csv
 import json
 import re
+import uuid
 from io import StringIO
 
 import django_filters
@@ -10,7 +11,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
 from django.urls import reverse
 
@@ -666,3 +667,48 @@ class NumericArrayField(SimpleArrayField):
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)
+
+
+class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+    """
+    Field to support matching an object's `pk` or `slug` field depending on the value
+    supplied. Raises ValidationError if neither field matches.
+    """
+
+    def _check_values(self, values):
+        """
+        This method overloads the grandparent method in `django.forms.models.ModelMultipleChoiceField`,
+        re-using some of that method's existing logic and adding support for coupling this field with
+        multiple model fields.
+        """
+        # deduplicate given values to avoid creating many querysets or
+        # requiring the database backend deduplicate efficiently.
+        try:
+            values = frozenset(values)
+        except TypeError:
+            # list of lists isn't hashable, for example
+            raise ValidationError(
+                self.error_messages["invalid_list"],
+                code="invalid_list",
+            )
+        pk_values = set()
+        for item in values:
+            query = Q()
+            try:
+                # query pk field if this is a uuid object or a valid uuid string
+                isinstance(item, uuid.UUID) or uuid.UUID(item)
+                pk_values.add(item)
+                query |= Q(pk=item)
+            except (ValueError, TypeError):
+                pass
+            query |= Q(slug=str(item))
+            qs = self.queryset.filter(query)
+            if not qs.exists():
+                raise ValidationError(
+                    self.error_messages["invalid_choice"],
+                    code="invalid_choice",
+                    params={"value": item},
+                )
+        query = Q(pk__in=pk_values) | Q(slug__in=values)
+        qs = self.queryset.filter(query)
+        return qs
