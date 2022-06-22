@@ -18,6 +18,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     PowerPort,
     PowerPortTemplate,
@@ -224,6 +226,56 @@ class RackTestCase(TestCase):
 
         # Check that Device1 is now assigned to Site B
         self.assertEqual(Device.objects.get(pk=device1.pk).site, site_b)
+
+
+class LocationTestCase(TestCase):
+    def setUp(self):
+        self.root_type = LocationType.objects.create(name="Campus")
+        self.intermediate_type = LocationType.objects.create(name="Building", parent=self.root_type)
+        self.leaf_type = LocationType.objects.create(name="Room", parent=self.intermediate_type)
+
+        self.status = Status.objects.get(slug="active")
+        self.site = Site.objects.create(name="Test Site", status=self.status)
+
+    def test_validate_unique(self):
+        """Confirm that the uniqueness constraint on (parent, name) works when parent is None."""
+        location_1 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_1.validated_save()
+
+        location_2 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        with self.assertRaises(ValidationError):
+            location_2.validated_save()
+
+    def test_parent_type_must_match(self):
+        """A location's parent's location_type must match its location_type's parent."""
+        location_1 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_1.validated_save()
+        location_2 = Location(name="Room 1", location_type=self.leaf_type, parent=location_1, status=self.status)
+        with self.assertRaises(ValidationError) as cm:
+            location_2.validated_save()
+        self.assertIn("must have a parent Location of type Building", str(cm.exception))
+
+    def test_site_required_for_root(self):
+        """A Location of a root type must have a Site."""
+        location = Location(name="Campus 1", location_type=self.root_type, status=self.status)
+        with self.assertRaises(ValidationError) as cm:
+            location.validated_save()
+        self.assertIn("must have a Site", str(cm.exception))
+
+    def test_site_forbidden_for_non_root(self):
+        """A Location of a non-root type must have a parent, not a Site."""
+        location_1 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_1.validated_save()
+        location_2 = Location(
+            name="Building 1",
+            location_type=self.intermediate_type,
+            parent=location_1,
+            site=self.site,
+            status=self.status,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            location_2.validated_save()
+        self.assertIn("must not have an associated Site", str(cm.exception))
 
 
 class DeviceTestCase(TestCase):
