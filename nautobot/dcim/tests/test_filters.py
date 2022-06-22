@@ -1619,16 +1619,10 @@ class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"device_type": [device_type[0].pk, device_type[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_power_port_templates(self):
+    def test_power_port_template(self):
         power_port_templates = PowerPortTemplate.objects.all()[:2]
-        params = {"power_port_templates": [power_port_templates[0].pk, power_port_templates[1].pk]}
+        params = {"power_port_template": [power_port_templates[0].pk, power_port_templates[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_has_power_port_templates(self):
-        params = {"has_power_port_templates": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"has_power_port_templates": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_label(self):
         labels = ["poweroutlet1", "poweroutlet2"]
@@ -2589,6 +2583,7 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         power_ports = (
             devices[0].powerports.get(name="Power Port 1"),
             devices[1].powerports.get(name="Power Port 2"),
+            PowerPort.objects.create(name="Power Port 4", device=devices[2]),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -2627,17 +2622,23 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         params = {"connected": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"connected": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = [
+            Region.objects.get(name="Region 1"),
+            Region.objects.get(name="Region 2"),
+        ]
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = [
+            Site.objects.get(name="Site 1"),
+            Site.objects.get(name="Site 2"),
+        ]
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -2657,12 +2658,23 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"cabled": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_label(self):
         labels = ["powerport1", "powerport2"]
         params = {"label": labels}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_power_outlets(self):
+        power_outlets = PowerOutlet.objects.all()[:2]
+        params = {"power_outlets": [power_outlets[0].pk, power_outlets[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_outlets(self):
+        params = {"has_power_outlets": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_power_outlets": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class PowerOutletTestCase(FilterTestCases.FilterTestCase):
@@ -2757,6 +2769,11 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
     def test_label(self):
         labels = ["poweroutlet1", "poweroutlet2"]
         params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_power_port(self):
+        power_port = PowerPort.objects.all()[:2]
+        params = {"power_port": [power_port[0].pk, power_port[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 

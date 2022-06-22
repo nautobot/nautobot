@@ -20,9 +20,9 @@ from nautobot.utilities.filters import (
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
-    SlugOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
+    SlugOrPKMultipleChoiceFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -574,7 +574,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     power_port_templates = django_filters.ModelMultipleChoiceFilter(
         field_name="powerporttemplates",
         queryset=PowerPortTemplate.objects.all(),
-        label="Power Port Templates",
+        label="Power port templates",
     )
     has_power_port_templates = RelatedMembershipBooleanFilter(
         field_name="powerporttemplates",
@@ -583,7 +583,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     power_outlet_templates = django_filters.ModelMultipleChoiceFilter(
         field_name="poweroutlettemplates",
         queryset=PowerOutletTemplate.objects.all(),
-        label="Power Outlet Templates",
+        label="Power outlet templates",
     )
     has_power_outlet_templates = RelatedMembershipBooleanFilter(
         field_name="poweroutlettemplates",
@@ -596,7 +596,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     )
     has_interface_templates = RelatedMembershipBooleanFilter(
         field_name="interfacetemplates",
-        label="Has Interface templates",
+        label="Has interface templates",
     )
     front_port_templates = django_filters.ModelMultipleChoiceFilter(
         field_name="frontporttemplates",
@@ -672,7 +672,7 @@ class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilt
     )
     device_type = SlugOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
-        label="Device type (Slug or ID)",
+        label="Device type (slug or ID)",
     )
     label = MultiValueCharFilter(label="Label")
     description = MultiValueCharFilter(label="Description")
@@ -713,14 +713,10 @@ class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
 
 class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
-    power_port_templates = django_filters.ModelMultipleChoiceFilter(
+    power_port_template = django_filters.ModelMultipleChoiceFilter(
         field_name="power_port",
         queryset=PowerPortTemplate.objects.all(),
         label="Power port templates",
-    )
-    has_power_port_templates = RelatedMembershipBooleanFilter(
-        field_name="power_port",
-        label="Has power port templates",
     )
 
     class Meta:
@@ -738,7 +734,7 @@ class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     rear_port_template = django_filters.ModelMultipleChoiceFilter(
         field_name="rear_port",
         queryset=RearPortTemplate.objects.all(),
-        label="Rear port templates",
+        label="Rear port template",
     )
 
     class Meta:
@@ -1113,6 +1109,15 @@ class PowerPortFilterSet(
     PathEndpointFilterSet,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
+    power_outlets = django_filters.ModelMultipleChoiceFilter(
+        field_name="poweroutlets",
+        queryset=PowerOutlet.objects.all(),
+        label="Power outlets",
+    )
+    has_power_outlets = RelatedMembershipBooleanFilter(
+        field_name="poweroutlets",
+        label="Has power outlets",
+    )
 
     class Meta:
         model = PowerPort
@@ -1126,6 +1131,11 @@ class PowerOutletFilterSet(
     PathEndpointFilterSet,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
+    power_port = django_filters.ModelMultipleChoiceFilter(
+        field_name="power_port",
+        queryset=PowerPort.objects.all(),
+        label="Power port",
+    )
 
     class Meta:
         model = PowerOutlet
