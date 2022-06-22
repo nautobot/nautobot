@@ -8,6 +8,7 @@ from nautobot.extras.filters import (
     NautobotFilterSet,
     StatusModelFilterSetMixin,
 )
+from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -16,6 +17,7 @@ from nautobot.utilities.filters import (
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
+    MultiValueCharFilter,
 )
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -94,7 +96,7 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
 
     class Meta:
         model = Cluster
-        fields = ["id", "name"]
+        fields = ["id", "name", "comments"]
 
 
 class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
@@ -182,17 +184,25 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         method="_has_primary_ip",
         label="Has a primary IP",
     )
+    primary_ip = MultiValueCharFilter(
+        method="filter_primary_ip",
+        label="Primary IP Address",
+    )
     tag = TagFilter()
 
     class Meta:
         model = VirtualMachine
-        fields = ["id", "name", "cluster", "vcpus", "memory", "disk"]
+        fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments"]
 
     def _has_primary_ip(self, queryset, name, value):
         params = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
         if value:
             return queryset.filter(params)
         return queryset.exclude(params)
+
+    def filter_primary_ip(self, queryset, name, value):
+        ip_queryset = IPAddress.objects.filter_address_in(address=value)
+        return queryset.filter(Q(primary_ip6__in=ip_queryset) | Q(primary_ip4__in=ip_queryset))
 
 
 class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSet):
@@ -233,8 +243,21 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
     )
+    vlan_vid = MultiValueCharFilter(method="filter_vlan_vid", label="Assigned VLAN (VID)")
+    vlan = MultiValueCharFilter(method="filter_vlan", label="Assigned VLAN")
+    ip_address = MultiValueCharFilter(method="filter_ip_address", label="IP Address")
     tag = TagFilter()
+
+    def filter_vlan(self, queryset, name, value):
+        return queryset.filter(Q(untagged_vlan__in=value) | Q(tagged_vlans__in=value))
+
+    def filter_vlan_vid(self, queryset, name, value):
+        return queryset.filter(Q(untagged_vlan__vid__in=value) | Q(tagged_vlans__vid__in=value))
+
+    def filter_ip_address(self, queryset, name, value):
+        ip_queryset = IPAddress.objects.filter_address_in(address=value)
+        return queryset.filter(ip_addresses__in=ip_queryset)
 
     class Meta:
         model = VMInterface
-        fields = ["id", "name", "enabled", "mtu"]
+        fields = ["id", "name", "description", "enabled", "mtu"]

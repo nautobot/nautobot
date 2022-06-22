@@ -1,6 +1,7 @@
+from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.filters import (
@@ -100,6 +101,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
             group=cluster_groups[0],
             site=sites[0],
             tenant=tenants[0],
+            comments="This is cluster 1",
         )
         Cluster.objects.create(
             name="Cluster 2",
@@ -107,6 +109,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
             group=cluster_groups[1],
             site=sites[1],
             tenant=tenants[1],
+            comments="This is cluster 2",
         )
         Cluster.objects.create(
             name="Cluster 3",
@@ -114,10 +117,15 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
             group=cluster_groups[2],
             site=sites[2],
             tenant=tenants[2],
+            comments="This is cluster 3",
         )
 
     def test_name(self):
         params = {"name": ["Cluster 1", "Cluster 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_comments(self):
+        params = {"comments": ["This is cluster 1", "This is cluster 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
@@ -259,6 +267,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
                 memory=1,
                 disk=1,
                 local_context_data={"foo": 123},
+                comments="This is VM 1",
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 2",
@@ -270,6 +279,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
                 vcpus=2,
                 memory=2,
                 disk=2,
+                comments="This is VM 2",
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 3",
@@ -281,6 +291,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
                 vcpus=3,
                 memory=3,
                 disk=3,
+                comments="This is VM 3",
             ),
         )
 
@@ -305,7 +316,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         # Assign primary IPs for filtering
         ipaddresses = (
             IPAddress.objects.create(address="192.0.2.1/24", assigned_object=interfaces[0]),
-            IPAddress.objects.create(address="192.0.2.2/24", assigned_object=interfaces[1]),
+            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=interfaces[1]),
         )
 
         VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=ipaddresses[0])
@@ -313,6 +324,14 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
 
     def test_name(self):
         params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_comments(self):
+        params = {"comments": ["This is VM 1", "This is VM 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_primary_ip(self):
+        params = {"primary_ip": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_vcpus(self):
@@ -444,33 +463,66 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
         statuses = Status.objects.get_for_model(VMInterface)
 
-        VMInterface.objects.create(
-            virtual_machine=vms[0],
-            name="Interface 1",
-            enabled=True,
-            mtu=100,
-            mac_address="00-00-00-00-00-01",
-            status=statuses.get(slug="active"),
+        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=1)
+        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=2)
+
+        vminterfaces = (
+            VMInterface.objects.create(
+                virtual_machine=vms[0],
+                name="Interface 1",
+                enabled=True,
+                mtu=100,
+                mac_address="00-00-00-00-00-01",
+                status=statuses.get(slug="active"),
+                description="This is a description of Interface1",
+                mode=InterfaceModeChoices.MODE_ACCESS,
+                untagged_vlan=cls.vlan1,
+            ),
+            VMInterface.objects.create(
+                virtual_machine=vms[1],
+                name="Interface 2",
+                enabled=True,
+                mtu=200,
+                mac_address="00-00-00-00-00-02",
+                status=statuses.get(slug="active"),
+                description="This is a description of Interface2",
+                mode=InterfaceModeChoices.MODE_ACCESS,
+                untagged_vlan=cls.vlan2,
+            ),
+            VMInterface.objects.create(
+                virtual_machine=vms[2],
+                name="Interface 3",
+                enabled=False,
+                mtu=300,
+                mac_address="00-00-00-00-00-03",
+                status=statuses.get(slug="planned"),
+                description="This is a description of Interface3",
+            ),
         )
-        VMInterface.objects.create(
-            virtual_machine=vms[1],
-            name="Interface 2",
-            enabled=True,
-            mtu=200,
-            mac_address="00-00-00-00-00-02",
-            status=statuses.get(slug="active"),
-        )
-        VMInterface.objects.create(
-            virtual_machine=vms[2],
-            name="Interface 3",
-            enabled=False,
-            mtu=300,
-            mac_address="00-00-00-00-00-03",
-            status=statuses.get(slug="planned"),
+
+        # Assign primary IPs for filtering
+        ipaddresses = (
+            IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0]),
+            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1]),
         )
 
     def test_name(self):
         params = {"name": ["Interface 1", "Interface 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        params = {"description": ["This is a description of Interface3", "This is a description of Interface2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_vlan(self):
+        params = {"vlan": [self.vlan1.pk, self.vlan2.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"vlan_vid": [self.vlan1.vid, self.vlan2.vid]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_ip_address(self):
+        params = {"ip_address": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_assigned_to_interface(self):

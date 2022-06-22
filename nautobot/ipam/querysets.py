@@ -382,3 +382,20 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             kwargs["host"] = address.ip
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
+
+    def filter_address_in(self, address):
+        """
+        Filters by a list of address
+
+        Similar to .filter(address__in=[<address>]`)
+        """
+        q = Q()
+        for _address in address:
+            _address = netaddr.IPNetwork(_address)
+            last_ip = self._get_last_ip(_address)
+            prefix_length = _address.prefixlen
+            host = _address.ip
+            broadcast = last_ip
+            q |= Q(prefix_length=prefix_length, host=host, broadcast=broadcast)
+
+        return super().filter(q)
