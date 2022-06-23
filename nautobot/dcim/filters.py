@@ -1065,6 +1065,10 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
 # TODO: should be CableTerminationFilterSetMixin
 class CableTerminationFilterSet(django_filters.FilterSet):
     cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
+    cable = django_filters.ModelMultipleChoiceFilter(
+        queryset=Cable.objects.all(),
+        label="Cable",
+    )
 
 
 # TODO: should be PathEndpointFilterSetMixin

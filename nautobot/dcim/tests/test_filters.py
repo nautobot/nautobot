@@ -2473,6 +2473,11 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
         params = {"label": labels}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPort.objects.all()
@@ -2561,6 +2566,11 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
     def test_label(self):
         labels = ["consoleserverport1", "consoleserverport2"]
         params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -2679,6 +2689,11 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         params = {"has_power_outlets": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class PowerOutletTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerOutlet.objects.all()
@@ -2777,6 +2792,11 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
     def test_power_port(self):
         power_port = PowerPort.objects.all()[:2]
         params = {"power_port": [power_port[0].pk, power_port[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -3102,6 +3122,11 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"label": labels}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
 
 class FrontPortTestCase(FilterTestCases.FilterTestCase):
     queryset = FrontPort.objects.all()
@@ -3228,6 +3253,11 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         params = {"rear_port_position": [2, 3]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
 
 class RearPortTestCase(FilterTestCases.FilterTestCase):
     queryset = RearPort.objects.all()
@@ -3339,6 +3369,11 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"has_front_ports": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
 class DeviceBayTestCase(FilterTestCases.FilterTestCase):
@@ -4154,6 +4189,11 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
 
     def test_comments(self):
         params = {"comments": ["PFA", "PFC"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_cable(self):
+        cable = Cable.objects.all()[:2]
+        params = {"cable": [cable[0].pk, cable[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
