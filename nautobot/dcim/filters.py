@@ -22,9 +22,9 @@ from nautobot.utilities.filters import (
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    SlugOrPKMultipleChoiceFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -127,7 +127,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent region (slug)",
     )
-    children = SlugOrPKMultipleChoiceFilter(
+    children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Region.objects.all(),
         label="Children (slug or ID)",
     )
@@ -135,7 +135,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         field_name="children",
         label="Has children",
     )
-    sites = SlugOrPKMultipleChoiceFilter(
+    sites = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
@@ -199,7 +199,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="powerpanel",
         label="Has power panels",
     )
-    rack_groups = SlugOrPKMultipleChoiceFilter(
+    rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Rack groups (slug or ID)",
     )
@@ -215,7 +215,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="prefixes",
         label="Has prefixes",
     )
-    vlan_groups = SlugOrPKMultipleChoiceFilter(
+    vlan_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
         label="Vlan groups (slug or ID)",
     )
@@ -298,7 +298,7 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent (slug)",
     )
-    children = SlugOrPKMultipleChoiceFilter(
+    children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Children (slug or ID)",
     )
@@ -672,7 +672,7 @@ class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilt
         field_name="device_type_id",
         label="Device type (ID)",
     )
-    device_type = SlugOrPKMultipleChoiceFilter(
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (slug or ID)",
     )
@@ -1181,15 +1181,30 @@ class InterfaceFilterSet(
         queryset=Interface.objects.all(),
         label="Parent interface (ID)",
     )
+    parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Interface.objects.all(),
+        label="Parent interface (name or ID)",
+    )
     bridge_id = django_filters.ModelMultipleChoiceFilter(
         field_name="bridge",
         queryset=Interface.objects.all(),
         label="Bridge interface (ID)",
     )
+    bridge = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Interface.objects.all(),
+        label="Bridge interface (name or ID)",
+    )
     lag_id = django_filters.ModelMultipleChoiceFilter(
         field_name="lag",
         queryset=Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG),
         label="LAG interface (ID)",
+    )
+    lag = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Interface.objects.all(),
+        label="LAG interface (name or ID)",
     )
     mac_address = MultiValueMACAddressFilter()
     tag = TagFilter()
@@ -1560,7 +1575,7 @@ class PowerPanelFilterSet(NautobotFilterSet):
         lookup_expr="in",
         label="Rack group (ID)",
     )
-    rack_group = SlugOrPKMultipleChoiceFilter(
+    rack_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Rack group (slug or ID)",
     )
