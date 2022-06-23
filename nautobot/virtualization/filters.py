@@ -250,11 +250,11 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         return queryset.exclude(params)
 
     def filter_primary_ip4(self, queryset, name, value):
-        ip_queryset = IPAddress.objects.filter_address_in(address=value)
+        ip_queryset = IPAddress.objects.filter_address_in(addresses=value)
         return queryset.filter(primary_ip4__in=ip_queryset)
 
     def filter_primary_ip6(self, queryset, name, value):
-        ip_queryset = IPAddress.objects.filter_address_in(address=value)
+        ip_queryset = IPAddress.objects.filter_address_in(addresses=value)
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
@@ -316,7 +316,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         return queryset.filter(untagged_vlan__vid__in=value)
 
     def filter_ip_address(self, queryset, name, value):
-        ip_queryset = IPAddress.objects.filter_address_in(address=value)
+        ip_queryset = IPAddress.objects.filter_address_in(addresses=value)
         return queryset.filter(ip_addresses__in=ip_queryset)
 
     class Meta:

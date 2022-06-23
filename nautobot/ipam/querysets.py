@@ -383,14 +383,14 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
 
-    def filter_address_in(self, address):
+    def filter_address_in(self, addresses):
         """
         Filters by a list of address
 
         Similar to .filter(address__in=[<address>]`)
         """
         q = Q()
-        for _address in address:
+        for _address in addresses:
             _address = netaddr.IPNetwork(_address)
             last_ip = self._get_last_ip(_address)
             prefix_length = _address.prefixlen
