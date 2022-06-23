@@ -171,6 +171,19 @@ class GetReturnURLMixin:
 class NautobotRouterMixin:
 
     routes = None
+    model = None
+    queryset = None
+    table = None
+    prefetch_related = []
+    template_name = None
+
+    @property
+    def detail_queryset(self):
+        return self.model.objects.all()
+
+    @property
+    def table_queryset(self):
+        return self.model.objects.prefetch_related(*self.prefetch_related)
 
     def define_routes(self):
         self.routes = []
@@ -182,9 +195,6 @@ class ObjectDetailViewMixin(NautobotRouterMixin):
     queryset: The base queryset for retrieving the object
     template_name: Name of the template to use
     """
-
-    object_detail_queryset = None
-    object_detail_template_name = None
 
     def define_routes(self):
         super().define_routes()
@@ -200,15 +210,6 @@ class ObjectDetailViewMixin(NautobotRouterMixin):
             ),
         )
 
-    def get_template_name_for_detail(self):
-        """
-        Return self.template_name if set. Otherwise, resolve the template path by model app_label and name.
-        """
-        if self.object_detail_template_name is not None:
-            return self.object_detail_template_name
-        model_opts = self.object_detail_queryset.model._meta
-        return f"{model_opts.app_label}/{model_opts.model_name}.html"
-
     def get_extra_context_for_detail(self, request, instance):
         """
         Return any additional context data for the template.
@@ -221,11 +222,11 @@ class ObjectDetailViewMixin(NautobotRouterMixin):
         """
         Generic GET handler for accessing an object by PK or slug
         """
-        instance = get_object_or_404(self.object_detail_queryset, **kwargs)
+        instance = get_object_or_404(self.queryset, **kwargs)
 
         return render(
             request,
-            self.get_template_name_for_detail(),
+            self.template_name,
             {
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
@@ -246,11 +247,8 @@ class ObjectListViewMixin(NautobotRouterMixin):
     template_name: The name of the template
     """
 
-    object_list_queryset = None
     object_list_filterset = None
     object_list_filterset_form = None
-    object_list_table = None
-    object_list_template_name = "generic/object_list.html"
     object_list_action_buttons = ("add", "import", "export")
 
     def define_routes(self):
@@ -271,7 +269,7 @@ class ObjectListViewMixin(NautobotRouterMixin):
         """
         Export the queryset of objects as concatenated YAML documents.
         """
-        yaml_data = [obj.to_yaml() for obj in self.object_list_queryset]
+        yaml_data = [obj.to_yaml() for obj in self.queryset]
 
         return "---\n".join(yaml_data)
 
@@ -283,18 +281,18 @@ class ObjectListViewMixin(NautobotRouterMixin):
         custom_fields = []
 
         # Start with the column headers
-        headers = self.object_list_queryset.model.csv_headers.copy()
+        headers = self.queryset.model.csv_headers.copy()
 
         # Add custom field headers, if any
-        if hasattr(self.object_list_queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(self.object_list_queryset.model):
+        if hasattr(self.queryset.model, "_custom_field_data"):
+            for custom_field in CustomField.objects.get_for_model(self.queryset.model):
                 headers.append(custom_field.name)
                 custom_fields.append(custom_field.name)
 
         csv_data.append(",".join(headers))
 
         # Iterate through the queryset appending each object
-        for obj in self.object_list_queryset:
+        for obj in self.queryset:
             data = obj.to_csv()
 
             for custom_field in custom_fields:
@@ -305,11 +303,11 @@ class ObjectListViewMixin(NautobotRouterMixin):
         return "\n".join(csv_data)
 
     def handle_object_list_get(self, request):
-        model = self.object_list_queryset.model
+        model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
         if self.object_list_filterset:
-            self.object_list_queryset = self.object_list_filterset(request.GET, self.object_list_queryset).qs
+            self.queryset = self.object_list_filterset(request.GET, self.queryset).qs
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -319,7 +317,7 @@ class ObjectListViewMixin(NautobotRouterMixin):
                 name=request.GET.get("export"),
             )
             try:
-                return et.render_to_response(self.object_list_queryset)
+                return et.render_to_response(self.queryset)
             except Exception as e:
                 messages.error(
                     request,
@@ -329,19 +327,19 @@ class ObjectListViewMixin(NautobotRouterMixin):
         # Check for YAML export support
         elif "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
-            filename = "nautobot_{}.yaml".format(self.object_list_queryset.model._meta.verbose_name_plural)
+            filename = "nautobot_{}.yaml".format(self.queryset.model._meta.verbose_name_plural)
             response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
             return response
 
         # Fall back to built-in CSV formatting if export requested but no template specified
         elif "export" in request.GET and hasattr(model, "to_csv"):
             response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = "nautobot_{}.csv".format(self.object_list_queryset.model._meta.verbose_name_plural)
+            filename = "nautobot_{}.csv".format(self.queryset.model._meta.verbose_name_plural)
             response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
             return response
 
         # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
-        self.object_list_queryset = self.alter_queryset_for_list(request)
+        self.queryset = self.alter_queryset_for_list(request)
 
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = {}
@@ -350,7 +348,7 @@ class ObjectListViewMixin(NautobotRouterMixin):
             permissions[action] = request.user.has_perm(perm_name)
 
         # Construct the objects table
-        table = self.object_list_table(self.object_list_queryset, user=request.user)
+        table = self.table(self.queryset, user=request.user)
         if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
             table.columns.show("pk")
 
@@ -373,11 +371,11 @@ class ObjectListViewMixin(NautobotRouterMixin):
         }
         context.update(self.extra_context_for_list())
 
-        return render(request, self.object_list_template_name, context)
+        return render(request, self.template_name, context)
 
     def alter_queryset_for_list(self, request):
         # .all() is necessary to avoid caching queries
-        return self.object_list_queryset.all()
+        return self.queryset.all()
 
     def extra_context_for_list(self):
         return {}
@@ -391,9 +389,7 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     template_name: The name of the template
     """
 
-    object_edit_queryset = None
     object_edit_model_form = None
-    object_edit_template_name = "generic/object_edit.html"
 
     def define_routes(self):
         super().define_routes()
@@ -425,11 +421,11 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     def get_object_for_edit(self, kwargs):
         # Look up an existing object by slug or PK, if provided.
         if "slug" in kwargs:
-            return get_object_or_404(self.object_edit_queryset, slug=kwargs["slug"])
+            return get_object_or_404(self.queryset, slug=kwargs["slug"])
         elif "pk" in kwargs:
-            return get_object_or_404(self.object_edit_queryset, pk=kwargs["pk"])
+            return get_object_or_404(self.queryset, pk=kwargs["pk"])
         # Otherwise, return a new instance.
-        return self.object_edit_queryset.model()
+        return self.queryset.model()
 
     def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
         # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
@@ -445,10 +441,10 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
 
         return render(
             request,
-            self.object_edit_template_name,
+            self.template_name,
             {
                 "obj": obj,
-                "obj_type": self.object_edit_queryset.model._meta.verbose_name,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
@@ -470,11 +466,11 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
                     obj = form.save()
 
                     # Check that the new object conforms with any assigned object-level permissions
-                    self.object_edit_queryset.get(pk=obj.pk)
+                    self.queryset.get(pk=obj.pk)
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",
-                    self.object_edit_queryset.model._meta.verbose_name,
+                    self.queryset.model._meta.verbose_name,
                 )
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
@@ -511,7 +507,7 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
             self.object_edit_template_name,
             {
                 "obj": obj,
-                "obj_type": self.object_edit_queryset.model._meta.verbose_name,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
@@ -525,9 +521,6 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     queryset: The base queryset for the object being deleted
     template_name: The name of the template
     """
-
-    object_delete_queryset = None
-    object_delete_template_name = "generic/object_delete.html"
 
     def define_routes(self):
         super().define_routes()
@@ -547,9 +540,9 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     def get_object_for_delete(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
         if "slug" in kwargs:
-            return get_object_or_404(self.object_delete_queryset, slug=kwargs["slug"])
+            return get_object_or_404(self.queryset, slug=kwargs["slug"])
         else:
-            return get_object_or_404(self.object_delete_queryset, pk=kwargs["pk"])
+            return get_object_or_404(self.queryset, pk=kwargs["pk"])
 
     def handle_object_delete_get(self, request, **kwargs):
         obj = self.get_object_for_delete(kwargs)
@@ -557,11 +550,11 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
 
         return render(
             request,
-            self.object_delete_template_name,
+            self.template_name,
             {
                 "obj": obj,
                 "form": form,
-                "obj_type": self.object_delete_queryset.model._meta.verbose_name,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request, obj),
             },
         )
@@ -581,7 +574,7 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
                 handle_protectederror([obj], request, e)
                 return redirect(obj.get_absolute_url())
 
-            msg = "Deleted {} {}".format(self.object_delete_queryset.model._meta.verbose_name, obj)
+            msg = "Deleted {} {}".format(self.queryset.model._meta.verbose_name, obj)
             logger.info(msg)
             messages.success(request, msg)
 
@@ -600,7 +593,7 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
             {
                 "obj": obj,
                 "form": form,
-                "obj_type": self.object_delete_queryset.model._meta.verbose_name,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request, obj),
             },
         )
@@ -616,10 +609,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     widget_attrs: A dict of attributes to apply to the import widget (e.g. to require a session key)
     """
 
-    bulk_import_queryset = None
     bulk_import_model_form = None
-    bulk_import_table = None
-    bulk_import_template_name = "generic/object_bulk_import.html"
     bulk_import_widget_attrs = {}
 
     def define_routes(self):
@@ -655,7 +645,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     def handle_bulk_import_get(self, request):
         return render(
             request,
-            self.bulk_import_template_name,
+            self.template_name,
             {
                 "form": self._import_form_for_bulk_import(),
                 "fields": self.bulk_import_model_form().fields,
@@ -690,11 +680,11 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
                             raise ValidationError("")
 
                     # Enforce object-level permissions
-                    if self.bulk_import_queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                    if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
                         raise ObjectDoesNotExist
 
                 # Compile a table containing the imported objects
-                obj_table = self.bulk_import_table(new_objs)
+                obj_table = self.table(new_objs)
 
                 if new_objs:
                     msg = "Imported {} {}".format(len(new_objs), new_objs[0]._meta.verbose_name_plural)
@@ -723,7 +713,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
 
         return render(
             request,
-            self.bulk_import_template_name,
+            self.template_name,
             {
                 "form": form,
                 "fields": self.bulk_import_model_form().fields,
@@ -733,7 +723,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
         )
 
 
-class BulkEditViewMixin(GetReturnURLMixin):
+class BulkEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     """
     Edit objects in bulk.
     queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
@@ -743,11 +733,8 @@ class BulkEditViewMixin(GetReturnURLMixin):
     template_name: The name of the template
     """
 
-    bulk_edit_queryset = None
     bulk_edit_filterset = None
-    bulk_edit_table = None
     bulk_edit_form = None
-    bulk_edit_template_name = "generic/object_bulk_edit.html"
 
     def define_routes(self):
         super().define_routes()
@@ -774,11 +761,11 @@ class BulkEditViewMixin(GetReturnURLMixin):
 
     def handle_bulk_edit_post(self, request, **kwargs):
         logger = logging.getLogger("nautobot.views.BulkEditView")
-        model = self.bulk_edit_queryset.model
+        model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all") and self.bulk_edit_filterset is not None:
-            pk_list = [obj.pk for obj in self.bulk_edit_filterset(request.GET, self.bulk_edit_queryset.only("pk")).qs]
+            pk_list = [obj.pk for obj in self.bulk_edit_filterset(request.GET, self.queryset.only("pk")).qs]
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -797,7 +784,7 @@ class BulkEditViewMixin(GetReturnURLMixin):
                     with transaction.atomic():
 
                         updated_objects = []
-                        for obj in self.bulk_edit_queryset.filter(pk__in=form.cleaned_data["pk"]):
+                        for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
 
                             obj = self.alter_obj_for_bulk_edit(obj, request, [], kwargs)
 
@@ -844,7 +831,7 @@ class BulkEditViewMixin(GetReturnURLMixin):
                                 obj.tags.remove(*form.cleaned_data["remove_tags"])
 
                         # Enforce object-level permissions
-                        if self.bulk_edit_queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
+                        if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
                             updated_objects
                         ):
                             raise ObjectDoesNotExist
@@ -883,7 +870,7 @@ class BulkEditViewMixin(GetReturnURLMixin):
             restrict_form_fields(form, request.user)
 
         # Retrieve objects being edited
-        table = self.bulk_edit_table(self.bulk_edit_queryset.filter(pk__in=pk_list), orderable=False)
+        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
         if not table.rows:
             messages.warning(request, "No {} were selected.".format(model._meta.verbose_name_plural))
             return redirect(self.get_return_url(request))
@@ -895,13 +882,13 @@ class BulkEditViewMixin(GetReturnURLMixin):
             "return_url": self.get_return_url(request),
         }
         context.update(self.extra_context_for_bulk_edit())
-        return render(request, self.bulk_edit_template_name, context)
+        return render(request, self.template_name, context)
 
     def extra_context_for_bulk_edit(self):
         return {}
 
 
-class BulkDeleteViewMixin(GetReturnURLMixin):
+class BulkDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     """
     Delete objects in bulk.
     queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
@@ -911,11 +898,8 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
     template_name: The name of the template
     """
 
-    bulk_delete_queryset = None
     bulk_delete_filterset = None
-    bulk_delete_table = None
     bulk_delete_form = None
-    bulk_delete_template_name = "generic/object_bulk_delete.html"
 
     def define_routes(self):
         super().define_routes()
@@ -937,7 +921,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
 
     def handle_bulk_delete_post(self, request, **kwargs):
         logger = logging.getLogger("nautobot.views.BulkDeleteView")
-        model = self.bulk_delete_queryset.model
+        model = self.queryset.model
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
@@ -956,7 +940,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
                 logger.debug("Form validation was successful")
 
                 # Delete objects
-                queryset = self.bulk_delete_queryset.filter(pk__in=pk_list)
+                queryset = self.queryset.filter(pk__in=pk_list)
                 try:
                     deleted_count = queryset.delete()[1][model._meta.label]
                 except ProtectedError as e:
@@ -981,7 +965,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
             )
 
         # Retrieve objects being deleted
-        table = self.bulk_delete_table(self.bulk_delete_queryset.filter(pk__in=pk_list), orderable=False)
+        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
         if not table.rows:
             messages.warning(
                 request,
@@ -996,7 +980,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
             "return_url": self.get_return_url(request),
         }
         context.update(self.extra_context_for_bulk_delete())
-        return render(request, self.bulk_delete_template_name, context)
+        return render(request, self.template_name, context)
 
     def extra_context_for_bulk_delete(self):
         return {}
@@ -1007,7 +991,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin):
         """
 
         class BulkDeleteForm(ConfirmationForm):
-            pk = ModelMultipleChoiceField(queryset=self.bulk_delete_queryset, widget=MultipleHiddenInput)
+            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
 
         if self.bulk_delete_form:
             return self.bulk_delete_form
@@ -1025,21 +1009,18 @@ class ObjectView(ObjectPermissionRequiredMixin, ObjectDetailViewMixin, View):
     template_name = None
 
     def __init__(self, *args, **kwargs):
-        if self.queryset:
-            self.object_detail_queryset = self.queryset
         if self.template_name:
             self.object_detail_template_name = self.template_name
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
-        return get_permission_for_model(self.object_detail_queryset.model, "view")
+        return get_permission_for_model(self.queryset.model, "view")
 
     def get(self, request, *args, **kwargs):
         return self.handle_object_detail_get(request, *args, **kwargs)
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, ObjectListViewMixin, View):
-    queryset = None
     filterset = None
     filterset_form = None
     table = None
@@ -1047,14 +1028,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, ObjectListViewMixin, View):
     action_buttons = None
 
     def __init__(self, *args, **kwargs):
-        if self.queryset:
-            self.object_list_queryset = self.queryset
         if self.filterset:
             self.object_list_filterset = self.filterset
         if self.filterset_form:
             self.object_list_filterset_form = self.filterset_form
-        if self.table:
-            self.object_list_table = self.table
+        # if self.table:
+        #     self.object_list_table = self.table
         if self.template_name:
             self.object_list_template_name = self.template_name
         if self.action_buttons:
@@ -1062,7 +1041,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, ObjectListViewMixin, View):
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
-        return get_permission_for_model(self.object_list_queryset.model, "view")
+        return get_permission_for_model(self.queryset.model, "view")
 
     def get(self, request):
         return self.handle_object_list_get(request)
@@ -1074,8 +1053,6 @@ class ObjectEditView(ObjectPermissionRequiredMixin, ObjectEditViewMixin, View):
     template_name = None
 
     def __init__(self, *args, **kwargs):
-        if self.queryset:
-            self.object_edit_queryset = self.queryset
         if self.model_form:
             self.object_edit_model_form = self.model_form
         if self.template_name:
@@ -1085,7 +1062,7 @@ class ObjectEditView(ObjectPermissionRequiredMixin, ObjectEditViewMixin, View):
     def get_required_permission(self):
         # self._permission_action is set by dispatch() to either "add" or "change" depending on whether
         # we are modifying an existing object or creating a new one.
-        return get_permission_for_model(self.object_edit_queryset.model, self._permission_action)
+        return get_permission_for_model(self.queryset.model, self._permission_action)
 
     def dispatch(self, request, *args, **kwargs):
         # Determine required permission based on whether we are editing an existing object
@@ -1106,13 +1083,13 @@ class ObjectDeleteView(ObjectPermissionRequiredMixin, ObjectDeleteViewMixin, Vie
 
     def __init__(self, *args, **kwargs):
         if self.queryset:
-            self.object_delete_queryset = self.queryset
+            self.queryset = self.queryset
         if self.template_name:
             self.object_delete_template_name = self.template_name
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
-        return get_permission_for_model(self.object_delete_queryset.model, "delete")
+        return get_permission_for_model(self.queryset.model, "delete")
 
     def get(self, request, **kwargs):
         return self.handle_object_delete_get(request, **kwargs)
@@ -1130,11 +1107,11 @@ class BulkImportView(ObjectPermissionRequiredMixin, BulkImportViewMixin, View):
 
     def __init__(self, *args, **kwargs):
         if self.queryset:
-            self.bulk_import_queryset = self.queryset
+            self.queryset = self.queryset
         if self.model_form:
             self.bulk_import_model_form = self.model_form
-        if self.table:
-            self.bulk_import_table = self.table
+        # if self.table:
+        #     self.bulk_import_table = self.table
         if self.template_name:
             self.bulk_import_template_name = self.template_name
         if self.widget_attrs:
@@ -1142,7 +1119,7 @@ class BulkImportView(ObjectPermissionRequiredMixin, BulkImportViewMixin, View):
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
-        return get_permission_for_model(self.bulk_import_queryset.model, "add")
+        return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
         return self.handle_bulk_import_get(request)
@@ -1160,11 +1137,11 @@ class BulkEditView(ObjectPermissionRequiredMixin, BulkEditViewMixin, View):
 
     def __init__(self, *args, **kwargs):
         if self.queryset:
-            self.bulk_edit_queryset = self.queryset
+            self.queryset = self.queryset
         if self.filterset:
             self.bulk_edit_filterset = self.filterset
-        if self.table:
-            self.bulk_edit_table = self.table
+        # if self.table:
+        #     self.bulk_edit_table = self.table
         if self.form:
             self.bulk_edit_form = self.form
         if self.template_name:
@@ -1172,7 +1149,7 @@ class BulkEditView(ObjectPermissionRequiredMixin, BulkEditViewMixin, View):
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
-        return get_permission_for_model(self.bulk_edit_queryset.model, "change")
+        return get_permission_for_model(self.queryset.model, "change")
 
     def get(self, request):
         return self.handle_bulk_edit_get(request)
@@ -1190,19 +1167,19 @@ class BulkDeleteView(ObjectPermissionRequiredMixin, BulkDeleteViewMixin, View):
 
     def __init__(self, *args, **kwargs):
         if self.queryset:
-            self.bulk_delete_queryset = self.queryset
+            self.queryset = self.queryset
         if self.filterset:
             self.bulk_delete_filterset = self.filterset
-        if self.table:
-            self.bulk_delete_table = self.table
+        # if self.table:
+        #     self.bulk_delete_table = self.table
         if self.form:
             self.bulk_delete_form = self.form
-        if self.template_name:
-            self.bulk_delete_template_name = self.template_name
+        # if self.template_name:
+        #     self.bulk_delete_template_name = self.template_name
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
-        return get_permission_for_model(self.bulk_delete_queryset.model, "delete")
+        return get_permission_for_model(self.queryset.model, "delete")
 
     def get(self, request):
         return self.handle_bulk_delete_get(request)
