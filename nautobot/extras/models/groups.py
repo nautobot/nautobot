@@ -11,7 +11,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 from django.utils.functional import cached_property
-import networkx as nx
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
