@@ -28,6 +28,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         """
         devices = [create_test_device() for _ in range(5)]
         content_type = ContentType.objects.get_for_model(Device)
+        ct_label = f"{content_type.app_label}.{content_type.model}"
 
         # Navigate to the DynamicGroups list view
         self.browser.links.find_by_partial_text("Organization").click()
@@ -40,7 +41,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         name = "devices-active"
         self.browser.fill("name", name)
         # self.browser.fill("slug", name)  # slug should be auto-populated
-        self.browser.select("content_type", content_type.pk)
+        self.browser.select("content_type", ct_label)
 
         # Click that "Create" button
         self.browser.find_by_text("Create").click()
