@@ -721,33 +721,6 @@ class DynamicGroup(OrganizationalModel):
         """
         return self._ordered_filter(self.__class__.objects, ["pk"], pk_list)
 
-    def get_graph(self, parent_group=None, graph=None):
-        """
-        Recursively generate a NetworkX DiGraph from `parent_group` downward.
-
-        :param group:
-            DynamicGroup from which to traverse. If not set, this group is used.
-        :param graph:
-            NetworkX DiGraph object. If not set, a new instance is created.
-        """
-        if parent_group is None:
-            parent_group = self
-        if graph is None:
-            graph = nx.DiGraph()
-
-        print(f"DG: Graphing {parent_group}...")
-
-        for node in parent_group.dynamic_group_memberships.all():
-            group = node.group
-            print(f"DG: Graphing {group}...")
-            graph.add_edge(parent_group, group, operator=node.operator, weight=node.weight)
-
-            if group.children.exists():
-                print(f"DG: Enumerating {group} children...")
-                self.get_graph(parent_group=group, graph=graph)
-
-        return graph
-
 
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
