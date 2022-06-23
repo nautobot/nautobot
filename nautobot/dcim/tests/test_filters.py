@@ -2963,10 +2963,6 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
         params = {"parent_interface_id": [parent_interface.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"parent_interface": [parent_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"parent_interface": [parent_interface.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_bridge(self):
         # Create bridged interfaces
@@ -3000,10 +2996,6 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
         params = {"bridge_id": [bridge_interface.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"bridge": [bridge_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"bridge": [bridge_interface.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_lag(self):
         # Create LAG members
@@ -3018,10 +3010,6 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Interface.objects.bulk_create(lag_members)
 
         params = {"lag_id": [lag_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"lag": [lag_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"lag": [lag_interface.name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_device_with_common_vc(self):

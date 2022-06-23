@@ -21,7 +21,6 @@ from nautobot.utilities.filters import (
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
-    NameOrPKMultipleChoiceFilter,
     NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -1182,27 +1181,15 @@ class InterfaceFilterSet(
         queryset=Interface.objects.all(),
         label="Parent interface (ID)",
     )
-    parent_interface = NameOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
-        label="Parent interface (name or ID)",
-    )
     bridge_id = django_filters.ModelMultipleChoiceFilter(
         field_name="bridge",
         queryset=Interface.objects.all(),
         label="Bridge interface (ID)",
     )
-    bridge = NameOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
-        label="Bridge interface (name or ID)",
-    )
     lag_id = django_filters.ModelMultipleChoiceFilter(
         field_name="lag",
         queryset=Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG),
         label="LAG interface (ID)",
-    )
-    lag = NameOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
-        label="LAG interface (name or ID)",
     )
     mac_address = MultiValueMACAddressFilter()
     tag = TagFilter()

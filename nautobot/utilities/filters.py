@@ -20,7 +20,7 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
-from nautobot.utilities.forms.fields import NameOrPKMultipleChoiceField, SlugOrPKMultipleChoiceField
+from nautobot.utilities.forms.fields import SlugOrPKMultipleChoiceField
 
 from taggit.managers import TaggableManager
 
@@ -416,14 +416,6 @@ class MappedPredicatesFilterMixin:
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
         return qs.distinct()
-
-
-class NameOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
-    """
-    Filter that supports filtering on the `pk` or the `name` of a foreign-key related field.
-    """
-
-    field_class = NameOrPKMultipleChoiceField
 
 
 class SlugOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
