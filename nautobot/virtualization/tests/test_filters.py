@@ -29,12 +29,23 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1", description="A")
-        ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2", description="B")
-        ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3", description="C")
+        cluster_types = (
+            ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1", description="A"),
+            ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2", description="B"),
+            ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3", description="C"),
+        )
+
+        cls.clusters = [
+            Cluster.objects.create(name="Cluster 1", type=cluster_types[0]),
+            Cluster.objects.create(name="Cluster 2", type=cluster_types[1]),
+        ]
 
     def test_description(self):
         params = {"description": ["A", "B"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_clusters(self):
+        params = {"clusters": [self.clusters[0].pk, self.clusters[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
