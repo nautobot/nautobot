@@ -46,6 +46,14 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+    clusters = django_filters.ModelMultipleChoiceFilter(
+        field_name="clusters", queryset=Cluster.objects.all(), label="Cluster (ID)"
+    )
+    has_clusters = RelatedMembershipBooleanFilter(
+        field_name="clusters",
+        label="Has clusters",
+    )
+
     class Meta:
         model = ClusterGroup
         fields = ["id", "name", "slug", "description"]

@@ -48,6 +48,12 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"clusters": [self.clusters[0].pk, self.clusters[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+        params = {"has_clusters": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"has_clusters": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = ClusterGroup.objects.all()
@@ -56,13 +62,35 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1", description="A")
-        ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2", description="B")
-        ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3", description="C")
+        cluster_groups = (
+            ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1", description="A"),
+            ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2", description="B"),
+            ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3", description="C"),
+        )
+
+        cluster_types = (
+            ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
+            ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
+        )
+
+        cls.clusters = (
+            Cluster.objects.create(name="Cluster 1", type=cluster_types[0], group=cluster_groups[0]),
+            Cluster.objects.create(name="Cluster 2", type=cluster_types[1], group=cluster_groups[1]),
+        )
 
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_clusters(self):
+        params = {"clusters": [self.clusters[0].pk, self.clusters[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"has_clusters": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"has_clusters": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ClusterTestCase(FilterTestCases.FilterTestCase):
