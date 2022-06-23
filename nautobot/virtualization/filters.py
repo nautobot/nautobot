@@ -1,7 +1,7 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.dcim.models import DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
@@ -18,6 +18,7 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
     MultiValueCharFilter,
+    RelatedMembershipBooleanFilter,
 )
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -72,6 +73,20 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
+    devices = django_filters.ModelMultipleChoiceFilter(
+        field_name="devices", queryset=Device.objects.all(), label="Device (ID)"
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    virtual_machines = django_filters.ModelMultipleChoiceFilter(
+        field_name="virtual_machines", queryset=VirtualMachine.objects.all(), label="Virtual Machines (ID)"
+    )
+    has_virtual_machines = RelatedMembershipBooleanFilter(
+        field_name="virtual_machines",
+        label="Has Virtual Machines",
+    )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ClusterGroup.objects.all(),
         label="Parent group (ID)",
@@ -92,7 +107,7 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="slug",
         label="Cluster type (slug)",
     )
-    tag = TagFilter()
+    tags = TagFilter()
 
     class Meta:
         model = Cluster

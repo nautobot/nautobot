@@ -1,6 +1,8 @@
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import DeviceRole, Platform, Region, Site
-from nautobot.extras.models import Status
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Region, Site
+from nautobot.extras.models import Status, Tag
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
@@ -95,30 +97,48 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
             Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
         )
 
-        Cluster.objects.create(
-            name="Cluster 1",
-            type=cluster_types[0],
-            group=cluster_groups[0],
-            site=sites[0],
-            tenant=tenants[0],
-            comments="This is cluster 1",
+        clusteres = (
+            Cluster.objects.create(
+                name="Cluster 1",
+                type=cluster_types[0],
+                group=cluster_groups[0],
+                site=sites[0],
+                tenant=tenants[0],
+                comments="This is cluster 1",
+            ),
+            Cluster.objects.create(
+                name="Cluster 2",
+                type=cluster_types[1],
+                group=cluster_groups[1],
+                site=sites[1],
+                tenant=tenants[1],
+                comments="This is cluster 2",
+            ),
+            Cluster.objects.create(
+                name="Cluster 3",
+                type=cluster_types[2],
+                group=cluster_groups[2],
+                site=sites[2],
+                tenant=tenants[2],
+                comments="This is cluster 3",
+            ),
         )
-        Cluster.objects.create(
-            name="Cluster 2",
-            type=cluster_types[1],
-            group=cluster_groups[1],
-            site=sites[1],
-            tenant=tenants[1],
-            comments="This is cluster 2",
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
+        devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")
+
+        cls.device = Device.objects.create(
+            name="Device 1", device_type=devicetype, device_role=devicerole, site=sites[0], cluster=clusteres[0]
         )
-        Cluster.objects.create(
-            name="Cluster 3",
-            type=cluster_types[2],
-            group=cluster_groups[2],
-            site=sites[2],
-            tenant=tenants[2],
-            comments="This is cluster 3",
-        )
+
+        cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusteres[1])
+
+        tag = Tag.objects.create(name="Tag 1", slug="tag-1")
+        tag.content_types.add(ContentType.objects.get_for_model(Cluster))
+
+        clusteres[0].tags.add(tag)
+        clusteres[1].tags.add(tag)
 
     def test_name(self):
         params = {"name": ["Cluster 1", "Cluster 2"]}
@@ -126,6 +146,30 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
 
     def test_comments(self):
         params = {"comments": ["This is cluster 1", "This is cluster 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_tags(self):
+        params = {"tags": ["tag-1"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_device(self):
+        params = {"devices": [self.device.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_virtual_machines(self):
+        params = {"virtual_machines": [self.virtualmachine.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        params = {"has_virtual_machines": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        params = {"has_virtual_machines": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
