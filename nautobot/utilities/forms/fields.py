@@ -669,13 +669,13 @@ class NumericArrayField(SimpleArrayField):
         return super().to_python(value)
 
 
-class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
-    Field to support matching an object's `pk` or `slug` field depending on the value
-    supplied. Raises ValidationError if neither field matches.
+    Field to support matching on multiple object fields depending on the value
+    supplied. Raises ValidationError if none of the fields match.
     """
 
-    def _check_values(self, values):
+    def _check_values(self, field_name, values):
         """
         This method overloads the grandparent method in `django.forms.models.ModelMultipleChoiceField`,
         re-using some of that method's existing logic and adding support for coupling this field with
@@ -701,7 +701,7 @@ class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField
                 query |= Q(pk=item)
             except (ValueError, TypeError):
                 pass
-            query |= Q(slug=str(item))
+            query |= Q(**{field_name: str(item)})
             qs = self.queryset.filter(query)
             if not qs.exists():
                 raise ValidationError(
@@ -709,6 +709,26 @@ class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField
                     code="invalid_choice",
                     params={"value": item},
                 )
-        query = Q(pk__in=pk_values) | Q(slug__in=values)
+        query = Q(pk__in=pk_values) | Q(**{f"{field_name}__in": values})
         qs = self.queryset.filter(query)
         return qs
+
+
+class NameOrPKMultipleChoiceField(MultiMatchModelMultipleChoiceField):
+    """
+    Field to support matching an object's `pk` or `slug` field depending on the value
+    supplied. Raises ValidationError if neither field matches.
+    """
+
+    def _check_values(self, values):
+        return super()._check_values(field_name="name", values=values)
+
+
+class SlugOrPKMultipleChoiceField(MultiMatchModelMultipleChoiceField):
+    """
+    Field to support matching an object's `pk` or `slug` field depending on the value
+    supplied. Raises ValidationError if neither field matches.
+    """
+
+    def _check_values(self, values):
+        return super()._check_values(field_name="slug", values=values)
