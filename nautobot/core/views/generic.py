@@ -80,7 +80,9 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Returns:
             dict
         """
-        return {}
+        return {
+            "active_tab": request.GET.get("tab", "main"),
+        }
 
     def get_changelog_url(self, instance):
         """Return the changelog URL for a given instance."""

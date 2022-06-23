@@ -229,6 +229,7 @@ Plugins can inject custom content into certain areas of the detail views of appl
 * `right_page()` - Inject content on the right side of the page
 * `full_width_page()` - Inject content across the entire bottom of the page
 * `buttons()` - Add buttons to the top of the page
+* `detail_tabs()` - Add extra tabs to the end of the list of tabs within the page tabs navigation
 
 Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
 
@@ -245,6 +246,7 @@ Declared subclasses should be gathered into a list or tuple for integration with
 
 ```python
 # template_content.py
+from django.urls import reverse
 from nautobot.extras.plugins import PluginTemplateExtension
 
 from .models import Animal
@@ -261,8 +263,89 @@ class SiteAnimalCount(PluginTemplateExtension):
         })
 
 
-template_extensions = [SiteAnimalCount]
+class DeviceExtraTabs(PluginTemplateExtension):
+    """Template extension to add extra tabs to the object detail tabs."""
+
+    model = 'dcim.device'
+
+    def detail_tabs(self):
+        """
+        You may define extra tabs to render on a model's detail page by utilizing this method.
+        Each tab is defined as a dict in a list of dicts.
+
+        For each of the tabs defined:
+        - The <title> key's value will become the tab link's title.
+        - The <url> key's value is used to render the HTML link for the tab
+
+        These tabs will be visible (in this instance) on the Device model's detail page as
+        set by the DeviceContent.model attribute "dcim.device"
+
+        This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
+        """
+        return [
+            {
+                "title": "Plugin Tab 1",
+                "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
+            },
+            {
+                "title": "Plugin Tab 2",
+                "url": reverse("plugins:example_plugin:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
+            },
+        ]
+
+template_extensions = [DeviceExtraTabs, SiteAnimalCount]
 ```
+
+#### Adding Extra Tabs
+
+In order for any extra tabs to work properly, the `"url"` key must reference a view which inherits from the `nautobot.core.views.generic.ObjectView` class and the template must extend the object's detail template such as:
+
+```html
+<!-- example_plugin/tab_device_detail_1.html -->
+{% extends 'dcim/device.html' %}
+
+{% block content %}
+    <h2>Device Plugin Tab 1</h2>
+    <p>I am some content for the example plugin's device ({{ object.pk }}) detail tab 1.</p>
+{% endblock %}
+```
+
+Here's a basic example of a tab's view
+
+```python
+# views.py
+from nautobot.core.views import generic
+from nautobot.dcim.models import Device
+
+class DeviceDetailPluginTabOne(generic.ObjectView):
+    """
+    This view's template extends the device detail template,
+    making it suitable to show as a tab on the device detail page.
+
+    Views that are intended to be for an object detail tab's content rendering must
+    always inherit from nautobot.core.views.generic.ObjectView.
+    """
+
+    queryset = Device.objects.all()
+    template_name = "example_plugin/tab_device_detail_1.html"
+```
+
+You must also add the view to the `url_patterns` like so (make sure to read the note after this code snippet):
+
+```python
+# urls.py
+from django.urls import path
+
+from example_plugin import views
+
+urlpatterns = [
+    # ... previously defined urls
+    path("devices/<uuid:pk>/example-plugin-tab-1/", views.DeviceDetailPluginTabOne.as_view(), name="device_detail_tab_1"),
+]
+```
+
+!!! note
+    For added tab views, we recommend for consistency that you follow the URL pattern established by the base model detail view and tabs (if any). For example, `nautobot/dcim/urls.py` references Device tab views with the URL pattern `devices/<uuid:pk>/TAB-NAME/`, so above we have followed that same pattern.
 
 ### Adding a Banner
 
