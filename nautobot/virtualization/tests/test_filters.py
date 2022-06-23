@@ -3,7 +3,8 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Region, Site
 from nautobot.extras.models import Status, Tag
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.choices import ServiceProtocolChoices
+from nautobot.ipam.models import IPAddress, VLAN, Service
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.filters import (
@@ -378,7 +379,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
-        interfaces = (
+        cls.interfaces = (
             VMInterface.objects.create(
                 virtual_machine=vms[0],
                 name="Interface 1",
@@ -396,14 +397,35 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
+        cls.services = (
+            Service.objects.create(
+                virtual_machine=vms[1],
+                name="Service 1",
+                protocol=ServiceProtocolChoices.PROTOCOL_UDP,
+                ports=[2003],
+            ),
+            Service.objects.create(
+                virtual_machine=vms[2],
+                name="Service 2",
+                protocol=ServiceProtocolChoices.PROTOCOL_UDP,
+                ports=[2002],
+            ),
+        )
+
         # Assign primary IPs for filtering
         ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24", assigned_object=interfaces[0]),
-            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=interfaces[1]),
+            IPAddress.objects.create(address="192.0.2.1/24", assigned_object=cls.interfaces[0]),
+            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=cls.interfaces[1]),
         )
 
         VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=ipaddresses[0])
-        VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip4=ipaddresses[1])
+        VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip6=ipaddresses[1])
+
+        tag = Tag.objects.create(name="Tag 1", slug="tag-1")
+        tag.content_types.add(ContentType.objects.get_for_model(VirtualMachine))
+
+        vms[0].tags.add(tag)
+        vms[1].tags.add(tag)
 
     def test_name(self):
         params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
@@ -414,7 +436,34 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_primary_ip(self):
-        params = {"primary_ip": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
+        params = {"primary_ip4": ["192.0.2.1/24"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_services(self):
+        params = {"services": [self.services[0].pk, self.services[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"has_services": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"has_services": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_vm_interfaces(self):
+        params = {"vm_interfaces": [self.interfaces[0].pk, self.interfaces[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"has_vm_interfaces": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+        params = {"has_vm_interfaces": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+
+    def test_tags(self):
+        params = {"tags": ["tag-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_vcpus(self):

@@ -8,7 +8,7 @@ from nautobot.extras.filters import (
     NautobotFilterSet,
     StatusModelFilterSetMixin,
 )
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, Service
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -215,11 +215,29 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         method="_has_primary_ip",
         label="Has a primary IP",
     )
-    primary_ip = MultiValueCharFilter(
-        method="filter_primary_ip",
+    primary_ip4 = MultiValueCharFilter(
+        method="filter_primary_ip4",
         label="Primary IP Address",
     )
-    tag = TagFilter()
+    primary_ip6 = MultiValueCharFilter(
+        method="filter_primary_ip6",
+        label="Primary IP Address",
+    )
+    services = django_filters.ModelMultipleChoiceFilter(
+        field_name="services", queryset=Service.objects.all(), label="Services (ID)"
+    )
+    has_services = RelatedMembershipBooleanFilter(
+        field_name="services",
+        label="Has services",
+    )
+    vm_interfaces = django_filters.ModelMultipleChoiceFilter(
+        field_name="interfaces", queryset=VMInterface.objects.all(), label="VMInterfaces (ID)"
+    )
+    has_vm_interfaces = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        label="Has VMinterfaces",
+    )
+    tags = TagFilter()
 
     class Meta:
         model = VirtualMachine
@@ -231,9 +249,13 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
             return queryset.filter(params)
         return queryset.exclude(params)
 
-    def filter_primary_ip(self, queryset, name, value):
+    def filter_primary_ip4(self, queryset, name, value):
         ip_queryset = IPAddress.objects.filter_address_in(address=value)
-        return queryset.filter(Q(primary_ip6__in=ip_queryset) | Q(primary_ip4__in=ip_queryset))
+        return queryset.filter(primary_ip4__in=ip_queryset)
+
+    def filter_primary_ip6(self, queryset, name, value):
+        ip_queryset = IPAddress.objects.filter_address_in(address=value)
+        return queryset.filter(primary_ip6__in=ip_queryset)
 
 
 class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSet):
