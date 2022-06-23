@@ -144,14 +144,21 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#1896](https://github.com/nautobot/nautobot/pull/1856) - Added Renovate Bot configuration, targeting `next`.
+- [#1900](https://github.com/nautobot/nautobot/issues/1900) - Added ability to filter repository based on provided contents.
+
 ### Changed
 
 - [#1645](https://github.com/nautobot/nautobot/issues/1645) - Hide Search Bar if No AuthN and hide_restricted_ui is True
+- [#1948](https://github.com/nautobot/nautobot/issues/1948) - Switched Renovate Bot configuration to bump lock-file only on patch releases instead of bumping in `pyproject.toml`.
 
 ### Fixed
 
 - [#1677](https://github.com/nautobot/nautobot/issues/1677) - Fixed nested CustomFields (ex: on Interface) default value not applying upon Device creation.
 - [#1769](https://github.com/nautobot/nautobot/issues/1769) - Resolve missing menu 'General / Installed Plugins' in navbar if HIDE RESTRICTED UI is activated
+- [#1836](https://github.com/nautobot/nautobot/issues/1836) - Fixed populating default value of FilterForm of Device view.
+- [#1870](https://github.com/nautobot/nautobot/issues/1870) - Fixed cable _abs_length validation error.
+- [#1903](https://github.com/nautobot/nautobot/issues/1903) - Fixed populating default value of FilterForms.
 
 ## v1.3.6 (2022-06-13)
 
