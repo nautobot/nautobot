@@ -1,7 +1,7 @@
 import django_filters
 
 from nautobot.dcim.models import Region, Site, Location
-from nautobot.utilities.filters import TreeNodeMultipleChoiceFilter
+from nautobot.utilities.filters import SlugOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
 
 
 class LocatableModelFilterSetMixin(django_filters.FilterSet):
@@ -26,13 +26,11 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Site.objects.all(),
-        label="Site (ID)",
+        label='Site (ID) (deprecated, use "site" filter instead)',
     )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
+    site = SlugOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (slug or ID)",
     )
     location_id = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),

@@ -6,6 +6,7 @@ from nautobot.utilities.filters import (
     NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
     SearchFilter,
+    SlugOrPKMultipleChoiceFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -58,8 +59,7 @@ class TenantFilterSet(NautobotFilterSet):
         to_field_name="slug",
         label="Tenant group (slug)",
     )
-    # TODO change to SlugOrPKMultipleChoiceFilter
-    locations = django_filters.ModelMultipleChoiceFilter(
+    locations = SlugOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Locations",
     )
@@ -95,11 +95,11 @@ class TenancyFilterSet(django_filters.FilterSet):
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
-        label="Tenant (ID)",
+        label='Tenant (ID) (deprecated, use "tenant" filter instead)',
     )
-    tenant = django_filters.ModelMultipleChoiceFilter(
+    tenant = SlugOrPKMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
         field_name="tenant__slug",
         to_field_name="slug",
-        label="Tenant (slug)",
+        label="Tenant (slug or ID)",
     )

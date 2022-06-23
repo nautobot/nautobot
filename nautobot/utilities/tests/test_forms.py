@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.urls import reverse
@@ -9,8 +10,13 @@ from nautobot.dcim.models import Device
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.models import CustomField
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
-from nautobot.ipam.models import IPAddress, Prefix
-from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField, JSONField
+from nautobot.ipam.models import IPAddress, Prefix, VLANGroup
+from nautobot.utilities.forms.fields import (
+    CSVDataField,
+    DynamicModelMultipleChoiceField,
+    JSONField,
+    SlugOrPKMultipleChoiceField,
+)
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
@@ -576,6 +582,32 @@ class JSONFieldTest(NautobotTestCase):
 
     def test_prepare_value_with_utf8(self):
         self.assertEqual('"I am UTF-8! 😀"', JSONField().prepare_value("I am UTF-8! 😀"))
+
+
+class SlugOrPKMultipleChoiceFieldTest(TestCase):
+    def test_clean(self):
+        field = SlugOrPKMultipleChoiceField(queryset=VLANGroup.objects.all())
+        vlan_groups = (
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1"),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
+            VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3"),
+        )
+        input = [vlan_groups[0].pk, vlan_groups[1].slug]
+        qs = field.clean(input)
+        expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
+        self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x: x.pk)
+
+        invalid_values = [
+            "",
+            [["test"]],
+            ["test"],
+            [vlan_groups[0].pk, "test"],
+            [None],
+            vlan_groups[0].pk,
+        ]
+        for value in invalid_values:
+            with self.assertRaises(ValidationError):
+                field.clean(value)
 
 
 class WidgetsTest(TestCase):

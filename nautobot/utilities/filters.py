@@ -23,6 +23,9 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
+from nautobot.utilities.forms.fields import SlugOrPKMultipleChoiceField
+
+from taggit.managers import TaggableManager
 
 
 logger = logging.getLogger(__name__)
@@ -426,6 +429,14 @@ class MappedPredicatesFilterMixin:
         return qs.distinct()
 
 
+class SlugOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter that supports filtering on the `pk` or the `slug` of a foreign-key related field.
+    """
+
+    field_class = SlugOrPKMultipleChoiceField
+
+
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
     Provide a search filter for use on filtersets as the `q=` parameter.
@@ -469,6 +480,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            TaggableManager: {"filter_class": TagFilter},
         }
     )
 
