@@ -1560,7 +1560,12 @@ class PowerPanelFilterSet(NautobotFilterSet):
         queryset=RackGroup.objects.all(),
         label="Rack group (slug or ID)",
     )
-    has_powerfeeds = RelatedMembershipBooleanFilter(
+    power_feeds = django_filters.ModelMultipleChoiceFilter(
+        field_name="powerfeeds",
+        queryset=PowerFeed.objects.all(),
+        label="Power feeds",
+    )
+    has_power_feeds = RelatedMembershipBooleanFilter(
         field_name="powerfeeds",
         label="Has powerfeeds",
     )
@@ -1568,7 +1573,7 @@ class PowerPanelFilterSet(NautobotFilterSet):
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "powerfeeds"]
+        fields = ["id", "name"]
 
 
 class PowerFeedFilterSet(

@@ -3984,15 +3984,15 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
         params = {"rack_group": [rack_groups[0].slug, rack_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_powerfeeds(self):
-        powerfeeds = PowerFeed.objects.all()[:2]
-        params = {"powerfeeds": [powerfeeds[0].pk, powerfeeds[1].pk]}
+    def test_power_feeds(self):
+        power_feeds = PowerFeed.objects.all()[:2]
+        params = {"power_feeds": [power_feeds[0].pk, power_feeds[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_has_powerfeeds(self):
-        params = {"has_powerfeeds": True}
+    def test_has_power_feeds(self):
+        params = {"has_power_feeds": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"has_powerfeeds": False}
+        params = {"has_power_feeds": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
