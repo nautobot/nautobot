@@ -377,9 +377,9 @@ def common_test_data(cls):
     VLAN.objects.create(name="VLAN 102", vid=102, site=sites[1])
     VLAN.objects.create(name="VLAN 103", vid=103, site=sites[2])
 
-    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[0], power_panel=power_panels[0])
-    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[1], power_panel=power_panels[1])
-    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[2], power_panel=power_panels[2])
+    PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0])
+    PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=power_panels[1])
+    PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2])
 
     users = (
         User.objects.create_user(username="TestCaseUser 1"),

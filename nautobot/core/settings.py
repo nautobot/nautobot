@@ -283,14 +283,14 @@ INSTALLED_APPS = [
     "django_tables2",
     "django_prometheus",
     "mptt",
-    "rest_framework",
     "social_django",
     "taggit",
     "timezone_field",
     "nautobot.core.apps.NautobotConstanceConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
-    "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
-    "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
+    "django.contrib.admin",  # Must be after `nautobot.core` for template overrides
+    "django_celery_beat",  # Must be after `nautobot.core` for template overrides
+    "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
     "nautobot.dcim",
