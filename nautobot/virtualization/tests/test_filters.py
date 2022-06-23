@@ -629,14 +629,23 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 mac_address="00-00-00-00-00-03",
                 status=statuses.get(slug="planned"),
                 description="This is a description of Interface3",
+                mode=InterfaceModeChoices.MODE_TAGGED,
             ),
         )
+
+        vminterfaces[2].tagged_vlans.add(cls.vlan2)
 
         # Assign primary IPs for filtering
         ipaddresses = (
             IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0]),
             IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1]),
         )
+
+        tag = Tag.objects.create(name="Tag 1", slug="tag-1")
+        tag.content_types.add(ContentType.objects.get_for_model(VMInterface))
+
+        vminterfaces[0].tags.add(tag)
+        vminterfaces[1].tags.add(tag)
 
     def test_name(self):
         params = {"name": ["Interface 1", "Interface 2"]}
@@ -646,12 +655,27 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"description": ["This is a description of Interface3", "This is a description of Interface2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_vlan(self):
-        params = {"vlan": [self.vlan1.pk, self.vlan2.pk]}
+    def test_tags(self):
+        params = {"tags": ["tag-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-        params = {"vlan_vid": [self.vlan1.vid, self.vlan2.vid]}
+    def test_tagged_vlans(self):
+        params = {"tagged_vlans": [self.vlan1.pk, self.vlan2.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        params = {"tagged_vlans_vid": [self.vlan1.vid, self.vlan2.vid]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_untagged_vlan(self):
+        params = {"untagged_vlan": [self.vlan1.pk, self.vlan2.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        params = {"untagged_vlan_vid": [self.vlan1.vid, self.vlan2.vid]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_mode(self):
+        params = {"mode": [InterfaceModeChoices.MODE_ACCESS, InterfaceModeChoices.MODE_TAGGED]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_ip_address(self):
         params = {"ip_address": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}

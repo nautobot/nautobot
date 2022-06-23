@@ -296,16 +296,24 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
     )
-    vlan_vid = MultiValueCharFilter(method="filter_vlan_vid", label="Assigned VLAN (VID)")
-    vlan = MultiValueCharFilter(method="filter_vlan", label="Assigned VLAN")
+    tagged_vlans_vid = MultiValueCharFilter(method="filter_tagged_vlans_vid", label="Tagged VLAN (VID)")
+    tagged_vlans = MultiValueCharFilter(method="filter_tagged_vlans", label="Tagged VLAN")
+    untagged_vlan_vid = MultiValueCharFilter(method="filter_untagged_vlan_vid", label="Untagged VLAN (VID)")
+    untagged_vlan = MultiValueCharFilter(method="filter_untagged_vlan", label="Untagged VLAN")
     ip_address = MultiValueCharFilter(method="filter_ip_address", label="IP Address")
-    tag = TagFilter()
+    tags = TagFilter()
 
-    def filter_vlan(self, queryset, name, value):
-        return queryset.filter(Q(untagged_vlan__in=value) | Q(tagged_vlans__in=value))
+    def filter_tagged_vlans(self, queryset, name, value):
+        return queryset.filter(tagged_vlans__in=value)
 
-    def filter_vlan_vid(self, queryset, name, value):
-        return queryset.filter(Q(untagged_vlan__vid__in=value) | Q(tagged_vlans__vid__in=value))
+    def filter_tagged_vlans_vid(self, queryset, name, value):
+        return queryset.filter(tagged_vlans__vid__in=value)
+
+    def filter_untagged_vlan(self, queryset, name, value):
+        return queryset.filter(untagged_vlan__in=value)
+
+    def filter_untagged_vlan_vid(self, queryset, name, value):
+        return queryset.filter(untagged_vlan__vid__in=value)
 
     def filter_ip_address(self, queryset, name, value):
         ip_queryset = IPAddress.objects.filter_address_in(address=value)
@@ -313,4 +321,4 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
 
     class Meta:
         model = VMInterface
-        fields = ["id", "name", "description", "enabled", "mtu"]
+        fields = ["id", "name", "description", "enabled", "mtu", "mode"]
