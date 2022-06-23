@@ -1,4 +1,4 @@
-from django.shortcuts import HttpResponse, render
+from django.shortcuts import render
 from django.views.generic import View
 
 from nautobot.core.views import generic
@@ -159,24 +159,3 @@ class AnotherExampleModelView(generic.ObjectView):
     """Detail view for a single `AnotherExampleModel` object."""
 
     queryset = AnotherExampleModel.objects.all()
-
-
-class DeviceOverrideView(View):
-    def get(self, request, *args, **kwargs):
-        return HttpResponse("Hello world! I'm a view provided by a plugin to override the `dcim:device` view.")
-
-
-def circuit_override_view(request, pk):
-    return HttpResponse("Circuit View Override")
-
-
-class CircuitOverrideView(View):
-    def get(self, request, *args, **kwargs):
-        return HttpResponse("Hello world! I'm a view provided by a plugin to override the `circuits:circuit` view.")
-
-
-override_views = {
-    "dcim:device": DeviceOverrideView.as_view(),
-    "circuits:circuit": circuit_override_view,
-    # "circuits:circuit": CircuitOverrideView.as_view(),
-}

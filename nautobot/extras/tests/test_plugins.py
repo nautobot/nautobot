@@ -1,21 +1,27 @@
+import sys
 from unittest import skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.shortcuts import HttpResponse
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
+from django.views.generic import View
 
 import netaddr
 
+from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
 from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation
+from nautobot.extras.plugins import register_override_views
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
@@ -26,6 +32,7 @@ from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases
 from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files
 from example_plugin.models import ExampleModel
+from example_plugin import views as plugin_views
 
 
 @skipIf(
@@ -623,3 +630,53 @@ class LoadPluginTest(TestCase):
         # Move to the example plugin. No errors should be raised (which is good).
         plugin_name = "example_plugin"
         load_plugin(plugin_name, settings)
+
+
+class TestPluginCoreViewOverrides(TestCase):
+    """
+    Validate that overridden core views work as expected.
+
+    The functionality is loaded and unloaded by this test case to isolate it from the rest of the test suite.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.device = create_test_device("Device")
+        provider = Provider.objects.create(name="Provider", slug="provider", asn=65001)
+        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        self.circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            type=circuit_type,
+            status=Status.objects.get_for_model(Circuit).get(slug="active"),
+        )
+        self.user.is_superuser = True
+        self.user.save()
+
+    @override_settings(
+        PLUGINS=[
+            "example_plugin",
+            "plugin_with_view_overrides",
+        ]
+    )
+    def test_views_are_overridden(self):
+
+        load_plugin("plugin_with_view_overrides", settings)
+
+        response = self.client.get(reverse("dcim:device", kwargs={"pk": self.device.pk}))
+        self.assertEqual(b"Hello world! I'm a view provided by a plugin to override the `dcim:device` view.",
+                         response.content)
+
+        response = self.client.get(reverse("circuits:circuit", kwargs={"pk": self.device.pk}))
+        self.assertEqual(b"Hello world! I'm a view provided by a plugin to override the `circuits:circuit` view.",
+                         response.content)
+
+        response = self.client.get(f'{reverse("plugins:plugins_list")}plugin_with_view_overrides/')
+        self.assertIn(
+            b"dcim:device <code>plugin_with_view_overrides.views.DeviceViewOverride</code>",
+            response.content
+        )
+        self.assertIn(
+            b"circuits:circuit <code>plugin_with_view_overrides.views.CircuitViewOverride</code>",
+            response.content
+        )
