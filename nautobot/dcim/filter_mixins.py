@@ -30,6 +30,8 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
     )
     site = SlugOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
+        field_name="site__slug",
+        to_field_name="slug",
         label="Site (slug or ID)",
     )
     location_id = TreeNodeMultipleChoiceFilter(
