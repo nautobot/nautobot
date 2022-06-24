@@ -313,7 +313,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["status"]
-    slug_source = ["parent__name", "name"]
+    slug_source = ["parent__slug", "name"]
 
     @classmethod
     def setUpTestData(cls):

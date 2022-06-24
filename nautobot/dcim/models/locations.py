@@ -107,7 +107,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     name = models.CharField(max_length=100, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     # However a Location's slug *is* globally unique.
-    slug = AutoSlugField(populate_from=["parent__name", "name"])
+    slug = AutoSlugField(populate_from=["parent__slug", "name"])
     location_type = models.ForeignKey(
         to="dcim.LocationType",
         on_delete=models.PROTECT,

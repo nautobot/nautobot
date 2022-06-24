@@ -457,11 +457,12 @@ class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
 
 class LocationForm(NautobotModelForm, TenancyForm):
-    slug = SlugField()
+    slug = SlugField(slug_source=("parent", "name"))
     location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
-        query_params={"child_location_type_id": "$location_type"},
+        query_params={"child_location_type": "$location_type"},
+        to_field_name="slug",
         required=False,
     )
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)

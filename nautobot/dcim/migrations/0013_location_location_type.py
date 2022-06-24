@@ -97,7 +97,7 @@ class Migration(migrations.Migration):
                 (
                     "slug",
                     nautobot.core.fields.AutoSlugField(
-                        blank=True, max_length=100, populate_from=["parent__name", "name"], unique=True
+                        blank=True, max_length=100, populate_from=["parent__slug", "name"], unique=True
                     ),
                 ),
                 ("description", models.CharField(blank=True, max_length=200)),

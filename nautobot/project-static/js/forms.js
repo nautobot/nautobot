@@ -43,7 +43,7 @@ $(document).ready(function() {
     }
     var slug_field = $('#id_slug');
     if (slug_field) {
-        var slug_source = $('#id_' + slug_field.attr('slug-source'));
+        var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
         if (slug_field.val()) {
             slug_field.attr('_changed', true);
@@ -51,14 +51,27 @@ $(document).ready(function() {
         slug_field.change(function() {
             $(this).attr('_changed', true);
         });
-        slug_source.on('keyup change', function() {
-            if (slug_field && !slug_field.attr('_changed')) {
-                slug_field.val(slugify($(this).val(), (slug_length ? slug_length : 50)));
+        function reslugify() {
+            let slug_str = "";
+            for (slug_source_str of slug_source_arr) {
+                if (slug_str != "") {
+                    slug_str += " ";
+                }
+                let slug_source = $('#id_' + slug_source_str);
+                slug_str += slug_source.val();
             }
-        });
-        $('button.reslugify').click(function() {
-            slug_field.val(slugify(slug_source.val(), (slug_length ? slug_length : 50)));
-        });
+            slug_field.val(slugify(slug_str, (slug_length ? slug_length : 100)));
+        };
+
+        for (slug_source_str of slug_source_arr) {
+            let slug_source = $('#id_' + slug_source_str);
+            slug_source.on('keyup change', function() {
+                if (slug_field && !slug_field.attr('_changed')) {
+                    reslugify();
+                }
+            });
+        }
+        $('button.reslugify').click(reslugify);
     }
 
     // Bulk edit nullification
