@@ -118,7 +118,7 @@ class TransactionTestCase(_TransactionTestCase, TestCaseMixin):
         populate_status_choices(apps, None)
 
         # Create the test user and assign permissions
-        self.user, _ = User.objects.get_or_create(username="testuser")
+        self.user = User.objects.create_user(username="testuser")
         self.add_permissions(*self.user_permissions)
 
         # Initialize the test client

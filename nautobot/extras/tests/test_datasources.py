@@ -35,10 +35,6 @@ from nautobot.extras.models import (
 from nautobot.utilities.testing import TransactionTestCase
 
 
-# Use the proper swappable User model
-User = get_user_model()
-
-
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
 class GitTest(TransactionTestCase):
     """
@@ -55,7 +51,6 @@ class GitTest(TransactionTestCase):
         # Repopulate custom statuses between test cases, as TransactionTestCase deletes them during cleanup
         create_custom_statuses(None, verbosity=0)
 
-        self.user = User.objects.create_user(username="testuser")
         self.factory = RequestFactory()
         self.mock_request = self.factory.get("/no-op/")
         self.mock_request.user = self.user
