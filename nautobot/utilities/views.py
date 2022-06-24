@@ -213,6 +213,32 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
             ),
         )
 
+    def get_changelog_url(self, instance):
+        """Return the changelog URL for a given instance."""
+        meta = self.queryset.model._meta
+
+        # Don't try to generate a changelog_url for an ObjectChange.
+        if meta.model_name == "objectchange":
+            return None
+
+        route = f"{meta.app_label}:{meta.model_name}_changelog"
+        if meta.app_label in settings.PLUGINS:
+            route = f"plugins:{route}"
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(instance, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(instance, field)})
+            except NoReverseMatch:
+                continue
+
+        # This object likely doesn't have a changelog route defined.
+        return None
+
     def get_extra_context_for_detail(self, request, instance):
         """
         Return any additional context data for the template.
@@ -235,6 +261,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 **self.get_extra_context_for_detail(request, instance),
+                "changelog_url": self.get_changelog_url(instance),
             },
         )
 
