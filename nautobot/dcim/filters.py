@@ -1511,6 +1511,15 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="slug",
         label="Tenant (slug)",
     )
+    members = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Device.objects.all(),
+        label="Device (name or ID)",
+    )
+    has_members = RelatedMembershipBooleanFilter(
+        field_name="members",
+        label="Has members",
+    )
     tag = TagFilter()
 
     class Meta:

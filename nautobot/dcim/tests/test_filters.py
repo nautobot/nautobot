@@ -3835,6 +3835,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
             VirtualChassis.objects.create(name="VC 1", master=devices[0], domain="Domain 1"),
             VirtualChassis.objects.create(name="VC 2", master=devices[2], domain="Domain 2"),
             VirtualChassis.objects.create(name="VC 3", master=devices[4], domain="Domain 3"),
+            VirtualChassis.objects.create(name="VC 4"),
         )
 
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis[0])
@@ -3874,6 +3875,17 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_members(self):
+        members = Device.objects.filter(name__in=["Device 2", "Device 4"])[:2]
+        params = {"members": [members[0].pk, members[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_members(self):
+        params = {"has_members": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_members": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class CableTestCase(FilterTestCases.FilterTestCase):
@@ -4122,8 +4134,8 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
     def test_termination_id(self):
-        cable_terminations_a = (Interface.objects.get(name="Interface 7"), Interface.objects.get(name="Interface 8"))
-        cable_terminations_b = (Interface.objects.get(name="Interface 10"), Interface.objects.get(name="Interface 11"))
+        cable_terminations_a = Interface.objects.filter(name__in=["Interface 7", "Interface 8"])
+        cable_terminations_b = Interface.objects.filter(name__in=["Interface 10", "Interface 11"])
         params = {"termination_a_id": [cable_terminations_a[0].pk, cable_terminations_a[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"termination_b_id": [cable_terminations_b[0].pk, cable_terminations_b[1].pk]}
