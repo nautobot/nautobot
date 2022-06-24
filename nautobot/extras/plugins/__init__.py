@@ -644,7 +644,7 @@ def register_override_views(override_views, plugin):
         except ValueError:
             raise ValidationError(
                 f"Plugin {plugin} tried to override view {qualified_view_name} "
-                f"but only top level namespace views are supported (e.g. `dcim:device`)."
+                f"but only namespaced views are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
             )
         while ":" in app_name:
             resolver_name, app_name = app_name.split(":", 1)
