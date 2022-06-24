@@ -204,7 +204,9 @@ class CircuitViewSet(NautobotViewSet):
     filterset = filters.CircuitFilterSet
     filterset_form = forms.CircuitFilterForm
     import_form = forms.CircuitCSVForm
+    bulk_edit_form = forms.CircuitBulkEditForm
     lookup_field = "pk"
+
 
     def get_extra_context(self, request, view_type, instance):
         if view_type == "detail":
