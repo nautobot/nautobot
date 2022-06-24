@@ -170,7 +170,7 @@ class GetReturnURLMixin:
 
 class NautobotViewSetMixin:
 
-    routes = None
+    routes = []
     model = None
     queryset = None
     table = None
@@ -179,6 +179,9 @@ class NautobotViewSetMixin:
     filterset_form = None
     import_form = None
     prefetch_related = []
+
+    def __init__(self):
+        self.routes = self.define_routes()
 
     @property
     def detail_queryset(self):
@@ -189,7 +192,15 @@ class NautobotViewSetMixin:
         return self.model.objects.prefetch_related(*self.prefetch_related)
 
     def define_routes(self):
-        self.routes = []
+        return []
+
+    def get_extra_context(self, request, view_type, instance=None):
+        """
+        Return any additional context data for the template.
+        request: The current request
+        instance: The object being viewed
+        """
+        return {}
 
 
 class ObjectDetailViewMixin(NautobotViewSetMixin):
@@ -199,9 +210,11 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
     template_name: Name of the template to use
     """
 
+    def __init__(self, *args, **kwargs):
+        self.routes = self.define_routes()
+
     def define_routes(self):
-        super().define_routes()
-        self.routes.append(
+        return super().define_routes() + [
             Route(
                 url=r"^{prefix}/{lookup}/$",
                 mapping={
@@ -211,7 +224,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
                 detail=True,
                 initkwargs={"suffix": "Detail"},
             ),
-        )
+        ]
 
     def get_changelog_url(self, instance):
         """Return the changelog URL for a given instance."""
@@ -239,20 +252,12 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
         # This object likely doesn't have a changelog route defined.
         return None
 
-    def get_extra_context_for_detail(self, request, instance):
-        """
-        Return any additional context data for the template.
-        request: The current request
-        instance: The object being viewed
-        """
-        return {}
-
     def handle_object_detail_get(self, request, *args, **kwargs):
         """
         Generic GET handler for accessing an object by PK or slug
         """
         instance = get_object_or_404(self.queryset, **kwargs)
-
+        self.context = self.get_extra_context(request, "detail", instance)
         return render(
             request,
             self.template_name,
@@ -260,7 +265,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                **self.get_extra_context_for_detail(request, instance),
+                **self.context,
                 "changelog_url": self.get_changelog_url(instance),
             },
         )
@@ -279,9 +284,11 @@ class ObjectListViewMixin(NautobotViewSetMixin):
 
     object_list_action_buttons = ("add", "import", "export")
 
+    def __init__(self, *args, **kwargs):
+        self.routes = self.define_routes()
+
     def define_routes(self):
-        super().define_routes()
-        self.routes.append(
+        return super().define_routes() + [
             Route(
                 url=r"^{prefix}/$",
                 mapping={
@@ -291,7 +298,7 @@ class ObjectListViewMixin(NautobotViewSetMixin):
                 detail=False,
                 initkwargs={"suffix": "List"},
             ),
-        )
+        ]
 
     def queryset_to_yaml(self):
         """
@@ -394,16 +401,13 @@ class ObjectListViewMixin(NautobotViewSetMixin):
             "table_config_form": TableConfigForm(table=table),
             "filter_form": self.filterset_form(request.GET, label_suffix="") if self.filterset_form else None,
         }
-        context.update(self.extra_context_for_list())
+        context.update(self.get_extra_context(request, "list", instance=None))
 
         return render(request, self.template_name, context)
 
     def alter_queryset_for_list(self, request):
         # .all() is necessary to avoid caching queries
         return self.queryset.all()
-
-    def extra_context_for_list(self):
-        return {}
 
 
 class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
@@ -414,9 +418,11 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     template_name: The name of the template
     """
 
+    def __init__(self, *args, **kwargs):
+        self.routes = self.define_routes()
+
     def define_routes(self):
-        super().define_routes()
-        self.routes.append(
+        return super().define_routes() + [
             Route(
                 url=r"^{prefix}/add/$",
                 mapping={
@@ -427,8 +433,6 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 detail=False,
                 initkwargs={"suffix": "Add"},
             ),
-        )
-        self.routes.append(
             Route(
                 url=r"^{prefix}/{lookup}/edit/$",
                 mapping={
@@ -439,7 +443,7 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 detail=True,
                 initkwargs={"suffix": "Edit"},
             ),
-        )
+        ]
 
     def get_object_for_edit(self, kwargs):
         # Look up an existing object by slug or PK, if provided.
@@ -545,9 +549,11 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     template_name: The name of the template
     """
 
+    def __init__(self, *args, **kwargs):
+        self.routes = self.define_routes()
+
     def define_routes(self):
-        super().define_routes()
-        self.routes.append(
+        return super().define_routes() + [
             Route(
                 url=r"^{prefix}/{lookup}/delete/$",
                 mapping={
@@ -558,7 +564,7 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 detail=True,
                 initkwargs={"suffix": "Delete"},
             ),
-        )
+        ]
 
     def get_object_for_delete(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
@@ -634,9 +640,11 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
 
     bulk_import_widget_attrs = {}
 
+    def __init__(self, *args, **kwargs):
+        self.routes = self.define_routes()
+
     def define_routes(self):
-        super().define_routes()
-        self.routes.append(
+        return super().define_routes() + [
             Route(
                 url=r"^{prefix}/import/$",
                 mapping={
@@ -647,7 +655,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 detail=False,
                 initkwargs={"suffix": "Import"},
             ),
-        )
+        ]
 
     def _import_form_for_bulk_import(self, *args, **kwargs):
         class ImportForm(BootstrapMixin, Form):
@@ -756,9 +764,11 @@ class BulkEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     bulk_edit_filterset = None
     bulk_edit_form = None
 
+    def __init__(self, *args, **kwargs):
+        self.routes = self.define_routes()
+
     def define_routes(self):
-        super().define_routes()
-        self.routes.append(
+        return super().define_routes() + [
             Route(
                 url=r"^{prefix}/edit/$",
                 mapping={
@@ -769,7 +779,7 @@ class BulkEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 detail=False,
                 initkwargs={"suffix": "Bulk Edit"},
             ),
-        )
+        ]
 
     def handle_bulk_edit_get(self, request):
         return redirect(self.get_return_url(request))
@@ -901,11 +911,8 @@ class BulkEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
             "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
         }
-        context.update(self.extra_context_for_bulk_edit())
+        context.update(self.get_extra_context(request, "bulk_edit", instance=None))
         return render(request, self.template_name, context)
-
-    def extra_context_for_bulk_edit(self):
-        return {}
 
 
 class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
@@ -921,9 +928,11 @@ class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     bulk_delete_filterset = None
     bulk_delete_form = None
 
+    def __init__(self, *args, **kwargs):
+        self.routes = self.define_routes()
+
     def define_routes(self):
-        super().define_routes()
-        self.routes.append(
+        return super().define_routes() + [
             Route(
                 url=r"^{prefix}/delete/$",
                 mapping={
@@ -934,7 +943,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 detail=False,
                 initkwargs={"suffix": "Bulk Delete"},
             ),
-        )
+        ]
 
     def handle_bulk_delete_get(self, request):
         return redirect(self.get_return_url(request))
@@ -999,11 +1008,8 @@ class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
             "table": table,
             "return_url": self.get_return_url(request),
         }
-        context.update(self.extra_context_for_bulk_delete())
+        context.update(self.get_extra_context(request, "bulk_delete", instance=None))
         return render(request, self.template_name, context)
-
-    def extra_context_for_bulk_delete(self):
-        return {}
 
     def get_form_for_bulk_delete(self):
         """

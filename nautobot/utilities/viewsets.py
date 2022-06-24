@@ -88,5 +88,5 @@ class NautobotViewSet(
 
 class NautobotRouter(SimpleRouter, NautobotViewSetMixin):
     def __init__(self):
-        self.define_routes()
         super().__init__()
+        self.routes = super().define_routes()

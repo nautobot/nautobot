@@ -3,6 +3,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
+from rest_framework.routers import Route
+
 
 from nautobot.core.views import generic
 from nautobot.utilities.forms import ConfirmationForm
@@ -40,25 +42,32 @@ class ProviderViewSet(NautobotViewSet):
     bulk_edit_form = forms.ProviderBulkEditForm
     lookup_field = "slug"
 
-    def get_extra_context_for_detail(self, request, instance):
-        circuits = (
-            Circuit.objects.restrict(request.user, "view")
-            .filter(provider=instance)
-            .prefetch_related("type", "tenant", "terminations__site")
-        )
+    def get_extra_context(self, request, view_type, instance):
+        if view_type == "detail":
+            circuits = (
+                Circuit.objects.restrict(request.user, "view")
+                .filter(provider=instance)
+                .prefetch_related("type", "tenant", "terminations__site")
+            )
 
-        circuits_table = tables.CircuitTable(circuits)
-        circuits_table.columns.hide("provider")
+            circuits_table = tables.CircuitTable(circuits)
+            circuits_table.columns.hide("provider")
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(circuits_table)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(circuits_table)
 
-        return {
-            "circuits_table": circuits_table,
-        }
+            return {
+                "circuits_table": circuits_table,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
 
 
 class ProviderRouter(
@@ -71,8 +80,8 @@ class ProviderRouter(
     BulkImportViewMixin,
     BulkEditViewMixin,
 ):
-    def define_routes(self):
-        super().define_routes()
+    def __init__(self):
+        super().__init__()
 
 
 class ProviderNetworkViewSet(NautobotViewSet):
@@ -85,23 +94,30 @@ class ProviderNetworkViewSet(NautobotViewSet):
     bulk_edit_form = forms.ProviderNetworkBulkEditForm
     lookup_field = "slug"
 
-    def get_extra_context_for_detail(self, request, instance):
-        circuits = (
-            Circuit.objects.restrict(request.user, "view")
-            .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
-            .prefetch_related("type", "tenant", "terminations__site")
-        )
+    def get_extra_context(self, request, view_type, instance):
+        if view_type == "detail":
+            circuits = (
+                Circuit.objects.restrict(request.user, "view")
+                .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
+                .prefetch_related("type", "tenant", "terminations__site")
+            )
 
-        circuits_table = tables.CircuitTable(circuits)
-        circuits_table.columns.hide("termination_a")
-        circuits_table.columns.hide("termination_z")
+            circuits_table = tables.CircuitTable(circuits)
+            circuits_table.columns.hide("termination_a")
+            circuits_table.columns.hide("termination_z")
 
-        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        RequestConfig(request, paginate).configure(circuits_table)
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(circuits_table)
 
-        return {
-            "circuits_table": circuits_table,
-        }
+            return {
+                "circuits_table": circuits_table,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
 
 
 class ProviderNetworkRouter(
@@ -114,8 +130,8 @@ class ProviderNetworkRouter(
     BulkImportViewMixin,
     BulkEditViewMixin,
 ):
-    def define_routes(self):
-        super().define_routes()
+    def __init__(self):
+        super().__init__()
 
 
 #
@@ -132,26 +148,33 @@ class CircuitTypeViewSet(NautobotViewSet):
     import_form = forms.CircuitTypeCSVForm
     lookup_field = "slug"
 
-    def get_extra_context_for_detail(self, request, instance):
+    def get_extra_context(self, request, view_type, instance):
         # Circuits
-        circuits = (
-            Circuit.objects.restrict(request.user, "view")
-            .filter(type=instance)
-            .prefetch_related("type", "tenant", "terminations__site")
-        )
+        if view_type == "detail":
+            circuits = (
+                Circuit.objects.restrict(request.user, "view")
+                .filter(type=instance)
+                .prefetch_related("type", "tenant", "terminations__site")
+            )
 
-        circuits_table = tables.CircuitTable(circuits)
-        circuits_table.columns.hide("type")
+            circuits_table = tables.CircuitTable(circuits)
+            circuits_table.columns.hide("type")
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(circuits_table)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(circuits_table)
 
-        return {
-            "circuits_table": circuits_table,
-        }
+            return {
+                "circuits_table": circuits_table,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
 
 
 class CircuitTypeRouter(
@@ -163,8 +186,8 @@ class CircuitTypeRouter(
     BulkDeleteViewMixin,
     BulkImportViewMixin,
 ):
-    def define_routes(self):
-        super().define_routes()
+    def __init__(self):
+        super().__init__()
 
 
 #
@@ -172,79 +195,123 @@ class CircuitTypeRouter(
 #
 
 
-class CircuitListView(generic.ObjectListView):
-    queryset = Circuit.objects.prefetch_related("provider", "type", "tenant", "termination_a", "termination_z")
+class CircuitViewSet(NautobotViewSet):
+    model = Circuit
+    prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
+    queryset = Circuit.objects.all()
+    table = tables.CircuitTable
+    form = forms.CircuitForm
     filterset = filters.CircuitFilterSet
     filterset_form = forms.CircuitFilterForm
-    table = tables.CircuitTable
+    import_form = forms.CircuitCSVForm
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, view_type, instance):
+        if view_type == "detail":
+            # A-side termination
+            termination_a = (
+                CircuitTermination.objects.restrict(request.user, "view")
+                .prefetch_related("site__region")
+                .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_A)
+                .first()
+            )
+            if (
+                termination_a
+                and termination_a.connected_endpoint
+                and hasattr(termination_a.connected_endpoint, "ip_addresses")
+            ):
+                termination_a.ip_addresses = termination_a.connected_endpoint.ip_addresses.restrict(
+                    request.user, "view"
+                )
+
+            # Z-side termination
+            termination_z = (
+                CircuitTermination.objects.restrict(request.user, "view")
+                .prefetch_related("site__region")
+                .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_Z)
+                .first()
+            )
+            if (
+                termination_z
+                and termination_z.connected_endpoint
+                and hasattr(termination_z.connected_endpoint, "ip_addresses")
+            ):
+                termination_z.ip_addresses = termination_z.connected_endpoint.ip_addresses.restrict(
+                    request.user, "view"
+                )
+
+            return {
+                "termination_a": termination_a,
+                "termination_z": termination_z,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
 
 
-class CircuitView(generic.ObjectView):
-    queryset = Circuit.objects.all()
-
-    def get_extra_context(self, request, instance):
-
-        # A-side termination
-        termination_a = (
-            CircuitTermination.objects.restrict(request.user, "view")
-            .prefetch_related("site__region")
-            .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_A)
-            .first()
-        )
-        if (
-            termination_a
-            and termination_a.connected_endpoint
-            and hasattr(termination_a.connected_endpoint, "ip_addresses")
-        ):
-            termination_a.ip_addresses = termination_a.connected_endpoint.ip_addresses.restrict(request.user, "view")
-
-        # Z-side termination
-        termination_z = (
-            CircuitTermination.objects.restrict(request.user, "view")
-            .prefetch_related("site__region")
-            .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_Z)
-            .first()
-        )
-        if (
-            termination_z
-            and termination_z.connected_endpoint
-            and hasattr(termination_z.connected_endpoint, "ip_addresses")
-        ):
-            termination_z.ip_addresses = termination_z.connected_endpoint.ip_addresses.restrict(request.user, "view")
-
-        return {
-            "termination_a": termination_a,
-            "termination_z": termination_z,
-        }
+class CircuitRouter(
+    NautobotRouter,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDeleteViewMixin,
+    BulkDeleteViewMixin,
+    BulkImportViewMixin,
+):
+    def __init__(self):
+        super().__init__()
 
 
-class CircuitEditView(generic.ObjectEditView):
-    queryset = Circuit.objects.all()
-    model_form = forms.CircuitForm
-    template_name = "circuits/circuit_edit.html"
+class CircuitTerminationViewset(NautobotViewSet):
+    model = CircuitTermination
+    queryset = CircuitTermination.objects.all()
+    form = forms.CircuitTerminationForm
+    lookup_field = "pk"
+
+    def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
+        if "circuit" in url_kwargs:
+            obj.circuit = get_object_or_404(Circuit, pk=url_kwargs["circuit"])
+        return obj
+
+    def get_return_url(self, request, obj):
+        return obj.circuit.get_absolute_url()
 
 
-class CircuitDeleteView(generic.ObjectDeleteView):
-    queryset = Circuit.objects.all()
+class CircuitTerminationRouter(
+    NautobotRouter,
+    ObjectDetailViewMixin,
+    ObjectDeleteViewMixin,
+):
+    def __init__(self):
+        super().__init__()
+        self.routes = self.define_routes()
 
-
-class CircuitBulkImportView(generic.BulkImportView):
-    queryset = Circuit.objects.all()
-    model_form = forms.CircuitCSVForm
-    table = tables.CircuitTable
-
-
-class CircuitBulkEditView(generic.BulkEditView):
-    queryset = Circuit.objects.prefetch_related("provider", "type", "tenant", "terminations")
-    filterset = filters.CircuitFilterSet
-    table = tables.CircuitTable
-    form = forms.CircuitBulkEditForm
-
-
-class CircuitBulkDeleteView(generic.BulkDeleteView):
-    queryset = Circuit.objects.prefetch_related("provider", "type", "tenant", "terminations")
-    filterset = filters.CircuitFilterSet
-    table = tables.CircuitTable
+    def define_routes(self):
+        return super().define_routes() + [
+            Route(
+                url=r"^circuits/(?P<circuit>[0-9a-f-]+)/terminations/add/$",
+                mapping={
+                    "get": "handle_object_edit_get",
+                    "post": "handle_object_edit_post",
+                },
+                name="{basename}_add",
+                detail=False,
+                initkwargs={"suffix": "Add"},
+            ),
+            Route(
+                url=r"^{prefix}/{lookup}/edit/$",
+                mapping={
+                    "get": "handle_object_edit_get",
+                    "post": "handle_object_edit_post",
+                },
+                name="{basename}_edit",
+                detail=True,
+                initkwargs={"suffix": "Edit"},
+            ),
+        ]
 
 
 class CircuitSwapTerminations(generic.ObjectEditView):
@@ -325,30 +392,3 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 "return_url": circuit.get_absolute_url(),
             },
         )
-
-
-#
-# Circuit terminations
-#
-
-
-class CircuitTerminationView(generic.ObjectView):
-    queryset = CircuitTermination.objects.all()
-
-
-class CircuitTerminationEditView(generic.ObjectEditView):
-    queryset = CircuitTermination.objects.all()
-    model_form = forms.CircuitTerminationForm
-    template_name = "circuits/circuittermination_edit.html"
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        if "circuit" in url_kwargs:
-            obj.circuit = get_object_or_404(Circuit, pk=url_kwargs["circuit"])
-        return obj
-
-    def get_return_url(self, request, obj):
-        return obj.circuit.get_absolute_url()
-
-
-class CircuitTerminationDeleteView(generic.ObjectDeleteView):
-    queryset = CircuitTermination.objects.all()
