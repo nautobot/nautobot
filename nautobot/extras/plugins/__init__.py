@@ -638,8 +638,10 @@ def register_custom_validators(class_list):
 def register_override_views(override_views, plugin):
     resolver = get_resolver()
 
-    override_warning = "Plugin {} tried to override view {}, but only namespaced views " \
-                       "are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
+    override_warning = (
+        "Plugin {} tried to override view {}, but only namespaced views "
+        "are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
+    )
 
     for qualified_view_name, view in override_views.items():
         try:
