@@ -11,7 +11,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Service, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
@@ -876,6 +876,10 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=DeviceType.objects.all(),
         label="Device type (ID)",
     )
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        label="Device type (slug or ID)",
+    )
     role_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_role_id",
         queryset=DeviceRole.objects.all(),
@@ -886,6 +890,10 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=DeviceRole.objects.all(),
         to_field_name="slug",
         label="Role (slug)",
+    )
+    device_role = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceRole.objects.all(),
+        label="Device role (slug or ID)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),
@@ -931,9 +939,19 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=Rack.objects.all(),
         label="Rack (ID)",
     )
+    rack = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Rack.objects.all(),
+        label="Rack (name or ID)",
+    )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         label="VM cluster (ID)",
+    )
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Cluster.objects.all(),
+        label="Cluster (name or ID)",
     )
     model = django_filters.ModelMultipleChoiceFilter(
         field_name="device_type__slug",
@@ -970,6 +988,11 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=VirtualChassis.objects.all(),
         label="Virtual chassis (ID)",
     )
+    virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=VirtualChassis.objects.all(),
+        label="Virtual chassis (name or ID)",
+    )
     is_virtual_chassis_member = RelatedMembershipBooleanFilter(
         field_name="virtual_chassis",
         label="Is a virtual chassis member",
@@ -1004,9 +1027,19 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         method="_pass_through_ports",
         label="Has pass-through ports",
     )
+    front_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=FrontPort.objects.all(),
+        label="Front ports (name or ID)",
+    )
     has_front_ports = RelatedMembershipBooleanFilter(
         field_name="frontports",
         label="Has front ports",
+    )
+    rear_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=RearPort.objects.all(),
+        label="Rear ports (name or ID)",
     )
     has_rear_ports = RelatedMembershipBooleanFilter(
         field_name="rearports",
@@ -1017,6 +1050,44 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Has device bays",
     )
     device_bays = has_device_bays
+    primary_ip4 = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="host",
+        queryset=IPAddress.objects.all(),
+        label="IPv4 address (host or ID)",
+    )
+    primary_ip6 = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="host",
+        queryset=IPAddress.objects.all(),
+        label="IPv6 address (host or ID)",
+    )
+    parent_bay = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=DeviceBay.objects.all(),
+        label="Parent device bay (name or ID)",
+    )
+    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=InventoryItem.objects.all(),
+        label="Inventory items (name or ID)",
+    )
+    has_inventory_items = RelatedMembershipBooleanFilter(
+        field_name="inventory_items",
+        label="Has inventory items",
+    )
+    vc_master_for = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=VirtualChassis.objects.all(),
+        label="Virtual chassis master for (name or ID)",
+    )
+    services = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Service.objects.all(),
+        label="Services (name or ID)",
+    )
+    has_services = RelatedMembershipBooleanFilter(
+        field_name="services",
+        label="Has services",
+    )
     tag = TagFilter()
 
     class Meta:
@@ -1029,6 +1100,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
             "position",
             "vc_position",
             "vc_priority",
+            "comments",
         ]
 
     def _has_primary_ip(self, queryset, name, value):
