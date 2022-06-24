@@ -1437,7 +1437,7 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "examples/plugin_with_view_overrides"
+url = "examples/plugin_with_view_override"
 
 [[package]]
 name = "prometheus-client"

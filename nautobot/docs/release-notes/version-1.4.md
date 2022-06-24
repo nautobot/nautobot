@@ -63,6 +63,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ### Added
 
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
+- [#1466](https://github.com/nautobot/nautobot/issues/1466) - Plugins can now override views.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add new filter `SlugOrPKMultipleChoiceFilter` to `nautobot.utilities.filters`.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 103 new filters to `nautobot.dcim.filters` FilterSets.
 - [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.

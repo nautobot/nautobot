@@ -1,4 +1,4 @@
-"""Views for plugin_with_view_overrides."""
+"""Views for plugin_with_view_override."""
 
 from django.shortcuts import HttpResponse
 from nautobot.core.views import generic

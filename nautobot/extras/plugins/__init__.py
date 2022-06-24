@@ -1,7 +1,7 @@
 import collections
 import inspect
 from importlib import import_module
-from logging import getLogger
+from logging import getLogger, WARNING
 
 from packaging import version
 
@@ -638,18 +638,23 @@ def register_custom_validators(class_list):
 def register_override_views(override_views, plugin):
     resolver = get_resolver()
 
+    override_warning = "Plugin {} tried to override view {}, but only namespaced views " \
+                       "are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
+
     for qualified_view_name, view in override_views.items():
         try:
             app_name, view_name = qualified_view_name.rsplit(":", 1)
         except ValueError:
-            raise ValidationError(
-                f"Plugin {plugin} tried to override view {qualified_view_name} "
-                f"but only namespaced views are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
-            )
+            logger.log(WARNING, override_warning.format(plugin, qualified_view_name))
+            continue
         # Handle nested view namespaces, such as "plugins:myplugin"
-        while ":" in app_name:
-            resolver_name, app_name = app_name.split(":", 1)
-            resolver = resolver.namespace_dict[resolver_name][1]
+        try:
+            while ":" in app_name:
+                resolver_name, app_name = app_name.split(":", 1)
+                resolver = resolver.namespace_dict[resolver_name][1]
+        except ValueError:
+            logger.log(WARNING, override_warning.format(plugin, qualified_view_name))
+            continue
 
         app_resolver = resolver.namespace_dict.get(app_name)
         if not app_resolver:

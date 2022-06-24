@@ -33,7 +33,7 @@ JOBS_ROOT = os.path.join(
 
 PLUGINS = [
     "example_plugin",
-    "plugin_with_view_overrides",
+    "plugin_with_view_override",
 ]
 
 

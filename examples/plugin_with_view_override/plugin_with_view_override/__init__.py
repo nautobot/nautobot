@@ -10,8 +10,8 @@ from nautobot.extras.plugins import PluginConfig
 
 
 class PluginWithOverridesConfig(PluginConfig):
-    name = "plugin_with_view_overrides"
-    verbose_name = "Plugin With View Overrides"
+    name = "plugin_with_view_override"
+    verbose_name = "Plugin With View Override"
     author = "Nautobot development team"
     author_email = "nautobot@example.com"
     version = __version__
