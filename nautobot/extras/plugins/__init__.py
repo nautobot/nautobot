@@ -654,7 +654,7 @@ def register_override_views(override_views, plugin):
         app_resolver = resolver.namespace_dict.get(app_name)
         if not app_resolver:
             raise ValidationError(
-                f"Plugin {plugin} tried to override view {qualified_view_name} but {app_name} is not a valid core app."
+                f"Plugin {plugin} tried to override view {qualified_view_name} but {app_name} is not a valid app name."
             )
 
         for pattern in app_resolver[1].url_patterns:
