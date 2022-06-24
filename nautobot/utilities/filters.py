@@ -420,9 +420,9 @@ class MappedPredicatesFilterMixin:
 
 class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
-    Filter that supports filtering on the `pk` and another field of a foreign-key
-    related field. The desired field is set using the `natural_key` keyword argument
-    on object initialization (defaults to `slug`).
+    Filter that supports filtering on values matching the `pk` field and another
+    field of a foreign-key related object. The desired field is set using the `natural_key`
+    keyword argument on filter initialization (defaults to `slug`).
     """
 
     field_class = MultiMatchModelMultipleChoiceField
