@@ -652,7 +652,7 @@ class CoreConfig(NautobotConfig):
         from nautobot.extras.models import mixins
         from taggit.managers import TaggableManager
 
-        # monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
+        monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
 
 
 class NautobotConstanceConfig(ConstanceConfig):
