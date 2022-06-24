@@ -534,7 +534,7 @@ class JobSiteCustomFieldTest(CeleryTestCase):
 
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
-        self.request.user = user
+        self.request.user = self.user
 
     def test_run(self):
         self.clear_worker()
