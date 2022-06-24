@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -337,10 +338,20 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         if self.site and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
         # Iff a site is defined, a location *may* also be defined.
-        if self.location and self.provider_network:
-            raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
-        if self.location is not None and self.site is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+        if self.location is not None:
+            if self.provider_network is not None:
+                raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {
+                        "location": "Circuit terminations may not associate to locations of type "
+                        f'"{self.location.location_type}"'
+                    }
+                )
 
     def to_objectchange(self, action):
 
