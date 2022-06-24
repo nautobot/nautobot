@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
@@ -292,6 +293,15 @@ class DeviceTestCase(TestCase):
             name="Test Device Role 1", slug="test-device-role-1", color="ff0000"
         )
         self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.location_type_1 = LocationType.objects.create(name="Root Type")
+        self.location_type_2 = LocationType.objects.create(name="Leaf Type", parent=self.location_type_1)
+        self.location_type_2.content_types.add(ContentType.objects.get_for_model(Device))
+        self.location_1 = Location.objects.create(
+            name="Root", status=self.device_status, location_type=self.location_type_1, site=self.site
+        )
+        self.location_2 = Location.objects.create(
+            name="Leaf", status=self.device_status, location_type=self.location_type_2, parent=self.location_1
+        )
 
         # Create DeviceType components
         ConsolePortTemplate(device_type=self.device_type, name="Console Port 1").save()
@@ -442,6 +452,33 @@ class DeviceTestCase(TestCase):
         # Two devices assigned to the same Site and different Tenants should pass validation
         device2.full_clean()
         device2.save()
+
+    def test_device_location_site_mismatch(self):
+        other_site = Site.objects.create(name="Test Site 2", status=self.device_status)
+        device = Device(
+            name="Device 3",
+            device_type=self.device_type,
+            device_role=self.device_role,
+            status=self.device_status,
+            site=other_site,
+            location=self.location_2,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            device.validated_save()
+        self.assertIn('Location "Leaf" does not belong to site "Test Site 2"', str(cm.exception))
+
+    def test_device_location_content_type_not_allowed(self):
+        device = Device(
+            name="Device 3",
+            device_type=self.device_type,
+            device_role=self.device_role,
+            status=self.device_status,
+            site=self.site,
+            location=self.location_1,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            device.validated_save()
+        self.assertIn('Devices may not associate to locations of type "Root Type"', str(cm.exception))
 
 
 class CableTestCase(TestCase):

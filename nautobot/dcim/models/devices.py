@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import yaml
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -623,10 +624,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     def clean(self):
         super().clean()
 
-        # Validate site/location combination
-        if self.location is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
-
         # Validate site/rack combination
         if self.rack and self.site != self.rack.site:
             raise ValidationError(
@@ -635,14 +632,22 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                 }
             )
 
-        # Validate location/rack combination
-        if (
-            self.rack is not None
-            and self.location is not None
-            and self.rack.location is not None
-            and self.rack.location != self.location
-        ):
-            raise ValidationError({"rack": f"Rack {self.rack} does not belong to location {self.location}."})
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if self.rack is not None and self.rack.location is not None and self.rack.location != self.location:
+                raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
+
+            # self.cluster is validated somewhat later, see below
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
+                )
 
         if self.rack is None:
             if self.face:
