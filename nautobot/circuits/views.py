@@ -258,8 +258,9 @@ class CircuitRouter(
     ObjectListViewMixin,
     ObjectEditViewMixin,
     ObjectDeleteViewMixin,
-    BulkDeleteViewMixin,
     BulkImportViewMixin,
+    BulkEditViewMixin,
+    BulkDeleteViewMixin,
 ):
     def __init__(self):
         super().__init__()
