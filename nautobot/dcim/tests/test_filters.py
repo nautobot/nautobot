@@ -2822,21 +2822,23 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         interface_statuses = Status.objects.get_for_model(Interface)
         interface_status_map = {s.slug: s for s in interface_statuses.all()}
 
-        interfaces = (
+        # Cabled interfaces
+        cabled_interfaces = (
             Interface.objects.get(name="Interface 1"),
             Interface.objects.get(name="Interface 2"),
             Interface.objects.get(name="Interface 3"),
             Interface.objects.create(
                 device=devices[2],
-                name="Interface 4",
+                name="Parent Interface 1",
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=True,
                 mgmt_only=True,
                 status=interface_status_map["failed"],
+                untagged_vlan=vlans[2],
             ),
             Interface.objects.create(
                 device=devices[2],
-                name="Interface 5",
+                name="Parent Interface 2",
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=True,
                 mgmt_only=True,
@@ -2844,7 +2846,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             ),
             Interface.objects.create(
                 device=devices[2],
-                name="Interface 6",
+                name="Parent Interface 3",
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=False,
                 mgmt_only=True,
@@ -2852,7 +2854,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
-        Interface.objects.filter(pk=interfaces[0].pk).update(
+        Interface.objects.filter(pk=cabled_interfaces[0].pk).update(
             enabled=True,
             mac_address="00-00-00-00-00-01",
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -2861,7 +2863,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             untagged_vlan=vlans[0],
         )
 
-        Interface.objects.filter(pk=interfaces[1].pk).update(
+        Interface.objects.filter(pk=cabled_interfaces[1].pk).update(
             enabled=True,
             mac_address="00-00-00-00-00-02",
             mode=InterfaceModeChoices.MODE_TAGGED,
@@ -2870,7 +2872,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             untagged_vlan=vlans[1],
         )
 
-        Interface.objects.filter(pk=interfaces[2].pk).update(
+        Interface.objects.filter(pk=cabled_interfaces[2].pk).update(
             enabled=False,
             mac_address="00-00-00-00-00-03",
             mode=InterfaceModeChoices.MODE_TAGGED_ALL,
@@ -2878,12 +2880,12 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             status=interface_status_map["failed"],
         )
 
-        interfaces[0].refresh_from_db()
-        interfaces[1].refresh_from_db()
-        interfaces[2].refresh_from_db()
+        cabled_interfaces[0].refresh_from_db()
+        cabled_interfaces[1].refresh_from_db()
+        cabled_interfaces[2].refresh_from_db()
 
-        # Tagged VLAN interface is "Interface 6"
-        tagged_interface = interfaces[-1]
+        # Tagged VLAN interface is "Parent Interface 3"
+        tagged_interface = cabled_interfaces[-1]
         tagged_interface.tagged_vlans.add(vlans[2])
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -2891,16 +2893,125 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
         # Cables
         Cable.objects.create(
-            termination_a=interfaces[0],
-            termination_b=interfaces[3],
+            termination_a=cabled_interfaces[0],
+            termination_b=cabled_interfaces[3],
             status=cable_status_map["connected"],
         )
         Cable.objects.create(
-            termination_a=interfaces[1],
-            termination_b=interfaces[4],
+            termination_a=cabled_interfaces[1],
+            termination_b=cabled_interfaces[4],
             status=cable_status_map["connected"],
         )
         # Third pair is not connected
+
+        # Child interfaces
+        Interface.objects.create(
+            device=cabled_interfaces[3].device,
+            name="Child 1",
+            parent_interface=cabled_interfaces[3],
+            status=interface_status_map["planned"],
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+        )
+        Interface.objects.create(
+            device=cabled_interfaces[4].device,
+            name="Child 2",
+            parent_interface=cabled_interfaces[4],
+            status=interface_status_map["planned"],
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+        )
+        Interface.objects.create(
+            device=cabled_interfaces[5].device,
+            name="Child 3",
+            parent_interface=cabled_interfaces[5],
+            status=interface_status_map["planned"],
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+        )
+
+        # Bridged interfaces
+        bridge_interfaces = (
+            Interface.objects.create(
+                device=devices[2],
+                name="Bridge 1",
+                status=interface_status_map["planned"],
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+            ),
+            Interface.objects.create(
+                device=devices[2],
+                name="Bridge 2",
+                status=interface_status_map["planned"],
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+            ),
+            Interface.objects.create(
+                device=devices[2],
+                name="Bridge 3",
+                status=interface_status_map["planned"],
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+            ),
+        )
+        Interface.objects.create(
+            device=bridge_interfaces[0].device,
+            name="Bridged 1",
+            bridge=bridge_interfaces[0],
+            status=interface_status_map["planned"],
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+        )
+        Interface.objects.create(
+            device=bridge_interfaces[1].device,
+            name="Bridged 2",
+            bridge=bridge_interfaces[1],
+            status=interface_status_map["planned"],
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+        )
+        Interface.objects.create(
+            device=bridge_interfaces[2].device,
+            name="Bridged 3",
+            bridge=bridge_interfaces[2],
+            status=interface_status_map["planned"],
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+        )
+
+        # LAG interfaces
+        lag_interfaces = (
+            Interface.objects.create(
+                device=devices[2],
+                name="LAG 1",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=interface_status_map["planned"],
+            ),
+            Interface.objects.create(
+                device=devices[2],
+                name="LAG 2",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=interface_status_map["planned"],
+            ),
+            Interface.objects.create(
+                device=devices[2],
+                name="LAG 3",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=interface_status_map["planned"],
+            ),
+        )
+        Interface.objects.create(
+            device=devices[2],
+            name="Member 1",
+            lag=lag_interfaces[0],
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=interface_status_map["planned"],
+        )
+        Interface.objects.create(
+            device=devices[2],
+            name="Member 2",
+            lag=lag_interfaces[1],
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=interface_status_map["planned"],
+        )
+        Interface.objects.create(
+            device=devices[2],
+            name="Member 3",
+            lag=lag_interfaces[2],
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=interface_status_map["planned"],
+        )
 
     def test_name(self):
         params = {"name": ["Interface 1", "Interface 2"]}
@@ -2910,11 +3021,11 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"connected": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"connected": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 17)
 
     def test_enabled(self):
         params = {"enabled": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 19)
         params = {"enabled": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
@@ -2926,7 +3037,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"mgmt_only": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"mgmt_only": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 17)
 
     def test_mode(self):
         params = {"mode": InterfaceModeChoices.MODE_ACCESS}
@@ -2937,92 +3048,25 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent(self):
-        # Create child interfaces
-        parent_interface = Interface.objects.first()
-        child_interfaces = (
-            Interface(
-                device=parent_interface.device,
-                name="Child 1",
-                parent_interface=parent_interface,
-                type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            ),
-            Interface(
-                device=parent_interface.device,
-                name="Child 2",
-                parent_interface=parent_interface,
-                type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            ),
-            Interface(
-                device=parent_interface.device,
-                name="Child 3",
-                parent_interface=parent_interface,
-                type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            ),
-        )
-        Interface.objects.bulk_create(child_interfaces)
-
-        params = {"parent_interface_id": [parent_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"parent_interface": [parent_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"parent_interface": [parent_interface.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        parent_interfaces = Interface.objects.filter(name__startswith="Parent")[:2]
+        params = {"parent_interface_id": [parent_interfaces[0].pk, parent_interfaces[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"parent_interface": [parent_interfaces[0].pk, parent_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_bridge(self):
-        # Create bridged interfaces
-        device = Interface.objects.first().device
-        bridge_interface = Interface.objects.create(
-            device=device,
-            name="Bridge 1",
-            type=InterfaceTypeChoices.TYPE_BRIDGE,
-        )
-        bridged_interfaces = (
-            Interface(
-                device=bridge_interface.device,
-                name="Bridged 1",
-                bridge=bridge_interface,
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface(
-                device=bridge_interface.device,
-                name="Bridged 2",
-                bridge=bridge_interface,
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface(
-                device=bridge_interface.device,
-                name="Bridged 3",
-                bridge=bridge_interface,
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-        )
-        Interface.objects.bulk_create(bridged_interfaces)
-
-        params = {"bridge_id": [bridge_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"bridge": [bridge_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"bridge": [bridge_interface.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        bridge_interfaces = Interface.objects.filter(name__startswith="Bridge")[:2]
+        params = {"bridge_id": [bridge_interfaces[0].pk, bridge_interfaces[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"bridge": [bridge_interfaces[0].pk, bridge_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_lag(self):
-        # Create LAG members
-        device = Device.objects.first()
-        lag_interface = Interface(device=device, name="LAG", type=InterfaceTypeChoices.TYPE_LAG)
-        lag_interface.save()
-        lag_members = (
-            Interface(device=device, name="Member 1", lag=lag_interface, type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=device, name="Member 2", lag=lag_interface, type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=device, name="Member 3", lag=lag_interface, type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-        )
-        Interface.objects.bulk_create(lag_members)
-
-        params = {"lag_id": [lag_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"lag": [lag_interface.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"lag": [lag_interface.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        lag_interfaces = Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG)[:2]
+        params = {"lag_id": [lag_interfaces[0].pk, lag_interfaces[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"lag": [lag_interfaces[0].pk, lag_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_device_with_common_vc(self):
         """Assert only interfaces belonging to devices with common VC are returned"""
@@ -3096,13 +3140,13 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"cabled": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 17)
 
     def test_kind(self):
         params = {"kind": "physical"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 12)
         params = {"kind": "virtual"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 9)
 
     def test_mac_address(self):
         params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}
@@ -3138,6 +3182,44 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         cable = Cable.objects.all()[:2]
         params = {"cable": [cable[0].pk, cable[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_untagged_vlan(self):
+        untagged_vlan = VLAN.objects.all()[:2]
+        params = {"untagged_vlan": [untagged_vlan[0].pk, untagged_vlan[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_child_interfaces(self):
+        child_interfaces = Interface.objects.filter(name__startswith="Child")[:2]
+        params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_child_interfaces(self):
+        params = {"has_child_interfaces": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_child_interfaces": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 18)
+
+    def test_bridged_interfaces(self):
+        bridged_interfaces = Interface.objects.filter(name__startswith="Bridged")[:2]
+        params = {"bridged_interfaces": [bridged_interfaces[0].pk, bridged_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_bridged_interfaces(self):
+        params = {"has_bridged_interfaces": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_bridged_interfaces": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 18)
+
+    def test_member_interfaces(self):
+        member_interfaces = Interface.objects.filter(name__startswith="Member")[:2]
+        params = {"member_interfaces": [member_interfaces[0].pk, member_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_member_interfaces(self):
+        params = {"has_member_interfaces": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_member_interfaces": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 18)
 
 
 class FrontPortTestCase(FilterTestCases.FilterTestCase):

@@ -11,7 +11,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VLANGroup
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.choices import ColorChoices
@@ -1205,6 +1205,37 @@ class InterfaceFilterSet(
         natural_key="name",
         queryset=Interface.objects.all(),
         label="LAG interface (name or ID)",
+    )
+    untagged_vlan = django_filters.ModelMultipleChoiceFilter(
+        queryset=VLAN.objects.all(),
+        label="Untagged vlan",
+    )
+    child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Interface.objects.all(),
+        label="Child interfaces",
+    )
+    has_child_interfaces = RelatedMembershipBooleanFilter(
+        field_name="child_interfaces",
+        label="Has child interfaces",
+    )
+    bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Interface.objects.all(),
+        label="Bridged interfaces",
+    )
+    has_bridged_interfaces = RelatedMembershipBooleanFilter(
+        field_name="bridged_interfaces",
+        label="Has bridged interfaces",
+    )
+    member_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Interface.objects.all(),
+        label="Member interfaces",
+    )
+    has_member_interfaces = RelatedMembershipBooleanFilter(
+        field_name="member_interfaces",
+        label="Has member interfaces",
     )
     mac_address = MultiValueMACAddressFilter()
     tag = TagFilter()
