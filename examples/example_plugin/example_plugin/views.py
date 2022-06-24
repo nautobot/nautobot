@@ -163,4 +163,4 @@ class AnotherExampleModelView(generic.ObjectView):
 
 class ViewToBeOverridden(generic.View):
     def get(self, request, *args, **kwargs):
-        return HttpResponse("I am a view in the example plugin which will be overridden.")
+        return HttpResponse("I am a view in the example plugin which will be overridden by another plugin.")
