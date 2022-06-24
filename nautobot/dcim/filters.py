@@ -22,7 +22,7 @@ from nautobot.utilities.filters import (
     NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    SlugOrPKMultipleChoiceFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -125,7 +125,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent region (slug)",
     )
-    children = SlugOrPKMultipleChoiceFilter(
+    children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Region.objects.all(),
         label="Children (slug or ID)",
     )
@@ -133,7 +133,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         field_name="children",
         label="Has children",
     )
-    sites = SlugOrPKMultipleChoiceFilter(
+    sites = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
@@ -197,7 +197,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="powerpanel",
         label="Has power panels",
     )
-    rack_groups = SlugOrPKMultipleChoiceFilter(
+    rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Rack groups (slug or ID)",
     )
@@ -213,7 +213,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="prefixes",
         label="Has prefixes",
     )
-    vlan_groups = SlugOrPKMultipleChoiceFilter(
+    vlan_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
         label="Vlan groups (slug or ID)",
     )
@@ -296,7 +296,7 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent (slug)",
     )
-    children = SlugOrPKMultipleChoiceFilter(
+    children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Children (slug or ID)",
     )
@@ -670,7 +670,7 @@ class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilt
         field_name="device_type_id",
         label="Device type (ID)",
     )
-    device_type = SlugOrPKMultipleChoiceFilter(
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (slug or ID)",
     )
