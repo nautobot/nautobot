@@ -1243,14 +1243,56 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1", description="A")
-        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2", description="B")
-        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3", description="C")
+        devices = Device.objects.all()
+
+        manufacturers = (
+            Manufacturer.objects.create(name="Manufacturer 4", slug="manufacturer-4", description="A"),
+            Manufacturer.objects.create(name="Manufacturer 5", slug="manufacturer-5", description="B"),
+            Manufacturer.objects.create(name="Manufacturer 6", slug="manufacturer-6", description="C"),
+        )
+
+        InventoryItem.objects.create(device=devices[0], name="Inventory Item 1", manufacturer=manufacturers[0])
+        InventoryItem.objects.create(device=devices[1], name="Inventory Item 2", manufacturer=manufacturers[1])
+        InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=manufacturers[2])
 
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_inventory_items(self):
+        inventory_items = InventoryItem.objects.all()[:2]
+        params = {"inventory_items": [inventory_items[0].pk, inventory_items[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_inventory_items(self):
+        params = {"has_inventory_items": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_inventory_items": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_device_types(self):
+        device_types = DeviceType.objects.all()[:2]
+        params = {"device_types": [device_types[0].pk, device_types[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_device_types(self):
+        params = {"has_device_types": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_device_types": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_platforms(self):
+        platforms = Platform.objects.all()[:2]
+        params = {"platforms": [platforms[0].pk, platforms[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_platforms(self):
+        params = {"has_platforms": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_platforms": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
 class DeviceTypeTestCase(FilterTestCases.FilterTestCase):

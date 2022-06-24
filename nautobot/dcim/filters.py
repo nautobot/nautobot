@@ -499,6 +499,32 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
 
 
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=InventoryItem.objects.all(),
+        label="Inventory items (name or ID)",
+    )
+    has_inventory_items = RelatedMembershipBooleanFilter(
+        field_name="inventory_items",
+        label="Has inventory items",
+    )
+    device_types = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        label="Device type (slug or ID)",
+    )
+    has_device_types = RelatedMembershipBooleanFilter(
+        field_name="device_types",
+        label="Has device types",
+    )
+    platforms = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Platform.objects.all(),
+        label="Platform (slug or ID)",
+    )
+    has_platforms = RelatedMembershipBooleanFilter(
+        field_name="platforms",
+        label="Has platforms",
+    )
+
     class Meta:
         model = Manufacturer
         fields = ["id", "name", "slug", "description"]
