@@ -32,13 +32,11 @@ class ProviderFilterSet(NautobotFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuits__terminations__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuits__terminations__site__region",
-        lookup_expr="in",
         to_field_name="slug",
         label="Region (slug)",
     )
@@ -53,16 +51,11 @@ class ProviderFilterSet(NautobotFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = TreeNodeMultipleChoiceFilter(
-        field_name="circuits__terminations__location",
-        queryset=Location.objects.all(),
-        label="Location (ID)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         field_name="circuits__terminations__location__slug",
         queryset=Location.objects.all(),
         to_field_name="slug",
-        label="Location (slug)",
+        label="Location (slug or ID)",
     )
     tag = TagFilter()
 
@@ -164,27 +157,20 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = TreeNodeMultipleChoiceFilter(
-        field_name="terminations__location",
-        queryset=Location.objects.all(),
-        label="Location (ID)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         field_name="terminations__location__slug",
         queryset=Location.objects.all(),
         to_field_name="slug",
-        label="Location (slug)",
+        label="Location (slug or ID)",
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="terminations__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="terminations__site__region",
-        lookup_expr="in",
         to_field_name="slug",
         label="Region (slug)",
     )

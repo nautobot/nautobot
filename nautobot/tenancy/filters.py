@@ -4,9 +4,9 @@ from nautobot.dcim.models import Location
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.utilities.filters import (
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    SlugOrPKMultipleChoiceFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -49,19 +49,17 @@ class TenantFilterSet(NautobotFilterSet):
     group_id = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         field_name="group",
-        lookup_expr="in",
         label="Tenant group (ID)",
     )
     group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         field_name="group",
-        lookup_expr="in",
         to_field_name="slug",
         label="Tenant group (slug)",
     )
-    locations = SlugOrPKMultipleChoiceFilter(
+    locations = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        label="Locations",
+        label="Locations (slugs and/or IDs)",
     )
     has_locations = RelatedMembershipBooleanFilter(
         field_name="locations",
@@ -83,23 +81,19 @@ class TenancyFilterSet(django_filters.FilterSet):
     tenant_group_id = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         field_name="tenant__group",
-        lookup_expr="in",
         label="Tenant Group (ID)",
     )
     tenant_group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         field_name="tenant__group",
         to_field_name="slug",
-        lookup_expr="in",
         label="Tenant Group (slug)",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
         label='Tenant (ID) (deprecated, use "tenant" filter instead)',
     )
-    tenant = SlugOrPKMultipleChoiceFilter(
+    tenant = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
-        field_name="tenant__slug",
-        to_field_name="slug",
         label="Tenant (slug or ID)",
     )

@@ -39,6 +39,7 @@ __all__ = (
     "JSONArrayFormField",
     "LaxURLField",
     "MultipleContentTypeField",
+    "MultiMatchModelMultipleChoiceField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
@@ -680,13 +681,13 @@ class NumericArrayField(SimpleArrayField):
 
 class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
-    Filter field to support matching on the PK or supplied `natural_key` fields. `natural_key`
-    defaults to `slug` if not provided. Raises ValidationError if none of the fields match the
-    requested value.
+    Filter field to support matching on the PK *or* `to_field_name` fields (defaulting to `slug` if not specified).
+
+    Raises ValidationError if none of the fields match the requested value.
     """
 
     def __init__(self, *args, **kwargs):
-        self.natural_key = kwargs.pop("natural_key", "slug")
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
         super().__init__(*args, **kwargs)
 
     def _check_values(self, values):

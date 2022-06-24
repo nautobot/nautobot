@@ -41,7 +41,7 @@ A plugin may now define extra tabs which will be appended to the object view's l
 
 #### Improved Filter Coverage for DCIM models ([#1729](https://github.com/nautobot/nautobot/issues/1729))
 
-The DCIM FilterSets have been updated with 103 new filters, including hybrid filters that support filtering on both `pk` and `slug`. A new filter `SlugOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on foreign-key related fields that relate to models with `slug` fields. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
+The DCIM FilterSets have been updated with 103 new filters, including hybrid filters that support filtering on both `pk` and `slug`. A new filter `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on foreign-key related fields that relate to models with `slug` fields. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
 ### Changed
 

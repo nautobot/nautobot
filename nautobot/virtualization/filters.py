@@ -111,13 +111,11 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="cluster__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="cluster__site__region",
-        lookup_expr="in",
         to_field_name="slug",
         label="Region (slug)",
     )
@@ -132,18 +130,11 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         to_field_name="slug",
         label="Site (slug)",
     )
-    location_id = TreeNodeMultipleChoiceFilter(
-        queryset=Location.objects.all(),
-        field_name="cluster__location",
-        lookup_expr="in",
-        label="Location (ID)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         field_name="cluster__location",
-        lookup_expr="in",
         to_field_name="slug",
-        label="Location (slug)",
+        label="Location (slug or ID)",
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceRole.objects.all(),

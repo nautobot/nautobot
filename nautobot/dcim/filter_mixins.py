@@ -1,7 +1,7 @@
 import django_filters
 
 from nautobot.dcim.models import Region, Site, Location
-from nautobot.utilities.filters import SlugOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
+from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
 
 
 class LocatableModelFilterSetMixin(django_filters.FilterSet):
@@ -14,34 +14,22 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
-        label="Region (ID)",
+        label='Region (ID) (deprecated, use "region" filter instead)',
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Site.objects.all(),
         label='Site (ID) (deprecated, use "site" filter instead)',
     )
-    site = SlugOrPKMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
-        field_name="site__slug",
-        to_field_name="slug",
         label="Site (slug or ID)",
-    )
-    location_id = TreeNodeMultipleChoiceFilter(
-        queryset=Location.objects.all(),
-        lookup_expr="in",
-        label="Location (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Location (slug)",
+        label="Location (slug or ID)",
     )
