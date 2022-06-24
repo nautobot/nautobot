@@ -129,7 +129,7 @@ class CircuitTypeViewSet(NautobotViewSet):
     table = tables.CircuitTypeTable
     form = forms.CircuitTypeForm
     filterset = filters.CircuitTypeFilterSet
-    bulk_import_model_form = forms.CircuitTypeCSVForm
+    import_form = forms.CircuitTypeCSVForm
     lookup_field = "slug"
 
     def get_extra_context_for_detail(self, request, instance):
