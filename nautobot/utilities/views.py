@@ -500,7 +500,7 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
 
         return render(
             request,
-            self.object_edit_template_name,
+            self.template_name,
             {
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
@@ -585,7 +585,7 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
 
         return render(
             request,
-            self.object_delete_template_name,
+            self.template_name,
             {
                 "obj": obj,
                 "form": form,
