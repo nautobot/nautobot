@@ -646,9 +646,11 @@ def register_override_views(override_views, plugin):
                 f"Plugin {plugin} tried to override view {qualified_view_name} "
                 f"but only namespaced views are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
             )
+        # Handle nested view namespaces, such as "plugins:myplugin"
         while ":" in app_name:
             resolver_name, app_name = app_name.split(":", 1)
             resolver = resolver.namespace_dict[resolver_name][1]
+
         app_resolver = resolver.namespace_dict.get(app_name)
         if not app_resolver:
             raise ValidationError(
