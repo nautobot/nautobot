@@ -15,7 +15,7 @@ from nautobot.utilities.forms.fields import (
     CSVDataField,
     DynamicModelMultipleChoiceField,
     JSONField,
-    SlugOrPKMultipleChoiceField,
+    MultiMatchModelMultipleChoiceField,
 )
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
@@ -584,9 +584,9 @@ class JSONFieldTest(NautobotTestCase):
         self.assertEqual('"I am UTF-8! 😀"', JSONField().prepare_value("I am UTF-8! 😀"))
 
 
-class SlugOrPKMultipleChoiceFieldTest(TestCase):
+class MultiMatchModelMultipleChoiceFieldTest(TestCase):
     def test_clean(self):
-        field = SlugOrPKMultipleChoiceField(queryset=VLANGroup.objects.all())
+        field = MultiMatchModelMultipleChoiceField(queryset=VLANGroup.objects.all())
         vlan_groups = (
             VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1"),
             VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
