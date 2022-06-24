@@ -653,30 +653,15 @@ class TestPluginCoreViewOverrides(TestCase):
         self.user.is_superuser = True
         self.user.save()
 
-    @override_settings(
-        PLUGINS=[
-            "example_plugin",
-            "plugin_with_view_overrides",
-        ]
-    )
     def test_views_are_overridden(self):
 
-        load_plugin("plugin_with_view_overrides", settings)
+        response = self.client.get(reverse("plugins:example_plugin:view_to_be_overridden"))
+        self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
 
-        response = self.client.get(reverse("dcim:device", kwargs={"pk": self.device.pk}))
-        self.assertEqual(b"Hello world! I'm a view provided by a plugin to override the `dcim:device` view.",
-                         response.content)
-
-        response = self.client.get(reverse("circuits:circuit", kwargs={"pk": self.device.pk}))
-        self.assertEqual(b"Hello world! I'm a view provided by a plugin to override the `circuits:circuit` view.",
-                         response.content)
-
-        response = self.client.get(f'{reverse("plugins:plugins_list")}plugin_with_view_overrides/')
-        self.assertIn(
-            b"dcim:device <code>plugin_with_view_overrides.views.DeviceViewOverride</code>",
-            response.content
+        response = self.client.get(
+            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "plugin_with_view_overrides"})}'
         )
         self.assertIn(
-            b"circuits:circuit <code>plugin_with_view_overrides.views.CircuitViewOverride</code>",
-            response.content
+            b"plugins:example_plugin:view_to_be_overridden <code>plugin_with_view_overrides.views.ViewOverride</code>",
+            response.content,
         )
