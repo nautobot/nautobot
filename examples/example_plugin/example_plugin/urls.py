@@ -94,4 +94,5 @@ urlpatterns = [
         views.DeviceDetailPluginTabTwoView.as_view(),
         name="device_detail_tab_2",
     ),
+    path("override-target/", views.ViewToBeOverridden.as_view(), name="view_to_be_overridden"),
 ]
