@@ -31,8 +31,6 @@ User = get_user_model()
 class TestCase(_TestCase, TestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
-    user_permissions = ()
-
     def setUp(self):
 
         # Create the test user and assign permissions
