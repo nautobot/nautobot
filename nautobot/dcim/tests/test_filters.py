@@ -3709,6 +3709,17 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         params = {"label": ["inventoryitem2", "inventoryitem3"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_child_items(self):
+        child_items = InventoryItem.objects.filter(parent__isnull=False)[:2]
+        params = {"child_items": [child_items[0].pk, child_items[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_child_items(self):
+        params = {"has_child_items": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_child_items": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
 
 class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
     queryset = VirtualChassis.objects.all()
