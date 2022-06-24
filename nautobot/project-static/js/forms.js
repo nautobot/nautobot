@@ -42,7 +42,7 @@ $(document).ready(function() {
         return s.substring(0, num_chars);           // Trim to first num_chars chars
     }
     var slug_field = $('#id_slug');
-    if (slug_field) {
+    if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
         if (slug_field.val()) {
