@@ -1,6 +1,6 @@
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.views import (
-    NautobotRouterMixin,
+    NautobotViewSetMixin,
     ObjectPermissionRequiredMixin,
     ObjectDetailViewMixin,
     ObjectDeleteViewMixin,
@@ -29,12 +29,6 @@ class NautobotViewSet(
     ViewSetMixin,
     View,
 ):
-    queryset = None
-    form = None
-    table = None
-    filterset = None
-    filterset_form = None
-
     def __init__(self, *args, **kwargs):
         if kwargs.get("suffix") == "List":
             self.action = "view"
@@ -73,34 +67,6 @@ class NautobotViewSet(
             self.template_name = self.get_template_name("list")
             self.queryset = self.detail_queryset
 
-        if self.form:
-            if not self.object_edit_model_form:
-                self.object_edit_model_form = self.form
-            if not self.bulk_import_model_form:
-                self.bulk_import_model_form = self.form
-            if not self.bulk_edit_form:
-                self.bulk_edit_form = self.form
-
-        if self.filterset:
-            if not self.object_list_filterset:
-                self.object_list_filterset = self.filterset
-            if not self.bulk_edit_filterset:
-                self.bulk_edit_filterset = self.filterset
-
-        if self.filterset_form:
-            if not self.object_list_filterset_form:
-                self.object_list_filterset_form = self.filterset_form
-
-        # if self.table:
-        #     if not self.object_list_table:
-        #         self.object_list_table = self.table
-        #     if not self.bulk_import_table:
-        #         self.bulk_import_table = self.table
-        #     if not self.bulk_edit_table:
-        #         self.bulk_edit_table = self.table
-        #     if not self.bulk_delete_table:
-        #         self.bulk_delete_table = self.table
-
         super().__init__(*args, **kwargs)
 
     def get_required_permission(self):
@@ -120,7 +86,7 @@ class NautobotViewSet(
             return f"generic/object_{view_type}.html"
 
 
-class NautobotRouter(SimpleRouter, NautobotRouterMixin):
+class NautobotRouter(SimpleRouter, NautobotViewSetMixin):
     def __init__(self):
         self.define_routes()
         super().__init__()

@@ -7,10 +7,22 @@ from django_tables2 import RequestConfig
 from nautobot.core.views import generic
 from nautobot.utilities.forms import ConfirmationForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import count_related
+
+# from nautobot.utilities.utils import count_related
+
 from . import filters, forms, tables
 from .choices import CircuitTerminationSideChoices
-from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from .models import Circuit, CircuitType, CircuitTermination, Provider, ProviderNetwork
+from nautobot.utilities.viewsets import NautobotViewSet, NautobotRouter
+from nautobot.utilities.views import (
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDeleteViewMixin,
+    BulkDeleteViewMixin,
+    BulkImportViewMixin,
+    BulkEditViewMixin,
+)
 
 
 #
@@ -18,17 +30,17 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 #
 
 
-class ProviderListView(generic.ObjectListView):
-    queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
-    filterset = filters.ProviderFilterSet
-    filterset_form = forms.ProviderFilterForm
+class ProviderViewSet(NautobotViewSet):
+    model = Provider
     table = tables.ProviderTable
+    form = forms.ProviderForm
+    filterset_form = forms.ProviderFilterForm
+    filterset = filters.ProviderFilterSet
+    import_form = forms.ProviderCSVForm
+    bulk_edit_form = forms.ProviderBulkEditForm
+    lookup_field = "slug"
 
-
-class ProviderView(generic.ObjectView):
-    queryset = Provider.objects.all()
-
-    def get_extra_context(self, request, instance):
+    def get_extra_context_for_detail(self, request, instance):
         circuits = (
             Circuit.objects.restrict(request.user, "view")
             .filter(provider=instance)
@@ -49,51 +61,31 @@ class ProviderView(generic.ObjectView):
         }
 
 
-class ProviderEditView(generic.ObjectEditView):
-    queryset = Provider.objects.all()
-    model_form = forms.ProviderForm
-    template_name = "circuits/provider_edit.html"
+class ProviderRouter(
+    NautobotRouter,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDeleteViewMixin,
+    BulkDeleteViewMixin,
+    BulkImportViewMixin,
+    BulkEditViewMixin,
+):
+    def define_routes(self):
+        super().define_routes()
 
 
-class ProviderDeleteView(generic.ObjectDeleteView):
-    queryset = Provider.objects.all()
-
-
-class ProviderBulkImportView(generic.BulkImportView):
-    queryset = Provider.objects.all()
-    model_form = forms.ProviderCSVForm
-    table = tables.ProviderTable
-
-
-class ProviderBulkEditView(generic.BulkEditView):
-    queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
-    filterset = filters.ProviderFilterSet
-    table = tables.ProviderTable
-    form = forms.ProviderBulkEditForm
-
-
-class ProviderBulkDeleteView(generic.BulkDeleteView):
-    queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
-    filterset = filters.ProviderFilterSet
-    table = tables.ProviderTable
-
-
-#
-# ProviderNetwork
-#
-
-
-class ProviderNetworkListView(generic.ObjectListView):
-    queryset = ProviderNetwork.objects.all()
-    filterset = filters.ProviderNetworkFilterSet
-    filterset_form = forms.ProviderNetworkFilterForm
+class ProviderNetworkViewSet(NautobotViewSet):
+    model = ProviderNetwork
     table = tables.ProviderNetworkTable
+    form = forms.ProviderNetworkForm
+    filterset_form = forms.ProviderNetworkFilterForm
+    filterset = filters.ProviderNetworkFilterSet
+    import_form = forms.ProviderNetworkCSVForm
+    bulk_edit_form = forms.ProviderNetworkBulkEditForm
+    lookup_field = "slug"
 
-
-class ProviderNetworkView(generic.ObjectView):
-    queryset = ProviderNetwork.objects.all()
-
-    def get_extra_context(self, request, instance):
+    def get_extra_context_for_detail(self, request, instance):
         circuits = (
             Circuit.objects.restrict(request.user, "view")
             .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
@@ -112,32 +104,18 @@ class ProviderNetworkView(generic.ObjectView):
         }
 
 
-class ProviderNetworkEditView(generic.ObjectEditView):
-    queryset = ProviderNetwork.objects.all()
-    model_form = forms.ProviderNetworkForm
-
-
-class ProviderNetworkDeleteView(generic.ObjectDeleteView):
-    queryset = ProviderNetwork.objects.all()
-
-
-class ProviderNetworkBulkImportView(generic.BulkImportView):
-    queryset = ProviderNetwork.objects.all()
-    model_form = forms.ProviderNetworkCSVForm
-    table = tables.ProviderNetworkTable
-
-
-class ProviderNetworkBulkEditView(generic.BulkEditView):
-    queryset = ProviderNetwork.objects.all()
-    filterset = filters.ProviderNetworkFilterSet
-    table = tables.ProviderNetworkTable
-    form = forms.ProviderNetworkBulkEditForm
-
-
-class ProviderNetworkBulkDeleteView(generic.BulkDeleteView):
-    queryset = ProviderNetwork.objects.all()
-    filterset = filters.ProviderNetworkFilterSet
-    table = tables.ProviderNetworkTable
+class ProviderNetworkRouter(
+    NautobotRouter,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDeleteViewMixin,
+    BulkDeleteViewMixin,
+    BulkImportViewMixin,
+    BulkEditViewMixin,
+):
+    def define_routes(self):
+        super().define_routes()
 
 
 #
@@ -145,16 +123,16 @@ class ProviderNetworkBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class CircuitTypeListView(generic.ObjectListView):
-    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
-    table = tables.CircuitTypeTable
-
-
-class CircuitTypeView(generic.ObjectView):
+class CircuitTypeViewSet(NautobotViewSet):
+    model = CircuitType
     queryset = CircuitType.objects.all()
+    table = tables.CircuitTypeTable
+    form = forms.CircuitTypeForm
+    filterset = filters.CircuitTypeFilterSet
+    bulk_import_model_form = forms.CircuitTypeCSVForm
+    lookup_field = "slug"
 
-    def get_extra_context(self, request, instance):
-
+    def get_extra_context_for_detail(self, request, instance):
         # Circuits
         circuits = (
             Circuit.objects.restrict(request.user, "view")
@@ -176,24 +154,17 @@ class CircuitTypeView(generic.ObjectView):
         }
 
 
-class CircuitTypeEditView(generic.ObjectEditView):
-    queryset = CircuitType.objects.all()
-    model_form = forms.CircuitTypeForm
-
-
-class CircuitTypeDeleteView(generic.ObjectDeleteView):
-    queryset = CircuitType.objects.all()
-
-
-class CircuitTypeBulkImportView(generic.BulkImportView):
-    queryset = CircuitType.objects.all()
-    model_form = forms.CircuitTypeCSVForm
-    table = tables.CircuitTypeTable
-
-
-class CircuitTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
-    table = tables.CircuitTypeTable
+class CircuitTypeRouter(
+    NautobotRouter,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDeleteViewMixin,
+    BulkDeleteViewMixin,
+    BulkImportViewMixin,
+):
+    def define_routes(self):
+        super().define_routes()
 
 
 #

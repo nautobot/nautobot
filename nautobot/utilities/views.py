@@ -168,14 +168,17 @@ class GetReturnURLMixin:
         return reverse("home")
 
 
-class NautobotRouterMixin:
+class NautobotViewSetMixin:
 
     routes = None
     model = None
     queryset = None
     table = None
-    prefetch_related = []
     template_name = None
+    filterset = None
+    filterset_form = None
+    import_form = None
+    prefetch_related = []
 
     @property
     def detail_queryset(self):
@@ -189,7 +192,7 @@ class NautobotRouterMixin:
         self.routes = []
 
 
-class ObjectDetailViewMixin(NautobotRouterMixin):
+class ObjectDetailViewMixin(NautobotViewSetMixin):
     """
     Retrieve a single object for display.
     queryset: The base queryset for retrieving the object
@@ -236,7 +239,7 @@ class ObjectDetailViewMixin(NautobotRouterMixin):
         )
 
 
-class ObjectListViewMixin(NautobotRouterMixin):
+class ObjectListViewMixin(NautobotViewSetMixin):
     """
     List a series of objects.
     queryset: The queryset of objects to display. Note: Prefetching related objects is not necessary, as the
@@ -247,8 +250,6 @@ class ObjectListViewMixin(NautobotRouterMixin):
     template_name: The name of the template
     """
 
-    object_list_filterset = None
-    object_list_filterset_form = None
     object_list_action_buttons = ("add", "import", "export")
 
     def define_routes(self):
@@ -306,8 +307,7 @@ class ObjectListViewMixin(NautobotRouterMixin):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
-        if self.object_list_filterset:
-            self.queryset = self.object_list_filterset(request.GET, self.queryset).qs
+        self.queryset = self.filterset(request.GET, self.queryset).qs
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -365,9 +365,7 @@ class ObjectListViewMixin(NautobotRouterMixin):
             "permissions": permissions,
             "action_buttons": self.object_list_action_buttons,
             "table_config_form": TableConfigForm(table=table),
-            "filter_form": self.object_list_filterset_form(request.GET, label_suffix="")
-            if self.object_list_filterset_form
-            else None,
+            "filter_form": self.filterset_form(request.GET, label_suffix="") if self.filterset_form else None,
         }
         context.update(self.extra_context_for_list())
 
@@ -381,15 +379,13 @@ class ObjectListViewMixin(NautobotRouterMixin):
         return {}
 
 
-class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
+class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     """
     Create or edit a single object.
     queryset: The base queryset for the object being modified
     model_form: The form used to create or edit the object
     template_name: The name of the template
     """
-
-    object_edit_model_form = None
 
     def define_routes(self):
         super().define_routes()
@@ -436,7 +432,7 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
         obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
 
         initial_data = normalize_querydict(request.GET)
-        form = self.object_edit_model_form(instance=obj, initial=initial_data)
+        form = self.form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 
         return render(
@@ -454,7 +450,7 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     def handle_object_edit_post(self, request, *args, **kwargs):
         logger = logging.getLogger("nautobot.views.ObjectEditView")
         obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
-        form = self.object_edit_model_form(data=request.POST, files=request.FILES, instance=obj)
+        form = self.form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
@@ -515,7 +511,7 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
         )
 
 
-class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
+class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     """
     Delete a single object.
     queryset: The base queryset for the object being deleted
@@ -599,7 +595,7 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
         )
 
 
-class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
+class BulkImportViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     """
     Import objects in bulk (CSV format).
     queryset: Base queryset for the model
@@ -609,7 +605,6 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
     widget_attrs: A dict of attributes to apply to the import widget (e.g. to require a session key)
     """
 
-    bulk_import_model_form = None
     bulk_import_widget_attrs = {}
 
     def define_routes(self):
@@ -629,10 +624,8 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
 
     def _import_form_for_bulk_import(self, *args, **kwargs):
         class ImportForm(BootstrapMixin, Form):
-            csv_data = CSVDataField(
-                from_form=self.bulk_import_model_form, widget=Textarea(attrs=self.bulk_import_widget_attrs)
-            )
-            csv_file = CSVFileField(from_form=self.bulk_import_model_form)
+            csv_data = CSVDataField(from_form=self.import_form, widget=Textarea(attrs=self.bulk_import_widget_attrs))
+            csv_file = CSVFileField(from_form=self.import_form)
 
         return ImportForm(*args, **kwargs)
 
@@ -648,8 +641,8 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
             self.template_name,
             {
                 "form": self._import_form_for_bulk_import(),
-                "fields": self.bulk_import_model_form().fields,
-                "obj_type": self.bulk_import_model_form._meta.model._meta.verbose_name,
+                "fields": self.import_form().fields,
+                "obj_type": self.import_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
             },
@@ -668,7 +661,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
                 with transaction.atomic():
                     headers, records = form.cleaned_data["csv_data"]
                     for row, data in enumerate(records, start=1):
-                        obj_form = self.bulk_import_model_form(data, headers=headers)
+                        obj_form = self.import_form(data, headers=headers)
                         restrict_form_fields(obj_form, request.user)
 
                         if obj_form.is_valid():
@@ -716,14 +709,14 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotRouterMixin):
             self.template_name,
             {
                 "form": form,
-                "fields": self.bulk_import_model_form().fields,
-                "obj_type": self.bulk_import_model_form._meta.model._meta.verbose_name,
+                "fields": self.import_form().fields,
+                "obj_type": self.import_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
             },
         )
 
 
-class BulkEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
+class BulkEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     """
     Edit objects in bulk.
     queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
@@ -888,7 +881,7 @@ class BulkEditViewMixin(GetReturnURLMixin, NautobotRouterMixin):
         return {}
 
 
-class BulkDeleteViewMixin(GetReturnURLMixin, NautobotRouterMixin):
+class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     """
     Delete objects in bulk.
     queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
@@ -1028,10 +1021,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, ObjectListViewMixin, View):
     action_buttons = None
 
     def __init__(self, *args, **kwargs):
-        if self.filterset:
-            self.object_list_filterset = self.filterset
-        if self.filterset_form:
-            self.object_list_filterset_form = self.filterset_form
+        # if self.filterset:
+        #     self.object_list_filterset = self.filterset
+        # if self.filterset_form:
+        #     self.object_list_filterset_form = self.filterset_form
         # if self.table:
         #     self.object_list_table = self.table
         if self.template_name:

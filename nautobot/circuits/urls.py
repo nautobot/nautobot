@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 
 from nautobot.dcim.views import CableCreateView, PathTraceView
 from nautobot.extras.views import ObjectChangeLogView
@@ -6,93 +6,25 @@ from . import views
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 app_name = "circuits"
+circuit_type_router = views.CircuitTypeRouter()
+circuit_type_router.register("circuit-types", views.CircuitTypeViewSet, basename="circuittype")
+provider_router = views.ProviderRouter()
+provider_router.register("providers", views.ProviderViewSet, basename="provider")
+provider_network_router = views.ProviderNetworkRouter()
+provider_network_router.register("provider-networks", views.ProviderNetworkViewSet, basename="providernetwork")
+
 urlpatterns = [
-    # Providers
-    path("providers/", views.ProviderListView.as_view(), name="provider_list"),
-    path("providers/add/", views.ProviderEditView.as_view(), name="provider_add"),
-    path(
-        "providers/import/",
-        views.ProviderBulkImportView.as_view(),
-        name="provider_import",
-    ),
-    path(
-        "providers/edit/",
-        views.ProviderBulkEditView.as_view(),
-        name="provider_bulk_edit",
-    ),
-    path(
-        "providers/delete/",
-        views.ProviderBulkDeleteView.as_view(),
-        name="provider_bulk_delete",
-    ),
-    path("providers/<slug:slug>/", views.ProviderView.as_view(), name="provider"),
-    path(
-        "providers/<slug:slug>/edit/",
-        views.ProviderEditView.as_view(),
-        name="provider_edit",
-    ),
-    path(
-        "providers/<slug:slug>/delete/",
-        views.ProviderDeleteView.as_view(),
-        name="provider_delete",
-    ),
     path(
         "providers/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="provider_changelog",
         kwargs={"model": Provider},
     ),
-    path("provider-networks/", views.ProviderNetworkListView.as_view(), name="providernetwork_list"),
-    path("provider-networks/add/", views.ProviderNetworkEditView.as_view(), name="providernetwork_add"),
-    path("provider-networks/import/", views.ProviderNetworkBulkImportView.as_view(), name="providernetwork_import"),
-    path("provider-networks/edit/", views.ProviderNetworkBulkEditView.as_view(), name="providernetwork_bulk_edit"),
-    path(
-        "provider-networks/delete/", views.ProviderNetworkBulkDeleteView.as_view(), name="providernetwork_bulk_delete"
-    ),
-    path("provider-networks/<slug:slug>/", views.ProviderNetworkView.as_view(), name="providernetwork"),
-    path("provider-networks/<slug:slug>/edit/", views.ProviderNetworkEditView.as_view(), name="providernetwork_edit"),
-    path(
-        "provider-networks/<slug:slug>/delete/",
-        views.ProviderNetworkDeleteView.as_view(),
-        name="providernetwork_delete",
-    ),
     path(
         "provider-networks/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="providernetwork_changelog",
         kwargs={"model": ProviderNetwork},
-    ),
-    # Circuit types
-    path("circuit-types/", views.CircuitTypeListView.as_view(), name="circuittype_list"),
-    path(
-        "circuit-types/add/",
-        views.CircuitTypeEditView.as_view(),
-        name="circuittype_add",
-    ),
-    path(
-        "circuit-types/import/",
-        views.CircuitTypeBulkImportView.as_view(),
-        name="circuittype_import",
-    ),
-    path(
-        "circuit-types/delete/",
-        views.CircuitTypeBulkDeleteView.as_view(),
-        name="circuittype_bulk_delete",
-    ),
-    path(
-        "circuit-types/<slug:slug>/",
-        views.CircuitTypeView.as_view(),
-        name="circuittype",
-    ),
-    path(
-        "circuit-types/<slug:slug>/edit/",
-        views.CircuitTypeEditView.as_view(),
-        name="circuittype_edit",
-    ),
-    path(
-        "circuit-types/<slug:slug>/delete/",
-        views.CircuitTypeDeleteView.as_view(),
-        name="circuittype_delete",
     ),
     path(
         "circuit-types/<slug:slug>/changelog/",
@@ -163,4 +95,7 @@ urlpatterns = [
         name="circuittermination_changelog",
         kwargs={"model": CircuitTermination},
     ),
+    path("", include(circuit_type_router.urls)),
+    path("", include(provider_router.urls)),
+    path("", include(provider_network_router.urls)),
 ]
