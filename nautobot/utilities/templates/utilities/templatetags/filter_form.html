@@ -27,7 +27,7 @@
                         <div id="main" role="tabpanel" class="tab-pane active">
 
                             <div class="">
-                                <table class="table" id="secrets">
+                                <table class="table" id="secrets" style="table-layout: fixed;">
                                     {{ lookup_filter_form.management_form }}
                                     {% for form in lookup_filter_form %}
                                         {% if forloop.first %}

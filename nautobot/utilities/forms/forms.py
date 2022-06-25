@@ -450,7 +450,6 @@ class LookUpFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
     value = forms.CharField(required=False)
-    advance = forms.BooleanField(required=False)
     advance_filter = forms.JSONField()
 
     def __init__(self, *args, **kwargs):
@@ -472,12 +471,10 @@ class LookUpFilterForm(BootstrapMixin, forms.Form):
 
         self.fields["value"].widget.attrs["class"] = "value-input form-control"
 
-        self.fields["advance_filter"].widget = forms.HiddenInput()
-        # self.fields["select_value"].widget = forms.HiddenInput()
-        # self.fields["advance_filter"].widget.attrs["class"] = " advance_filter-json"
-        # self.fields["advance"].widget.attrs["class"] = "advance-bool"
-
-        # self.fields["lookup_field"].widget.attrs["data-lookup-expr"] = json.dumps(lookup_field_choices)
+        self.fields["advance_filter"].widget.attrs["rows"] = 1
+        self.fields["advance_filter"].widget.attrs["disabled"] = "true"
+        from django.forms import HiddenInput
+        self.fields["advance_filter"].widget = HiddenInput()
 
     def get_lookup_expr_choices(self):
         filters = get_filterset_for_model(self.model).get_filters()
@@ -501,7 +498,7 @@ def lookup_formset_factory(model, **kwargs):
     params = {
         "can_delete_extra": False,
         "can_delete": False,
-        "extra": 5,
+        "extra": 3,
     }
 
     kwargs.update(params)
