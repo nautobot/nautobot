@@ -3,8 +3,13 @@ import re
 
 import yaml
 from django import forms
+from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import fields, ManyToOneRel, ManyToManyRel
 from django.db.models.fields import related
+from django.forms import inlineformset_factory, formset_factory, BaseFormSet
+from django.urls import reverse
+from taggit.managers import TaggableManager
 
 from nautobot.ipam.formfields import IPNetworkFormField
 
@@ -362,6 +367,74 @@ class FilterConfigForm(BootstrapMixin, forms.Form):
         return self.form.__class__.__name__
 
 
+class SelectWidgetWithConfigurableOptions(forms.Select):
+    def __init__(self, *args, model=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = model
+        self.attrs["class"] = "nautobot-select2-static"
+
+    def get_field_data_type(self, field_name):
+        """
+        Get model field value data type
+
+        Args:
+            field_name: model field name
+
+        Returns:
+            A dict of field-type and/or field url(if field-type is a choice field)
+
+        """
+        field = {"data-field-type": "text"}
+        field_extension = None
+        if "__" in field_name:
+            field_values = field_name.split("__")
+            field_name = field_values[0]
+            field_extension = field_values[1]
+
+        try:
+            field_instance = self.model._meta.get_field(field_name)
+            if isinstance(field_instance, (ManyToOneRel, fields.related.ForeignKey, ManyToManyRel, TaggableManager)):
+                if field_extension is not None and field_extension != "slug":
+                    # get the extension related_model
+                    # e.g. if field is tenant__group,
+                    # tenant has a foreign key field "group" so we get group related_model instead of tenant model
+                    field_model = field_instance.related_model._meta.get_field(field_extension).related_model
+                else:
+                    field_model = field_instance.related_model
+
+                app_label = field_model._meta.app_label
+                model_name = field_model._meta.model_name
+                if app_label in settings.PLUGINS:
+                    data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
+                else:
+                    data_url = reverse(f"{app_label}-api:{model_name}-list")
+
+                parent_app_label = self.model._meta.app_label
+                parent_model_name = self.model._meta.model_name
+
+                content_types_included_in_filterset = (
+                    "content_types" in get_filterset_for_model(field_model).get_fields()
+                )
+
+                field = {
+                    "data-field-type": "select",
+                    "data-field-data-url": data_url,
+                }
+                if content_types_included_in_filterset is True:
+                    field["data-query-param-content_types"] = f'["{parent_app_label.strip()}.{parent_model_name}"]'
+
+        except FieldDoesNotExist:
+            pass
+
+        return field
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        data = super().create_option(name, value, label, selected, index, subindex, attrs)
+        data["attrs"].update(self.get_field_data_type(value))
+
+        return data
+
+
 class LookUpFilterForm(BootstrapMixin, forms.Form):
     """
     Form for configuring user's filter form preferences.
@@ -370,25 +443,41 @@ class LookUpFilterForm(BootstrapMixin, forms.Form):
     lookup_field = forms.ChoiceField(
         choices=[],
         required=False,
+        label="Field",
     )
     lookup_type = forms.ChoiceField(
         choices=[],
         required=False,
     )
-    lookup_value = forms.CharField(
-        required=False,
-    )
+    value = forms.CharField(required=False)
+    advance = forms.BooleanField(required=False)
+    advance_filter = forms.JSONField()
 
     def __init__(self, *args, **kwargs):
-        self.model = kwargs.pop("model", None)
 
         super().__init__(*args, **kwargs)
 
         # Initialize columns field based on table attributes
         lookup_field_choices = self.get_lookup_expr_choices()
 
-        self.fields["lookup_field"].choices = [(item, item) for item in lookup_field_choices.keys()]
-        self.fields["lookup_field"].widget.attrs["data-lookup-expr"] = json.dumps(lookup_field_choices)
+        self.fields["lookup_field"].widget = SelectWidgetWithConfigurableOptions(model=self.model)
+        lookup_field_css = self.fields["lookup_field"].widget.attrs.get("class")
+        self.fields["lookup_field"].widget.attrs["class"] = " ".join([lookup_field_css, "lookup_field-select"])
+        self.fields["lookup_field"].choices = [(None, None)] + [(item, item) for item in lookup_field_choices.keys()]
+
+        self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-static lookup_type-select"
+        self.fields["lookup_type"].choices = [(None, None)] + [
+            (item["name"], item["lookup_label"]) for item in lookup_field_choices["contact_name"]
+        ]
+
+        self.fields["value"].widget.attrs["class"] = "value-input form-control"
+
+        self.fields["advance_filter"].widget = forms.HiddenInput()
+        # self.fields["select_value"].widget = forms.HiddenInput()
+        # self.fields["advance_filter"].widget.attrs["class"] = " advance_filter-json"
+        # self.fields["advance"].widget.attrs["class"] = "advance-bool"
+
+        # self.fields["lookup_field"].widget.attrs["data-lookup-expr"] = json.dumps(lookup_field_choices)
 
     def get_lookup_expr_choices(self):
         filters = get_filterset_for_model(self.model).get_filters()
@@ -403,3 +492,22 @@ class LookUpFilterForm(BootstrapMixin, forms.Form):
                 }
                 lookup_fields.setdefault(item.field_name, []).append(data)
         return dict(sorted(lookup_fields.items(), key=lambda d: d[0]))
+
+
+def lookup_formset_factory(model, **kwargs):
+    modelform = LookUpFilterForm
+    modelform.model = model
+
+    params = {
+        "can_delete_extra": False,
+        "can_delete": False,
+        "extra": 5,
+    }
+
+    kwargs.update(params)
+    form = formset_factory(form=LookUpFilterForm, **kwargs)
+
+    return form
+
+
+LookupFilterFormSet = lookup_formset_factory

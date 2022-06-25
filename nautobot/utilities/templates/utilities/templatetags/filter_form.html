@@ -1,6 +1,8 @@
 {% load form_helpers %}
+{% load static %}
+
 <div class="modal fade" tabindex="-1" id="{{ filter_form_name }}_modal">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg" style="width: 90% !important;">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -23,25 +25,34 @@
 
                     <div class="tab-content">
                         <div id="main" role="tabpanel" class="tab-pane active">
-                           {% render_form filter_form %}
+
+                            <div class="">
+                                <table class="table" id="secrets">
+                                    {{ lookup_filter_form.management_form }}
+                                    {% for form in lookup_filter_form %}
+                                        {% if forloop.first %}
+                                            <thead>
+                                                <tr>
+                                                    {% for field in form.visible_fields %}
+                                                        <th>{{ field.label|capfirst }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                        {% endif %}
+                                        <tr class="formset_row-{{ lookup_filter_form.prefix }}">
+                                            {% for field in form.visible_fields %}
+                                                <td>
+                                                    {{ field }}
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </table>
+                            </div>
+
                         </div>
                         <div id="advanced" role="tabpanel" class="tab-pane">
-                            {% render_form lookup_filter_form %}
-                            <hr>
-
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Lookup Field</th>
-                                        <th>Lookup Value</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="lookup_filter_form_table">
-                                </tbody>
-                            </table>
-
-
+                            {% render_form filter_form %}
                         </div>
                     </div>
 
