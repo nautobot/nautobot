@@ -207,7 +207,6 @@ class CircuitViewSet(NautobotViewSet):
     bulk_edit_form = forms.CircuitBulkEditForm
     lookup_field = "pk"
 
-
     def get_extra_context(self, request, view_type, instance):
         if view_type == "detail":
             # A-side termination
