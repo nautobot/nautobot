@@ -21,7 +21,6 @@ __all__ = (
     "BulkRenameForm",
     "ConfirmationForm",
     "CSVModelForm",
-    "FilterConfigForm",
     "ImportForm",
     "LookUpFilterForm",
     "PrefixFieldMixin",
@@ -339,32 +338,6 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
-
-
-class FilterConfigForm(BootstrapMixin, forms.Form):
-    """
-    Form for configuring user's filter form preferences.
-    """
-
-    columns = forms.MultipleChoiceField(
-        choices=[],
-        required=False,
-        widget=forms.SelectMultiple(attrs={"size": 10}),
-        help_text="Use the buttons below to arrange columns in the desired order, then select all columns to display.",
-    )
-
-    def __init__(self, form, *args, **kwargs):
-        self.form = form
-
-        super().__init__(*args, **kwargs)
-
-        # Initialize columns field based on table attributes
-        self.fields["columns"].choices = form.columns_sequence
-        self.fields["columns"].initial = form.selected_fields
-
-    @property
-    def form_name(self):
-        return self.form.__class__.__name__
 
 
 class SelectWidgetWithConfigurableOptions(forms.Select):

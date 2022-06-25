@@ -10,53 +10,29 @@
             </div>
             <div class="modal-body">
                 <form class="form-horizontal userconfigform" data-config-root="">
-                    <ul class="nav nav-tabs">
-                        <li role="presentation" class="active">
-                            <a href="{{ object.get_absolute_url }}#main" aria-controls="main" role="tab" data-toggle="tab">
-                                Filter Form
-                            </a>
-                        </li>
-                        <li role="presentation">
-                            <a href="{{ object.get_absolute_url }}#advanced" aria-controls="advanced" role="tab" data-toggle="tab">
-                                Lookup Form
-                            </a>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <div id="main" role="tabpanel" class="tab-pane active">
-
-                            <div class="">
-                                <table class="table" id="secrets" style="table-layout: fixed;">
-                                    {{ lookup_filter_form.management_form }}
-                                    {% for form in lookup_filter_form %}
-                                        {% if forloop.first %}
-                                            <thead>
-                                                <tr>
-                                                    {% for field in form.visible_fields %}
-                                                        <th>{{ field.label|capfirst }}</th>
-                                                    {% endfor %}
-                                                </tr>
-                                            </thead>
-                                        {% endif %}
-                                        <tr class="formset_row-{{ lookup_filter_form.prefix }}">
+                    <div class="">
+                        <table class="table" id="secrets" style="table-layout: fixed;">
+                            {{ lookup_filter_form.management_form }}
+                            {% for form in lookup_filter_form %}
+                                {% if forloop.first %}
+                                    <thead>
+                                        <tr>
                                             {% for field in form.visible_fields %}
-                                                <td>
-                                                    {{ field }}
-                                                </td>
+                                                <th>{{ field.label|capfirst }}</th>
                                             {% endfor %}
                                         </tr>
+                                    </thead>
+                                {% endif %}
+                                <tr class="formset_row-{{ lookup_filter_form.prefix }}">
+                                    {% for field in form.visible_fields %}
+                                        <td>
+                                            {{ field }}
+                                        </td>
                                     {% endfor %}
-                                </table>
-                            </div>
-
-                        </div>
-                        <div id="advanced" role="tabpanel" class="tab-pane">
-                            {% render_form filter_form %}
-                        </div>
+                                </tr>
+                            {% endfor %}
+                        </table>
                     </div>
-
-
 
                     <div class="text-right noprint">
                         <button type="submit" class="btn btn-info">
