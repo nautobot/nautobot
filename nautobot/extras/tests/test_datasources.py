@@ -47,6 +47,7 @@ class GitTest(TransactionTestCase):
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
 
     def setUp(self):
+        super().setUp()
         # Repopulate custom statuses between test cases, as TransactionTestCase deletes them during cleanup
         create_custom_statuses(None, verbosity=0)
 
