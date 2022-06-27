@@ -356,8 +356,8 @@ class JobTest(TransactionTestCase):
         name = "TestPass"
         job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
-        job = Job.objects.get(id=job_result.job_id)
-        latest_job_result = job.results.first()
+        job_class, job_model = get_job_class_and_model(module, name)
+        latest_job_result = job_model.results.first()
         self.assertEqual(job_result.completed, latest_job_result.completed)
 
 
