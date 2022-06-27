@@ -453,16 +453,20 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         """The specified location (if any) must belong to the specified site."""
         self.add_permissions("dcim.add_rackgroup")
         url = reverse("dcim-api:rackgroup-list")
+        location = Location.objects.create(
+            name="Peer Location", location_type=LocationType.objects.first(), site=self.sites[0], status=self.active
+        )
         data = {
             "name": "Bad Group",
             "parent": self.parent_rack_groups[1].pk,
-            "site": self.sites[0].pk,
-            "location": self.locations[1].pk,
+            "site": self.sites[1].pk,
+            "location": location.pk,
         }
 
         response = self.client.post(url, **self.header, data=data, format="json")
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["location"], ['Location "Location 2" does not belong to site "Site 1".'])
+        self.assertIn("location", response.json())
+        self.assertEqual(response.json()["location"], ['Location "Peer Location" does not belong to site "Site 2".'])
 
     def test_child_group_location_valid(self):
         """A child group with a location may fall within the parent group's location."""
@@ -473,6 +477,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         child_location_type = LocationType.objects.create(
             name="Child Location Type", parent=self.locations[0].location_type
         )
+        child_location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
         child_location = Location.objects.create(
             name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.active
         )
