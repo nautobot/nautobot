@@ -162,8 +162,6 @@ def get_worker_count(request=None):
     """
     # Inner imports so we don't risk circular imports
     from nautobot.core.celery import app  # noqa
-    from rq.worker import Worker  # noqa
-    from django_rq.queues import get_connection  # noqa
 
     # Celery next, since it's slower.
     inspect = app.control.inspect()
