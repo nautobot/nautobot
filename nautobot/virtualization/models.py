@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -183,9 +184,17 @@ class Cluster(PrimaryModel):
     def clean(self):
         super().clean()
 
-        # Validate site/location combination
-        if self.location is not None and self.site is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+        # Validate location
+        if self.location is not None:
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
+                )
 
         # If the Cluster is assigned to a Site, verify that all host Devices belong to that Site.
         if self.present_in_database and self.site:
@@ -196,6 +205,22 @@ class Cluster(PrimaryModel):
                         "site": "{} devices are assigned as hosts for this cluster but are not in site {}".format(
                             nonsite_devices, self.site
                         )
+                    }
+                )
+
+        # Likewise, verify that host Devices match Location of this Cluster if any
+        if self.present_in_database and self.location is not None:
+            nonlocation_devices = (
+                Device.objects.filter(cluster=self)
+                .exclude(location=self.location)
+                .exclude(location__isnull=True)
+                .count()
+            )
+            if nonlocation_devices:
+                raise ValidationError(
+                    {
+                        "location": f"{nonlocation_devices} devices are assigned as hosts for this cluster "
+                        f'but belong to a location other than "{self.location}".'
                     }
                 )
 
