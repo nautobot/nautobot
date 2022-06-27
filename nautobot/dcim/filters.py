@@ -1028,6 +1028,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Has pass-through ports",
     )
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="frontports",
         natural_key="name",
         queryset=FrontPort.objects.all(),
         label="Front ports (name or ID)",
@@ -1037,6 +1038,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Has front ports",
     )
     rear_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="rearports",
         natural_key="name",
         queryset=RearPort.objects.all(),
         label="Rear ports (name or ID)",
@@ -1050,15 +1052,13 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Has device bays",
     )
     device_bays = has_device_bays
-    primary_ip4 = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="host",
+    primary_ip4 = django_filters.ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
-        label="IPv4 address (host or ID)",
+        label="IPv4 address (ID)",
     )
-    primary_ip6 = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="host",
+    primary_ip6 = django_filters.ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
-        label="IPv6 address (host or ID)",
+        label="IPv6 address (ID)",
     )
     parent_bay = NaturalKeyOrPKMultipleChoiceFilter(
         natural_key="name",
@@ -1066,12 +1066,13 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Parent device bay (name or ID)",
     )
     inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="inventoryitems",
         natural_key="name",
         queryset=InventoryItem.objects.all(),
         label="Inventory items (name or ID)",
     )
     has_inventory_items = RelatedMembershipBooleanFilter(
-        field_name="inventory_items",
+        field_name="inventoryitems",
         label="Has inventory items",
     )
     vc_master_for = NaturalKeyOrPKMultipleChoiceFilter(

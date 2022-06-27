@@ -88,7 +88,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.extras.models import SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
@@ -2007,32 +2007,47 @@ class DeviceTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
+        devices = Device.objects.exclude(name="Device 3")
+
         # Components for filtering
         ConsolePort.objects.first().delete()
         ConsoleServerPort.objects.first().delete()
-        DeviceBay.objects.first().delete()
+        DeviceBay.objects.get(name="Device Bay 3").delete()
         Interface.objects.get(name="Interface 3").delete()
         PowerPort.objects.first().delete()
         PowerOutlet.objects.first().delete()
         RearPort.objects.first().delete()
+        InventoryItem.objects.create(device=devices[0], name="Inventory Item 1")
+        InventoryItem.objects.create(device=devices[1], name="Inventory Item 2")
+        Service.objects.create(device=devices[0], name="ssh", protocol="tcp", ports=[22])
+        Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
         # Assign primary IPs for filtering
-        devices = Device.objects.exclude(name="Device 3")
         interfaces = Interface.objects.all()
         ipaddresses = (
             IPAddress.objects.create(address="192.0.2.1/24", assigned_object=interfaces[0]),
             IPAddress.objects.create(address="192.0.2.2/24", assigned_object=interfaces[1]),
+            IPAddress.objects.create(address="2600::1/120", assigned_object=interfaces[0]),
+            IPAddress.objects.create(address="2600::0100/120", assigned_object=interfaces[1]),
         )
 
-        Device.objects.filter(pk=devices[0].pk).update(primary_ip4=ipaddresses[0])
-        Device.objects.filter(pk=devices[1].pk).update(primary_ip4=ipaddresses[1])
+        Device.objects.filter(pk=devices[0].pk).update(
+            primary_ip4=ipaddresses[0],
+            primary_ip6=ipaddresses[2],
+            comments="Comment A",
+        )
+        Device.objects.filter(pk=devices[1].pk).update(
+            primary_ip4=ipaddresses[1],
+            primary_ip6=ipaddresses[3],
+            comments="Comment B",
+        )
 
         # Update existing interface objects with mac addresses for filtering
         Interface.objects.filter(pk=interfaces[0].pk).update(mac_address="00-00-00-00-00-01")
         Interface.objects.filter(pk=interfaces[1].pk).update(mac_address="00-00-00-00-00-02")
 
         # VirtualChassis assignment for filtering
-        virtual_chassis = VirtualChassis.objects.create(master=devices[0])
+        virtual_chassis = VirtualChassis.objects.create(name="vc1", master=devices[0])
         Device.objects.filter(pk=devices[0].pk).update(virtual_chassis=virtual_chassis, vc_position=1, vc_priority=1)
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis, vc_position=2, vc_priority=2)
 
@@ -2123,6 +2138,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase):
         clusters = Cluster.objects.all()[:2]
         params = {"cluster_id": [clusters[0].pk, clusters[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"cluster": [clusters[0].pk, clusters[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_model(self):
         params = {"model": ["model-1", "model-2"]}
@@ -2154,8 +2171,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase):
         params = {"has_primary_ip": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_virtual_chassis_id(self):
+    def test_virtual_chassis(self):
         params = {"virtual_chassis_id": [VirtualChassis.objects.first().pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"virtual_chassis": [VirtualChassis.objects.first().pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"virtual_chassis": [VirtualChassis.objects.first().name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_virtual_chassis_member(self):
@@ -2295,25 +2316,103 @@ class DeviceTestCase(FilterTestCases.FilterTestCase):
         params = {"device_role": [device_role[0].pk, device_role[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    # not working yet
-    # def test_primary_ip4(self):
-    #     ipv4_addresses = IPAddress.objects.all()[:2]
-    #     params = {"primary_ip4": [ipv4_addresses[0].pk, ipv4_addresses[1].pk]}
-    #     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+    def test_primary_ip4(self):
+        ipv4_addresses = IPAddress.objects.filter(prefix_length=24)[:2]
+        params = {"primary_ip4": [ipv4_addresses[0].pk, ipv4_addresses[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    # TODO: Add filter tests for
-    # primary_ip6
-    # cluster
-    # virtual_chassis
-    # comments
-    # frontports
-    # rearports
-    # parent_bay
-    # inventoryitems
-    # has_inventoryitems
-    # vc_master_for
-    # services
-    # has_services
+    def test_primary_ip6(self):
+        ipv6_addresses = IPAddress.objects.filter(prefix_length=120)[:2]
+        params = {"primary_ip6": [ipv6_addresses[0].pk, ipv6_addresses[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_comments(self):
+        params = {"comments": ["Comment A", "Comment B"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_front_ports(self):
+        front_ports = FrontPort.objects.all()[:2]
+        params = {"front_ports": [front_ports[0].pk, front_ports[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rear_ports(self):
+        rear_ports = RearPort.objects.all()[:2]
+        params = {"rear_ports": [rear_ports[0].pk, rear_ports[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_parent_bay(self):
+        site = Site.objects.first()
+        role = DeviceRole.objects.first()
+        device_statuses = Status.objects.get_for_model(Device)
+        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
+        parent_type = DeviceType.objects.get(slug="model-2")
+        child_type = DeviceType.objects.get(slug="model-3")
+        Device.objects.create(
+            name="Parent 2",
+            site=site,
+            device_role=role,
+            device_type=parent_type,
+            status=device_status_map["active"],
+        )
+        child_devices = (
+            Device.objects.create(
+                name="Child 1",
+                site=site,
+                device_role=role,
+                device_type=child_type,
+                status=device_status_map["active"],
+            ),
+            Device.objects.create(
+                name="Child 2",
+                site=site,
+                device_role=role,
+                device_type=child_type,
+                status=device_status_map["active"],
+            ),
+        )
+        parent_bays = list(DeviceBay.objects.filter(name="Device Bay 2"))
+        parent_bays[0].installed_device = child_devices[0]
+        parent_bays[1].installed_device = child_devices[1]
+        parent_bays[0].save()
+        parent_bays[1].save()
+        params = {"parent_bay": [parent_bays[0].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"parent_bay": ["Device Bay 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_inventory_items(self):
+        inventory_items = InventoryItem.objects.all()[:2]
+        params = {"inventory_items": [inventory_items[0].pk, inventory_items[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_inventory_items(self):
+        params = {"has_inventory_items": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_inventory_items": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_vc_master_for(self):
+        vc_master_2 = Device.objects.create(
+            name="VC Master 2",
+            site=Site.objects.first(),
+            device_role=DeviceRole.objects.first(),
+            device_type=DeviceType.objects.first(),
+        )
+        VirtualChassis.objects.create(name="vc2", master=vc_master_2)
+        vc_master_for = list(VirtualChassis.objects.all()[:2])
+        params = {"vc_master_for": [vc_master_for[0].pk, vc_master_for[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_services(self):
+        services = Service.objects.all()[:2]
+        params = {"services": [services[0].pk, services[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_services(self):
+        params = {"has_services": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_services": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConsolePortTestCase(FilterTestCases.FilterTestCase):
