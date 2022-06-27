@@ -585,9 +585,17 @@ class Prefix(PrimaryModel, StatusModel):
                         }
                     )
 
-        # Validate site/location combination
-        if self.location is not None and self.site is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+        # Validate location
+        if self.location is not None:
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
+                )
 
     def save(self, *args, **kwargs):
 
@@ -1065,9 +1073,17 @@ class VLANGroup(OrganizationalModel):
     def clean(self):
         super().clean()
 
-        # Validate site/location combination
-        if self.location is not None and self.site is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+        # Validate location
+        if self.location is not None:
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
+                )
 
     def __str__(self):
         return self.name
@@ -1202,9 +1218,17 @@ class VLAN(PrimaryModel, StatusModel):
     def clean(self):
         super().clean()
 
-        # Validate site/location combination
-        if self.location is not None and self.site is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+        # Validate location
+        if self.location is not None:
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
+                )
 
         # Validate VLAN group
         if self.group and self.group.site != self.site:
@@ -1217,7 +1241,7 @@ class VLAN(PrimaryModel, StatusModel):
             and self.group.location not in self.location.ancestors(include_self=True)
         ):
             raise ValidationError(
-                {"group": f"The assigned group belongs to a location that does not include {self.location}."}
+                {"group": f'The assigned group belongs to a location that does not include location "{self.location}".'}
             )
 
     def to_csv(self):
