@@ -145,7 +145,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#1896](https://github.com/nautobot/nautobot/pull/1856) - Added Renovate Bot configuration, targeting `next`.
-- [#1900](https://github.com/nautobot/nautobot/issues/1900) - Added ability to filter repository based on provided contents.
+- [#1900](https://github.com/nautobot/nautobot/issues/1900) - Added ability to filter Git repository table based on provided contents.
 
 ### Changed
 
@@ -158,7 +158,6 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1769](https://github.com/nautobot/nautobot/issues/1769) - Resolve missing menu 'General / Installed Plugins' in navbar if `HIDE_RESTRICTED_UI` is activated
 - [#1836](https://github.com/nautobot/nautobot/issues/1836) - Fixed incorrect pre-population of custom field filters in table views.
 - [#1870](https://github.com/nautobot/nautobot/issues/1870) - Fixed cable `_abs_length` validation error.
-- [#1903](https://github.com/nautobot/nautobot/issues/1903) - Fixed populating default value of FilterForms.
 - [#1941](https://github.com/nautobot/nautobot/pull/1941) - Fixes uWSGI config example, development environment links in Docker section of docs.
 
 ## v1.3.6 (2022-06-13)
