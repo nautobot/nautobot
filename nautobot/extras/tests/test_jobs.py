@@ -352,8 +352,8 @@ class JobTest(TransactionTestCase):
         """
         Job test to see if the latest_result property is indeed returning the most recent job result
         """
-        module = "test_latest_property"
-        name = "TestLatestProperty"
+        module = "test_pass"
+        name = "TestPass"
         job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
         job = Job.objects.get(id=job_result.job_id)
