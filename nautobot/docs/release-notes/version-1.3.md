@@ -150,6 +150,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#1645](https://github.com/nautobot/nautobot/issues/1645) - Hide search bar for unauthenticated users if `HIDE_RESTRICTED_UI` is True
+- [#1946](https://github.com/nautobot/nautobot/pull/1946) - Increase character limit on `FileAttachment.mimetype` to 255 to allow for all mime types to be used.
 - [#1948](https://github.com/nautobot/nautobot/issues/1948) - Switched Renovate Bot configuration to bump lock-file only on patch releases instead of bumping in `pyproject.toml`.
 
 ### Fixed
