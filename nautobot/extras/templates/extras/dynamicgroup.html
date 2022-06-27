@@ -1,6 +1,24 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
 
+{% block extra_nav_tabs %}
+        <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href)" aria-controls="members" role="tab" data-toggle="tab">
+                Members
+            </a>
+        </li>
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+        <div id="members" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "members" %}active{% else %}fade{% endif %}">
+            <div class="row">
+                <div class="col-md-12">
+                    {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Dynamic Group members' %}
+                </div>
+            </div>
+        </div>
+{% endblock extra_tab_content %}
+
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -25,6 +43,9 @@
             </tr>
         </table>
     </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Filter</strong>
@@ -33,6 +54,9 @@
             <pre>{{ object.filter | render_json }}</pre>
         </div>
     </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Child Groups</strong>
@@ -43,8 +67,5 @@
            {% include 'utilities/obj_table.html' with table=ancestors_table table_template='panel_table.html' heading='Ancestors' no_paginate=True %}
         </div>
     </div>
-{% endblock content_left_page %}
 
-{% block content_right_page %}
-    {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Dynamic Group members' %}
-{% endblock content_right_page %}
+{% endblock content_full_width_page %}
