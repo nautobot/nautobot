@@ -696,6 +696,9 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
         re-using some of that method's existing logic and adding support for coupling this field with
         multiple model fields.
         """
+        null = self.null_label is not None and values and self.null_value in values
+        if null:
+            values = [v for v in values if v != self.null_value]
         # deduplicate given values to avoid creating many querysets or
         # requiring the database backend deduplicate efficiently.
         try:
@@ -726,4 +729,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
                 )
         query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": values})
         qs = self.queryset.filter(query)
-        return qs
+        result = list(qs)
+        if null:
+            result += [self.null_value]
+        return result
