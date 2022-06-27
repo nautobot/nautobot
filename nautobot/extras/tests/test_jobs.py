@@ -348,6 +348,18 @@ class JobTest(TransactionTestCase):
         ).first()
         self.assertIn("Data should be a dictionary", log_failure.message)
 
+    def test_job_latest_result_property(self):
+        """
+        Job test to see if the latest_result property is indeed returning the most recent job result
+        """
+        module = "test_latest_property"
+        name = "TestLatestProperty"
+        job_result = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        job = Job.objects.get(id=job_result.job_id)
+        latest_job_result = job.results.first()
+        self.assertEqual(job_result.completed, latest_job_result.completed)
+
 
 class JobFileUploadTest(TransactionTestCase):
     """Test a job that uploads/deletes files."""
