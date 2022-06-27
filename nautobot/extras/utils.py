@@ -163,7 +163,7 @@ def get_worker_count(request=None):
     # Inner imports so we don't risk circular imports
     from nautobot.core.celery import app  # noqa
 
-    # Celery next, since it's slower.
+    # Count the number of active celery workers
     inspect = app.control.inspect()
     active = inspect.active()  # None if no active workers
     celery_count = len(active) if active is not None else 0
