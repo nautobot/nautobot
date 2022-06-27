@@ -689,9 +689,9 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         child_region_1a = Region.objects.get(slug="region-1a")
         child_region_1b = Region.objects.get(slug="region-1b")
         child_region_2a = Region.objects.get(slug="region-2a")
-        params = {"children": [child_region_1a.pk, child_region_1b.slug]}
+        params = {"children": [child_region_1a.pk, child_region_1b.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"children": [child_region_1a.slug, child_region_2a.pk]}
+        params = {"children": [child_region_1a.pk, child_region_2a.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_children(self):
@@ -823,7 +823,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_rack_groups(self):
         rack_groups = RackGroup.objects.all()[:2]
-        params = {"rack_groups": [rack_groups[0].pk, rack_groups[1].slug]}
+        params = {"rack_groups": [rack_groups[0].pk, rack_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_rack_groups(self):
@@ -977,10 +977,10 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_children(self):
         child_groups = RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2]
-        params = {"children": [child_groups[0].pk, child_groups[1].slug]}
+        params = {"children": [child_groups[0].pk, child_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         rack_group_4 = RackGroup.objects.filter(slug="rack-group-4").first()
-        params = {"children": [rack_group_4.slug, rack_group_4.pk]}
+        params = {"children": [rack_group_4.pk, rack_group_4.pk]}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_has_children(self):
@@ -1288,7 +1288,7 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_inventory_items(self):
         inventory_items = InventoryItem.objects.all()[:2]
-        params = {"inventory_items": [inventory_items[0].pk, inventory_items[1].name]}
+        params = {"inventory_items": [inventory_items[0].pk, inventory_items[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_inventory_items(self):
@@ -3742,7 +3742,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
 
     def test_child_items(self):
         child_items = InventoryItem.objects.filter(parent__isnull=False)[:2]
-        params = {"child_items": [child_items[0].pk, child_items[1].name]}
+        params = {"child_items": [child_items[0].pk, child_items[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_child_items(self):
@@ -4164,7 +4164,7 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
         rack_groups = RackGroup.objects.all()[:2]
         params = {"rack_group_id": [rack_groups[0].pk, rack_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"rack_group": [rack_groups[0].slug, rack_groups[1].pk]}
+        params = {"rack_group": [rack_groups[0].pk, rack_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_power_feeds(self):

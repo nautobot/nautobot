@@ -127,9 +127,10 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent region (slug)",
     )
-    children = NaturalKeyOrPKMultipleChoiceFilter(
+    children = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        label="Children (slug or ID)",
+        lookup_expr="in",
+        label="Children (ID)",
     )
     has_children = RelatedMembershipBooleanFilter(
         field_name="children",
@@ -199,9 +200,10 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="powerpanel",
         label="Has power panels",
     )
-    rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
+    rack_groups = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Rack groups (slug or ID)",
+        lookup_expr="in",
+        label="Rack groups (ID)",
     )
     has_rack_groups = RelatedMembershipBooleanFilter(
         field_name="rack_groups",
@@ -298,9 +300,10 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent (slug)",
     )
-    children = NaturalKeyOrPKMultipleChoiceFilter(
+    children = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Children (slug or ID)",
+        lookup_expr="in",
+        label="Children (ID)",
     )
     has_children = RelatedMembershipBooleanFilter(
         field_name="children",
@@ -499,10 +502,10 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
 
 
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+    inventory_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
-        label="Inventory items (name or ID)",
+        lookup_expr="in",
+        label="Inventory items (ID)",
     )
     has_inventory_items = RelatedMembershipBooleanFilter(
         field_name="inventory_items",
@@ -1065,11 +1068,11 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=DeviceBay.objects.all(),
         label="Parent device bay (name or ID)",
     )
-    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="inventoryitems",
-        natural_key="name",
+    inventory_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
-        label="Inventory items (name or ID)",
+        field_name="inventoryitems",
+        lookup_expr="in",
+        label="Inventory items (ID)",
     )
     has_inventory_items = RelatedMembershipBooleanFilter(
         field_name="inventoryitems",
@@ -1515,10 +1518,10 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         to_field_name="slug",
         label="Manufacturer (slug)",
     )
-    child_items = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+    child_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
-        label="Child items",
+        lookup_expr="in",
+        label="Child items (ID)",
     )
     has_child_items = RelatedMembershipBooleanFilter(
         field_name="child_items",
@@ -1723,9 +1726,10 @@ class PowerPanelFilterSet(NautobotFilterSet):
         lookup_expr="in",
         label="Rack group (ID)",
     )
-    rack_group = NaturalKeyOrPKMultipleChoiceFilter(
+    rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Rack group (slug or ID)",
+        lookup_expr="in",
+        label="Rack group (ID)",
     )
     power_feeds = django_filters.ModelMultipleChoiceFilter(
         field_name="powerfeeds",
