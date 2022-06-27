@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -72,9 +73,20 @@ class PowerPanel(PrimaryModel):
     def clean(self):
         super().clean()
 
-        # Validate site/location combination
-        if self.location is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {
+                        "location": "Power panels may not associate to locations of type "
+                        f'"{self.location.location_type}".'
+                    }
+                )
 
         # RackGroup must belong to assigned Site and Location
         if self.rack_group:
@@ -91,8 +103,8 @@ class PowerPanel(PrimaryModel):
             ):
                 raise ValidationError(
                     {
-                        "rack_group": f"Rack group {self.rack_group} belongs to a location "
-                        f"that does not include {self.location}."
+                        "rack_group": f'Rack group "{self.rack_group}" belongs to a location '
+                        f'("{self.rack_group.location}") that does not contain "{self.location}".'
                     }
                 )
 

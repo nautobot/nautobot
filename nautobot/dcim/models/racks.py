@@ -112,27 +112,34 @@ class RackGroup(MPTTModel, OrganizationalModel):
     def clean(self):
         super().clean()
 
-        # Validate site/location combination:
-        if self.location is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f'Location "{self.location}" does not belong to site "{self.site}".'})
-
         # Parent RackGroup (if any) must belong to the same Site
         if self.parent and self.parent.site != self.site:
             raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
 
-        # Parent RackGroup (if any) must belong to the same or ancestor Location
-        if (
-            self.parent is not None
-            and self.location is not None
-            and self.parent.location is not None
-            and self.parent.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {
-                    "location": f'Location "{self.location}" is not descended from '
-                    f'parent rack group "{self.parent}" location "{self.parent.location}".'
-                }
-            )
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Rack groups may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+            # Parent RackGroup (if any) must belong to the same or ancestor Location
+            if (
+                self.parent is not None
+                and self.parent.location is not None
+                and self.parent.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "location": f'Location "{self.location}" is not descended from '
+                        f'parent rack group "{self.parent}" location "{self.parent.location}".'
+                    }
+                )
 
 
 @extras_features(
@@ -321,24 +328,34 @@ class Rack(PrimaryModel, StatusModel):
     def clean(self):
         super().clean()
 
-        # Validate site/location combination
-        if self.location is not None and self.location.base_site != self.site:
-            raise ValidationError({"location": f"Location {self.location} does not belong to site {self.site}."})
-
         # Validate group/site assignment
         if self.site and self.group and self.group.site != self.site:
             raise ValidationError(f"Assigned rack group must belong to parent site ({self.site}).")
 
-        # Validate group/location assignment
-        if (
-            self.group is not None
-            and self.location is not None
-            and self.group.location is not None
-            and self.group.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {"group": f"The assigned rack group belongs to a location that does not include {self.location}."}
-            )
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            # Validate group/location assignment
+            if (
+                self.group is not None
+                and self.group.location is not None
+                and self.group.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "group": f'The assigned rack group "{self.group}" belongs to a location '
+                        f'("{self.group.location}") that does not include location "{self.location}".'
+                    }
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Racks may not associate to locations of type "{self.location.location_type}".'}
+                )
 
         # Validate outer dimensions and unit
         if (self.outer_width is not None or self.outer_depth is not None) and not self.outer_unit:

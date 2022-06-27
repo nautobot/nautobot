@@ -38,52 +38,166 @@ from nautobot.tenancy.models import Tenant
 
 
 class RackGroupTestCase(TestCase):
-    def test_change_rackgroup_site(self):
+    def setUp(self):
         """
-        Check that all child RackGroups and Racks get updated when a RackGroup is moved to a new Site. Topology:
-        Site A
+        Site A (Location A)
           - RackGroup A1
             - RackGroup A2
               - Rack 2
             - Rack 1
+            - PowerPanel 1
         """
-        site_a = Site.objects.create(name="Site A", slug="site-a")
+        self.site_a = Site.objects.create(name="Site A", slug="site-a")
+
+        self.location_type_a = LocationType.objects.create(name="Location Type A")
+        self.location_type_a.content_types.add(
+            ContentType.objects.get_for_model(RackGroup),
+            ContentType.objects.get_for_model(Rack),
+            ContentType.objects.get_for_model(PowerPanel),
+        )
+        self.location_a = Location.objects.create(
+            name="Location A", location_type=self.location_type_a, site=self.site_a
+        )
+
+        self.rackgroup_a1 = RackGroup(
+            site=self.site_a, location=self.location_a, name="RackGroup A1", slug="rackgroup-a1"
+        )
+        self.rackgroup_a1.save()
+        self.rackgroup_a2 = RackGroup(
+            site=self.site_a, location=self.location_a, parent=self.rackgroup_a1, name="RackGroup A2"
+        )
+        self.rackgroup_a2.save()
+
+        self.rack1 = Rack.objects.create(
+            site=self.site_a, location=self.location_a, group=self.rackgroup_a1, name="Rack 1"
+        )
+        self.rack2 = Rack.objects.create(
+            site=self.site_a, location=self.location_a, group=self.rackgroup_a2, name="Rack 2"
+        )
+
+        self.powerpanel1 = PowerPanel.objects.create(
+            site=self.site_a, location=self.location_a, rack_group=self.rackgroup_a1, name="Power Panel 1"
+        )
+
+    def test_rackgroup_location_validation(self):
+        """Check that rack group locations are validated correctly."""
+        # Child group cannot belong to a different site than its parent
+        site_b = Site.objects.create(name="Site B", slug="site-b")
+        child = RackGroup(site=site_b, parent=self.rackgroup_a1, name="Child Group")
+        with self.assertRaises(ValidationError) as cm:
+            child.validated_save()
+        self.assertIn("must belong to the same site", str(cm.exception))
+
+        # Group location, if specified, must belong to the right site
+        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a, site=site_b)
+        child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_b, name="Child Group")
+        with self.assertRaises(ValidationError) as cm:
+            child.validated_save()
+        self.assertIn('Location "Location B" does not belong to site "Site A"', str(cm.exception))
+
+        # Group location, if specified, must permit RackGroups
+        location_type_c = LocationType.objects.create(name="Location Type C")
+        location_c = Location.objects.create(name="Location C", location_type=location_type_c, site=self.site_a)
+        child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_c, name="Child Group")
+        with self.assertRaises(ValidationError) as cm:
+            child.validated_save()
+        self.assertIn('Rack groups may not associate to locations of type "Location Type C"', str(cm.exception))
+
+        # Child group location must descend from parent group location
+        location_type_d = LocationType.objects.create(name="Location Type D", parent=location_type_c)
+        location_type_d.content_types.add(ContentType.objects.get_for_model(RackGroup))
+        location_d = Location.objects.create(name="Location D", location_type=location_type_d, parent=location_c)
+        child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_d, name="Child Group")
+        with self.assertRaises(ValidationError) as cm:
+            child.validated_save()
+        self.assertIn(
+            'Location "Location D" is not descended from parent rack group "RackGroup A1" location "Location A"',
+            str(cm.exception),
+        )
+
+    def test_change_rackgroup_site(self):
+        """
+        Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup is moved to a new Site.
+        """
         site_b = Site.objects.create(name="Site B", slug="site-b")
 
-        rackgroup_a1 = RackGroup(site=site_a, name="RackGroup A1", slug="rackgroup-a1")
-        rackgroup_a1.save()
-        rackgroup_a2 = RackGroup(site=site_a, parent=rackgroup_a1, name="RackGroup A2", slug="rackgroup-a2")
-        rackgroup_a2.save()
-
-        rack1 = Rack.objects.create(site=site_a, group=rackgroup_a1, name="Rack 1")
-        rack2 = Rack.objects.create(site=site_a, group=rackgroup_a2, name="Rack 2")
-
-        powerpanel1 = PowerPanel.objects.create(site=site_a, rack_group=rackgroup_a1, name="Power Panel 1")
-
         # Move RackGroup A1 to Site B
-        rackgroup_a1.site = site_b
-        rackgroup_a1.save()
+        self.rackgroup_a1.site = site_b
+        self.rackgroup_a1.location = None
+        self.rackgroup_a1.save()
 
-        # Check that all objects within RackGroup A1 now belong to Site B
-        self.assertEqual(RackGroup.objects.get(pk=rackgroup_a1.pk).site, site_b)
-        self.assertEqual(RackGroup.objects.get(pk=rackgroup_a2.pk).site, site_b)
-        self.assertEqual(Rack.objects.get(pk=rack1.pk).site, site_b)
-        self.assertEqual(Rack.objects.get(pk=rack2.pk).site, site_b)
-        self.assertEqual(PowerPanel.objects.get(pk=powerpanel1.pk).site, site_b)
+        # Check that all objects within RackGroup A1 now belong to Site B and no location
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).site, site_b)
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).location, None)
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).site, site_b)
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, None)
+        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).site, site_b)
+        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, None)
+        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).site, site_b)
+        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, None)
+        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).site, site_b)
+        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, None)
+
+    def test_change_rackgroup_location_children_permitted(self):
+        """
+        Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup changes Locations.
+
+        In this test, the new Location permits Racks and PowerPanels so the Location should match.
+        """
+        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a, site=self.site_a)
+
+        self.rackgroup_a1.location = location_b
+        self.rackgroup_a1.save()
+
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).location, location_b)
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, location_b)
+        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, location_b)
+        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, location_b)
+        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, location_b)
+
+    def test_change_rackgroup_location_children_not_permitted(self):
+        """
+        Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup changes Locations.
+
+        In this test, the new location does not permit Racks and PowerPanels so the Location should be nulled.
+        """
+        location_type_c = LocationType.objects.create(name="Location Type C", parent=self.location_type_a)
+        location_type_c.content_types.add(ContentType.objects.get_for_model(RackGroup))
+        location_c = Location.objects.create(name="Location C", location_type=location_type_c, parent=self.location_a)
+
+        self.rackgroup_a1.location = location_c
+        self.rackgroup_a1.save()
+
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).location, location_c)
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, location_c)
+        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, None)
+        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, None)
+        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, None)
 
 
 class RackTestCase(TestCase):
     def setUp(self):
 
         self.status = Status.objects.get_for_model(Rack).first()
+        self.location_type_a = LocationType.objects.create(name="Location Type A")
+        self.location_type_a.content_types.add(
+            ContentType.objects.get_for_model(RackGroup),
+            ContentType.objects.get_for_model(Rack),
+            ContentType.objects.get_for_model(Device),
+        )
+
         self.site1 = Site.objects.create(name="TestSite1", slug="test-site-1")
+        self.location1 = Location.objects.create(name="Location1", location_type=self.location_type_a, site=self.site1)
         self.site2 = Site.objects.create(name="TestSite2", slug="test-site-2")
-        self.group1 = RackGroup.objects.create(name="TestGroup1", slug="test-group-1", site=self.site1)
+        self.group1 = RackGroup.objects.create(
+            name="TestGroup1", slug="test-group-1", site=self.site1, location=self.location1
+        )
         self.group2 = RackGroup.objects.create(name="TestGroup2", slug="test-group-2", site=self.site2)
         self.rack = Rack.objects.create(
             name="TestRack1",
             facility_id="A101",
             site=self.site1,
+            location=self.location1,
             group=self.group1,
             status=self.status,
             u_height=42,
@@ -209,24 +323,114 @@ class RackTestCase(TestCase):
         Check that child Devices get updated when a Rack is moved to a new Site.
         """
         site_a = Site.objects.create(name="Site A", slug="site-a")
+        location_a = Location.objects.create(name="Location A", location_type=self.location_type_a, site=site_a)
         site_b = Site.objects.create(name="Site B", slug="site-b")
+        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a, site=site_b)
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
 
-        # Create Rack1 in Site A
-        rack1 = Rack.objects.create(site=site_a, name="Rack 1", status=self.status)
+        # Create Rack1 in Site A and Location A
+        rack1 = Rack.objects.create(site=site_a, location=location_a, name="Rack 1", status=self.status)
 
-        # Create Device1 in Rack1
-        device1 = Device.objects.create(site=site_a, rack=rack1, device_type=device_type, device_role=device_role)
+        # Create Device1 in Rack1 and Location A
+        device1 = Device.objects.create(
+            site=site_a, location=location_a, rack=rack1, device_type=device_type, device_role=device_role
+        )
 
-        # Move Rack1 to Site B
+        # Move Rack1 to Site B and Location B
         rack1.site = site_b
+        rack1.location = location_b
         rack1.save()
 
-        # Check that Device1 is now assigned to Site B
+        # Check that Device1 is now assigned to Site B and Location B
         self.assertEqual(Device.objects.get(pk=device1.pk).site, site_b)
+        self.assertEqual(Device.objects.get(pk=device1.pk).location, location_b)
+
+    def test_change_rack_location_devices_permitted(self):
+        """
+        Check that changing a Rack's Location also affects child Devices.
+
+        In this test, the new Location also permits Devices.
+        """
+        # Device1 is explicitly assigned to the same location as the Rack
+        device1 = Device.objects.create(
+            site=self.site1,
+            location=self.location1,
+            rack=self.rack,
+            device_type=self.device_type["cc5000"],
+            device_role=self.role["Switch"],
+        )
+        # Device2 is defaulted to a null Location
+        device2 = Device.objects.create(
+            site=self.site1,
+            rack=self.rack,
+            device_type=self.device_type["cc5000"],
+            device_role=self.role["Switch"],
+        )
+
+        # Move self.rack to a new location
+        location2 = Location.objects.create(name="Location2", location_type=self.location_type_a, site=self.site1)
+        self.rack.location = location2
+        self.rack.save()
+
+        self.assertEqual(Device.objects.get(pk=device1.pk).location, location2)
+        self.assertEqual(Device.objects.get(pk=device2.pk).location, None)
+
+    def test_change_rack_location_devices_not_permitted(self):
+        """
+        Check that changing a Rack's Location also affects child Devices.
+
+        In this test, the new Location does not permit Devices.
+        """
+        device1 = Device.objects.create(
+            site=self.site1,
+            location=self.location1,
+            rack=self.rack,
+            device_type=self.device_type["cc5000"],
+            device_role=self.role["Switch"],
+        )
+
+        # Move self.rack to a new location that permits Racks but not Devices
+        location_type_b = LocationType.objects.create(name="Location Type B")
+        location_type_b.content_types.add(ContentType.objects.get_for_model(Rack))
+        location2 = Location.objects.create(name="Location2", location_type=location_type_b, site=self.site1)
+        self.rack.location = location2
+        self.rack.save()
+
+        self.assertEqual(Device.objects.get(pk=device1.pk).location, None)
+
+    def test_rack_location_validation(self):
+        # Rack and group site must match
+        rack = Rack(name="Rack", site=self.site2, group=self.group1, status=self.status)
+        with self.assertRaises(ValidationError) as cm:
+            rack.validated_save()
+        self.assertIn("Assigned rack group must belong to parent site", str(cm.exception))
+
+        # Rack location and site must match
+        rack = Rack(name="Rack", site=self.site2, location=self.location1, status=self.status)
+        with self.assertRaises(ValidationError) as cm:
+            rack.validated_save()
+        self.assertIn('Location "Location1" does not belong to site "TestSite2"', str(cm.exception))
+
+        # Rack group location and rack location must relate
+        location2 = Location.objects.create(name="Location2", location_type=self.location_type_a, site=self.site1)
+        rack = Rack(name="Rack", site=self.site1, group=self.group1, location=location2, status=self.status)
+        with self.assertRaises(ValidationError) as cm:
+            rack.validated_save()
+        self.assertIn(
+            'group "TestGroup1" belongs to a location ("Location1") that does not include location "Location2"',
+            str(cm.exception),
+        )
+
+        # Location type must permit Racks
+        location_type_b = LocationType.objects.create(name="Location Type B")
+        locationb = Location.objects.create(name="Location2", location_type=location_type_b, site=self.site1)
+        rack = Rack(name="Rack", site=self.site1, location=locationb, status=self.status)
+        with self.assertRaises(ValidationError) as cm:
+            rack.validated_save()
+        self.assertIn('Racks may not associate to locations of type "Location Type B"', str(cm.exception))
 
 
 class LocationTestCase(TestCase):
@@ -711,3 +915,45 @@ class CableTestCase(TestCase):
         cable = Cable(termination_a=self.interface2, termination_b=wireless_interface)
         with self.assertRaises(ValidationError):
             cable.clean()
+
+
+class PowerPanelTestCase(TestCase):
+    def test_power_panel_validation(self):
+        active = Status.objects.get(name="Active")
+        site_1 = Site.objects.create(name="Site 1", status=active)
+        location_type_1 = LocationType.objects.create(name="Location Type 1")
+        location_1 = Location.objects.create(
+            name="Location 1", location_type=location_type_1, site=site_1, status=active
+        )
+
+        power_panel = PowerPanel(name="Power Panel 1", site=site_1, location=location_1)
+        with self.assertRaises(ValidationError) as cm:
+            power_panel.validated_save()
+        self.assertIn('Power panels may not associate to locations of type "Location Type 1"', str(cm.exception))
+
+        location_type_1.content_types.add(ContentType.objects.get_for_model(PowerPanel))
+        site_2 = Site.objects.create(name="Site 2", status=active)
+        power_panel.site = site_2
+        with self.assertRaises(ValidationError) as cm:
+            power_panel.validated_save()
+        self.assertIn('Location "Location 1" does not belong to site "Site 2"', str(cm.exception))
+
+        power_panel.site = site_1
+        rack_group = RackGroup.objects.create(name="Rack Group 1", site=site_2)
+        power_panel.rack_group = rack_group
+        with self.assertRaises(ValidationError) as cm:
+            power_panel.validated_save()
+        self.assertIn("Rack group Rack Group 1 (Site 2) is in a different site than Site 1", str(cm.exception))
+
+        rack_group.site = site_1
+        location_2 = Location.objects.create(
+            name="Location 2", location_type=location_type_1, site=site_1, status=active
+        )
+        rack_group.location = location_2
+        rack_group.save()
+        with self.assertRaises(ValidationError) as cm:
+            power_panel.validated_save()
+        self.assertIn(
+            'Rack group "Rack Group 1" belongs to a location ("Location 2") that does not contain "Location 1"',
+            str(cm.exception),
+        )
