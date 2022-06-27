@@ -636,10 +636,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         vminterfaces[2].tagged_vlans.add(cls.vlan2)
 
         # Assign primary IPs for filtering
-        ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0]),
-            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1]),
-        )
+        IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0])
+        IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1])
 
         tag = Tag.objects.create(name="Tag 1", slug="tag-1")
         tag.content_types.add(ContentType.objects.get_for_model(VMInterface))
