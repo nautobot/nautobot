@@ -669,11 +669,16 @@ class NumericArrayField(SimpleArrayField):
         return super().to_python(value)
 
 
-class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
-    Field to support matching an object's `pk` or `slug` field depending on the value
-    supplied. Raises ValidationError if neither field matches.
+    Filter field to support matching on the PK or supplied `natural_key` fields. `natural_key`
+    defaults to `slug` if not provided. Raises ValidationError if none of the fields match the
+    requested value.
     """
+
+    def __init__(self, *args, **kwargs):
+        self.natural_key = kwargs.pop("natural_key", "slug")
+        super().__init__(*args, **kwargs)
 
     def _check_values(self, values):
         """
@@ -701,7 +706,7 @@ class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField
                 query |= Q(pk=item)
             except (ValueError, TypeError):
                 pass
-            query |= Q(slug=str(item))
+            query |= Q(**{self.natural_key: str(item)})
             qs = self.queryset.filter(query)
             if not qs.exists():
                 raise ValidationError(
@@ -709,6 +714,6 @@ class SlugOrPKMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField
                     code="invalid_choice",
                     params={"value": item},
                 )
-        query = Q(pk__in=pk_values) | Q(slug__in=values)
+        query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": values})
         qs = self.queryset.filter(query)
         return qs
