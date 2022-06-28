@@ -428,7 +428,7 @@ python-crontab = ">=2.3.4"
 
 [[package]]
 name = "django-constance"
-version = "2.8.0"
+version = "2.9.0"
 description = "Django live settings with pluggable backends, including Redis."
 category = "main"
 optional = false
@@ -2238,7 +2238,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "2495bfc52de250fb3bf445e922f7cd231319ed49c21173406cc5874c89fdd269"
+content-hash = "3ebed747e73e26960335c686ec2d573b90436a1b286aaa2ee5de48ae3190d376"
 
 [metadata.files]
 amqp = [
@@ -2504,8 +2504,8 @@ django-celery-beat = [
     {file = "django_celery_beat-2.2.1-py2.py3-none-any.whl", hash = "sha256:ab43049634fd18dc037927d7c2c7d5f67f95283a20ebbda55f42f8606412e66c"},
 ]
 django-constance = [
-    {file = "django-constance-2.8.0.tar.gz", hash = "sha256:0a492454acc78799ce7b9f7a28a00c53427d513f34f8bf6fdc90a46d8864b2af"},
-    {file = "django_constance-2.8.0-py3-none-any.whl", hash = "sha256:60fec73e397d5f4f7440f611b18d3e7ce5342647f316fedc47b62e1411c849e7"},
+    {file = "django-constance-2.9.0.tar.gz", hash = "sha256:758e190755f05b12e9729933239b87053aa1f790071a402cc02034cb23c8624e"},
+    {file = "django_constance-2.9.0-py3-none-any.whl", hash = "sha256:c78eed0f75eb003836db84345fa7df0c529b47b2c4e04ac84fdf8558b3338a28"},
 ]
 django-cors-headers = [
     {file = "django-cors-headers-3.13.0.tar.gz", hash = "sha256:f9dc6b4e3f611c3199700b3e5f3398c28757dcd559c2f82932687f3d0443cfdf"},
