@@ -163,7 +163,7 @@ mkdocs = "~1.3.0"
 # Integration Tests
 requests = "~2.27.1"
 # Selenium web drivers for live integration testing
-selenium = "~4.2.0"
+selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
 
