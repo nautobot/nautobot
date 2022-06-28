@@ -10,6 +10,7 @@ from rest_framework.test import APIClient, APITransactionTestCase as _APITransac
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ObjectChange
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from .utils import disable_warnings
 from .views import ModelTestCase
 
@@ -554,7 +555,7 @@ class APIViewTestCases:
 
 
 @tag("unit")
-class APITransactionTestCase(_APITransactionTestCase):
+class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
     def setUp(self):
         """
         Create a superuser and token for API calls.

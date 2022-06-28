@@ -11,7 +11,7 @@ from django.utils.text import slugify
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
 from nautobot.extras.models import ChangeLoggedModel, ObjectChange
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing.mixins import TestCaseMixin
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from .utils import disable_warnings, extract_page_body, post_data
 
 
@@ -28,7 +28,7 @@ User = get_user_model()
 
 
 @tag("unit")
-class TestCase(_TestCase, TestCaseMixin):
+class TestCase(_TestCase, NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
     def setUp(self):

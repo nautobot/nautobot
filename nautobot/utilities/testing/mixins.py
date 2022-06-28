@@ -15,7 +15,7 @@ from nautobot.utilities.fields import JSONArrayField
 from .utils import extract_form_failures
 
 
-class TestCaseMixin:
+class NautobotTestCaseMixin:
     """Base class for all Nautobot-specific unit tests."""
 
     user_permissions = ()

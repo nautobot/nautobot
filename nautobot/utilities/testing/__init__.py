@@ -13,7 +13,7 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
-from nautobot.utilities.testing.mixins import TestCaseMixin
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 
 from .api import APITestCase, APIViewTestCases
 from .utils import (
@@ -99,7 +99,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
 
 
 @tag("unit")
-class TransactionTestCase(_TransactionTestCase, TestCaseMixin):
+class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
     """
     Base test case class using the TransactionTestCase for unit testing
     """

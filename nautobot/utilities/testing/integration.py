@@ -15,6 +15,7 @@ from nautobot.core.celery import app
 from nautobot.extras.management import create_custom_statuses
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 
 
 # Use the proper swappable User model
@@ -67,7 +68,7 @@ FIREFOX_PROFILE_PREFERENCES = {
 
 
 @tag("integration")
-class SeleniumTestCase(StaticLiveServerTestCase):
+class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
     """
     Base test case for Splinter Selenium integration testing with custom helper methods.
 
@@ -77,7 +78,6 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
     host = "0.0.0.0"  # Always listen publicly
     selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
-    user_permissions = ()
 
     requires_celery = False  # If true, a celery instance will be started. TODO: create celery mixin?
 
@@ -110,17 +110,6 @@ class SeleniumTestCase(StaticLiveServerTestCase):
         self.password = "testpassword"
         self.user.set_password(self.password)
         self.user.save()
-
-    def add_permissions(self, *names):
-        """
-        Assign a set of permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
-        """
-        for name in names:
-            ct, action = resolve_permission_ct(name)
-            obj_perm = ObjectPermission(name=name, actions=[action])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ct)
 
     @classproperty
     def live_server_url(cls):
