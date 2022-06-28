@@ -15,6 +15,7 @@ from nautobot.extras.filters import (
     ConfigContextFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
+    GitRepositoryFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
     JobFilterSet,
@@ -314,6 +315,71 @@ class ExportTemplateTestCase(TestCase):
     def test_search(self):
         params = {"q": "export"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class GitRepositoryTestCase(TestCase):
+    queryset = GitRepository.objects.all()
+    filterset = GitRepositoryFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create Three GitRepository records
+        repos = (
+            GitRepository(
+                name="Repo 1",
+                slug="repo-1",
+                branch="main",
+                provided_contents=[
+                    "extras.configcontext",
+                ],
+                remote_url="https://example.com/repo1.git",
+            ),
+            GitRepository(
+                name="Repo 2",
+                slug="repo-2",
+                branch="develop",
+                provided_contents=[
+                    "extras.configcontext",
+                    "extras.job",
+                ],
+                remote_url="https://example.com/repo2.git",
+            ),
+            GitRepository(
+                name="Repo 3",
+                slug="repo-3",
+                branch="next",
+                provided_contents=[
+                    "extras.configcontext",
+                    "extras.job",
+                    "extras.exporttemplate",
+                ],
+                remote_url="https://example.com/repo3.git",
+            ),
+        )
+        for repo in repos:
+            repo.save(trigger_resync=False)
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Repo 3", "Repo 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_remote_url(self):
+        params = {"remote_url": ["https://example.com/repo1.git"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_branch(self):
+        params = {"branch": ["main", "next"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_provided_contents(self):
+        params = {"provided_contents": ["extras.exporttemplate"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"provided_contents": ["extras.job"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class GraphQLTestCase(TestCase):

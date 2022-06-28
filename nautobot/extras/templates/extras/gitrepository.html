@@ -84,9 +84,9 @@
                                 {{ entry.name|title }}</td>
                             <td>
                                 {% if entry.content_identifier in object.provided_contents %}
-                                    {{ true | render_boolean }}
+                                    {{ True | render_boolean }}
                                 {% else %}
-                                    {{ false | render_boolean }}
+                                    {{ False | render_boolean }}
                                 {% endif %}
                             </td>
                         </tr>
