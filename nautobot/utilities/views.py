@@ -22,6 +22,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from django.template.loader import select_template, TemplateDoesNotExist
 from rest_framework.routers import Route
 
 from nautobot.utilities.permissions import get_permission_for_model, resolve_permission
@@ -220,6 +221,19 @@ class NautobotViewSetMixin:
         instance: The object being viewed
         """
         return {}
+    
+    def get_template_name(self, view_type):
+        # Use "<app>/<model>_<view_type> if available, else fall back to generic templates
+        model_opts = self.model._meta
+        app_label = model_opts.app_label
+        if view_type == "detail":
+            return f"{app_label}/{model_opts.model_name}.html"
+
+        try:
+            select_template([f"{app_label}/{model_opts.model_name}_{view_type}.html"])
+            return f"{app_label}/{model_opts.model_name}_{view_type}.html"
+        except TemplateDoesNotExist:
+            return f"generic/object_{view_type}.html"
 
 
 class ObjectDetailViewMixin(NautobotViewSetMixin):

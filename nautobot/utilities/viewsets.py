@@ -14,8 +14,6 @@ from nautobot.utilities.views import (
 from rest_framework.routers import SimpleRouter
 from rest_framework.viewsets import ViewSetMixin
 
-from django.template.loader import select_template, TemplateDoesNotExist
-
 
 class NautobotViewSet(
     ObjectPermissionRequiredMixin,
@@ -71,19 +69,6 @@ class NautobotViewSet(
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, self.action)
-
-    def get_template_name(self, view_type):
-        # Use "<app>/<model>_<view_type> if available, else fall back to generic templates
-        model_opts = self.model._meta
-        app_label = model_opts.app_label
-        if view_type == "detail":
-            return f"{app_label}/{model_opts.model_name}.html"
-
-        try:
-            select_template([f"{app_label}/{model_opts.model_name}_{view_type}.html"])
-            return f"{app_label}/{model_opts.model_name}_{view_type}.html"
-        except TemplateDoesNotExist:
-            return f"generic/object_{view_type}.html"
 
 
 class NautobotRouter(SimpleRouter, NautobotViewSetMixin):
