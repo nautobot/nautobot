@@ -354,11 +354,14 @@ class JobTest(TransactionTestCase):
         """
         module = "test_pass"
         name = "TestPass"
-        job_result = create_job_result_and_run_job(module, name, commit=False)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        job_result_1 = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_COMPLETED)
+        job_result_2 = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_COMPLETED)
         job_class, job_model = get_job_class_and_model(module, name)
-        latest_job_result = job_model.results.first()
-        self.assertEqual(job_result.completed, latest_job_result.completed)
+        self.assertGreaterEqual(job_model.results.count(), 2)
+        latest_job_result = job_model.latest_result()
+        self.assertEqual(job_result_2.completed, latest_job_result.completed)
 
 
 class JobFileUploadTest(TransactionTestCase):
