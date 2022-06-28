@@ -221,7 +221,7 @@ class NautobotViewSetMixin:
         instance: The object being viewed
         """
         return {}
-    
+
     def get_template_name(self, view_type):
         # Use "<app>/<model>_<view_type> if available, else fall back to generic templates
         model_opts = self.model._meta
