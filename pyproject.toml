@@ -157,7 +157,7 @@ flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.7.1"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.2.3"
+mkdocs-include-markdown-plugin = "~3.5.0"
 # Rendering docs to HTML
 mkdocs = "~1.3.0"
 # Integration Tests

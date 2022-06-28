@@ -1216,15 +1216,15 @@ i18n = ["babel (>=2.9.0)"]
 
 [[package]]
 name = "mkdocs-include-markdown-plugin"
-version = "3.2.3"
+version = "3.5.2"
 description = "Mkdocs Markdown includer plugin."
 category = "dev"
 optional = false
 python-versions = ">=3.6"
 
 [package.extras]
-dev = ["bump2version (==1.0.1)", "flake8 (==3.9.2)", "flake8-implicit-str-concat (==0.2.0)", "flake8-print (==4.0.0)", "isort (==5.9.1)", "mdpo (==0.3.61)", "pre-commit (==2.13.0)", "pytest (==6.2.4)", "pytest-cov (==2.12.1)", "pyupgrade (==2.19.4)", "yamllint (==1.26.1)"]
-test = ["pytest (==6.2.4)", "pytest-cov (==2.12.1)"]
+dev = ["bump2version (==1.0.1)", "flake8 (==3.9.2)", "flake8-implicit-str-concat (==0.2.0)", "flake8-print (==4.0.0)", "isort (==5.9.1)", "mdpo (==0.3.61)", "mkdocs (==1.2.3)", "pre-commit (==2.13.0)", "pytest (==6.2.5)", "pytest-cov (==3.0.0)", "pyupgrade (==2.19.4)", "yamllint (==1.26.1)"]
+test = ["pytest (==6.2.5)", "pytest-cov (==3.0.0)"]
 
 [[package]]
 name = "mypy-extensions"
@@ -2238,7 +2238,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "2495bfc52de250fb3bf445e922f7cd231319ed49c21173406cc5874c89fdd269"
+content-hash = "913a2c3d8de450bfea381e26b2c61a522826e4c3d57d1928e002a8f73c7a78d9"
 
 [metadata.files]
 amqp = [
@@ -2822,8 +2822,8 @@ mkdocs = [
     {file = "mkdocs-1.3.0.tar.gz", hash = "sha256:b504405b04da38795fec9b2e5e28f6aa3a73bb0960cb6d5d27ead28952bd35ea"},
 ]
 mkdocs-include-markdown-plugin = [
-    {file = "mkdocs_include_markdown_plugin-3.2.3-py3-none-any.whl", hash = "sha256:5a8b0c60d8981225c012b8f657b6557910997e46dacae4aff039b181487236cf"},
-    {file = "mkdocs_include_markdown_plugin-3.2.3.tar.gz", hash = "sha256:64dd8c408a1b5b7422d4a5a826c434e5372af2fb7bd244dd5c87e09ff8f13302"},
+    {file = "mkdocs_include_markdown_plugin-3.5.2-py3-none-any.whl", hash = "sha256:df47b97168ff02739d7640d0a75317e825d6d96df8089203557b6fc983818aba"},
+    {file = "mkdocs_include_markdown_plugin-3.5.2.tar.gz", hash = "sha256:f75d593c5f81e1f29eb7701b9799468d9ec242e379fb175920ec78ada9d2b058"},
 ]
 mypy-extensions = [
     {file = "mypy_extensions-0.4.3-py2.py3-none-any.whl", hash = "sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d"},
