@@ -446,9 +446,7 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
 class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = LocationType
     q = forms.CharField(required=False, label="Search")
-    content_types = MultipleContentTypeField(
-        feature="locations", help_text="The object(s) that can belong to this location type."
-    )
+    content_types = MultipleContentTypeField(feature="locations", choices_as_strings=True, required=False)
 
 
 #
