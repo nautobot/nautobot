@@ -293,11 +293,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset_form:
             if request.GET:
                 # Bind form to the values specified in request.GET
-                filter_form = self.filterset_form(filter_params, label_suffix="", user=request.user)
+                filter_form = self.filterset_form(filter_params, label_suffix="")
                 lookup_filter_form = LookupFilterFormSet(model=self.queryset.model)
             else:
                 # Use unbound form with default (initial) values
-                filter_form = self.filterset_form(label_suffix="", user=request.user)
+                filter_form = self.filterset_form(label_suffix="")
 
         valid_actions = self.validate_action_buttons(request)
 

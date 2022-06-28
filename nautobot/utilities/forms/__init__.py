@@ -28,7 +28,6 @@ from .fields import (
 )
 from .forms import (
     AddressFieldMixin,
-    BaseFilterForm,
     BootstrapMixin,
     BulkEditForm,
     BulkRenameForm,
@@ -73,7 +72,6 @@ __all__ = (
     "APISelect",
     "APISelectMultiple",
     "BOOLEAN_WITH_BLANK_CHOICES",
-    "BaseFilterForm",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkEditNullBooleanSelect",

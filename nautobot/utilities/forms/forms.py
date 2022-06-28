@@ -15,7 +15,6 @@ from nautobot.ipam.formfields import IPNetworkFormField
 
 __all__ = (
     "AddressFieldMixin",
-    "BaseFilterForm",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkRenameForm",
@@ -84,102 +83,6 @@ class BootstrapMixin(forms.BaseForm):
                 field.widget.attrs["required"] = "required"
             if "placeholder" not in field.widget.attrs:
                 field.widget.attrs["placeholder"] = field.label
-
-
-class BaseFilterForm(forms.BaseForm):
-    def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Defaults
-        self.selected_fields = [field.name for field in self.visible_fields()]
-        self.columns_sequence = [
-            (field.name, field.label) for field in self.visible_fields()
-        ] + self.get_filterset_fields_name_and_label(self.selected_fields)
-
-        if user is not None and user.is_authenticated:
-            user_config = f"filter_form.{self.__class__.__name__}"
-            columns = user.get_config(user_config + ".columns")
-            lookup_expr = user.get_config(user_config + ".lookup_expr")
-            fields_to_remove = []
-
-            if columns:
-                self.selected_fields = columns
-                self.fields.update(
-                    self.get_filterset_fields(
-                        default_visible_fields=[field.name for field in self.visible_fields()],
-                        selected_fields=columns,
-                    )
-                )
-                fields_to_remove = [field for field in self.fields.keys() if field not in columns]
-
-            for field in fields_to_remove:
-                self.fields.pop(field)
-
-        self.order_fields(self.selected_fields)
-        self.order_columns_sequence(self.selected_fields)
-
-    def get_filterset_fields_name_and_label(self, default_visible_fields):
-        filters = get_filterset_for_model(self.model).get_filters()
-        filters_fields = []
-        for name, item in filters.items():
-            if name not in default_visible_fields and "__" not in name:
-                filters_fields.append((name, name))
-
-        return filters_fields
-
-    def get_filterset_fields(self, default_visible_fields, selected_fields):
-        filters = get_filterset_for_model(self.model).get_filters()
-        fields = {}
-
-        for name, item in filters.items():
-            if name not in default_visible_fields and name in selected_fields and "__" not in name:
-                fields[name] = self.get_form_field(name)
-                if "__" in name:
-                    field_name = item.field_name[0].upper() + item.field_name[1:]
-                    fields[name].label = f"{field_name} {item.lookup_expr}"
-                else:
-                    fields[name].label = item.label
-        return fields
-
-    def order_columns_sequence(self, field_order=None):
-        """
-        Rearrange the columns_sequence according to field_order.
-
-        Args:
-            field_order (list): A list of field names specifying the order.
-        """
-        ordered_fields = {}
-        fields = dict(self.columns_sequence)
-
-        for key in field_order:
-            if key in fields:
-                ordered_fields[key] = fields.pop(key)
-
-        ordered_fields.update(fields)
-        self.columns_sequence = ordered_fields.items()
-
-    def get_form_field(self, name):
-        """
-        Return the appropriate form field(e.g CharField, DynamicModelMultipleChoiceField, BooleanField) for model field`
-
-        Args:
-            name (str): Model field name
-        """
-        form = forms.CharField(required=False)
-
-        if "__" not in name:
-            try:
-                field_instance = self.model._meta.get_field(name)
-                if isinstance(field_instance, (related.ForeignKey, related.ManyToManyField)):
-                    related_model = getattr(field_instance, "related_model", None)
-                    form = DynamicModelMultipleChoiceField(queryset=related_model.objects.all(), required=False)
-                # TODO: Add check for other types eg Integer, boolean etc
-            except FieldDoesNotExist:
-                pass
-        else:
-            ...
-
-        return form
 
 
 class ReturnURLForm(forms.Form):
@@ -435,18 +338,20 @@ class LookUpFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_field"].widget = SelectWidgetWithConfigurableOptions(model=self.model)
         lookup_field_css = self.fields["lookup_field"].widget.attrs.get("class")
         self.fields["lookup_field"].widget.attrs["class"] = " ".join([lookup_field_css, "lookup_field-select"])
+        self.fields["lookup_field"].widget.attrs["data-lookup-choices"] = json.dumps(lookup_field_choices)
         self.fields["lookup_field"].choices = [(None, None)] + [(item, item) for item in lookup_field_choices.keys()]
 
         self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-static lookup_type-select"
-        self.fields["lookup_type"].choices = [(None, None)] + [
-            (item["name"], item["lookup_label"]) for item in lookup_field_choices["contact_name"]
-        ]
+        # self.fields["lookup_type"].choices = [(None, None)] + [
+        #     (item["name"], item["lookup_label"]) for item in lookup_field_choices["contact_name"]
+        # ]
 
         self.fields["value"].widget.attrs["class"] = "value-input form-control"
 
         self.fields["advance_filter"].widget.attrs["rows"] = 1
         self.fields["advance_filter"].widget.attrs["disabled"] = "true"
         from django.forms import HiddenInput
+
         self.fields["advance_filter"].widget = HiddenInput()
 
     def get_lookup_expr_choices(self):
