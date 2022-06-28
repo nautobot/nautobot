@@ -51,7 +51,7 @@
                 <td>
                     {% if object.content_types.all %}
                         <ul>
-                            {% for content_type in object.content_types.all %}
+                            {% for content_type in object.content_types.all|dictsort:"model"|dictsort:"app_label" %}
                                 <li>{{ content_type }}</li>
                             {% endfor %}
                         </ul>
