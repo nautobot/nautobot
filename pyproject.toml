@@ -144,7 +144,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = "~22.3.0"
+black = "~22.6.0"
 # Test code coverage measurement
 coverage = "~6.4.1"
 # Tool for debugging Django
