@@ -619,6 +619,7 @@ class DeviceInterfaceTable(InterfaceTable):
         fields = (
             "pk",
             "name",
+            "device",
             "label",
             "enabled",
             "type",
@@ -640,6 +641,7 @@ class DeviceInterfaceTable(InterfaceTable):
         default_columns = (
             "pk",
             "name",
+            "device",
             "label",
             "enabled",
             "type",
