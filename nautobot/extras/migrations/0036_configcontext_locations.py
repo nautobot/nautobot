@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("dcim", "0013_location_location_type"),
-        ("extras", "0034_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
+        ("extras", "0035_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
     ]
 
     operations = [

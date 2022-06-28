@@ -60,6 +60,15 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 ## v1.4.0a2 (2022-MM-DD)
 
+!!! attention
+    `next` and `develop` introduced conflicting migration numbers during the release cycle. This necessitates reordering the migration in `next`. If you installed `v1.4.0a1`, you will need to roll back a migration before upgrading/installing `v1.4.0a2` and newer. If you have not installed `v1.4.0a` this will not be an issue.
+
+    Before upgrading, run: `nautobot-server migrate extras 0033_add__optimized_indexing`. This will revert the reordered migration `0034_configcontextschema__remove_name_unique__create_constraint_unique_name_owner`, which is now number `0035`.
+
+    Perform the Nautobot upgrade as usual and proceed with post-installation migration.
+
+    No data loss is expected as the reordered migration only modified indexing on existing fields.
+
 ### Added
 
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.

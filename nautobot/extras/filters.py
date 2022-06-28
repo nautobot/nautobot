@@ -509,7 +509,7 @@ class GitRepositoryFilterSet(NautobotFilterSet):
 
     class Meta:
         model = GitRepository
-        fields = ["id", "name", "slug", "remote_url", "branch"]
+        fields = ["id", "name", "slug", "remote_url", "branch", "provided_contents"]
 
 
 #
