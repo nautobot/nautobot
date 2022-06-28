@@ -145,22 +145,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
 
 
-class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
-    """
-    Filters for a set of Models, including all descendant models within a Tree.  Example: [<Region: R1>,<Region: R2>]
-    """
-
-    def get_filter_predicate(self, v):
-        # Null value filtering
-        if v is None:
-            return {f"{self.field_name}__isnull": True}
-        return super().get_filter_predicate(v)
-
-    def filter(self, qs, value):
-        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
-        return super().filter(qs, value)
-
-
 class NullableCharFieldFilter(django_filters.CharFilter):
     """
     Allow matching on null field values by passing a special string used to signify NULL.
@@ -421,11 +405,28 @@ class MappedPredicatesFilterMixin:
 class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filter that supports filtering on values matching the `pk` field and another
-    field of a foreign-key related object. The desired field is set using the `natural_key`
+    field of a foreign-key related object. The desired field is set using the `to_field_name`
     keyword argument on filter initialization (defaults to `slug`).
     """
 
     field_class = MultiMatchModelMultipleChoiceField
+
+    def __init__(self, *args, **kwargs):
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        """
+        Override base filter behavior to force the filter to use the `pk` field instead of
+        the natural key in the generated filter.
+        """
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+        name = self.field_name
+        if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
+            name = "__".join([name, self.lookup_expr])
+        return {name: v}
 
 
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
@@ -436,6 +437,35 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
 
     label = "Search"
+
+
+class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """
+    Filter that matches on the given model(s) (identified by slug and/or pk) _as well as their tree descendants._
+    For example, if we have:
+        Region "Earth"
+          Region "USA"
+            Region "GA" <- Site "Athens"
+            Region "NC" <- Site "Durham"
+    a NaturalKeyOrPKMultipleChoiceFilter on Site for {"region": "USA"} would have no matches,
+    since there are no Sites whose immediate Region is "USA",
+    but a TreeNodeMultipleChoiceFilter on Site for {"region": "USA"} or {"region": "Earth"}
+    would match both "Athens" and "Durham".
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("lookup_expr", "in")
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+        return super().get_filter_predicate(v)
+
+    def filter(self, qs, value):
+        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+        return super().filter(qs, value)
 
 
 #

@@ -671,13 +671,13 @@ class NumericArrayField(SimpleArrayField):
 
 class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
-    Filter field to support matching on the PK or supplied `natural_key` fields. `natural_key`
-    defaults to `slug` if not provided. Raises ValidationError if none of the fields match the
-    requested value.
+    Filter field to support matching on the PK *or* `to_field_name` fields (defaulting to `slug` if not specified).
+
+    Raises ValidationError if none of the fields match the requested value.
     """
 
     def __init__(self, *args, **kwargs):
-        self.natural_key = kwargs.pop("natural_key", "slug")
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
         super().__init__(*args, **kwargs)
 
     def _check_values(self, values):
@@ -686,6 +686,9 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
         re-using some of that method's existing logic and adding support for coupling this field with
         multiple model fields.
         """
+        null = self.null_label is not None and values and self.null_value in values
+        if null:
+            values = [v for v in values if v != self.null_value]
         # deduplicate given values to avoid creating many querysets or
         # requiring the database backend deduplicate efficiently.
         try:
@@ -716,4 +719,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
                 )
         query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": values})
         qs = self.queryset.filter(query)
-        return qs
+        result = list(qs)
+        if null:
+            result += [self.null_value]
+        return result

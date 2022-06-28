@@ -129,7 +129,6 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     children = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        lookup_expr="in",
         label="Children (ID)",
     )
     has_children = RelatedMembershipBooleanFilter(
@@ -171,14 +170,11 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     has_circuit_terminations = RelatedMembershipBooleanFilter(
@@ -202,7 +198,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     )
     rack_groups = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        lookup_expr="in",
         label="Rack groups (ID)",
     )
     has_rack_groups = RelatedMembershipBooleanFilter(
@@ -270,14 +265,11 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
@@ -302,7 +294,6 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     children = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        lookup_expr="in",
         label="Children (ID)",
     )
     has_children = RelatedMembershipBooleanFilter(
@@ -358,14 +349,11 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
@@ -381,14 +369,11 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="group",
-        lookup_expr="in",
         label="Rack group (ID)",
     )
     group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="group",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Rack group (slug)",
     )
     type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
@@ -470,14 +455,11 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
     group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__group",
-        lookup_expr="in",
         label="Rack group (ID)",
     )
     group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__group",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Rack group (slug)",
     )
     user_id = django_filters.ModelMultipleChoiceFilter(
@@ -504,7 +486,7 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     inventory_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
-        lookup_expr="in",
+        to_field_name="name",
         label="Inventory items (ID)",
     )
     has_inventory_items = RelatedMembershipBooleanFilter(
@@ -911,14 +893,11 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
@@ -934,7 +913,6 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
     rack_group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__group",
-        lookup_expr="in",
         label="Rack group (ID)",
     )
     rack_id = django_filters.ModelMultipleChoiceFilter(
@@ -943,7 +921,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Rack (ID)",
     )
     rack = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Rack.objects.all(),
         label="Rack (name or ID)",
     )
@@ -952,7 +930,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="VM cluster (ID)",
     )
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Cluster.objects.all(),
         label="Cluster (name or ID)",
     )
@@ -992,7 +970,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Virtual chassis (ID)",
     )
     virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=VirtualChassis.objects.all(),
         label="Virtual chassis (name or ID)",
     )
@@ -1032,7 +1010,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
     )
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="frontports",
-        natural_key="name",
+        to_field_name="name",
         queryset=FrontPort.objects.all(),
         label="Front ports (name or ID)",
     )
@@ -1042,7 +1020,7 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
     )
     rear_ports = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="rearports",
-        natural_key="name",
+        to_field_name="name",
         queryset=RearPort.objects.all(),
         label="Rear ports (name or ID)",
     )
@@ -1064,14 +1042,14 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="IPv6 address (ID)",
     )
     parent_bay = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=DeviceBay.objects.all(),
         label="Parent device bay (name or ID)",
     )
     inventory_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
         field_name="inventoryitems",
-        lookup_expr="in",
+        to_field_name="name",
         label="Inventory items (ID)",
     )
     has_inventory_items = RelatedMembershipBooleanFilter(
@@ -1079,12 +1057,12 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         label="Has inventory items",
     )
     vc_master_for = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=VirtualChassis.objects.all(),
         label="Virtual chassis master for (name or ID)",
     )
     services = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Service.objects.all(),
         label="Services (name or ID)",
     )
@@ -1130,14 +1108,11 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
@@ -1284,7 +1259,7 @@ class InterfaceFilterSet(
         label="Parent interface (ID)",
     )
     parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Interface.objects.all(),
         label="Parent interface (name or ID)",
     )
@@ -1294,7 +1269,7 @@ class InterfaceFilterSet(
         label="Bridge interface (ID)",
     )
     bridge = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Interface.objects.all(),
         label="Bridge interface (name or ID)",
     )
@@ -1304,7 +1279,7 @@ class InterfaceFilterSet(
         label="LAG interface (ID)",
     )
     lag = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Interface.objects.all(),
         label="LAG interface (name or ID)",
     )
@@ -1313,7 +1288,7 @@ class InterfaceFilterSet(
         label="Untagged vlan",
     )
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Interface.objects.all(),
         label="Child interfaces",
     )
@@ -1322,7 +1297,7 @@ class InterfaceFilterSet(
         label="Has child interfaces",
     )
     bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Interface.objects.all(),
         label="Bridged interfaces",
     )
@@ -1331,7 +1306,7 @@ class InterfaceFilterSet(
         label="Has bridged interfaces",
     )
     member_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Interface.objects.all(),
         label="Member interfaces",
     )
@@ -1468,14 +1443,11 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
@@ -1504,7 +1476,6 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
     )
     parent = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
-        lookup_expr="in",
         to_field_name="name",
         label="Parent (name)",
     )
@@ -1520,7 +1491,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
     )
     child_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
-        lookup_expr="in",
+        to_field_name="name",
         label="Child items (ID)",
     )
     has_child_items = RelatedMembershipBooleanFilter(
@@ -1555,14 +1526,11 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="master__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="master__site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
@@ -1588,7 +1556,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         label="Tenant (slug)",
     )
     members = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Device.objects.all(),
         label="Device (name or ID)",
     )
@@ -1700,14 +1668,11 @@ class PowerPanelFilterSet(NautobotFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
@@ -1723,12 +1688,10 @@ class PowerPanelFilterSet(NautobotFilterSet):
     rack_group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack_group",
-        lookup_expr="in",
         label="Rack group (ID)",
     )
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        lookup_expr="in",
         label="Rack group (ID)",
     )
     power_feeds = django_filters.ModelMultipleChoiceFilter(
@@ -1754,14 +1717,11 @@ class PowerFeedFilterSet(
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="power_panel__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="power_panel__site__region",
-        lookup_expr="in",
-        to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
