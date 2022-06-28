@@ -3382,7 +3382,6 @@ class ConnectCableToPowerOutletForm(ConnectCableToDeviceForm):
 
 
 class ConnectCableToInterfaceForm(ConnectCableToDeviceForm):
-
     def __init__(self, exclude_id=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["termination_b_id"].widget.add_query_param("id__n", str(exclude_id))
