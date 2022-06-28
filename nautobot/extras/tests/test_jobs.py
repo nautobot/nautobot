@@ -360,7 +360,7 @@ class JobTest(TransactionTestCase):
         self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_COMPLETED)
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertGreaterEqual(job_model.results.count(), 2)
-        latest_job_result = job_model.latest_result()
+        latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.completed, latest_job_result.completed)
 
 
