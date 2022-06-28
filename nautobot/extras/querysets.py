@@ -140,6 +140,8 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 class DynamicGroupQuerySet(RestrictedQuerySet):
     """Queryset for `DynamicGroup` objects that provides a `get_for_object` method."""
 
+    # FIXME(jathan): Ideally replace this iteration with a reversible Q object
+    # of some sort.
     def get_for_object(self, obj):
         """Return all `DynamicGroup` assigned to the given object."""
         if not isinstance(obj, Model):

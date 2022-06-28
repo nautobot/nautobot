@@ -525,7 +525,7 @@ class DynamicGroupView(generic.ObjectView):
                 descendants,
                 orderable=False,
                 sequence=["name", "members", "description"],
-                exclude=["content_type", "actions"],
+                exclude=["content_type"],
             )
             descendants_tree = instance.flatten_tree(instance.descendants_tree())
             descendants_map = {node.name: node.depth for node in descendants_tree}
@@ -535,7 +535,7 @@ class DynamicGroupView(generic.ObjectView):
                 ancestors,
                 orderable=False,
                 sequence=["name", "members", "description"],
-                exclude=["content_type", "actions"],
+                exclude=["content_type"],
             )
             ancestors_tree = instance.flatten_tree(instance.ancestors_tree(), descendants=False)
             ancestors_map = {node.name: node.depth for node in ancestors_tree}

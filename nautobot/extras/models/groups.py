@@ -444,7 +444,8 @@ class DynamicGroup(OrganizationalModel):
         # Validate `filter` dict
         self.clean_filter()
 
-    def generate_query_for_filter(self, filter_field, value):
+    @classmethod
+    def generate_query_for_filter(cls, filter_field, value):
         """
         Return a `Q` object generated from the a `filter_field` and `value`.
 
@@ -461,7 +462,8 @@ class DynamicGroup(OrganizationalModel):
             q |= filter_field.get_filter_predicate(v)
         return q
 
-    def generate_query_for_group(self, group):
+    @classmethod
+    def generate_query_for_group(cls, group):
         """
         Return a `Q` object generated from all filters for a `group`.
 
@@ -473,7 +475,7 @@ class DynamicGroup(OrganizationalModel):
 
         for field_name, value in fs.data.items():
             filter_field = fs.filters[field_name]
-            q &= self.generate_query_for_filter(filter_field, value)
+            q &= cls.generate_query_for_filter(filter_field, value)
 
         return q
 
@@ -769,7 +771,8 @@ class DynamicGroupMembership(BaseModel):
         return self.group.count
 
     def get_absolute_url(self):
-        return reverse("extras:dynamicgroup", kwargs={"slug": self.group.slug})
+        """Return the group's absolute URL."""
+        return self.group.get_absolute_url()
 
     def get_group_members_url(self):
         """Return the group members URL."""
