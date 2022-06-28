@@ -1957,7 +1957,7 @@ python-versions = "*"
 
 [[package]]
 name = "splinter"
-version = "0.17.0"
+version = "0.18.0"
 description = "browser abstraction for web acceptance testing"
 category = "dev"
 optional = false
@@ -2238,7 +2238,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "e0b2384e982b106d899ee2393415a40ff832fb84e77e042c329142ba2128f8f9"
+content-hash = "f813e48435d4630418d9834d63c52876f704da395b8660716187afcc9a7fc2ec"
 
 [metadata.files]
 amqp = [
@@ -3324,8 +3324,8 @@ sortedcontainers = [
     {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
 splinter = [
-    {file = "splinter-0.17.0-py3-none-any.whl", hash = "sha256:4721b22a5e0a8592cec90b07d35bf5f6c11ea06af1dc83409898f150b118ed11"},
-    {file = "splinter-0.17.0.tar.gz", hash = "sha256:0fef9b632a0e220fe9cad7df1e2d5119932b6d2baf7843b80334248d6fda62d9"},
+    {file = "splinter-0.18.0-py3-none-any.whl", hash = "sha256:55a17163aa77b33bfcd5b0e77aea88c1295e5a5c46bdc1b33bf94b270c508954"},
+    {file = "splinter-0.18.0.tar.gz", hash = "sha256:517f4af46a8cf512d3a940823808f18a54bbee0579b0910c2b01a1860715a20a"},
 ]
 sqlparse = [
     {file = "sqlparse-0.4.2-py3-none-any.whl", hash = "sha256:48719e356bb8b42991bdbb1e8b83223757b93789c00910a616a071910ca4a64d"},
