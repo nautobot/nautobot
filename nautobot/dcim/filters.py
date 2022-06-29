@@ -129,7 +129,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     children = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        label="Children (ID)",
+        label="Children (slug or ID)",
     )
     has_children = RelatedMembershipBooleanFilter(
         field_name="children",
@@ -198,7 +198,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     )
     rack_groups = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Rack groups (ID)",
+        label="Rack groups (slug or ID)",
     )
     has_rack_groups = RelatedMembershipBooleanFilter(
         field_name="rack_groups",
@@ -294,7 +294,7 @@ class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     children = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Children (ID)",
+        label="Children (slug or ID)",
     )
     has_children = RelatedMembershipBooleanFilter(
         field_name="children",
@@ -487,7 +487,7 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     inventory_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
         to_field_name="name",
-        label="Inventory items (ID)",
+        label="Inventory items (name or ID)",
     )
     has_inventory_items = RelatedMembershipBooleanFilter(
         field_name="inventory_items",
@@ -1404,7 +1404,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
     parent = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
         to_field_name="name",
-        label="Parent (name)",
+        label="Parent (name or ID)",
     )
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(),
@@ -1419,7 +1419,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
     child_items = TreeNodeMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
         to_field_name="name",
-        label="Child items (ID)",
+        label="Child items (name or ID)",
     )
     has_child_items = RelatedMembershipBooleanFilter(
         field_name="child_items",
@@ -1619,7 +1619,7 @@ class PowerPanelFilterSet(NautobotFilterSet):
     )
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Rack group (ID)",
+        label="Rack group (slug or ID)",
     )
     power_feeds = django_filters.ModelMultipleChoiceFilter(
         field_name="powerfeeds",
