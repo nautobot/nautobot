@@ -62,9 +62,9 @@
             <strong>Child Groups</strong>
         </div>
         <div class="panel-body">
-            {% include 'utilities/obj_table.html' with table=children_table table_template='panel_table.html' heading='Children' no_paginate=True %}
-            {% include 'utilities/obj_table.html' with table=descendants_table table_template='panel_table.html' heading='Descendants' no_paginate=True %}
-           {% include 'utilities/obj_table.html' with table=ancestors_table table_template='panel_table.html' heading='Ancestors' no_paginate=True %}
+            {% include 'utilities/obj_table.html' with table=children_table table_template='panel_table.html' heading='Children' disable_pagination=True %}
+            {% include 'utilities/obj_table.html' with table=descendants_table table_template='panel_table.html' heading='Descendants' disable_pagination=True %}
+           {% include 'utilities/obj_table.html' with table=ancestors_table table_template='panel_table.html' heading='Ancestors' disable_pagination=True %}
         </div>
     </div>
 
