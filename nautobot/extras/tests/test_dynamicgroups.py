@@ -152,6 +152,13 @@ class DynamicGroupTestBase(TestCase):
             ),
         ]
 
+    def assertQuerySetEqual(self, left_qs, right_qs):
+        """Compare two querysets and assert that they are equal."""
+        self.assertEqual(
+            sorted(left_qs.values_list("pk", flat=True)),
+            sorted(right_qs.values_list("pk", flat=True)),
+        )
+
 
 class DynamicGroupModelTest(DynamicGroupTestBase):
     """DynamicGroup model tests."""
@@ -208,10 +215,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Assert that the groups we got from `get_for_object()` match the lookup
         # from the group instance itself.
         device1_groups = DynamicGroup.objects.get_for_object(device1)
-        self.assertEqual(
-            sorted(device1_groups.values_list("pk", flat=True)),
-            sorted(device1.dynamic_groups.values_list("pk", flat=True)),
-        )
+        self.assertQuerySetEqual(device1_groups, device1.dynamic_groups)
 
     def test_members(self):
         """Test `DynamicGroup.members`."""
@@ -345,10 +349,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertTrue(form.is_valid())
 
         # Form instance should have identical field set to filter fields.
-        self.assertEqual(
-            sorted(form.fields),
-            sorted(filter_fields),
-        )
+        self.assertEqual(sorted(form.fields), sorted(filter_fields))
 
     def test_get_initial(self):
         """Test `DynamicGroup.get_initial()`."""
@@ -416,10 +417,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Assert that both querysets resturn the same results
         group_qs = group.get_queryset().filter(query)
         device_qs = Device.objects.filter(site__slug__in=value)
-        self.assertEqual(
-            sorted(group_qs.values_list("pk", flat=True)),
-            sorted(device_qs.values_list("pk", flat=True)),
-        )
+        self.assertQuerySetEqual(group_qs, device_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""
@@ -436,23 +434,71 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Assert that both querysets resturn the same results
         group_qs = group.get_queryset().filter(child_q)
         device_qs = Device.objects.filter(**lookup_kwargs)
-        self.assertEqual(
-            sorted(group_qs.values_list("pk", flat=True)),
-            sorted(device_qs.values_list("pk", flat=True)),
-        )
+        self.assertQuerySetEqual(group_qs, device_qs)
 
-    # def test_process_group_filters(self):
-    # def test_get_group_queryset(self):
-    # def test_get_descendants(self):
-    # def test_get_ancestors(self):
-    # def test_get_siblings(self):
-    # def test_descendants(self):
-    # def test_ancestors(self):
-    # def test_descendants_tree(self):
-    # def test_ancestors_tree(self):
+    def test_get_group_queryset(self):
+        """Test `DynamicGroup.get_group_queryset()`."""
+        # This is literally just calling `process_group_filters(self)` so let's
+        # just make sure that it stays consistent until we decide otherwise.
+        group = self.parent
+        group_qs = group.get_group_queryset()
+        process_qs = group.process_group_filters(group=group)
+        self.assertQuerySetEqual(group_qs, process_qs)
+
+    def test_get_ancestors(self):
+        """Test `DynamicGroup.get_ancestors()`."""
+        expected = ["third-child", "second-child", "first-child", "parent"]
+        ancestors = [a.slug for a in self.nested_child.get_ancestors()]
+        self.assertEqual(ancestors, expected)
+
+    def test_get_descendants(self):
+        """Test `DynamicGroup.get_descendants()`."""
+        expected = ["first-child", "second-child", "third-child", "nested-child"]
+        descendants = [d.slug for d in self.parent.get_descendants()]
+        self.assertEqual(descendants, expected)
+
+    def test_get_siblings(self):
+        """Test `DynamicGroup.get_siblings()`."""
+        expected = ["first-child", "second-child"]
+        siblings = sorted(s.slug for s in self.third_child.get_siblings())
+        self.assertEqual(siblings, expected)
+
+    def test_is_root(self):
+        """Test `DynamicGroup.is_root()`."""
+        self.assertTrue(self.parent.is_root())
+        self.assertFalse(self.nested_child.is_root())
+
+    def test_is_leaf(self):
+        """Test `DynamicGroup.is_leaf()`."""
+        self.assertFalse(self.parent.is_leaf())
+        self.assertTrue(self.nested_child.is_leaf())
+
+    def test_ancestors(self):
+        """Test `DynamicGroup.ancestors`."""
+        a1 = self.parent.get_ancestors()
+        a2 = self.parent.ancestors.all()
+        self.assertEqual(list(a1), list(a2))
+
+    def test_descendants(self):
+        """Test `DynamicGroup.descendants`."""
+        d1 = self.parent.get_descendants()
+        d2 = self.parent.descendants.all()
+        self.assertEqual(list(d1), list(d2))
+
+    def test_ancestors_tree(self):
+        """Test `DynamicGroup.ancestors_tree()`."""
+        a_tree = self.nested_child.ancestors_tree()
+        self.assertIn(self.parent, a_tree[self.third_child])
+
+    def test_descendants_tree(self):
+        """Test `DynamicGroup.descendants_tree()`."""
+        d_tree = self.parent.descendants_tree()
+        self.assertIn(self.nested_child, d_tree[self.third_child])
+
     # def test_flatten_tree(self):
     # def test__ordered_filter(self):
     # def test_reversibility (generating a Q object)
+    # def test_process_group_filters(self):
     # def test_good_group(self): (well-constructed)
     # def test_bad_group(self): (poorly-constructed; makes no sense)
     # def test_chainable_filtering(self): from ancestors/descendants

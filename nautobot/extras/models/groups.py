@@ -619,7 +619,9 @@ class DynamicGroup(OrganizationalModel):
 
     def get_siblings(self):
         """Return groups that share the same parents."""
-        return DynamicGroup.objects.filter(parents__in=self.parents.all())
+        return DynamicGroup.objects.filter(
+            parents__in=self.parents.all()
+        ).exclude(slug=self.slug)
 
     def is_root(self):
         """Return whether this is a root node (has children, but no parents)."""
