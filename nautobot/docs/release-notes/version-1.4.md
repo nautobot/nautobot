@@ -71,6 +71,8 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 ### Fixed
 
+- [#1898](https://github.com/nautobot/nautobot/issues/1898) - Browsable API is now properly styled as the rest of the app.
+
 ### Removed
 
 - [#1462](https://github.com/nautobot/nautobot/issues/1462) - Removed job source tab from Job and Job Result view.
