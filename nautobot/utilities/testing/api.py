@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings, tag
@@ -19,10 +18,6 @@ __all__ = (
     "APITestCase",
     "APIViewTestCases",
 )
-
-
-# Use the proper swappable User model
-User = get_user_model()
 
 
 #
@@ -45,11 +40,10 @@ class APITestCase(ModelTestCase):
 
     def setUp(self):
         """
-        Create a superuser and token for API calls.
+        Create a token for API calls.
         """
-        # Create the test user and assign permissions
-        self.user = User.objects.create_user(username="testuser")
-        self.add_permissions(*self.user_permissions)
+        # Do not initialize the client, it conflicts with the APIClient.
+        super().setUpNautobot(client=False)
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
         if self.api_version:
@@ -560,7 +554,9 @@ class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
         """
         Create a superuser and token for API calls.
         """
-        self.user = User.objects.create(username="testuser", is_superuser=True)
+        super().setUpNautobot()
+        self.user.is_superuser = True
+        self.user.save()
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 

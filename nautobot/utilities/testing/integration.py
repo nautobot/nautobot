@@ -2,7 +2,6 @@ import os
 import time
 
 from celery.contrib.testing.worker import start_worker
-from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from django.test import tag
@@ -12,14 +11,8 @@ from selenium import webdriver
 from splinter.browser import Browser
 
 from nautobot.core.celery import app
-from nautobot.extras.management import create_custom_statuses
-from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 
-
-# Use the proper swappable User model
-User = get_user_model()
 
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
@@ -101,11 +94,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
             cls.celery_worker.__enter__()
 
     def setUp(self):
-        # Repopulate custom statuses between test cases
-        create_custom_statuses(None, verbosity=0)
-
-        # Setup test user
-        self.user, _ = User.objects.get_or_create(username="testuser")
+        super().setUpNautobot()
 
         self.password = "testpassword"
         self.user.set_password(self.password)

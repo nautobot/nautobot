@@ -1,13 +1,17 @@
 import json
 
+from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
+from django.test import Client
 from django.utils.text import slugify
 from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
+from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
@@ -15,10 +19,30 @@ from nautobot.utilities.fields import JSONArrayField
 from .utils import extract_form_failures
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class NautobotTestCaseMixin:
     """Base class for all Nautobot-specific unit tests."""
 
     user_permissions = ()
+
+    def setUpNautobot(self, client=True):
+        """Setup shared testuser, statuses and client."""
+        # Re-populate status choices after database truncation by TransactionTestCase
+        populate_status_choices(apps, None)
+
+        # Create the test user and assign permissions
+        self.user = User.objects.create_user(username="testuser")
+        self.add_permissions(*self.user_permissions)
+
+        if client:
+            # Initialize the test client
+            self.client = Client()
+
+            # Force login explicitly with the first-available backend
+            self.client.force_login(self.user)
 
     def prepare_instance(self, instance):
         """

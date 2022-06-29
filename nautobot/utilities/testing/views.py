@@ -1,10 +1,9 @@
 import uuid
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from django.test import Client, TestCase as _TestCase, override_settings, tag
+from django.test import TestCase as _TestCase, override_settings, tag
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 
@@ -23,25 +22,13 @@ __all__ = (
 )
 
 
-# Use the proper swappable User model
-User = get_user_model()
-
-
 @tag("unit")
 class TestCase(_TestCase, NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
     def setUp(self):
-
-        # Create the test user and assign permissions
-        self.user = User.objects.create_user(username="testuser")
-        self.add_permissions(*self.user_permissions)
-
-        # Initialize the test client
-        self.client = Client()
-
-        # Force login explicitly with the first-available backend
-        self.client.force_login(self.user)
+        """Initialize user and client."""
+        super().setUpNautobot()
 
 
 class ModelTestCase(TestCase):
