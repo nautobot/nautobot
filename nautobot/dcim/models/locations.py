@@ -62,7 +62,7 @@ class LocationType(TreeNode, OrganizationalModel):
             self.slug,
             self.parent.name if self.parent else None,
             self.description,
-            "",  # TODO content-types string
+            ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.order_by("app_label", "model")),
         )
 
 
