@@ -1,5 +1,4 @@
 {
-  "baseBranches": [],
   "constraints": {
     "python": "3.7"
   },
@@ -26,7 +25,7 @@
     {
       "description": "Group updates to next cut down on PR noise.",
       "groupName": "Next Updates",
-      "matchBaseBranches": ["next"],
+      "baseBranches": ["next"],
       "rangeStrategy": "update-lockfile",
       "schedule": [
         "before 2am"
@@ -35,7 +34,7 @@
     {
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
       "groupName": "Develop Updates",
-      "matchBaseBranches": ["develop"],
+      "baseBranches": ["develop"],
       "rangeStrategy": "in-range-only",
       "schedule": [
         "before 3am on Friday"
