@@ -20,7 +20,7 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
-from nautobot.utilities.forms.fields import SlugOrPKMultipleChoiceField
+from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
 
 from taggit.managers import TaggableManager
 
@@ -418,12 +418,14 @@ class MappedPredicatesFilterMixin:
         return qs.distinct()
 
 
-class SlugOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
-    Filter that supports filtering on the `pk` or the `slug` of a foreign-key related field.
+    Filter that supports filtering on values matching the `pk` field and another
+    field of a foreign-key related object. The desired field is set using the `natural_key`
+    keyword argument on filter initialization (defaults to `slug`).
     """
 
-    field_class = SlugOrPKMultipleChoiceField
+    field_class = MultiMatchModelMultipleChoiceField
 
 
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):

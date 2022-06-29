@@ -115,14 +115,21 @@ class UserFilter(NautobotFilterSet):
 ```
 
 - For foreign-key related fields on **new core models for v1.4 or later:**
-    - The field **must** be shadowed utilizing a hybrid `SlugOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
-    - In default settings for filtersets, when not using `SlugOrPKMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `SlugOrPKMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
+    - The field **must** be shadowed utilizing a hybrid `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
+    - Fields that use `name` instead of `slug` can set the `natural_key` argument on `NaturalKeyOrPKMultipleChoiceFilter`.
+    - In default settings for filtersets, when not using `NaturalKeyOrPKMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyOrPKMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
     - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. *We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release.*
     - Using the previous field (`provider`) as an example, it would look something like this:
 
 ```python
-    from nautobot.utilities.filters import SlugOrPKMultipleChoiceFilter
-    provider = SlugOrPKMultipleChoiceFilter(
+    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Provider.objects.all(),
+        label="Provider (slug or ID)",
+    )
+    # optionally use the natural_key argument to set the field to name instead of slug
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
         queryset=Provider.objects.all(),
         label="Provider (slug or ID)",
     )

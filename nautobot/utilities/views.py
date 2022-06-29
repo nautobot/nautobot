@@ -48,6 +48,25 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
+class AdminRequiredMixin(AccessMixin):
+    """
+    Allows access only to admin users.
+    """
+
+    def has_permission(self):
+        return bool(
+            self.request.user
+            and self.request.user.is_active
+            and (self.request.user.is_staff or self.request.user.is_superuser)
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.has_permission():
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
+
+
 class ObjectPermissionRequiredMixin(AccessMixin):
     """
     Similar to Django's built-in PermissionRequiredMixin, but extended to check for both model-level and object-level

@@ -4,6 +4,7 @@ import inspect
 import json
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -264,9 +265,9 @@ def to_meters(length, unit):
     if unit == CableLengthUnitChoices.UNIT_CENTIMETER:
         return length / 100
     if unit == CableLengthUnitChoices.UNIT_FOOT:
-        return length * 0.3048
+        return length * Decimal("0.3048")
     if unit == CableLengthUnitChoices.UNIT_INCH:
-        return length * 0.3048 * 12
+        return length * Decimal("0.3048") * 12
     raise ValueError("Unknown unit {}. Must be 'm', 'cm', 'ft', or 'in'.".format(unit))
 
 

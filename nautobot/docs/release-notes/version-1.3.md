@@ -140,6 +140,27 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.7 (2022-06-27)
+
+### Added
+
+- [#1896](https://github.com/nautobot/nautobot/pull/1856) - Added Renovate Bot configuration, targeting `next`.
+- [#1900](https://github.com/nautobot/nautobot/issues/1900) - Added ability to filter Git repository table based on provided contents.
+
+### Changed
+
+- [#1645](https://github.com/nautobot/nautobot/issues/1645) - Hide search bar for unauthenticated users if `HIDE_RESTRICTED_UI` is True
+- [#1946](https://github.com/nautobot/nautobot/pull/1946) - Increase character limit on `FileAttachment.mimetype` to 255 to allow for all mime types to be used.
+- [#1948](https://github.com/nautobot/nautobot/issues/1948) - Switched Renovate Bot configuration to bump lock-file only on patch releases instead of bumping in `pyproject.toml`.
+
+### Fixed
+
+- [#1677](https://github.com/nautobot/nautobot/issues/1677) - Fixed default values of custom fields on device components (such as Interface) not being applied upon Device creation.
+- [#1769](https://github.com/nautobot/nautobot/issues/1769) - Resolve missing menu 'General / Installed Plugins' in navbar if `HIDE_RESTRICTED_UI` is activated
+- [#1836](https://github.com/nautobot/nautobot/issues/1836) - Fixed incorrect pre-population of custom field filters in table views.
+- [#1870](https://github.com/nautobot/nautobot/issues/1870) - Fixed cable `_abs_length` validation error.
+- [#1941](https://github.com/nautobot/nautobot/pull/1941) - Fixes uWSGI config example, development environment links in Docker section of docs.
+
 ## v1.3.6 (2022-06-13)
 
 ### Changed
