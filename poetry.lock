@@ -1957,7 +1957,7 @@ python-versions = "*"
 
 [[package]]
 name = "splinter"
-version = "0.18.0"
+version = "0.18.1"
 description = "browser abstraction for web acceptance testing"
 category = "dev"
 optional = false
@@ -3324,8 +3324,8 @@ sortedcontainers = [
     {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
 splinter = [
-    {file = "splinter-0.18.0-py3-none-any.whl", hash = "sha256:55a17163aa77b33bfcd5b0e77aea88c1295e5a5c46bdc1b33bf94b270c508954"},
-    {file = "splinter-0.18.0.tar.gz", hash = "sha256:517f4af46a8cf512d3a940823808f18a54bbee0579b0910c2b01a1860715a20a"},
+    {file = "splinter-0.18.1-py3-none-any.whl", hash = "sha256:616da85a0c99bef00b59e75eb29e2e48162027c68ccb81a12d1dfe6d26209692"},
+    {file = "splinter-0.18.1.tar.gz", hash = "sha256:4a14a9d1f9d1372c64b666627ef4e103d759379bc1a9bde0c487e00d70976b1e"},
 ]
 sqlparse = [
     {file = "sqlparse-0.4.2-py3-none-any.whl", hash = "sha256:48719e356bb8b42991bdbb1e8b83223757b93789c00910a616a071910ca4a64d"},
