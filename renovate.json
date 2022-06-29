@@ -6,6 +6,9 @@
   "extends": [
     "config:base"
   ],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "description": "Require dashboard approval for non-patch updates to graphene-django-optimizer and django-timezone-field.",
@@ -31,7 +34,6 @@
     {
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
       "groupName": "Develop Updates",
-      "matchUpdateTypes": ["patch"],
       "baseBranches": ["develop"],
       "rangeStrategy": "in-range-only",
       "schedule": [
