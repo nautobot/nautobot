@@ -337,7 +337,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
             raise ValidationError("A circuit termination must attach to either a site or a provider network.")
         if self.site and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
-        # Iff a site is defined, a location *may* also be defined.
+        # If and only if a site is defined, a location *may* also be defined.
         if self.location is not None:
             if self.provider_network is not None:
                 raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
