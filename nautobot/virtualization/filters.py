@@ -8,7 +8,7 @@ from nautobot.extras.filters import (
     NautobotFilterSet,
     StatusModelFilterSetMixin,
 )
-from nautobot.ipam.models import IPAddress, Service
+from nautobot.ipam.models import IPAddress, Service, VLAN
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -296,24 +296,30 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
     )
-    tagged_vlans_vid = MultiValueCharFilter(method="filter_tagged_vlans_vid", label="Tagged VLAN (VID)")
-    tagged_vlans = MultiValueCharFilter(method="filter_tagged_vlans", label="Tagged VLAN")
-    untagged_vlan_vid = MultiValueCharFilter(method="filter_untagged_vlan_vid", label="Untagged VLAN (VID)")
-    untagged_vlan = MultiValueCharFilter(method="filter_untagged_vlan", label="Untagged VLAN")
+    tagged_vlans_vid = django_filters.ModelMultipleChoiceFilter(
+        field_name="tagged_vlans__vid",
+        queryset=VLAN.objects.all(),
+        to_field_name="vid",
+        label="Tagged VLAN (VID)",
+    )
+    tagged_vlans = django_filters.ModelMultipleChoiceFilter(
+        field_name="tagged_vlans",
+        queryset=VLAN.objects.all(),
+        label="Tagged VLAN",
+    )
+    untagged_vlan_vid = django_filters.ModelMultipleChoiceFilter(
+        field_name="untagged_vlan__vid",
+        queryset=VLAN.objects.all(),
+        to_field_name="vid",
+        label="Untagged VLAN (VID)",
+    )
+    untagged_vlan = django_filters.ModelMultipleChoiceFilter(
+        field_name="untagged_vlan",
+        queryset=VLAN.objects.all(),
+        label="Untagged VLAN",
+    )
     ip_address = MultiValueCharFilter(method="filter_ip_address", label="IP Address")
     tags = TagFilter()
-
-    def filter_tagged_vlans(self, queryset, name, value):
-        return queryset.filter(tagged_vlans__in=value)
-
-    def filter_tagged_vlans_vid(self, queryset, name, value):
-        return queryset.filter(tagged_vlans__vid__in=value)
-
-    def filter_untagged_vlan(self, queryset, name, value):
-        return queryset.filter(untagged_vlan__in=value)
-
-    def filter_untagged_vlan_vid(self, queryset, name, value):
-        return queryset.filter(untagged_vlan__vid__in=value)
 
     def filter_ip_address(self, queryset, name, value):
         ip_queryset = IPAddress.objects.filter_address_in(addresses=value)
