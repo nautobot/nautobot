@@ -23,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.tables import NotesTable
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -121,6 +122,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                     "assigned_object_id": instance.pk
                 }
             )
+        notes_table = NotesTable(instance.notes)
 
         return render(
             request,
@@ -131,6 +133,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 "changelog_url": self.get_changelog_url(instance),
                 "notes_form": notes_form,
+                "notes_table": notes_table,
                 **self.get_extra_context(request, instance),
             },
         )

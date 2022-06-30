@@ -31,6 +31,7 @@ from .models import (
     Job as JobModel,
     JobResult,
     JobLogEntry,
+    Notes,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -578,6 +579,20 @@ class JobResultTable(BaseTable):
         default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
 
 
+#
+# Notes
+#
+
+
+class NotesTable(BaseTable):
+    actions = ButtonsColumn(Notes, pk_field="slug")
+
+    class Meta(BaseTable.Meta):
+        model = Notes
+        fields = ("name", "created", "note", "user_name")
+
+    def render_note(self, value):
+        return render_markdown(value)
 #
 # ScheduledJobs
 #
