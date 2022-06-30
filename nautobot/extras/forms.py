@@ -18,6 +18,7 @@ from nautobot.utilities.forms import (
     BulkEditForm,
     BulkEditNullBooleanSelect,
     ColorSelect,
+    CommentField,
     CSVContentTypeField,
     CSVModelChoiceField,
     CSVModelForm,
@@ -59,6 +60,7 @@ from .models import (
     ImageAttachment,
     Job,
     JobResult,
+    Notes,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -1088,6 +1090,21 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
     )
     total_run_count = forms.IntegerField(required=False)
 
+
+#
+# Notes
+#
+
+class NotesForm(BootstrapMixin, forms.ModelForm):
+    note = CommentField
+
+    class Meta:
+        model = Notes
+        fields = ["name", "assigned_object_type", "assigned_object_id", "note"]
+        widgets = {
+            "assigned_object_type": forms.HiddenInput,
+            "assigned_object_id": forms.HiddenInput,
+        }
 
 #
 # Change logging

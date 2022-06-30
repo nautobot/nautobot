@@ -1,0 +1,71 @@
+{% load helpers %}
+{% load form_helpers %}
+
+{% if perms.extras.add_notes %}
+<form action="{% url 'extras:notes_add' %}?return_url={{ request.path }}?tab=notes" method="post" enctype="multipart/form-data" class="form form-horizontal">
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+          <h3>Add a new note</h3>
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <strong>Note</strong>
+            </div>
+            <div class="panel-body">
+              {% csrf_token %}
+              {% render_form notes_form %}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-md-offset-3 text-right" style="margin-bottom: 20px;">
+          <button type="submit" class="btn btn-primary">Create</button>
+          <a href="{{ object.get_absolute_url }}" class="btn btn-default">Cancel</a>
+        </div>
+      </div>
+</form>
+{% endif %}
+
+{% with notes=object.notes %}
+<div class="panel panel-default">
+    <table class="table table-hover table-headings panel-body">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Created</th>
+            <th>Note</th>
+            <th>User Name</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for note in notes %}
+            <tr>
+                <td>{{ note.name }}</td>
+                <td>{{ note.created }}</td>
+                <td>{{ note.note|render_markdown }}</td>
+                <td>{{ note.user_name }}</td>
+                <td class="text-right text-nowrap noprint">
+                  <a href="{% url 'extras:notes_changelog' slug=note.slug %}" class="btn btn-default btn-xs" title="Change log">
+                      <i class="mdi mdi-history"></i>
+                  </a>
+                  {% if perms.extras.change_notes %}
+                      <a href="{% url 'extras:notes_edit' slug=note.slug %}?return_url={{ request.path }}?tab=notes" class="btn btn-xs btn-warning" title="Edit">
+                          <i class="mdi mdi-pencil"></i>
+                      </a>
+                  {% endif %}
+                  {% if perms.extras.delete_notes %}
+                      <a href="{% url 'extras:notes_delete' slug=note.slug %}?return_url={{ request.path }}?tab=notes" class="btn btn-xs btn-danger" title="Delete">
+                          <i class="mdi mdi-trash-can-outline"></i>
+                      </a>
+                  {% endif %}
+                </td>
+            </tr>
+          {% endfor %}
+          {% if notes|length == 0 %}
+            <tr>
+              <td colspan="5" class="text-center text-muted">&mdash; No notes found &mdash;</td>
+            </tr>
+          {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endwith %}

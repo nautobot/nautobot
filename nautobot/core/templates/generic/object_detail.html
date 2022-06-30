@@ -78,6 +78,13 @@
             </a>
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
+        {% if perms.extras.view_notes %}
+            <li role="presentation"{% if request.GET.tab == 'notes' %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#notes" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+                    Notes
+                </a>
+            </li>
+        {% endif %}
         {% if perms.extras.view_dynamicgroup and object.dynamic_groups %}
             <li role="presentation"{% if request.GET.tab == 'dynamic-groups' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#dynamic-groups" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
@@ -139,6 +146,13 @@
             <div class="row">
                 <div class="col-md-6">
                     {% include 'inc/dynamic_groups_panel.html' %}
+                </div>
+            </div>
+        </div>
+        <div id="notes" role="tabpanel" class="tab-pane {% if request.GET.tab == 'notes' %}active{% else %}fade{% endif %}">
+            <div class="row">
+                <div class="col-md-12">
+                    {% include 'inc/notes_panel.html' %}
                 </div>
             </div>
         </div>

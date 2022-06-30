@@ -12,6 +12,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
+    Notes,
     Secret,
     SecretsGroup,
     Status,
@@ -530,4 +531,15 @@ urlpatterns = [
         name="webhook_changelog",
         kwargs={"model": Webhook},
     ),
+    # Notes
+    path("notes/add/", views.NotesEditView.as_view(), name="notes_add"),
+    path("notes/<slug:slug>/", views.NotesView.as_view(), name="notes"),
+    path(
+        "notes/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="notes_changelog",
+        kwargs={"model": Notes},
+    ),
+    path("notes/<slug:slug>/edit/", views.NotesEditView.as_view(), name="notes_edit"),
+    path("notes/<slug:slug>/delete/", views.NotesDeleteView.as_view(), name="notes_delete"),
 ]

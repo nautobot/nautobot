@@ -27,6 +27,23 @@ class DynamicGroupMixin:
         return self._dynamic_group_queryset
 
 
+class NotesMixin:
+    """
+    Adds a `notes` property that returns a queryset of `Notes` membership.
+    """
+
+    @property
+    def notes(self):
+        """Return a `Notes` queryset for this instance."""
+        from nautobot.extras.models.models import Notes
+
+        if not hasattr(self, "_notes_queryset"):
+            queryset = Notes.objects.get_for_object(self)
+            self._notes_queryset = queryset
+
+        return self._notes_queryset
+
+
 # 2.0 TODO: Remove after v2 since we will no longer care about backwards-incompatibility.
 # - Remove the `monkey_mix` from `nautobot.core.apps.CoreConfig.ready()`
 # - Convert this into a subclass instead of a mixin and move it to `nautobot.extras.models.managers.TaggableManager` (assuming this stays in `extras`)

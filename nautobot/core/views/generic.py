@@ -44,7 +44,7 @@ from nautobot.utilities.utils import (
     prepare_cloned_fields,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
-
+from nautobot.extras.forms import NotesForm
 
 class ObjectView(ObjectPermissionRequiredMixin, View):
     """
@@ -115,6 +115,12 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object by PK or slug
         """
         instance = get_object_or_404(self.queryset, **kwargs)
+        notes_form = NotesForm(
+                initial={
+                    "assigned_object_type": ContentType.objects.get_for_model(instance),
+                    "assigned_object_id": instance.pk
+                }
+            )
 
         return render(
             request,
@@ -124,6 +130,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 "changelog_url": self.get_changelog_url(instance),
+                "notes_form": notes_form,
                 **self.get_extra_context(request, instance),
             },
         )

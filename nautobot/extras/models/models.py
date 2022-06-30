@@ -30,7 +30,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.querysets import ConfigContextQuerySet
+from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
@@ -642,6 +642,50 @@ class ImageAttachment(BaseModel):
             return self.image.size
         except tuple(expected_exceptions):
             return None
+
+
+#
+# Notes
+#
+
+
+@extras_features("graphql", "webhooks")
+class Notes(BaseModel, ChangeLoggedModel):
+    """
+    Notes allows anyone with proper permissions to add a note to an object.
+    """
+    assigned_object_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE
+    )
+    assigned_object_id = models.UUIDField(db_index=True)
+    assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="note",
+        blank=True,
+        null=True,
+    )
+    user_name = models.CharField(max_length=150, editable=False)
+    name = models.CharField(max_length=150)
+    slug = AutoSlugField(populate_from="name", max_length=150)
+    note = models.TextField()
+    objects = NotesQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["created"]
+        verbose_name = "Note"
+        verbose_name_plural = "Notes"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        # Record the user's name as static strings
+        if not self.user_name:
+            self.user_name = self.user.username if self.user else "Undefined"
+        return super().save(*args, **kwargs)
 
 
 #
