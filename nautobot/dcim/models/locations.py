@@ -185,9 +185,6 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Save original location_type for use in clean()
-        self._original_location_type = self.location_type if self.present_in_database else None
-
     def to_csv(self):
         return (
             self.name,
@@ -219,7 +216,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
         # Prevent changing location type as that would require a whole bunch of cascading logic checks,
         # e.g. what if the new type doesn't allow all of the associated objects that the old type did?
-        if self.present_in_database and self.location_type != self._original_location_type:
+        if self.present_in_database and self.location_type != Location.objects.get(pk=self.pk).location_type:
             raise ValidationError({"location_type": "Changing the type of an existing Location is not permitted."})
 
         if self.location_type.parent is not None:

@@ -367,6 +367,13 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+        # Changing location_type of an existing instance is not permitted
+        cls.update_data = {
+            "name": "A revised location",
+            "slug": "a-different-slug",
+            "status": "planned",
+        }
+
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
