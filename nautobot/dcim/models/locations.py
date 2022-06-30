@@ -65,6 +65,26 @@ class LocationType(TreeNode, OrganizationalModel):
             ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.order_by("app_label", "model")),
         )
 
+    def clean(self):
+        """
+        Disallow LocationTypes whose name conflicts with existing location-related models, to avoid confusion.
+
+        In the longer term we will collapse these other models into special cases of LocationType.
+        """
+        super().clean()
+
+        if self.name.lower() in [
+            "region",
+            "regions",
+            "site",
+            "sites",
+            "rackgroup",
+            "rackgroups",
+            "rack group",
+            "rack groups",
+        ]:
+            raise ValidationError({"name": "This name is reserved for future use."})
+
 
 @extras_features(
     "custom_fields",
@@ -86,8 +106,8 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     Region
       Region
         Site
-          Location
-            Location
+          Location (location_type="Building")
+            Location (location_type="Room")
               RackGroup
                 Rack
                   Device

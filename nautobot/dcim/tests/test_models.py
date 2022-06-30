@@ -541,6 +541,22 @@ class RackTestCase(TestCase):
         self.assertIn('Racks may not associate to locations of type "Location Type B"', str(cm.exception))
 
 
+class LocationTypeTestCase(TestCase):
+    def test_reserved_names(self):
+        """Confirm that certain names are reserved for now."""
+        for candidate_name in (
+            "Region",
+            "Site",
+            "RackGroup",
+            "regions",
+            "sites",
+            "rack groups",
+        ):
+            with self.assertRaises(ValidationError) as cm:
+                LocationType(name=candidate_name).clean()
+            self.assertIn("This name is reserved", str(cm.exception))
+
+
 class LocationTestCase(TestCase):
     def setUp(self):
         self.root_type = LocationType.objects.create(name="Campus")
