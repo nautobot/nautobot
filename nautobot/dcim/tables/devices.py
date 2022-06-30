@@ -605,7 +605,6 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
 
 
 class DeviceInterfaceTable(InterfaceTable):
-
     def __init__(self, is_vc_master=False, *args, **kwargs):
         if is_vc_master:
             self.Meta.default_columns.append("device")
