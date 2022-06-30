@@ -35,13 +35,12 @@ from nautobot.utilities.filters import (
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
-    class SiteFilterSet(django_filters.FilterSet):
-        region = TreeNodeMultipleChoiceFilter(
-            queryset=Region.objects.all(),
-            field_name="region",
-            lookup_expr="in",
-            to_field_name="slug",
-        )
+    class SiteFilterSet(BaseFilterSet):
+        region = TreeNodeMultipleChoiceFilter(queryset=Region.objects.all())
+
+        class Meta:
+            model = Site
+            fields = []
 
     def setUp(self):
 
@@ -49,45 +48,99 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
         self.region1 = Region.objects.create(name="Test Region 1", slug="test-region-1")
         self.region2 = Region.objects.create(name="Test Region 2", slug="test-region-2")
+        self.region2a = Region.objects.create(name="Test Region 2A", slug="test-region-2a", parent=self.region2)
+        self.region2ab = Region.objects.create(name="Test Region 2A-B", slug="test-region-2a-b", parent=self.region2a)
         self.site1 = Site.objects.create(region=self.region1, name="Test Site 1", slug="test-site1")
         self.site2 = Site.objects.create(region=self.region2, name="Test Site 2", slug="test-site2")
-        self.site3 = Site.objects.create(region=None, name="Test Site 3", slug="test-site3")
+        self.site2a = Site.objects.create(region=self.region2a, name="Test Site 2a", slug="test-site2a")
+        self.site2ab = Site.objects.create(region=self.region2ab, name="Test Site 2a-b", slug="test-site2a-b")
+        self.site0 = Site.objects.create(region=None, name="Test Site 0", slug="test-site0")
 
         self.queryset = Site.objects.all()
 
-    def test_filter_single(self):
+    def test_filter_single_slug(self):
 
         kwargs = {"region": ["test-region-1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 1)
-        self.assertEqual(qs[0], self.site1)
+        self.assertCountEqual(list(qs), [self.site1])
 
-    def test_filter_multiple(self):
+    def test_filter_single_pk(self):
+
+        kwargs = {"region": [self.region1.pk]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1])
+
+    def test_filter_multiple_slug(self):
 
         kwargs = {"region": ["test-region-1", "test-region-2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 2)
-        self.assertEqual(qs[0], self.site1)
-        self.assertEqual(qs[1], self.site2)
+        self.assertCountEqual(list(qs), [self.site1, self.site2, self.site2a, self.site2ab])
 
     def test_filter_null(self):
 
         kwargs = {"region": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 1)
-        self.assertEqual(qs[0], self.site3)
+        self.assertCountEqual(list(qs), [self.site0])
 
-    def test_filter_combined(self):
+    def test_filter_combined_slug(self):
 
         kwargs = {"region": ["test-region-1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 2)
-        self.assertEqual(qs[0], self.site1)
-        self.assertEqual(qs[1], self.site3)
+        self.assertCountEqual(list(qs), [self.site0, self.site1])
+
+    def test_filter_combined_pk(self):
+
+        kwargs = {"region": [self.region2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site2, self.site2a, self.site2ab])
+
+    def test_filter_single_slug_exclude(self):
+
+        kwargs = {"region__n": ["test-region-1"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site2, self.site2a, self.site2ab])
+
+    def test_filter_single_pk_exclude(self):
+
+        kwargs = {"region__n": [self.region2.pk]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site1])
+
+    def test_filter_multiple_slug_exclude(self):
+
+        kwargs = {"region__n": ["test-region-1", "test-region-2"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0])
+
+    def test_filter_null_exclude(self):
+
+        kwargs = {"region__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1, self.site2, self.site2a, self.site2ab])
+
+    def test_filter_combined_slug_exclude(self):
+
+        kwargs = {"region__n": ["test-region-1", settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site2, self.site2a, self.site2ab])
+
+    def test_filter_combined_pk_exclude(self):
+
+        kwargs = {"region__n": [self.region2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1])
 
 
 class TestModel(models.Model):
@@ -451,8 +504,7 @@ class BaseFilterSetTest(TestCase):
 
     def test_tree_node_multiple_choice_filter(self):
         self.assertIsInstance(self.filters["treeforeignkeyfield"], TreeNodeMultipleChoiceFilter)
-        # TODO: lookup_expr different for negation?
-        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "exact")
+        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "in")
         self.assertEqual(self.filters["treeforeignkeyfield"].exclude, False)
         self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "in")
         self.assertEqual(self.filters["treeforeignkeyfield__n"].exclude, True)
