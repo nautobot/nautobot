@@ -636,19 +636,16 @@ def register_custom_validators(class_list):
 
 
 def register_override_views(override_views, plugin):
-    resolver = get_resolver()
 
     override_warning = (
         "Plugin {} tried to override view {}, but only namespaced views "
         "are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
     )
 
-    # This functionality will only work properly if core views are overridden before plugin views
-    # This sorts the dict by occurrences of ":" in the keys.
-    # Overridden plugin views will have two colons in the key so will be sorted to get processed last here:
-    override_views = dict(sorted(override_views.items(), key=lambda i: i[0].count(":")))
-
     for qualified_view_name, view in override_views.items():
+
+        resolver = get_resolver()
+
         try:
             app_name, view_name = qualified_view_name.rsplit(":", 1)
         except ValueError:
