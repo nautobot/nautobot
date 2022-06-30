@@ -1096,7 +1096,9 @@ plugin_name/                   # "nautobot_animal_sounds"
 ```
 
 ## Overriding Existing Functionality
+
 ### Replacing Views
+
 You may override any of the core or plugin views by providing an `override_views` `dict` in a plugin's `views.py` file.
 
 To override a view, you must specify the view's fully qualified name as the `dict` key which consists of the app name followed by the view's name separated by a colon, for instance `dcim:device`. The `dict` value should be the overriding view function.
