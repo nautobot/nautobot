@@ -11,5 +11,4 @@ class ViewOverride(generic.View):
 
 override_views = {
     "plugins:example_plugin:view_to_be_overridden": ViewOverride.as_view(),
-    "dcim:device": ViewOverride.as_view(),
 }

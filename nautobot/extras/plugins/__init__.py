@@ -648,6 +648,7 @@ def register_override_views(override_views, plugin):
 
         try:
             app_name, view_name = qualified_view_name.rsplit(":", 1)
+            app_resolver = resolver.namespace_dict.get(app_name)
         except ValueError:
             logger.log(WARNING, override_warning.format(plugin, qualified_view_name))
             continue
@@ -656,12 +657,12 @@ def register_override_views(override_views, plugin):
         try:
             while ":" in app_name:
                 resolver_name, app_name = app_name.split(":", 1)
-                resolver = resolver.namespace_dict[resolver_name][1]
+                nested_resolver = resolver.namespace_dict[resolver_name][1]
+                app_resolver = nested_resolver.namespace_dict.get(app_name)
         except ValueError:
             logger.log(WARNING, override_warning.format(plugin, qualified_view_name))
             continue
 
-        app_resolver = resolver.namespace_dict.get(app_name)
         if not app_resolver:
             raise ValidationError(
                 f"Plugin {plugin} tried to override view {qualified_view_name} but {app_name} is not a valid app name."
