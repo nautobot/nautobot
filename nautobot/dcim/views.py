@@ -2386,8 +2386,8 @@ class CableCreateView(generic.ObjectEditView):
         if "termination_b_rack" not in initial_data:
             initial_data["termination_b_rack"] = getattr(obj.termination_a.parent, "rack", None)
 
-        if kwargs.get("termination_b_type", "") == "interface":
-            form = self.model_form(exclude_id=kwargs.get("termination_a_id", ""), instance=obj, initial=initial_data)
+        if kwargs.get("termination_b_type") == "interface":
+            form = self.model_form(exclude_id=kwargs.get("termination_a_id"), instance=obj, initial=initial_data)
         else:
             form = self.model_form(instance=obj, initial=initial_data)
 
