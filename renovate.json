@@ -1,5 +1,4 @@
 {
-  "baseBranches": ["next"],
   "constraints": {
     "python": "3.7"
   },
@@ -7,11 +6,39 @@
   "extends": [
     "config:base"
   ],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
-      "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
+      "description": "Require dashboard approval for non-patch updates to graphene-django-optimizer and django-timezone-field.",
+      "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field"],
+      "matchUpdateTypes": ["major", "minor"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Require dashboard approval for major updates for django-taggit.",
+      "matchPackageNames": ["django-taggit"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Group updates to next cut down on PR noise.",
+      "groupName": "Next Updates",
+      "baseBranches": ["next"],
+      "rangeStrategy": "update-lockfile",
+      "schedule": [
+        "before 2am"
+      ]
+    },
+    {
+      "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
+      "groupName": "Develop Updates",
+      "baseBranches": ["develop"],
+      "rangeStrategy": "in-range-only",
+      "schedule": [
+        "before 3am on Friday"
+      ]
     }
-  ],
-  "rangeStrategy": "update-lockfile"
+  ]
 }
