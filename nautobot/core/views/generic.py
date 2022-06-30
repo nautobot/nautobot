@@ -12,6 +12,7 @@ from django.core.exceptions import (
 )
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
+from django.db.models.query import QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -112,18 +113,25 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         # This object likely doesn't have a changelog route defined.
         return None
 
+    def add_notes_tab(self, request, instance):
+        """Adds the Notes tab if the model has the NotesMixin."""
+        ctx = {}
+        if hasattr(instance, "notes") and isinstance(instance.notes, QuerySet):
+            ctx["notes_form"] = NotesForm(
+                initial={
+                    "assigned_object_type": ContentType.objects.get_for_model(instance),
+                    "assigned_object_id": instance.pk,
+                }
+            )
+            ctx["notes_table"] = NotesTable(instance.notes)
+        
+        return ctx
+
     def get(self, request, *args, **kwargs):
         """
         Generic GET handler for accessing an object by PK or slug
         """
         instance = get_object_or_404(self.queryset, **kwargs)
-        notes_form = NotesForm(
-            initial={
-                "assigned_object_type": ContentType.objects.get_for_model(instance),
-                "assigned_object_id": instance.pk,
-            }
-        )
-        notes_table = NotesTable(instance.notes)
 
         return render(
             request,
@@ -133,9 +141,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 "changelog_url": self.get_changelog_url(instance),
-                "notes_form": notes_form,
-                "notes_table": notes_table,
                 **self.get_extra_context(request, instance),
+                **self.add_notes_tab(request, instance),
             },
         )
 
