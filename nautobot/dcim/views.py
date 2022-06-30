@@ -1310,12 +1310,9 @@ class DeviceInterfacesView(generic.ObjectView):
             "_path__destination",
             "tags",
         )
-        interface_table = tables.DeviceInterfaceTable(
-            is_vc_master=VirtualChassis.objects.filter(master=instance).exists(),
-            data=interfaces,
-            user=request.user,
-            orderable=False,
-        )
+        interface_table = tables.DeviceInterfaceTable(data=interfaces, user=request.user, orderable=False)
+        if VirtualChassis.objects.filter(master=instance).exists():
+            interface_table.columns.show("device")
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
             interface_table.columns.show("pk")
 
