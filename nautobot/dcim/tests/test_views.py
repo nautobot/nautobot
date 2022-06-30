@@ -30,7 +30,7 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SubdeviceRoleChoices,
 )
-
+from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -77,7 +77,7 @@ from nautobot.extras.models import (
 )
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1728,11 +1728,15 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
+        statuses = Status.objects.get_for_model(Interface)
+        status_active = statuses.get(slug="active")
+
         interfaces = (
             Interface.objects.create(device=device, name="Interface 1"),
             Interface.objects.create(device=device, name="Interface 2"),
             Interface.objects.create(device=device, name="Interface 3"),
             Interface.objects.create(device=device, name="LAG", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(device=device, name="BRIDGE", type=InterfaceTypeChoices.TYPE_BRIDGE),
         )
 
         vlans = (
@@ -1746,10 +1750,10 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.form_data = {
             "device": device.pk,
-            "virtual_machine": None,
             "name": "Interface X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
+            "status": status_active.pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1766,6 +1770,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
+            "bridge": interfaces[4].pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1775,6 +1780,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in tags],
+            "status": status_active.pk,
         }
 
         cls.bulk_edit_data = {
@@ -1788,13 +1794,14 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "status": status_active.pk,
         }
 
         cls.csv_data = (
-            "device,name,type",
-            "Device 1,Interface 4,1000base-t",
-            "Device 1,Interface 5,1000base-t",
-            "Device 1,Interface 6,1000base-t",
+            "device,name,type,status",
+            "Device 1,Interface 4,1000base-t,active",
+            "Device 1,Interface 5,1000base-t,active",
+            "Device 1,Interface 6,1000base-t,active",
         )
 
 
@@ -2165,6 +2172,7 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:console_connections_{}"
 
     model = ConsolePort
+    filterset = ConsoleConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2218,6 +2226,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:power_connections_{}"
 
     model = PowerPort
+    filterset = PowerConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2276,6 +2285,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:interface_connections_{}"
 
     model = Interface
+    filterset = InterfaceConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2322,6 +2332,23 @@ Device 1,Interface 2,,,True
 Device 1,Interface 3,,,False""",
             response.content.decode(response.charset),
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_objects_filtered(self):
+        """Extend base ListObjectsViewTestCase to filter based on *both ends* of a connection."""
+        # self.interfaces[0] is cabled to self.device_2_interface, and unfortunately with the way the queryset filtering
+        # works at present, we can't guarantee whether filtering on id=interfaces[0] will show it or not.
+        instance1, instance2 = self.interfaces[1], self.interfaces[2]
+        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+        if hasattr(self.model, "name"):
+            self.assertIn(instance1.name, content, msg=content)
+            self.assertNotIn(instance2.name, content, msg=content)
+        if hasattr(self.model, "get_absolute_url"):
+            self.assertIn(instance1.get_absolute_url(), content, msg=content)
+            self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):

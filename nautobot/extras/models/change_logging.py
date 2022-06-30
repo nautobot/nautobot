@@ -74,6 +74,7 @@ class ObjectChange(BaseModel):
         blank=True,
         null=True,
     )
+    # todoindex:
     related_object_id = models.UUIDField(blank=True, null=True)
     related_object = GenericForeignKey(ct_field="related_object_type", fk_field="related_object_id")
     object_repr = models.CharField(max_length=200, editable=False)

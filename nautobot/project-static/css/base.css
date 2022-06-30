@@ -7,6 +7,7 @@ html {
 }
 html, body {
     height: 100%;
+    overflow: auto;
 }
 body {
     padding-top: 70px;
@@ -514,4 +515,12 @@ span.hover_copy:hover .hover_copy_button {
 }
 #accordion-toggle-all {
     display: inline;
+}
+
+/* Theme modal */
+.theme-table .img-responsive {
+    margin: 0 auto;
+}
+.theme-table .active-theme {
+    border: 5px solid #FF0000;
 }

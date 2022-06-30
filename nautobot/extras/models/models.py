@@ -178,6 +178,9 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
 
     class Meta:
         abstract = True
+        indexes = [
+            models.Index(fields=("local_context_data_owner_content_type", "local_context_data_owner_object_id")),
+        ]
 
     def get_config_context(self):
         """
@@ -230,7 +233,7 @@ class ConfigContextSchema(OrganizationalModel):
     This model stores jsonschema documents where are used to optionally validate config context data payloads.
     """
 
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     description = models.CharField(max_length=200, blank=True)
     slug = AutoSlugField(populate_from="name", max_length=200, unique=None, db_index=True)
     data_schema = models.JSONField(
@@ -250,6 +253,11 @@ class ConfigContextSchema(OrganizationalModel):
         ct_field="owner_content_type",
         fk_field="owner_object_id",
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["name", "owner_content_type", "owner_object_id"], name="unique_name_owner"),
+        ]
 
     def __str__(self):
         if self.owner:
@@ -458,7 +466,7 @@ class FileAttachment(BaseModel):
 
     bytes = models.BinaryField()
     filename = models.CharField(max_length=255)
-    mimetype = models.CharField(max_length=50)
+    mimetype = models.CharField(max_length=255)
 
     def __str__(self):
         return self.filename

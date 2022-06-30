@@ -2,6 +2,11 @@
 
 While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through the `nbshell`.
 
+## Base Classes
+
+- All FilterSet classes should inherit from either `nautobot.utilities.filters.BaseFilterSet` (for bare-bones models) or `nautobot.extras.filters.NautobotFilterSet` (for models that support both change-logging and custom fields).
+- All Serializer classes should inherit from `ValidatedModelSerializer`.
+
 ## Model Existence in the Database
 
 A common Django pattern is to check whether a model instance's primary key (`pk`) field is set as a proxy for whether the instance has been written to the database or whether it exists only in memory.
@@ -110,15 +115,22 @@ class UserFilter(NautobotFilterSet):
 ```
 
 - For foreign-key related fields on **new core models for v1.4 or later:**
-    - The field **must** be shadowed utilizing a hybrid `NaturalKeyMultipleChoiceFilter`(yet to be implemented) which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
-    - In default settings for filtersets, when not using `NaturalKeyMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
+    - The field **must** be shadowed utilizing a hybrid `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
+    - Fields that use `name` instead of `slug` can set the `natural_key` argument on `NaturalKeyOrPKMultipleChoiceFilter`.
+    - In default settings for filtersets, when not using `NaturalKeyOrPKMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyOrPKMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
     - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. *We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release.*
     - Using the previous field (`provider`) as an example, it would look something like this:
 
 ```python
-    provider = NaturalKeyModelMultipleChoiceFilter(
+    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        to_field_name="slug",
+        label="Provider (slug or ID)",
+    )
+    # optionally use the natural_key argument to set the field to name instead of slug
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=Provider.objects.all(),
         label="Provider (slug or ID)",
     )
 ```

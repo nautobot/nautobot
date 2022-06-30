@@ -501,6 +501,7 @@ def check_schema(context, api_version=None):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "skip_docs_build": "Skip (re)build of documentation before running the test.",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -514,10 +515,12 @@ def unittest(
     tag=None,
     verbose=False,
     append=False,
+    skip_docs_build=False,
 ):
     """Run Nautobot unit tests."""
-    # First build the docs so they are available.
-    build_and_check_docs(context)
+    if not skip_docs_build:
+        # First build the docs so they are available.
+        build_and_check_docs(context)
 
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
@@ -560,6 +563,7 @@ def unittest_coverage(context):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "skip_docs_build": "Skip (re)build of documentation before running the test.",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -573,6 +577,7 @@ def integration_test(
     exclude_tag=None,
     verbose=False,
     append=False,
+    skip_docs_build=False,
 ):
     """Run Nautobot integration tests."""
 
@@ -589,6 +594,7 @@ def integration_test(
         exclude_tag=exclude_tag,
         verbose=verbose,
         append=append,
+        skip_docs_build=skip_docs_build,
     )
 
 

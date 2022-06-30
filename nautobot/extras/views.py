@@ -1468,6 +1468,10 @@ class RelationshipListView(generic.ObjectListView):
     action_buttons = ("add",)
 
 
+class RelationshipView(generic.ObjectView):
+    queryset = Relationship.objects.all()
+
+
 class RelationshipEditView(generic.ObjectEditView):
     queryset = Relationship.objects.all()
     model_form = forms.RelationshipForm

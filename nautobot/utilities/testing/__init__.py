@@ -16,6 +16,7 @@ from nautobot.extras.utils import get_job_content_type
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 
 from .api import APITestCase, APIViewTestCases
+from .filters import FilterTestCases
 from .utils import (
     post_data,
     create_test_user,
@@ -33,15 +34,16 @@ from .views import (
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
-    "post_data",
-    "create_test_user",
-    "extract_form_failures",
-    "extract_page_body",
-    "disable_warnings",
-    "TestCase",
+    "FilterTestCases",
     "ModelTestCase",
     "ModelViewTestCase",
+    "TestCase",
     "ViewTestCases",
+    "create_test_user",
+    "disable_warnings",
+    "extract_form_failures",
+    "extract_page_body",
+    "post_data",
     "run_job_for_testing",
 )
 

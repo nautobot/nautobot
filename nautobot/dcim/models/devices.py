@@ -109,12 +109,15 @@ class DeviceType(PrimaryModel):
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
+    # TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
+    # todoindex:
     is_full_depth = models.BooleanField(
         default=True,
         verbose_name="Is full depth",
         help_text="Device consumes both front and rear rack faces",
     )
+    # todoindex:
     subdevice_role = models.CharField(
         max_length=50,
         choices=SubdeviceRoleChoices,
@@ -341,6 +344,7 @@ class DeviceRole(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     color = ColorField(default=ColorChoices.COLOR_GREY)
+    # todoindex:
     vm_role = models.BooleanField(
         default=True,
         verbose_name="VM Role",
@@ -493,6 +497,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
+    # TODO: Profile filtering on this field if it could benefit from an index
     position = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
@@ -500,6 +505,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         verbose_name="Position (U)",
         help_text="The lowest-numbered unit occupied by the device",
     )
+    # todoindex:
     face = models.CharField(max_length=50, blank=True, choices=DeviceFaceChoices, verbose_name="Rack face")
     primary_ip4 = models.OneToOneField(
         to="ipam.IPAddress",
@@ -531,6 +537,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
+    # TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     comments = models.TextField(blank=True)
@@ -837,6 +844,16 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             filter |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
         return Interface.objects.filter(filter)
 
+    @property
+    def common_vc_interfaces(self):
+        """
+        Return a QuerySet matching all Interfaces assigned to this Device or,
+        if this Device belongs to a VirtualChassis, it returns all interfaces belonging Devices with same VirtualChassis
+        """
+        if self.virtual_chassis:
+            return self.virtual_chassis.member_interfaces
+        return self.interfaces
+
     def get_cables(self, pk_list=False):
         """
         Return a QuerySet or PK list matching all Cables connected to a component of this Device.
@@ -907,6 +924,11 @@ class VirtualChassis(PrimaryModel):
 
     def get_absolute_url(self):
         return reverse("dcim:virtualchassis", kwargs={"pk": self.pk})
+
+    @property
+    def member_interfaces(self):
+        """Return a list of Interfaces common to all member devices."""
+        return Interface.objects.filter(pk__in=self.members.values_list("interfaces", flat=True))
 
     def clean(self):
         super().clean()

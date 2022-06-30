@@ -1,9 +1,13 @@
+from collections import OrderedDict
 from copy import deepcopy
+import logging
 
 from django import forms
 from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
+from django.forms.utils import ErrorDict, ErrorList
+
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
@@ -16,6 +20,12 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
+from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
+
+from taggit.managers import TaggableManager
+
+
+logger = logging.getLogger(__name__)
 
 
 def multivalue_field_factory(field_class):
@@ -408,6 +418,16 @@ class MappedPredicatesFilterMixin:
         return qs.distinct()
 
 
+class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter that supports filtering on values matching the `pk` field and another
+    field of a foreign-key related object. The desired field is set using the `natural_key`
+    keyword argument on filter initialization (defaults to `slug`).
+    """
+
+    field_class = MultiMatchModelMultipleChoiceField
+
+
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
     Provide a search filter for use on filtersets as the `q=` parameter.
@@ -425,7 +445,7 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
 
 class BaseFilterSet(django_filters.FilterSet):
     """
-    A base filterset which provides common functionaly to all Nautobot filtersets
+    A base filterset which provides common functionality to all Nautobot filtersets.
     """
 
     FILTER_DEFAULTS = deepcopy(django_filters.filterset.FILTER_FOR_DBFIELD_DEFAULTS)
@@ -451,6 +471,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            TaggableManager: {"filter_class": TagFilter},
         }
     )
 
@@ -581,6 +602,14 @@ class BaseFilterSet(django_filters.FilterSet):
         )
 
     @classmethod
+    def get_fields(cls):
+        fields = super().get_fields()
+        if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
+            # Add "id" as the first key in the `fields` OrderedDict
+            fields = OrderedDict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
+        return fields
+
+    @classmethod
     def get_filters(cls):
         """
         Override filter generation to support dynamic lookup expressions for certain filter types.
@@ -595,6 +624,37 @@ class BaseFilterSet(django_filters.FilterSet):
 
         filters.update(new_filters)
         return filters
+
+    def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
+        super().__init__(data, queryset, request=request, prefix=prefix)
+        self._is_valid = None
+        self._errors = None
+
+    def is_valid(self):
+        """Extend FilterSet.is_valid() to potentially enforce settings.STRICT_FILTERING."""
+        if self._is_valid is None:
+            self._is_valid = super().is_valid()
+            if settings.STRICT_FILTERING:
+                self._is_valid = self._is_valid and set(self.form.data.keys()).issubset(self.form.cleaned_data.keys())
+            else:
+                # Trigger warning logs associated with generating self.errors
+                self.errors
+        return self._is_valid
+
+    @property
+    def errors(self):
+        """Extend FilterSet.errors to potentially include additional errors from settings.STRICT_FILTERING."""
+        if self._errors is None:
+            self._errors = ErrorDict(self.form.errors)
+            for extra_key in set(self.form.data.keys()).difference(self.form.cleaned_data.keys()):
+                # If a given field was invalid, it will be omitted from cleaned_data; don't report extra errors
+                if extra_key not in self._errors:
+                    if settings.STRICT_FILTERING:
+                        self._errors.setdefault(extra_key, ErrorList()).append("Unknown filter field")
+                    else:
+                        logger.warning('%s: Unknown filter field "%s"', self.__class__.__name__, extra_key)
+
+        return self._errors
 
 
 class NameSlugSearchFilterSet(django_filters.FilterSet):

@@ -567,7 +567,7 @@ class BaseInterfaceTable(BaseTable):
     )
 
 
-class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
 
@@ -577,6 +577,7 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
             "pk",
             "device",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
@@ -597,6 +598,7 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
             "pk",
             "device",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
@@ -611,6 +613,8 @@ class DeviceInterfaceTable(InterfaceTable):
         '{% endif %}"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
+    parent_interface = tables.Column(linkify=True, verbose_name="Parent")
+    bridge = tables.Column(linkify=True)
     lag = tables.Column(linkify=True, verbose_name="LAG")
     actions = ButtonsColumn(model=Interface, buttons=("edit", "delete"), prepend_template=INTERFACE_BUTTONS)
 
@@ -619,9 +623,12 @@ class DeviceInterfaceTable(InterfaceTable):
         fields = (
             "pk",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
+            "parent_interface",
+            "bridge",
             "lag",
             "mgmt_only",
             "mtu",
@@ -640,9 +647,11 @@ class DeviceInterfaceTable(InterfaceTable):
         default_columns = (
             "pk",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
+            "parent_interface",
             "lag",
             "mtu",
             "mode",
