@@ -654,10 +654,8 @@ class Notes(BaseModel, ChangeLoggedModel):
     """
     Notes allows anyone with proper permissions to add a note to an object.
     """
-    assigned_object_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE
-    )
+
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
     assigned_object_id = models.UUIDField(db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
     user = models.ForeignKey(

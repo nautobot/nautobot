@@ -593,6 +593,8 @@ class NotesTable(BaseTable):
 
     def render_note(self, value):
         return render_markdown(value)
+
+
 #
 # ScheduledJobs
 #

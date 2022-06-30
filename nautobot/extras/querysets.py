@@ -177,7 +177,6 @@ class NotesQuerySet(RestrictedQuerySet):
         return self.filter(assigned_object_id=obj.pk, assigned_object_type=content_type)
 
 
-
 class JobQuerySet(RestrictedQuerySet):
     """
     Extend the standard queryset with a get_for_class_path method.

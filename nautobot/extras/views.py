@@ -70,7 +70,7 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
-    Notes
+    Notes,
 )
 from .registry import registry
 
@@ -1873,6 +1873,7 @@ class NotesEditView(generic.ObjectEditView):
         if not obj.present_in_database:
             obj.user = request.user
         return obj
+
 
 class NotesDeleteView(generic.ObjectDeleteView):
     queryset = Notes.objects.all()

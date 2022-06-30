@@ -22,6 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
+from nautobot.extras.forms import NotesForm
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.tables import NotesTable
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -45,7 +46,7 @@ from nautobot.utilities.utils import (
     prepare_cloned_fields,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
-from nautobot.extras.forms import NotesForm
+
 
 class ObjectView(ObjectPermissionRequiredMixin, View):
     """
@@ -117,11 +118,11 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
         notes_form = NotesForm(
-                initial={
-                    "assigned_object_type": ContentType.objects.get_for_model(instance),
-                    "assigned_object_id": instance.pk
-                }
-            )
+            initial={
+                "assigned_object_type": ContentType.objects.get_for_model(instance),
+                "assigned_object_id": instance.pk,
+            }
+        )
         notes_table = NotesTable(instance.notes)
 
         return render(

@@ -1095,6 +1095,7 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 # Notes
 #
 
+
 class NotesForm(BootstrapMixin, forms.ModelForm):
     note = CommentField
 
@@ -1105,6 +1106,7 @@ class NotesForm(BootstrapMixin, forms.ModelForm):
             "assigned_object_type": forms.HiddenInput,
             "assigned_object_id": forms.HiddenInput,
         }
+
 
 #
 # Change logging

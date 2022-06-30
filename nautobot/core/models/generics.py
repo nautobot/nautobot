@@ -1,5 +1,4 @@
 from taggit.managers import TaggableManager
-from django.contrib.contenttypes.fields import GenericRelation
 
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
@@ -9,7 +8,9 @@ from nautobot.extras.models.tags import TaggedItem
 from nautobot.core.models import BaseModel
 
 
-class OrganizationalModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, DynamicGroupMixin, NotesMixin):
+class OrganizationalModel(
+    BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, DynamicGroupMixin, NotesMixin
+):
     """
     Base abstract model for all organizational models.
 
