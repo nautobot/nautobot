@@ -575,6 +575,16 @@ class LocationTestCase(TestCase):
         with self.assertRaises(ValidationError):
             location_2.validated_save()
 
+    def test_changing_type_forbidden(self):
+        """Once created, a location cannot change location_type."""
+        location = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location.validated_save()
+        location.location_type = self.intermediate_type
+        with self.assertRaises(ValidationError) as cm:
+            location.validated_save()
+        self.assertIn("location_type", str(cm.exception))
+        self.assertIn("not permitted", str(cm.exception))
+
     def test_parent_type_must_match(self):
         """A location's parent's location_type must match its location_type's parent."""
         location_1 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
