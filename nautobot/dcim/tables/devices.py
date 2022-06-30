@@ -605,6 +605,17 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
 
 
 class DeviceInterfaceTable(InterfaceTable):
+
+    def __init__(self, is_vc_master=False, *args, **kwargs):
+        if is_vc_master:
+            self.Meta.default_columns.append("device")
+        else:
+            try:
+                self.Meta.default_columns.remove("device")
+            except ValueError:
+                pass
+        super().__init__(*args, **kwargs)
+
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-{% if iface.mgmt_only %}wrench{% elif iface.is_lag %}drag-horizontal-variant'
         "{% elif iface.is_virtual %}circle{% elif iface.is_wireless %}wifi{% else %}ethernet"
@@ -638,10 +649,9 @@ class DeviceInterfaceTable(InterfaceTable):
             "tagged_vlans",
             "actions",
         )
-        default_columns = (
+        default_columns = [
             "pk",
             "name",
-            "device",
             "label",
             "enabled",
             "type",
@@ -653,7 +663,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "cable",
             "connection",
             "actions",
-        )
+        ]
         row_attrs = {
             "style": cable_status_color_css,
             "data-name": lambda record: record.name,
