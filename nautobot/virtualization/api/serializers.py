@@ -8,6 +8,7 @@ from nautobot.core.api import (
 )
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceRoleSerializer,
+    NestedLocationSerializer,
     NestedPlatformSerializer,
     NestedSiteSerializer,
 )
@@ -97,6 +98,7 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     group = NestedClusterGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
@@ -110,6 +112,7 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "group",
             "tenant",
             "site",
+            "location",
             "comments",
             "tags",
             "custom_fields",
@@ -130,6 +133,7 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     site = NestedSiteSerializer(read_only=True)
+    location = NestedLocationSerializer(read_only=True, required=False, allow_null=True)
     cluster = NestedClusterSerializer()
     role = NestedDeviceRoleSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -147,6 +151,7 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
             "name",
             "status",
             "site",
+            "location",
             "cluster",
             "role",
             "tenant",
@@ -181,6 +186,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
             "name",
             "status",
             "site",
+            "location",
             "cluster",
             "role",
             "tenant",
