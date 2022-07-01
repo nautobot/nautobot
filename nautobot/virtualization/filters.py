@@ -217,7 +217,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     )
     primary_ip4 = MultiValueCharFilter(
         method="filter_primary_ip4",
-        label="Primary IP Address",
+        label="Primary IPv4 Address",
     )
     primary_ip6 = MultiValueCharFilter(
         method="filter_primary_ip6",
