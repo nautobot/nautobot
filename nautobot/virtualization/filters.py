@@ -221,7 +221,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     )
     primary_ip6 = MultiValueCharFilter(
         method="filter_primary_ip6",
-        label="Primary IP Address",
+        label="Primary IPv6 Address",
     )
     services = django_filters.ModelMultipleChoiceFilter(
         field_name="services", queryset=Service.objects.all(), label="Services (ID)"
