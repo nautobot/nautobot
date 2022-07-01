@@ -311,7 +311,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
     )
-    ip_address = MultiValueCharFilter(method="filter_ip_address", label="IP Address")
+    ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP Addresses")
     tags = TagFilter()
 
     def filter_ip_address(self, queryset, name, value):

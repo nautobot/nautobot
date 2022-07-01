@@ -669,8 +669,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"mode": [InterfaceModeChoices.MODE_ACCESS, InterfaceModeChoices.MODE_TAGGED]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
-    def test_ip_address(self):
-        params = {"ip_address": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
+    def test_ip_addresses(self):
+        params = {"ip_addresses": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_assigned_to_interface(self):
