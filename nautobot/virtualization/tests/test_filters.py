@@ -658,17 +658,11 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tagged_vlans(self):
-        params = {"tagged_vlans": [self.vlan1.pk, self.vlan2.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-        params = {"tagged_vlans_vid": [self.vlan1.vid, self.vlan2.vid]}
+        params = {"tagged_vlans": [self.vlan1.pk, self.vlan2.vid]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_untagged_vlan(self):
-        params = {"untagged_vlan": [self.vlan1.pk, self.vlan2.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-        params = {"untagged_vlan_vid": [self.vlan1.vid, self.vlan2.vid]}
+        params = {"untagged_vlan": [self.vlan1.pk, self.vlan2.vid]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_mode(self):

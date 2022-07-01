@@ -301,27 +301,15 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
     )
-    tagged_vlans_vid = django_filters.ModelMultipleChoiceFilter(
-        field_name="tagged_vlans__vid",
+    tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="vid",
         queryset=VLAN.objects.all(),
-        to_field_name="vid",
-        label="Tagged VLAN (VID)",
+        label="Tagged VLAN (VID or ID)",
     )
-    tagged_vlans = django_filters.ModelMultipleChoiceFilter(
-        field_name="tagged_vlans",
+    untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="vid",
         queryset=VLAN.objects.all(),
-        label="Tagged VLAN",
-    )
-    untagged_vlan_vid = django_filters.ModelMultipleChoiceFilter(
-        field_name="untagged_vlan__vid",
-        queryset=VLAN.objects.all(),
-        to_field_name="vid",
-        label="Untagged VLAN (VID)",
-    )
-    untagged_vlan = django_filters.ModelMultipleChoiceFilter(
-        field_name="untagged_vlan",
-        queryset=VLAN.objects.all(),
-        label="Untagged VLAN",
+        label="Untagged VLAN (VID or ID)",
     )
     ip_address = MultiValueCharFilter(method="filter_ip_address", label="IP Address")
     tags = TagFilter()
