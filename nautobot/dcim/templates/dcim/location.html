@@ -1,0 +1,93 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    {% for ancestor in object.ancestors %}
+        <li>{{ ancestor|hyperlinked_object }}</li>
+    {% endfor %}
+{% endblock %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Location</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Location Type</td>
+                <td>{{ object.location_type|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>Status</td>
+                <td>
+                    <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>Hierarchy</td>
+                <td>
+                    {% include 'dcim/inc/location_hierarchy.html' with location=object %}
+                </td>
+            </tr>
+            <tr>
+                <td>Tenant</td>
+                <td>
+                    {% if object.tenant and object.tenant.group %}
+                        {{ object.tenant.group|hyperlinked_object }} /
+                    {% endif %}
+                    {{ object.tenant|hyperlinked_object }}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Children</td>
+                <td>
+                    {% if object.location_type.children.all %}
+                        <a href="{% url 'dcim:location_list' %}?parent={{ object.slug }}">{{ children_table.rows|length }}</a>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Images</strong>
+        </div>
+        {% include 'inc/image_attachments.html' with images=object.images.all %}
+        {% if perms.extras.add_imageattachment %}
+            <div class="panel-footer text-right noprint">
+                <a href="{% url 'dcim:location_add_image' slug=object.slug %}" class="btn btn-primary btn-xs">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+                    Attach an image
+                </a>
+            </div>
+        {% endif %}
+    </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    {% if object.location_type.children.all %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Children</strong>
+            </div>
+            {% include 'inc/table.html' with table=children_table %}
+            {% if perms.dcim.add_location %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:location_add' %}?parent={{ object.slug }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
+    {% endif %}
+{% endblock content_full_width_page %}

@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -121,6 +122,7 @@ class ClusterGroup(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "webhooks",
 )
@@ -152,14 +154,22 @@ class Cluster(PrimaryModel):
         blank=True,
         null=True,
     )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="clusters",
+        blank=True,
+        null=True,
+    )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "type", "group", "site", "comments"]
+    csv_headers = ["name", "type", "group", "site", "location", "tenant", "comments"]
     clone_fields = [
         "type",
         "group",
         "tenant",
         "site",
+        "location",
     ]
 
     class Meta:
@@ -174,6 +184,18 @@ class Cluster(PrimaryModel):
     def clean(self):
         super().clean()
 
+        # Validate location
+        if self.location is not None:
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
+                )
+
         # If the Cluster is assigned to a Site, verify that all host Devices belong to that Site.
         if self.present_in_database and self.site:
             nonsite_devices = Device.objects.filter(cluster=self).exclude(site=self.site).count()
@@ -186,12 +208,29 @@ class Cluster(PrimaryModel):
                     }
                 )
 
+        # Likewise, verify that host Devices match Location of this Cluster if any
+        if self.present_in_database and self.location is not None:
+            nonlocation_devices = (
+                Device.objects.filter(cluster=self)
+                .exclude(location=self.location)
+                .exclude(location__isnull=True)
+                .count()
+            )
+            if nonlocation_devices:
+                raise ValidationError(
+                    {
+                        "location": f"{nonlocation_devices} devices are assigned as hosts for this cluster "
+                        f'but belong to a location other than "{self.location}".'
+                    }
+                )
+
     def to_csv(self):
         return (
             self.name,
             self.type.name,
             self.group.name if self.group else None,
             self.site.name if self.site else None,
+            self.location.name if self.location else None,
             self.tenant.name if self.tenant else None,
             self.comments,
         )
@@ -374,6 +413,14 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     @property
     def site_id(self):
         return self.cluster.site_id
+
+    @property
+    def location(self):
+        return self.cluster.location
+
+    @property
+    def location_id(self):
+        return self.cluster.location_id
 
 
 #

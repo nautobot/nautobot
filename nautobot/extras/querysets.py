@@ -33,10 +33,18 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         else:
             regions = []
 
+        # Match against the directly assigned location as well as any parent locations
+        location = getattr(obj, "location", None)
+        if location:
+            locations = location.ancestors(include_self=True)
+        else:
+            locations = []
+
         queryset = (
             self.filter(
                 Q(regions__in=regions) | Q(regions=None),
                 Q(sites=obj.site) | Q(sites=None),
+                Q(locations__in=locations) | Q(locations=None),
                 Q(roles=role) | Q(roles=None),
                 Q(device_types=device_type) | Q(device_types=None),
                 Q(platforms=obj.platform) | Q(platforms=None),
