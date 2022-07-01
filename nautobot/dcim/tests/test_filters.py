@@ -3068,7 +3068,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_bridge(self):
-        bridge_interfaces = Interface.objects.filter(name__startswith="Bridge")[:2]
+        bridge_interfaces = Interface.objects.filter(type=InterfaceTypeChoices.TYPE_BRIDGE)[:2]
         params = {"bridge_id": [bridge_interfaces[0].pk, bridge_interfaces[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"bridge": [bridge_interfaces[0].pk, bridge_interfaces[1].name]}
