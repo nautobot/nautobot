@@ -15,6 +15,13 @@ Nautobot's UI now supports dark mode, both explicitly and via browser preference
 
 The "Theme" link in the footer provides a modal popup to select the preferred theme. This preference is saved per browser via `localStorage`.
 
+#### Location Data Model ([#1052](https://github.com/nautobot/nautobot/issues/1052))
+
+To locate network information more precisely than a Site defines, you can now define a hierarchy of Location Types (for example, `Building` ← `Floor` ← `Room`) and then create Locations corresponding to these types within each Site. Data objects such as devices, prefixes, VLAN groups, etc. can thus be mapped or assigned to Location representing a specific building, wing, floor, room, etc. as appropriate to your needs.
+
+!!! info
+    At present, Locations fill the conceptual space between the more abstract Region and Site models and the more concrete Rack Group model. In a future Nautobot release, some or all of these other models may be collapsed into Locations. That is to say, in the future you might not deal with Regions and Sites as distinct models, but instead your Location Type hierarchy might include these higher-level categories, becoming something like Country ← City ← Site ← Building ← Floor ← Room.
+
 #### Parent Interfaces and Bridge Interfaces ([#1455](https://github.com/nautobot/nautobot/issues/1455))
 
 Interface and VMInterface models now have `parent_interface` and `bridge` keys. An interface of type `Virtual` can now associate to a parent physical interface on the same device, virtual chassis, or virtual machine, and an interface of any type can specify another interface as its associated bridge interface. (A new `Bridge` interface type has also been added, but the `bridge` interface property is not restricted to interfaces of this type.)
@@ -72,6 +79,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ### Added
 
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
+- [#1052](https://github.com/nautobot/nautobot/issues/1052) - Initial prototype implementation of Location data model
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add new filter class `NaturalKeyOrPKMultipleChoiceFilter` to `nautobot.utilities.filters`.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 103 new filters to `nautobot.dcim.filters` FilterSets.
 - [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.
