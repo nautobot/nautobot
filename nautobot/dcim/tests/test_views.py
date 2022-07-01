@@ -325,10 +325,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "description": "A generic description",
-            "location_type": lt1.pk,
-            "parent": None,
-            "_nullify": "parent",
-            "site": site.pk,
+            # Because we have a mix of root and non-root LocationTypes,
+            # we can't bulk-edit the parent or site fields in this generic test
             "tenant": tenant.pk,
             "status": Status.objects.get(name="Planned").pk,
         }

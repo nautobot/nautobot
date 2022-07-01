@@ -472,7 +472,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
 
 class LocationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Location.objects.all(), widget=forms.MultipleHiddenInput)
-    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
+    # location_type is not editable on existing instances
     parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
