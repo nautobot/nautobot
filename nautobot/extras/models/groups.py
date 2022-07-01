@@ -444,10 +444,9 @@ class DynamicGroup(OrganizationalModel):
         # Validate `filter` dict
         self.clean_filter()
 
-    @classmethod
-    def generate_query_for_filter(cls, filter_field, value):
+    def generate_query_for_filter(self, filter_field, value):
         """
-        Return a `Q` object generated from the a `filter_field` and `value`.
+        Return a `Q` object generated from a `filter_field` and `value`.
 
         :param filter_field:
             Filter instance
@@ -459,11 +458,11 @@ class DynamicGroup(OrganizationalModel):
             for v in value:
                 q |= models.Q(**filter_field.get_filter_predicate(v))
         else:
-            q |= filter_field.get_filter_predicate(v)
+            lookup = f"{filter_field.field_name}__{filter_field.lookup_expr}"
+            q |= models.Q(**{lookup: value})
         return q
 
-    @classmethod
-    def generate_query_for_group(cls, group):
+    def generate_query_for_group(self, group):
         """
         Return a `Q` object generated from all filters for a `group`.
 
@@ -475,7 +474,7 @@ class DynamicGroup(OrganizationalModel):
 
         for field_name, value in fs.data.items():
             filter_field = fs.filters[field_name]
-            q &= cls.generate_query_for_filter(filter_field, value)
+            q &= self.generate_query_for_filter(filter_field, value)
 
         return q
 
@@ -493,21 +492,19 @@ class DynamicGroup(OrganizationalModel):
 
         return query
 
-    def generate_query(self, group=None):
+    def generate_query(self):
         """
-        Return a `Q` object generated recursively from all nested filters for a dynamic group.
-
-        :param group:
-            DynamicGroup instance. If not provided, this group will be used.
+        Return a `Q` object generated recursively from all nested filters for this dynamic group.
         """
-        if group is None:
-            group = self
-            logger.debug("Processing group %s...", group)
-
         query = models.Q()
+        memberships = self.dynamic_group_memberships.all()
+
+        # If this group has no children, just return a single query.
+        if not memberships.exists():
+            return self.generate_members_query()
 
         # Enumerate the filters for each child group, trusting that they handle their own children.
-        for membership in group.dynamic_group_memberships.all():
+        for membership in memberships:
             group = membership.group
             operator = membership.operator
             logger.debug("Processing group %s...", group)
@@ -528,7 +525,7 @@ class DynamicGroup(OrganizationalModel):
 
     def get_group_queryset(self):
         """Return a filtered queryset of all descendant groups."""
-        query = self.generate_query(group=self)
+        query = self.generate_query()
         qs = self.get_queryset()
         return qs.filter(query)
 
@@ -572,16 +569,12 @@ class DynamicGroup(OrganizationalModel):
             descendants = []
 
         for child_group in group.children.all():
-            print(f"Processing group {child_group}...")
-            # descendants.append(child_group.pk)
+            logger.debug("Processing group %s...", child_group)
             descendants.append(child_group)
             if child_group.children.exists():
                 self.get_descendants(child_group, descendants)
 
-        # TODO(jathan): Return a QuerySet with default ordering? Or a list that
-        # is explicitly ordered by distance from object.
         return descendants
-        # return DynamicGroup.objects.filter(pk__in=descendants)
 
     def get_ancestors(self, group=None, ancestors=None):
         """
@@ -599,16 +592,12 @@ class DynamicGroup(OrganizationalModel):
             ancestors = []
 
         for parent_group in group.parents.all():
-            print(f"Processing group {parent_group}...")
-            # ancestors.append(parent_group.pk)
+            logger.debug("Processing group %s...", parent_group)
             ancestors.append(parent_group)
             if parent_group.parents.exists():
                 self.get_ancestors(parent_group, ancestors)
 
-        # TODO(jathan): Return a QuerySet with default ordering? Or a list that
-        # is explicitly ordered by distance from object.
         return ancestors
-        # return DynamicGroup.objects.filter(pk__in=ancestors)
 
     def get_siblings(self):
         """Return groups that share the same parents."""
@@ -674,21 +663,23 @@ class DynamicGroup(OrganizationalModel):
         else:
             method = "get_ancestors"
 
-        for leaf in tree:
-            leaf.depth = depth
-            nodes.append(leaf)
-            leaves = getattr(leaf, method)()
-            self.flatten_tree(leaves, nodes=nodes, descendants=descendants, depth=depth + 1)
+        for item in tree:
+            item.depth = depth
+            nodes.append(item)
+            branches = getattr(item, method)()
+            self.flatten_tree(branches, nodes=nodes, descendants=descendants, depth=depth + 1)
 
         return nodes
 
     def _ordered_filter(self, queryset, field_names, values):
         """
-        Filters the provided queryset for `{field_name}__in` values for each given `field_name`. If
-        in [field_names] orders results in the same order as provided values
+        Filters the provided `queryset` using `{field_name}__in` expressions for each field_name in the
+        list of `field_names`. The query constructed by this method explicitly orders the results in
+        the same order as the provided `values` using their list index. This is ideal for
+        maintaining ordering of topologically sorted nodes.
 
-        For example, would return an ordered queryset following the order in the list of "pk"
-        values:
+        For example, the following would return an ordered queryset following the order in the list
+        of "pk" values:
 
             self._ordered_filter(self.__class__.objects, ["pk"], pk_list)
 
@@ -703,11 +694,17 @@ class DynamicGroup(OrganizationalModel):
             raise TypeError("Field names must be a list")
 
         case = []
-        for pos, value in enumerate(values):
-            when_condition = {field_names[0]: value, "then": pos}
+
+        # This is queryset magic to build a query that explicitly orders the items in the list of
+        # values based on their index value (idx). It's how we can get an explicitly ordered
+        # queryset that can be used for topological sort, but also supports queryset filtering.
+        for idx, value in enumerate(values):
+            when_condition = {field_names[0]: value, "then": idx}
             case.append(models.When(**when_condition))
+
         order_by = models.Case(*case)
         filter_condition = {field_name + "__in": values for field_name in field_names}
+
         return queryset.filter(**filter_condition).order_by(order_by)
 
     def ordered_queryset_from_pks(self, pk_list):
@@ -737,11 +734,7 @@ class DynamicGroupMembership(BaseModel):
     objects = DynamicGroupMembershipQuerySet.as_manager()
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["group", "parent_group", "operator", "weight"], name="group_to_filter_uniq"
-            ),
-        ]
+        unique_together = ["group", "parent_group", "operator", "weight"]
         ordering = ["parent_group", "weight", "group"]
 
     def __str__(self):

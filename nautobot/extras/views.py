@@ -24,7 +24,6 @@ from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from nautobot.extras.tables import NestedDynamicGroupAncestorsTable, NestedDynamicGroupDescendantsTable
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -521,7 +520,7 @@ class DynamicGroupView(generic.ObjectView):
             children_table = dgm_table_class(children, orderable=False)
 
             descendants = instance.get_descendants()
-            descendants_table = NestedDynamicGroupDescendantsTable(
+            descendants_table = tables.NestedDynamicGroupDescendantsTable(
                 descendants,
                 orderable=False,
                 sequence=["name", "members", "description"],
@@ -531,7 +530,7 @@ class DynamicGroupView(generic.ObjectView):
             descendants_map = {node.name: node.depth for node in descendants_tree}
 
             ancestors = instance.get_ancestors()
-            ancestors_table = NestedDynamicGroupAncestorsTable(
+            ancestors_table = tables.NestedDynamicGroupAncestorsTable(
                 ancestors,
                 orderable=False,
                 sequence=["name", "members", "description"],

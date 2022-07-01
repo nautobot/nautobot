@@ -51,6 +51,7 @@ class DynamicGroupTestBase(TestCase):
                 status=cls.status_planned,
                 device_role=cls.device_role,
                 device_type=cls.device_type,
+                serial="abc123",
                 site=cls.sites[1],
             ),
             Device.objects.create(
@@ -410,16 +411,28 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_generate_query_for_filter(self):
         """Test `DynamicGroup.generate_query_for_filter()`."""
         group = self.parent  # Any group will do, so why not this one?
-        value = ["site-3"]
-        query = group.generate_query_for_filter(
-            filter_field=group.filterset_class.declared_filters["site"],
-            value=value,
+        multi_value = ["site-3"]
+        fs = group.filterset_class()
+        multi_field = fs.filters["site"]
+        multi_query = group.generate_query_for_filter(
+            filter_field=multi_field,
+            value=multi_value,
         )
 
+        queryset = group.get_queryset()
+
         # Assert that both querysets resturn the same results
-        group_qs = group.get_queryset().filter(query)
-        device_qs = Device.objects.filter(site__slug__in=value)
+        group_qs = queryset.filter(multi_query)
+        device_qs = Device.objects.filter(site__slug__in=multi_value)
         self.assertQuerySetEqual(group_qs, device_qs)
+
+        # Now do a non-multi-value filter
+        solo_field = fs.filters["serial"]
+        solo_value = "abc123"
+        solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)
+        solo_qs = queryset.filter(solo_query)
+        serial_qs = Device.objects.filter(serial__iexact=solo_value)
+        self.assertQuerySetEqual(solo_qs, serial_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""
@@ -444,7 +457,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # just make sure that it stays consistent until we decide otherwise.
         group = self.parent
         group_qs = group.get_group_queryset()
-        process_query = group.generate_query(group=group)
+        process_query = group.generate_query()
         base_qs = group.get_queryset()
         process_qs = base_qs.filter(process_query)
 

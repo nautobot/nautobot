@@ -27,11 +27,14 @@
                 <div class="tab-pane active" id="filter-form">
                     {% if filter_form %}
                     <span class="help-block">
-                        Select the filtering criteria to determine membership of objects matching the Content Type for this Dynamic Group. Fields that are not a dropdown are expected to have string inputs and do not support multiple values.
+			Select the filtering criteria to determine membership of objects matching
+			the Content Type for this Dynamic Group. Fields that are not a dropdown are
+			expected to have string inputs and do not support multiple values.
                     </span>
                     {% else %}
                     <span class="help-block">
-                        Filtering criteria will be available after initially saving this group and returning to this page.
+			Filtering criteria will be available after initially saving this group and
+			returning to this page.
                     </span>
                     {% endif %}
                     {% render_form filter_form %}

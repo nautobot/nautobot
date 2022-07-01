@@ -8,7 +8,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0035_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
+        ("extras", "0036_configcontext_locations"),
     ]
 
     operations = [
@@ -51,10 +51,8 @@ class Migration(migrations.Migration):
                 related_name="parents", through="extras.DynamicGroupMembership", to="extras.DynamicGroup"
             ),
         ),
-        migrations.AddConstraint(
-            model_name="dynamicgroupmembership",
-            constraint=models.UniqueConstraint(
-                fields=("group", "parent_group", "operator", "weight"), name="group_to_filter_uniq"
-            ),
+        migrations.AlterUniqueTogether(
+            name='dynamicgroupmembership',
+            unique_together={('group', 'parent_group', 'operator', 'weight')},
         ),
     ]
