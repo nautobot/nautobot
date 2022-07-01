@@ -547,13 +547,12 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         if self.backend is None:
             self.backend = get_default_backend()
 
-        if self.middleware is None:
-            self.middleware = graphene_settings.MIDDLEWARE
-
         self.graphql_schema = self.graphql_schema or self.schema
 
         if self.middleware is not None:
-            if isinstance(self.middleware, MiddlewareManager) is False:
+            if isinstance(self.middleware, MiddlewareManager):
+                self.middleware = graphene_settings.MIDDLEWARE
+            else:
                 self.middleware = list(instantiate_middleware(self.middleware))
 
         self.executor = self.executor
