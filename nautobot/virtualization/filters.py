@@ -36,7 +36,7 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         natural_key="name",
-        label="Cluster (slug or ID)",
+        label="Cluster (name or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
@@ -52,7 +52,7 @@ class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         natural_key="name",
-        label="Cluster (slug or ID)",
+        label="Cluster (name or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
