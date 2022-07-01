@@ -506,7 +506,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
 
 
 class CustomFieldModelForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, exclude_id=None, *args, **kwargs):
 
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         self.custom_fields = []
@@ -514,6 +514,9 @@ class CustomFieldModelForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self._append_customfield_fields()
+
+        if exclude_id is not None:
+            self.fields["termination_b_id"].widget.add_query_param("id__n", str(exclude_id))
 
     def _append_customfield_fields(self):
         """
