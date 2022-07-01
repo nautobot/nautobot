@@ -19,6 +19,7 @@ from nautobot.utilities.filters import (
     TreeNodeMultipleChoiceFilter,
     MultiValueCharFilter,
     RelatedMembershipBooleanFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
 )
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -32,8 +33,10 @@ __all__ = (
 
 
 class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    clusters = django_filters.ModelMultipleChoiceFilter(
-        field_name="clusters", queryset=Cluster.objects.all(), label="Cluster (ID)"
+    clusters = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        natural_key="name",
+        label="Cluster (slug or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
@@ -46,8 +49,10 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    clusters = django_filters.ModelMultipleChoiceFilter(
-        field_name="clusters", queryset=Cluster.objects.all(), label="Cluster (ID)"
+    clusters = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        natural_key="name",
+        label="Cluster (slug or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
@@ -230,12 +235,12 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         field_name="services",
         label="Has services",
     )
-    vm_interfaces = django_filters.ModelMultipleChoiceFilter(
-        field_name="interfaces", queryset=VMInterface.objects.all(), label="VMInterfaces (ID)"
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VMInterface.objects.all(), natural_key="name", label="Interfaces (name or ID)"
     )
-    has_vm_interfaces = RelatedMembershipBooleanFilter(
+    has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",
-        label="Has VMinterfaces",
+        label="Has Interfaces",
     )
     tag = TagFilter()
 

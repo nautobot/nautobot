@@ -46,7 +46,7 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_clusters(self):
-        params = {"clusters": [self.clusters[0].pk, self.clusters[1].pk]}
+        params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         params = {"has_clusters": True}
@@ -84,7 +84,7 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_clusters(self):
-        params = {"clusters": [self.clusters[0].pk, self.clusters[1].pk]}
+        params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         params = {"has_clusters": True}
@@ -189,7 +189,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tags(self):
-        params = {"tags": ["tag-1"]}
+        params = {"tag": ["tag-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_device(self):
@@ -452,18 +452,18 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         params = {"has_services": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_vm_interfaces(self):
-        params = {"vm_interfaces": [self.interfaces[0].pk, self.interfaces[1].pk]}
+    def test_interfaces(self):
+        params = {"interfaces": [self.interfaces[0].pk, self.interfaces[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-        params = {"has_vm_interfaces": True}
+        params = {"has_interfaces": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
-        params = {"has_vm_interfaces": False}
+        params = {"has_interfaces": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_tags(self):
-        params = {"tags": ["tag-1"]}
+        params = {"tag": ["tag-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_vcpus(self):
