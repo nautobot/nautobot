@@ -123,7 +123,7 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="slug",
         label="Cluster type (slug)",
     )
-    tags = TagFilter()
+    tag = TagFilter()
 
     class Meta:
         model = Cluster
@@ -237,7 +237,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         field_name="interfaces",
         label="Has VMinterfaces",
     )
-    tags = TagFilter()
+    tag = TagFilter()
 
     class Meta:
         model = VirtualMachine
