@@ -479,65 +479,58 @@ class DynamicGroup(OrganizationalModel):
 
         return q
 
-    def process_group_filters(self, group=None, qs=None):
+    def generate_members_query(self):
         """
-        Recursively process all filters for a dynamic group.
+        Return a `Q` object generated from all direct members or from self if `filter` is set.
+        """
+        if self.filter:
+            return self.generate_query_for_group(self)
+
+        query = models.Q()
+        for membership in self.dynamic_group_memberships.all():
+            group = membership.group
+            query &= self.generate_query_for_group(group)
+
+        return query
+
+    def generate_query(self, group=None):
+        """
+        Return a `Q` object generated recursively from all nested filters for a dynamic group.
 
         :param group:
             DynamicGroup instance. If not provided, this group will be used.
-        :param qs:
-            Queryset to filter. If not provided, this group's queryset will be used.
         """
-        if qs is None:
-            qs = self.get_queryset()
-
         if group is None:
             group = self
             logger.debug("Processing group %s...", group)
 
-        # FIXME(jathan): We need to decide if we want to emit a Q object and
-        # have the `get_group_queryset()` method pass this to `qs.filter()` that
-        # way we can assert some reversibility easier. For example:
-        #
-        # def get_group_queryset(self):
-        #     big_q = self.process_group_filters(group, qs)
-        #     qs = self.get_queryset()
-        #     return qs.filter(big_q)
-        # big_q = models.Q()
+        query = models.Q()
 
-        # Start with this group's base queryset
-        base_qs = self.get_queryset()
-
-        # Enumerate the filters. Recursing into any groups of groups.
+        # Enumerate the filters for each child group, trusting that they handle their own children.
         for membership in group.dynamic_group_memberships.all():
             group = membership.group
-            logger.debug("Processing group %s...", group)
-            child_memberships = group.dynamic_group_memberships.all()
-
-            if child_memberships.exists():
-                qs = self.process_group_filters(group=group, qs=qs)
-
             operator = membership.operator
-            logger.debug("%s -> %s -> %s", group, group.filter, operator)
-            next_set = self.generate_query_for_group(group)
+            logger.debug("Processing group %s...", group)
+
+            if group.filter:
+                logger.debug("%s -> %s -> %s", group, group.filter, operator)
+
+            next_set = group.generate_members_query()
 
             if operator == "union":
-                # big_q |= next_set
-                qs = qs | base_qs.filter(next_set)
+                query |= next_set
             elif operator == "difference":
-                # big_q &= ~next_set
-                qs = qs.exclude(next_set)
+                query &= ~next_set
             elif operator == "intersection":
-                # big_q &= next_set
-                qs = qs.filter(next_set)
-            # print(big_q)
+                query &= next_set
 
-        # return big_q
-        return qs
+        return query
 
     def get_group_queryset(self):
         """Return a filtered queryset of all descendant groups."""
-        return self.process_group_filters(group=self)
+        query = self.generate_query(group=self)
+        qs = self.get_queryset()
+        return qs.filter(query)
 
     def add_child(self, child, operator, weight):
         """
@@ -619,9 +612,7 @@ class DynamicGroup(OrganizationalModel):
 
     def get_siblings(self):
         """Return groups that share the same parents."""
-        return DynamicGroup.objects.filter(
-            parents__in=self.parents.all()
-        ).exclude(slug=self.slug)
+        return DynamicGroup.objects.filter(parents__in=self.parents.all()).exclude(slug=self.slug)
 
     def is_root(self):
         """Return whether this is a root node (has children, but no parents)."""
@@ -657,6 +648,9 @@ class DynamicGroup(OrganizationalModel):
             tree[f] = f.descendants_tree()
         return tree
 
+    # FIXME(jathan): When flattening a tree of ancestors, and not setting `descendants=False` it's
+    # easy to get confusing results here. Perhaps wrap this in another method one each for
+    # ancestors/descendants and make this a private method?
     def flatten_tree(self, tree, nodes=None, descendants=True, depth=1):
         """
         Recursively flatten a tree mapping to a list, adding a `depth` attribute to each instance in
@@ -690,7 +684,8 @@ class DynamicGroup(OrganizationalModel):
 
     def _ordered_filter(self, queryset, field_names, values):
         """
-        Filters the provided queryset for `{field_name}__in` values for each given `field_name`. If  in [field_names] orders results in the same order as provided values
+        Filters the provided queryset for `{field_name}__in` values for each given `field_name`. If
+        in [field_names] orders results in the same order as provided values
 
         For example, would return an ordered queryset following the order in the list of "pk"
         values:

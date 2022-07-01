@@ -1,3 +1,5 @@
+import random
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -442,12 +444,15 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # just make sure that it stays consistent until we decide otherwise.
         group = self.parent
         group_qs = group.get_group_queryset()
-        process_qs = group.process_group_filters(group=group)
+        process_query = group.generate_query(group=group)
+        base_qs = group.get_queryset()
+        process_qs = base_qs.filter(process_query)
+
         self.assertQuerySetEqual(group_qs, process_qs)
 
     def test_get_ancestors(self):
         """Test `DynamicGroup.get_ancestors()`."""
-        expected = ["third-child", "second-child", "first-child", "parent"]
+        expected = ["third-child", "parent"]
         ancestors = [a.slug for a in self.nested_child.get_ancestors()]
         self.assertEqual(ancestors, expected)
 
@@ -495,13 +500,80 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         d_tree = self.parent.descendants_tree()
         self.assertIn(self.nested_child, d_tree[self.third_child])
 
-    # def test_flatten_tree(self):
-    # def test__ordered_filter(self):
-    # def test_reversibility (generating a Q object)
-    # def test_process_group_filters(self):
-    # def test_good_group(self): (well-constructed)
-    # def test_bad_group(self): (poorly-constructed; makes no sense)
-    # def test_chainable_filtering(self): from ancestors/descendants
+    def test_flatten_tree(self):
+        """Test `DynamicGroup.flatten_tree()`."""
+        ## Assert descendants are deterministic
+        d_tree = self.parent.descendants_tree()
+        d_flat = self.parent.flatten_tree(d_tree)
+        expected = {"first-child": 1, "second-child": 1, "third-child": 1, "nested-child": 2}
+        seen = {d.slug: d.depth for d in d_flat}
+        self.assertEqual(seen, expected)
+
+        # Parent should not be here; nested-child should.
+        self.assertNotIn(self.parent, d_flat)
+        self.assertIn(self.nested_child, d_flat)
+
+        ## Assert ancestors are deterministic
+        a_tree = self.nested_child.ancestors_tree()
+        a_flat = self.nested_child.flatten_tree(a_tree, descendants=False)
+        expected = {"third-child": 1, "parent": 2}
+        seen = {a.slug: a.depth for a in a_flat}
+        self.assertEqual(seen, expected)
+
+        # Nested-child should not be here; parent should.
+        self.assertNotIn(self.nested_child, a_flat)
+        self.assertIn(self.parent, a_flat)
+
+    def test_ordered_queryset_from_pks(self):
+        """Test `DynamicGroup.ordered_queryset_from_pks()`."""
+        descendants = self.parent.get_descendants()
+        pk_list = [d.pk for d in descendants]
+
+        # Assert that ordering is always deterministic by shuffling the list of pks and asserting
+        # that the ordered pk matches that shuffled order.
+        random.shuffle(pk_list)
+        ordered_qs = self.parent.ordered_queryset_from_pks(pk_list)
+        self.assertEqual(
+            pk_list,
+            [o.pk for o in ordered_qs],
+        )
+
+    def test_generate_query(self):
+        """Test `DynamicGroup.generate_query()`."""
+        # Start with parent. Enumerate descendants and their operators to assert correct results.
+        group = self.parent
+        group_query = group.generate_query()
+        group_qs = group.get_queryset().filter(group_query)
+
+        # <DynamicGroupMembership: First Child: intersection (10)>
+        # <DynamicGroupMembership: Second Child: union (20)>
+        # <DynamicGroupMembership: Third Child: difference (30)>
+        group_members = group.dynamic_group_memberships.all()
+
+        # Manually iterate over the groups to assert the same result that the queryset should have,
+        # igoring weight since each set of members are already ordered by weight when queried from
+        # the database.
+        child_set = set(group.get_queryset())
+        for member in group_members:
+            child_members = set(member.members)
+            operator = member.operator
+            # Use operator value to call a set method; one of intersection, union, difference and
+            # update the results set. (e.g. `child_set.difference(child_members)`
+            if operator == "union":
+                child_set = child_set | child_members
+            elif operator == "difference":
+                child_set = child_set - child_members
+            elif operator == "intersection":
+                child_set = child_set & child_members
+
+        # These should be the same length.
+        self.assertEqual(group_qs.count(), len(child_set))
+
+        # And have the same members...
+        self.assertEqual(
+            sorted(group_qs.values_list("pk", flat=True)),
+            sorted(c.pk for c in child_set),
+        )
 
 
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
