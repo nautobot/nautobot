@@ -39,6 +39,7 @@ __all__ = (
     "JSONArrayFormField",
     "LaxURLField",
     "MultipleContentTypeField",
+    "MultiMatchModelMultipleChoiceField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
@@ -264,7 +265,8 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
 
     def prepare_value(self, value):
         """Parse a comma-separated string of model names into a list of PKs."""
-        if isinstance(value, str):
+        # "".split(",") yields [""] rather than [], which we don't want!
+        if isinstance(value, str) and value:
             value = value.split(",")
 
         # For each model name, retrieve the model object and extract its
@@ -361,10 +363,18 @@ class SlugField(forms.SlugField):
     """
 
     def __init__(self, slug_source="name", *args, **kwargs):
-        label = kwargs.pop("label", "Slug")
-        help_text = kwargs.pop("help_text", "URL-friendly unique shorthand")
-        widget = kwargs.pop("widget", widgets.SlugWidget)
-        super().__init__(label=label, help_text=help_text, widget=widget, *args, **kwargs)
+        """
+        Instantiate a SlugField.
+
+        Args:
+            slug_source (str, tuple): Name of the field (or a list of field names) that will be used to suggest a slug.
+        """
+        kwargs.setdefault("label", "Slug")
+        kwargs.setdefault("help_text", "URL-friendly unique shorthand")
+        kwargs.setdefault("widget", widgets.SlugWidget)
+        super().__init__(*args, **kwargs)
+        if isinstance(slug_source, (tuple, list)):
+            slug_source = " ".join(slug_source)
         self.widget.attrs["slug-source"] = slug_source
 
 

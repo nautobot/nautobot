@@ -28,6 +28,10 @@
                     <td>{{ object.site|hyperlinked_object }}</td>
                 </tr>
                 <tr>
+                    <td>Location</td>
+                    <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                </tr>
+                <tr>
                     <td>Virtual Machines</td>
                     <td><a href="{% url 'virtualization:virtualmachine_list' %}?cluster_id={{ object.pk }}">{{ object.virtual_machines.count }}</a></td>
                 </tr>

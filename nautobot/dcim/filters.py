@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from timezone_field import TimeZoneField
 
+from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
@@ -55,6 +56,8 @@ from .models import (
     Interface,
     InterfaceTemplate,
     InventoryItem,
+    Location,
+    LocationType,
     Manufacturer,
     Platform,
     PowerFeed,
@@ -94,6 +97,8 @@ __all__ = (
     "InterfaceFilterSet",
     "InterfaceTemplateFilterSet",
     "InventoryItemFilterSet",
+    "LocationFilterSet",
+    "LocationTypeFilterSet",
     "ManufacturerFilterSet",
     "PathEndpointFilterSet",
     "PlatformFilterSet",
@@ -176,6 +181,14 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         queryset=Region.objects.all(),
         field_name="region",
         label="Region (slug)",
+    )
+    locations = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Locations within this Site (slugs or IDs)",
+    )
+    has_locations = RelatedMembershipBooleanFilter(
+        field_name="locations",
+        label="Has locations",
     )
     has_circuit_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",
@@ -261,27 +274,56 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         ]
 
 
-class RackGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (ID)",
+class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=LocationType.objects.all(),
+        label="Parent location type (slug or ID)",
     )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (slug)",
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("locations").get_choices,
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+
+    class Meta:
+        model = LocationType
+        fields = ["id", "name", "slug", "description"]
+
+
+class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
+    )
+    location_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=LocationType.objects.all(),
+        label="Location type (slug or ID)",
+    )
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Parent location (slug or ID)",
+    )
+    child_location_type = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="location_type__children",
+        queryset=LocationType.objects.all(),
+        label="Child location type (slug or ID)",
+    )
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
-        label="Site (ID)",
+        label="Site (slug or ID)",
     )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+    content_type = ContentTypeMultipleChoiceFilter(
+        field_name="location_type__content_types",
+        choices=FeatureQuery("locations").get_choices,
     )
+    tags = TagFilter()
+
+    class Meta:
+        model = Location
+        fields = ["id", "name", "slug", "description"]
+
+
+class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Parent (ID)",
@@ -330,7 +372,7 @@ class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "color", "description", "racks"]
 
 
-class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -345,26 +387,6 @@ class RackFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             },
             "comments": "icontains",
         },
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
     )
     group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -827,7 +849,13 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         ]
 
 
-class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet, StatusModelFilterSetMixin):
+class DeviceFilterSet(
+    NautobotFilterSet,
+    LocatableModelFilterSetMixin,
+    TenancyFilterSet,
+    LocalContextFilterSet,
+    StatusModelFilterSetMixin,
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -881,26 +909,6 @@ class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet
         queryset=Platform.objects.all(),
         to_field_name="slug",
         label="Platform (slug)",
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site name (slug)",
     )
     rack_group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -1590,28 +1598,8 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = []
 
 
-class PowerPanelFilterSet(NautobotFilterSet):
+class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"name": "icontains"})
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site name (slug)",
-    )
     rack_group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack_group",

@@ -129,6 +129,7 @@ def create_custom_statuses(
     CHOICESET_MAP = [
         ("dcim.Device", dcim_choices.DeviceStatusChoices),
         ("dcim.Site", dcim_choices.SiteStatusChoices),
+        ("dcim.Location", dcim_choices.LocationStatusChoices),
         ("dcim.Rack", dcim_choices.RackStatusChoices),
         ("dcim.Cable", dcim_choices.CableStatusChoices),
         ("dcim.PowerFeed", dcim_choices.PowerFeedStatusChoices),

@@ -12,6 +12,9 @@ import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 
+from mptt.models import MPTTModel
+from tree_queries.models import TreeNode
+
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
 from nautobot.utilities.constants import (
@@ -442,11 +445,14 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
 class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """
     Filter that matches on the given model(s) (identified by slug and/or pk) _as well as their tree descendants._
+
     For example, if we have:
+
         Region "Earth"
           Region "USA"
             Region "GA" <- Site "Athens"
             Region "NC" <- Site "Durham"
+
     a NaturalKeyOrPKMultipleChoiceFilter on Site for {"region": "USA"} would have no matches,
     since there are no Sites whose immediate Region is "USA",
     but a TreeNodeMultipleChoiceFilter on Site for {"region": "USA"} or {"region": "Earth"}
@@ -458,7 +464,15 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         super().__init__(*args, **kwargs)
 
     def filter(self, qs, value):
-        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+        if value:
+            if any(isinstance(node, TreeNode) for node in value):
+                # django-tree-queries
+                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            elif any(isinstance(node, MPTTModel) for node in value):
+                # django-mptt
+                value = [
+                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
+                ]
         return super().filter(qs, value)
 
 

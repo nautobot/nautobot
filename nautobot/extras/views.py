@@ -682,7 +682,7 @@ class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
 class GitRepositoryListView(generic.ObjectListView):
     queryset = GitRepository.objects.all()
     filterset = filters.GitRepositoryFilterSet
-    # filterset_form = forms.GitRepositoryFilterForm
+    filterset_form = forms.GitRepositoryFilterForm
     table = tables.GitRepositoryTable
     template_name = "extras/gitrepository_list.html"
 
@@ -870,14 +870,31 @@ class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
 
 
 class ImageAttachmentEditView(generic.ObjectEditView):
+    """
+    View for creating and editing ImageAttachments.
+
+    Note that a URL kwargs parameter of "pk" identifies an existing ImageAttachment to edit,
+    while kwargs of "object_id" or "slug" identify the parent model instance to attach an ImageAttachment to.
+    """
+
     queryset = ImageAttachment.objects.all()
     model_form = forms.ImageAttachmentForm
+
+    def get_object(self, kwargs):
+        if "pk" in kwargs:
+            return get_object_or_404(self.queryset, pk=kwargs["pk"])
+        return self.queryset.model()
 
     def alter_obj(self, imageattachment, request, args, kwargs):
         if not imageattachment.present_in_database:
             # Assign the parent object based on URL kwargs
             model = kwargs.get("model")
-            imageattachment.parent = get_object_or_404(model, pk=kwargs["object_id"])
+            if "object_id" in kwargs:
+                imageattachment.parent = get_object_or_404(model, pk=kwargs["object_id"])
+            elif "slug" in kwargs:
+                imageattachment.parent = get_object_or_404(model, slug=kwargs["slug"])
+            else:
+                raise RuntimeError("Neither object_id nor slug were provided?")
         return imageattachment
 
     def get_return_url(self, request, imageattachment):

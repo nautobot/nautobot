@@ -19,9 +19,10 @@ from nautobot.core.api.views import NautobotAPIVersionMixin
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
+from nautobot.utilities.views import AdminRequiredMixin
 
 
-class InstalledPluginsView(LoginRequiredMixin, View):
+class InstalledPluginsView(AdminRequiredMixin, View):
     """
     View for listing all installed plugins.
     """
