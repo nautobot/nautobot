@@ -1,3 +1,4 @@
+import netaddr
 from django.contrib.auth import get_user_model
 
 from nautobot.dcim.choices import (
@@ -85,15 +86,548 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.extras.models import SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import FilterTestCases
-from nautobot.virtualization.models import Cluster, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+def common_test_data(cls):
+
+    tenant_groups = (
+        TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
+        TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
+        TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
+    )
+
+    tenants = (
+        Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
+        Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
+        Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
+    )
+
+    regions = (
+        Region.objects.create(name="Region 1", slug="region-1", description="A"),
+        Region.objects.create(name="Region 2", slug="region-2", description="B"),
+        Region.objects.create(name="Region 3", slug="region-3", description="C"),
+    )
+
+    site_statuses = Status.objects.get_for_model(Site)
+    cls.site_status_map = {s.slug: s for s in site_statuses.all()}
+
+    sites = (
+        Site.objects.create(
+            name="Site 1",
+            slug="site-1",
+            description="Site 1 description",
+            region=regions[0],
+            tenant=tenants[0],
+            status=cls.site_status_map["active"],
+            facility="Facility 1",
+            asn=65001,
+            latitude=10,
+            longitude=10,
+            contact_name="Contact 1",
+            contact_phone="123-555-0001",
+            contact_email="contact1@example.com",
+            physical_address="1 road st, albany, ny",
+            shipping_address="PO Box 1, albany, ny",
+            comments="comment1",
+            time_zone="America/Chicago",
+        ),
+        Site.objects.create(
+            name="Site 2",
+            slug="site-2",
+            description="Site 2 description",
+            region=regions[1],
+            tenant=tenants[1],
+            status=cls.site_status_map["planned"],
+            facility="Facility 2",
+            asn=65002,
+            latitude=20,
+            longitude=20,
+            contact_name="Contact 2",
+            contact_phone="123-555-0002",
+            contact_email="contact2@example.com",
+            physical_address="2 road st, albany, ny",
+            shipping_address="PO Box 2, albany, ny",
+            comments="comment2",
+            time_zone="America/Los_Angeles",
+        ),
+        Site.objects.create(
+            name="Site 3",
+            slug="site-3",
+            region=regions[2],
+            tenant=tenants[2],
+            status=cls.site_status_map["retired"],
+            facility="Facility 3",
+            asn=65003,
+            latitude=30,
+            longitude=30,
+            contact_name="Contact 3",
+            contact_phone="123-555-0003",
+            contact_email="contact3@example.com",
+            comments="comment3",
+            time_zone="America/Detroit",
+        ),
+    )
+
+    provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
+    circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
+    circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Test Circuit 1")
+    CircuitTermination.objects.create(circuit=circuit, site=sites[0], term_side="A")
+    CircuitTermination.objects.create(circuit=circuit, site=sites[1], term_side="Z")
+
+    manufacturers = (
+        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
+        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
+        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
+    )
+
+    platforms = (
+        Platform.objects.create(
+            name="Platform 1",
+            slug="platform-1",
+            manufacturer=manufacturers[0],
+            napalm_driver="driver-1",
+            napalm_args=["--test", "--arg1"],
+            description="A",
+        ),
+        Platform.objects.create(
+            name="Platform 2",
+            slug="platform-2",
+            manufacturer=manufacturers[1],
+            napalm_driver="driver-2",
+            napalm_args=["--test", "--arg2"],
+            description="B",
+        ),
+        Platform.objects.create(
+            name="Platform 3",
+            slug="platform-3",
+            manufacturer=manufacturers[2],
+            napalm_driver="driver-3",
+            napalm_args=["--test", "--arg3"],
+            description="C",
+        ),
+    )
+
+    device_types = (
+        DeviceType.objects.create(
+            manufacturer=manufacturers[0],
+            comments="Device type 1",
+            model="Model 1",
+            slug="model-1",
+            part_number="Part Number 1",
+            u_height=1,
+            is_full_depth=True,
+        ),
+        DeviceType.objects.create(
+            manufacturer=manufacturers[1],
+            comments="Device type 2",
+            model="Model 2",
+            slug="model-2",
+            part_number="Part Number 2",
+            u_height=2,
+            is_full_depth=True,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        ),
+        DeviceType.objects.create(
+            manufacturer=manufacturers[2],
+            comments="Device type 3",
+            model="Model 3",
+            slug="model-3",
+            part_number="Part Number 3",
+            u_height=3,
+            is_full_depth=False,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        ),
+    )
+
+    rack_groups = (
+        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
+        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
+        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[2]),
+    )
+
+    power_panels = (
+        PowerPanel.objects.create(name="Power Panel 1", site=sites[0], rack_group=rack_groups[0]),
+        PowerPanel.objects.create(name="Power Panel 2", site=sites[1], rack_group=rack_groups[1]),
+        PowerPanel.objects.create(name="Power Panel 3", site=sites[2], rack_group=rack_groups[2]),
+    )
+
+    rackroles = (
+        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
+        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
+        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff"),
+    )
+
+    rack_statuses = Status.objects.get_for_model(Rack)
+    cls.rack_status_map = {s.slug: s for s in rack_statuses.all()}
+
+    racks = (
+        Rack.objects.create(
+            name="Rack 1",
+            comments="comment1",
+            facility_id="rack-1",
+            site=sites[0],
+            group=rack_groups[0],
+            tenant=tenants[0],
+            status=cls.rack_status_map["active"],
+            role=rackroles[0],
+            serial="ABC",
+            asset_tag="1001",
+            type=RackTypeChoices.TYPE_2POST,
+            width=RackWidthChoices.WIDTH_19IN,
+            u_height=42,
+            desc_units=False,
+            outer_width=100,
+            outer_depth=100,
+            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+        ),
+        Rack.objects.create(
+            name="Rack 2",
+            comments="comment2",
+            facility_id="rack-2",
+            site=sites[1],
+            group=rack_groups[1],
+            tenant=tenants[1],
+            status=cls.rack_status_map["planned"],
+            role=rackroles[1],
+            serial="DEF",
+            asset_tag="1002",
+            type=RackTypeChoices.TYPE_4POST,
+            width=RackWidthChoices.WIDTH_21IN,
+            u_height=43,
+            desc_units=False,
+            outer_width=200,
+            outer_depth=200,
+            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+        ),
+        Rack.objects.create(
+            name="Rack 3",
+            comments="comment3",
+            facility_id="rack-3",
+            site=sites[2],
+            group=rack_groups[2],
+            tenant=tenants[2],
+            status=cls.rack_status_map["reserved"],
+            role=rackroles[2],
+            serial="GHI",
+            asset_tag="1003",
+            type=RackTypeChoices.TYPE_CABINET,
+            width=RackWidthChoices.WIDTH_23IN,
+            u_height=44,
+            desc_units=True,
+            outer_width=300,
+            outer_depth=300,
+            outer_unit=RackDimensionUnitChoices.UNIT_INCH,
+        ),
+    )
+
+    device_roles = (
+        DeviceRole.objects.create(
+            name="Device Role 1",
+            slug="device-role-1",
+            color="ff0000",
+            vm_role=False,
+            description="Device Role Description 1",
+        ),
+        DeviceRole.objects.create(
+            name="Device Role 2",
+            slug="device-role-2",
+            color="00ff00",
+            vm_role=False,
+            description="Device Role Description 2",
+        ),
+        DeviceRole.objects.create(
+            name="Device Role 3",
+            slug="device-role-3",
+            color="0000ff",
+            vm_role=False,
+            description="Device Role Description 3",
+        ),
+    )
+
+    cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+    clusters = (
+        Cluster.objects.create(name="Cluster 1", type=cluster_type, site=sites[0]),
+        Cluster.objects.create(name="Cluster 2", type=cluster_type, site=sites[1]),
+        Cluster.objects.create(name="Cluster 3", type=cluster_type, site=sites[2]),
+    )
+
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 1", role=device_roles[0], platform=platforms[0])
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 2", role=device_roles[1], platform=platforms[1])
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 3", role=device_roles[2], platform=platforms[2])
+
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=sites[0])
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=sites[1])
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), site=sites[2])
+
+    VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0])
+    VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1])
+    VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=sites[2])
+
+    VLAN.objects.create(name="VLAN 101", vid=101, site=sites[0])
+    VLAN.objects.create(name="VLAN 102", vid=102, site=sites[1])
+    VLAN.objects.create(name="VLAN 103", vid=103, site=sites[2])
+
+    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[0], power_panel=power_panels[0])
+    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[1], power_panel=power_panels[1])
+    PowerFeed.objects.create(name="Powerfeed 1", rack=racks[2], power_panel=power_panels[2])
+
+    users = (
+        User.objects.create_user(username="TestCaseUser 1"),
+        User.objects.create_user(username="TestCaseUser 2"),
+        User.objects.create_user(username="TestCaseUser 3"),
+    )
+
+    RackReservation.objects.create(
+        rack=racks[0],
+        units=(1, 2, 3),
+        user=users[0],
+        description="Rack Reservation 1",
+        tenant=tenants[0],
+    )
+    RackReservation.objects.create(
+        rack=racks[1],
+        units=(4, 5, 6),
+        user=users[1],
+        description="Rack Reservation 2",
+        tenant=tenants[1],
+    )
+    RackReservation.objects.create(
+        rack=racks[2],
+        units=(7, 8, 9),
+        user=users[2],
+        description="Rack Reservation 3",
+        tenant=tenants[2],
+    )
+
+    ConsolePortTemplate.objects.create(
+        device_type=device_types[0],
+        name="Console Port 1",
+        label="console1",
+        description="Front Console Port 1",
+    )
+    ConsolePortTemplate.objects.create(
+        device_type=device_types[1],
+        name="Console Port 2",
+        label="console2",
+        description="Front Console Port 2",
+    )
+    ConsolePortTemplate.objects.create(
+        device_type=device_types[2],
+        name="Console Port 3",
+        label="console3",
+        description="Front Console Port 3",
+    )
+
+    ConsoleServerPortTemplate.objects.create(
+        device_type=device_types[0],
+        name="Console Server Port 1",
+        label="consoleserverport1",
+        description="Front Console Server Port 1",
+    )
+    ConsoleServerPortTemplate.objects.create(
+        device_type=device_types[1],
+        name="Console Server Port 2",
+        label="consoleserverport2",
+        description="Front Console Server Port 2",
+    )
+    ConsoleServerPortTemplate.objects.create(
+        device_type=device_types[2],
+        name="Console Server Port 3",
+        label="consoleserverport3",
+        description="Front Console Server Port 3",
+    )
+
+    power_port_templates = (
+        PowerPortTemplate.objects.create(
+            device_type=device_types[0],
+            name="Power Port 1",
+            maximum_draw=100,
+            allocated_draw=50,
+            label="powerport1",
+            description="Power Port Description 1",
+        ),
+        PowerPortTemplate.objects.create(
+            device_type=device_types[1],
+            name="Power Port 2",
+            maximum_draw=200,
+            allocated_draw=100,
+            label="powerport2",
+            description="Power Port Description 2",
+        ),
+        PowerPortTemplate.objects.create(
+            device_type=device_types[2],
+            name="Power Port 3",
+            maximum_draw=300,
+            allocated_draw=150,
+            label="powerport3",
+            description="Power Port Description 3",
+        ),
+    )
+
+    PowerOutletTemplate.objects.create(
+        device_type=device_types[0],
+        power_port=power_port_templates[0],
+        name="Power Outlet 1",
+        feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        label="poweroutlet1",
+        description="Power Outlet Description 1",
+    )
+    PowerOutletTemplate.objects.create(
+        device_type=device_types[1],
+        power_port=power_port_templates[1],
+        name="Power Outlet 2",
+        feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
+        label="poweroutlet2",
+        description="Power Outlet Description 2",
+    )
+    PowerOutletTemplate.objects.create(
+        device_type=device_types[2],
+        power_port=power_port_templates[2],
+        name="Power Outlet 3",
+        feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
+        label="poweroutlet3",
+        description="Power Outlet Description 3",
+    )
+
+    InterfaceTemplate.objects.create(
+        name="Interface 1",
+        description="Interface Description 1",
+        device_type=device_types[0],
+        label="interface1",
+        mgmt_only=True,
+        type=InterfaceTypeChoices.TYPE_1GE_SFP,
+    )
+    InterfaceTemplate.objects.create(
+        name="Interface 2",
+        description="Interface Description 2",
+        device_type=device_types[1],
+        label="interface2",
+        mgmt_only=False,
+        type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+    )
+    InterfaceTemplate.objects.create(
+        name="Interface 3",
+        description="Interface Description 3",
+        device_type=device_types[2],
+        label="interface3",
+        mgmt_only=False,
+        type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+    )
+
+    rear_ports = (
+        RearPortTemplate.objects.create(
+            device_type=device_types[0],
+            name="Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=1,
+            label="rearport1",
+            description="Rear Port Description 1",
+        ),
+        RearPortTemplate.objects.create(
+            device_type=device_types[1],
+            name="Rear Port 2",
+            type=PortTypeChoices.TYPE_110_PUNCH,
+            positions=2,
+            label="rearport2",
+            description="Rear Port Description 2",
+        ),
+        RearPortTemplate.objects.create(
+            device_type=device_types[2],
+            name="Rear Port 3",
+            type=PortTypeChoices.TYPE_BNC,
+            positions=3,
+            label="rearport3",
+            description="Rear Port Description 3",
+        ),
+    )
+
+    FrontPortTemplate.objects.create(
+        device_type=device_types[0],
+        name="Front Port 1",
+        rear_port=rear_ports[0],
+        type=PortTypeChoices.TYPE_8P8C,
+        rear_port_position=1,
+        label="frontport1",
+        description="Front Port Description 1",
+    )
+    FrontPortTemplate.objects.create(
+        device_type=device_types[1],
+        name="Front Port 2",
+        rear_port=rear_ports[1],
+        type=PortTypeChoices.TYPE_110_PUNCH,
+        rear_port_position=2,
+        label="frontport2",
+        description="Front Port Description 2",
+    )
+    FrontPortTemplate.objects.create(
+        device_type=device_types[2],
+        name="Front Port 3",
+        rear_port=rear_ports[2],
+        type=PortTypeChoices.TYPE_BNC,
+        rear_port_position=3,
+        label="frontport3",
+        description="Front Port Description 3",
+    )
+
+    DeviceBayTemplate.objects.create(
+        device_type=device_types[0],
+        name="Device Bay 1",
+        label="devicebay1",
+        description="Device Bay Description 1",
+    )
+    DeviceBayTemplate.objects.create(
+        device_type=device_types[1],
+        name="Device Bay 2",
+        label="devicebay2",
+        description="Device Bay Description 2",
+    )
+    DeviceBayTemplate.objects.create(
+        device_type=device_types[2],
+        name="Device Bay 3",
+        label="devicebay3",
+        description="Device Bay Description 3",
+    )
+
+    device_statuses = Status.objects.get_for_model(Device)
+    device_status_map = {ds.slug: ds for ds in device_statuses.all()}
+
+    Device.objects.create(
+        name="Device 1",
+        device_type=device_types[0],
+        device_role=device_roles[0],
+        platform=platforms[0],
+        rack=racks[0],
+        site=sites[0],
+        status=device_status_map["active"],
+    )
+    Device.objects.create(
+        name="Device 2",
+        device_type=device_types[1],
+        device_role=device_roles[1],
+        platform=platforms[1],
+        rack=racks[1],
+        site=sites[1],
+        status=device_status_map["staged"],
+    )
+    Device.objects.create(
+        name="Device 3",
+        device_type=device_types[2],
+        device_role=device_roles[2],
+        platform=platforms[2],
+        rack=racks[2],
+        site=sites[2],
+        status=device_status_map["failed"],
+    )
 
 
 class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -102,19 +636,15 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1", description="A"),
-            Region.objects.create(name="Region 2", slug="region-2", description="B"),
-            Region.objects.create(name="Region 3", slug="region-3", description="C"),
-        )
-
-        Region.objects.create(name="Region 1A", slug="region-1a", parent=regions[0])
-        Region.objects.create(name="Region 1B", slug="region-1b", parent=regions[0])
-        Region.objects.create(name="Region 2A", slug="region-2a", parent=regions[1])
-        Region.objects.create(name="Region 2B", slug="region-2b", parent=regions[1])
-        Region.objects.create(name="Region 3A", slug="region-3a", parent=regions[2])
-        Region.objects.create(name="Region 3B", slug="region-3b", parent=regions[2])
+        parent_regions = Region.objects.filter(parent__isnull=True)
+        Region.objects.create(name="Region 1A", slug="region-1a", parent=parent_regions[0])
+        Region.objects.create(name="Region 1B", slug="region-1b", parent=parent_regions[0])
+        Region.objects.create(name="Region 2A", slug="region-2a", parent=parent_regions[1])
+        Region.objects.create(name="Region 2B", slug="region-2b", parent=parent_regions[1])
+        Region.objects.create(name="Region 3A", slug="region-3a", parent=parent_regions[2])
+        Region.objects.create(name="Region 3B", slug="region-3b", parent=parent_regions[2])
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -127,6 +657,32 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"parent": [parent_regions[0].slug, parent_regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
+    def test_children(self):
+        child_region_1a = Region.objects.get(slug="region-1a")
+        child_region_1b = Region.objects.get(slug="region-1b")
+        child_region_2a = Region.objects.get(slug="region-2a")
+        params = {"children": [child_region_1a.pk, child_region_1b.slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"children": [child_region_1a.slug, child_region_2a.pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_children(self):
+        params = {"has_children": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_children": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+
+    def test_sites(self):
+        sites = Site.objects.all()
+        params = {"sites": [sites[0].pk, sites[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_sites(self):
+        params = {"has_sites": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_sites": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+
 
 class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Site.objects.all()
@@ -134,70 +690,9 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
-
-        statuses = Status.objects.get_for_model(Site)
-        status_map = {s.slug: s for s in statuses.all()}
-
-        Site.objects.create(
-            name="Site 1",
-            slug="site-1",
-            region=regions[0],
-            tenant=tenants[0],
-            status=status_map["active"],
-            facility="Facility 1",
-            asn=65001,
-            latitude=10,
-            longitude=10,
-            contact_name="Contact 1",
-            contact_phone="123-555-0001",
-            contact_email="contact1@example.com",
-        )
-        Site.objects.create(
-            name="Site 2",
-            slug="site-2",
-            region=regions[1],
-            tenant=tenants[1],
-            status=status_map["planned"],
-            facility="Facility 2",
-            asn=65002,
-            latitude=20,
-            longitude=20,
-            contact_name="Contact 2",
-            contact_phone="123-555-0002",
-            contact_email="contact2@example.com",
-        )
-        Site.objects.create(
-            name="Site 3",
-            slug="site-3",
-            region=regions[2],
-            tenant=tenants[2],
-            status=status_map["retired"],
-            facility="Facility 3",
-            asn=65003,
-            latitude=30,
-            longitude=30,
-            contact_name="Contact 3",
-            contact_phone="123-555-0003",
-            contact_email="contact3@example.com",
-        )
+        Site.objects.create(name="Site 4", status=cls.site_status_map["retired"])
 
     def test_facility(self):
         params = {"facility": ["Facility 1", "Facility 2"]}
@@ -257,6 +752,137 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
+    def test_comments(self):
+        params = {"comments": "COMMENT"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+        params = {"comments": "comment123"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+        params = {"comments": "comment2"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_circuit_terminations(self):
+        circuit_terminations = CircuitTermination.objects.all()[:2]
+        params = {"circuit_terminations": [circuit_terminations[0].pk, circuit_terminations[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_circuit_terminations(self):
+        params = {"has_circuit_terminations": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_circuit_terminations": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_devices(self):
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_power_panels(self):
+        power_panels = PowerPanel.objects.all()[:2]
+        params = {"power_panels": [power_panels[0].pk, power_panels[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_panels(self):
+        params = {"has_power_panels": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_power_panels": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_rack_groups(self):
+        rack_groups = RackGroup.objects.all()[:2]
+        params = {"rack_groups": [rack_groups[0].pk, rack_groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_rack_groups(self):
+        params = {"has_rack_groups": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_rack_groups": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_racks(self):
+        racks = Rack.objects.all()[:2]
+        params = {"racks": [racks[0].pk, racks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_racks(self):
+        params = {"has_racks": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_racks": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_prefixes(self):
+        prefixes = Prefix.objects.all()[:2]
+        params = {"prefixes": [prefixes[0].pk, prefixes[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_prefixes(self):
+        params = {"has_prefixes": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_prefixes": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_vlan_groups(self):
+        vlan_groups = VLANGroup.objects.all()[:2]
+        params = {"vlan_groups": [vlan_groups[0].pk, vlan_groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_vlan_groups(self):
+        params = {"has_vlan_groups": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_vlan_groups": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_vlans(self):
+        vlans = VLAN.objects.all()[:2]
+        params = {"vlans": [vlans[0].pk, vlans[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_vlans(self):
+        params = {"has_vlans": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_vlans": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_clusters(self):
+        clusters = Cluster.objects.all()[:2]
+        params = {"clusters": [clusters[0].pk, clusters[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_clusters(self):
+        params = {"has_clusters": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_clusters": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_time_zone(self):
+        params = {"time_zone": ["America/Los_Angeles", "America/Chicago"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"time_zone": [""]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_physical_address(self):
+        params = {"physical_address": "1 road st, albany, ny"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"physical_address": "nomatch"}
+        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+    def test_shipping_address(self):
+        params = {"shipping_address": "PO Box 1, albany, ny"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"shipping_address": "nomatch"}
+        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+    def test_description(self):
+        params = {"description": "Site 1 description"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"description": "nomatch"}
+        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
 
 class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = RackGroup.objects.all()
@@ -264,45 +890,36 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-        )
-
-        parent_rack_groups = (
-            RackGroup.objects.create(name="Parent Rack Group 1", slug="parent-rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Parent Rack Group 2", slug="parent-rack-group-2", site=sites[1]),
-            RackGroup.objects.create(name="Parent Rack Group 3", slug="parent-rack-group-3", site=sites[2]),
-        )
+        sites = Site.objects.all()
+        parent_rack_groups = RackGroup.objects.filter(parent__isnull=True)
 
         RackGroup.objects.create(
-            name="Rack Group 1",
-            slug="rack-group-1",
+            name="Child Rack Group 1",
+            slug="rack-group-1c",
             site=sites[0],
             parent=parent_rack_groups[0],
             description="A",
         )
         RackGroup.objects.create(
-            name="Rack Group 2",
-            slug="rack-group-2",
+            name="Child Rack Group 2",
+            slug="rack-group-2c",
             site=sites[1],
             parent=parent_rack_groups[1],
             description="B",
         )
         RackGroup.objects.create(
-            name="Rack Group 3",
-            slug="rack-group-3",
+            name="Child Rack Group 3",
+            slug="rack-group-3c",
             site=sites[2],
             parent=parent_rack_groups[2],
             description="C",
+        )
+        RackGroup.objects.create(
+            name="Rack Group 4",
+            slug="rack-group-4",
+            site=sites[2],
         )
 
     def test_description(self):
@@ -317,18 +934,48 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = Site.objects.filter(slug__in=["site-1", "site-2"])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_parent(self):
-        parent_groups = RackGroup.objects.filter(name__startswith="Parent")[:2]
-        params = {"parent_id": [parent_groups[0].pk, parent_groups[1].pk]}
+        parent_rack_groups = RackGroup.objects.filter(children__isnull=False)[:2]
+        params = {"parent_id": [parent_rack_groups[0].pk, parent_rack_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"parent": [parent_groups[0].slug, parent_groups[1].slug]}
+        params = {"parent": [parent_rack_groups[0].slug, parent_rack_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_children(self):
+        child_groups = RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2]
+        params = {"children": [child_groups[0].pk, child_groups[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        rack_group_4 = RackGroup.objects.filter(slug="rack-group-4").first()
+        params = {"children": [rack_group_4.slug, rack_group_4.pk]}
+        self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+    def test_has_children(self):
+        self.assertEqual(self.filterset({"has_children": True}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"has_children": False}, self.queryset).qs.count(), 4)
+
+    def test_power_panels(self):
+        power_panels = PowerPanel.objects.all()[:2]
+        params = {"power_panels": [power_panels[0].pk, power_panels[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_panels(self):
+        self.assertEqual(self.filterset({"has_power_panels": True}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"has_power_panels": False}, self.queryset).qs.count(), 4)
+
+    def test_racks(self):
+        racks = Rack.objects.all()[:2]
+        params = {"racks": [racks[0].pk, racks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_racks(self):
+        self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 4)
 
 
 class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -337,14 +984,22 @@ class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
-        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00")
-        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff")
+        RackRole.objects.create(name="Rack Role 4", slug="rack-role-4", color="abcdef")
 
     def test_color(self):
         params = {"color": ["ff0000", "00ff00"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_racks(self):
+        racks = Rack.objects.all()[:2]
+        params = {"racks": [racks[0].pk, racks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_racks(self):
+        self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 1)
 
 
 class RackTestCase(FilterTestCases.FilterTestCase):
@@ -353,99 +1008,29 @@ class RackTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-        )
-
-        rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[2]),
-        )
-
-        rack_roles = (
-            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1"),
-            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2"),
-            RackRole.objects.create(name="Rack Role 3", slug="rack-role-3"),
-        )
-
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
-
-        statuses = Status.objects.get_for_model(Rack)
-        status_map = {s.slug: s for s in statuses.all()}
+        site = Site.objects.get(slug="site-3")
+        rack_group = RackGroup.objects.get(slug="rack-group-3")
+        tenant = Tenant.objects.get(slug="tenant-3")
+        rack_role = RackRole.objects.get(slug="rack-role-3")
 
         Rack.objects.create(
-            name="Rack 1",
-            facility_id="rack-1",
-            site=sites[0],
-            group=rack_groups[0],
-            tenant=tenants[0],
-            status=status_map["active"],
-            role=rack_roles[0],
-            serial="ABC",
-            asset_tag="1001",
+            name="Rack 4",
+            facility_id="rack-4",
+            site=site,
+            group=rack_group,
+            tenant=tenant,
+            status=cls.rack_status_map["active"],
+            role=rack_role,
+            serial="ABCDEF",
+            asset_tag="1004",
             type=RackTypeChoices.TYPE_2POST,
             width=RackWidthChoices.WIDTH_19IN,
             u_height=42,
             desc_units=False,
             outer_width=100,
             outer_depth=100,
-            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
-        )
-        Rack.objects.create(
-            name="Rack 2",
-            facility_id="rack-2",
-            site=sites[1],
-            group=rack_groups[1],
-            tenant=tenants[1],
-            status=status_map["planned"],
-            role=rack_roles[1],
-            serial="DEF",
-            asset_tag="1002",
-            type=RackTypeChoices.TYPE_4POST,
-            width=RackWidthChoices.WIDTH_21IN,
-            u_height=43,
-            desc_units=False,
-            outer_width=200,
-            outer_depth=200,
-            outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
-        )
-        Rack.objects.create(
-            name="Rack 3",
-            facility_id="rack-3",
-            site=sites[2],
-            group=rack_groups[2],
-            tenant=tenants[2],
-            status=status_map["reserved"],
-            role=rack_roles[2],
-            serial="GHI",
-            asset_tag="1003",
-            type=RackTypeChoices.TYPE_CABINET,
-            width=RackWidthChoices.WIDTH_23IN,
-            u_height=44,
-            desc_units=True,
-            outer_width=300,
-            outer_depth=300,
-            outer_unit=RackDimensionUnitChoices.UNIT_INCH,
         )
 
     def test_name(self):
@@ -462,32 +1047,32 @@ class RackTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         params = {"type": [RackTypeChoices.TYPE_2POST, RackTypeChoices.TYPE_4POST]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_width(self):
         params = {"width": [RackWidthChoices.WIDTH_19IN, RackWidthChoices.WIDTH_21IN]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_u_height(self):
         params = {"u_height": [42, 43]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_desc_units(self):
         params = {"desc_units": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"desc_units": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_outer_width(self):
         params = {"outer_width": [100, 200]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_outer_depth(self):
         params = {"outer_depth": [100, 200]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_outer_unit(self):
-        self.assertEqual(Rack.objects.filter(outer_unit__isnull=False).count(), 3)
+        self.assertEqual(Rack.objects.exclude(outer_unit="").count(), 3)
         params = {"outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
@@ -514,7 +1099,7 @@ class RackTestCase(FilterTestCases.FilterTestCase):
 
     def test_status(self):
         params = {"status": ["active", "planned"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_role(self):
         roles = RackRole.objects.all()[:2]
@@ -548,6 +1133,44 @@ class RackTestCase(FilterTestCases.FilterTestCase):
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
+    def test_comments(self):
+        rack_1 = Rack.objects.filter(name="Rack 1").first()
+        self.assertEqual(self.filterset({"comments": "comment1"}).qs.count(), 1)
+        self.assertEqual(self.filterset({"comments": "comment1"}).qs.first().pk, rack_1.pk)
+
+    def test_devices(self):
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_power_feeds(self):
+        power_feeds = PowerFeed.objects.all()[:2]
+        params = {"power_feeds": [power_feeds[0], power_feeds[1]]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_feeds(self):
+        params = {"has_power_feeds": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_power_feeds": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_reservations(self):
+        reservations = RackReservation.objects.all()[:2]
+        params = {"reservations": [reservations[0], reservations[1]]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_reservations(self):
+        params = {"has_reservations": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_reservations": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class RackReservationTestCase(FilterTestCases.FilterTestCase):
     queryset = RackReservation.objects.all()
@@ -555,46 +1178,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        )
-
-        rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[2]),
-        )
-
-        racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0], group=rack_groups[0]),
-            Rack.objects.create(name="Rack 2", site=sites[1], group=rack_groups[1]),
-            Rack.objects.create(name="Rack 3", site=sites[2], group=rack_groups[2]),
-        )
-
-        cls.users = (
-            User.objects.create(username="User 1"),
-            User.objects.create(username="User 2"),
-            User.objects.create(username="User 3"),
-        )
-
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
-
-        RackReservation.objects.create(rack=racks[0], units=[1, 2, 3], user=cls.users[0], tenant=tenants[0])
-        RackReservation.objects.create(rack=racks[1], units=[4, 5, 6], user=cls.users[1], tenant=tenants[1])
-        RackReservation.objects.create(rack=racks[2], units=[7, 8, 9], user=cls.users[2], tenant=tenants[2])
+        common_test_data(cls)
 
     def test_site(self):
         sites = Site.objects.all()[:2]
@@ -611,7 +1195,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_user(self):
-        users = self.users[:2]
+        users = User.objects.filter(username__startswith="TestCaseUser")[:2]
         params = {"user_id": [users[0].pk, users[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"user": [users[0].username, users[1].username]}
@@ -636,6 +1220,19 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase):
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
+    def test_description(self):
+        params = {"description": "Rack Reservation 1"}
+        self.assertSequenceEqual(self.filterset(params, self.queryset).qs.first().units, (1, 2, 3))
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"description": "Rack Reservation 3"}
+        self.assertSequenceEqual(self.filterset(params, self.queryset).qs.first().units, (7, 8, 9))
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_rack(self):
+        racks = Rack.objects.filter(name__startswith="Rack ")[:2]
+        params = {"rack": [racks[0].pk, racks[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Manufacturer.objects.all()
@@ -659,86 +1256,18 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturers = (
-            Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
-            Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
-            Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
+        manufacturer = Manufacturer.objects.get(name="Manufacturer 3")
+        DeviceType.objects.create(
+            manufacturer=manufacturer,
+            comments="Device type 4",
+            model="Model 4",
+            slug="model-4",
+            part_number="Part Number 4",
+            u_height=4,
+            is_full_depth=True,
         )
-
-        device_types = (
-            DeviceType.objects.create(
-                manufacturer=manufacturers[0],
-                model="Model 1",
-                slug="model-1",
-                part_number="Part Number 1",
-                u_height=1,
-                is_full_depth=True,
-            ),
-            DeviceType.objects.create(
-                manufacturer=manufacturers[1],
-                model="Model 2",
-                slug="model-2",
-                part_number="Part Number 2",
-                u_height=2,
-                is_full_depth=True,
-                subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
-            ),
-            DeviceType.objects.create(
-                manufacturer=manufacturers[2],
-                model="Model 3",
-                slug="model-3",
-                part_number="Part Number 3",
-                u_height=3,
-                is_full_depth=False,
-                subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
-            ),
-        )
-
-        # Add component templates for filtering
-        ConsolePortTemplate.objects.create(device_type=device_types[0], name="Console Port 1")
-        ConsolePortTemplate.objects.create(device_type=device_types[1], name="Console Port 2")
-
-        ConsoleServerPortTemplate.objects.create(device_type=device_types[0], name="Console Server Port 1")
-        ConsoleServerPortTemplate.objects.create(device_type=device_types[1], name="Console Server Port 2")
-
-        PowerPortTemplate.objects.create(device_type=device_types[0], name="Power Port 1")
-        PowerPortTemplate.objects.create(device_type=device_types[1], name="Power Port 2")
-
-        PowerOutletTemplate.objects.create(device_type=device_types[0], name="Power Outlet 1")
-        PowerOutletTemplate.objects.create(device_type=device_types[1], name="Power Outlet 2")
-
-        InterfaceTemplate.objects.create(device_type=device_types[0], name="Interface 1")
-        InterfaceTemplate.objects.create(device_type=device_types[1], name="Interface 2")
-
-        rear_ports = (
-            RearPortTemplate.objects.create(
-                device_type=device_types[0],
-                name="Rear Port 1",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=device_types[1],
-                name="Rear Port 2",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-        )
-
-        FrontPortTemplate.objects.create(
-            device_type=device_types[0],
-            name="Front Port 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[0],
-        )
-        FrontPortTemplate.objects.create(
-            device_type=device_types[1],
-            name="Front Port 2",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[1],
-        )
-
-        DeviceBayTemplate.objects.create(device_type=device_types[0], name="Device Bay 1")
-        DeviceBayTemplate.objects.create(device_type=device_types[1], name="Device Bay 2")
 
     def test_model(self):
         params = {"model": ["Model 1", "Model 2"]}
@@ -758,12 +1287,14 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 
     def test_is_full_depth(self):
         params = {"is_full_depth": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"is_full_depth": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_subdevice_role(self):
         params = {"subdevice_role": SubdeviceRoleChoices.ROLE_PARENT}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"subdevice_role": SubdeviceRoleChoices.ROLE_CHILD}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_manufacturer(self):
@@ -775,43 +1306,43 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 
     def test_console_ports(self):
         params = {"console_ports": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"console_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_console_server_ports(self):
         params = {"console_server_ports": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"console_server_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_power_ports(self):
         params = {"power_ports": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"power_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_power_outlets(self):
         params = {"power_outlets": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"power_outlets": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_interfaces(self):
         params = {"interfaces": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"interfaces": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_pass_through_ports(self):
         params = {"pass_through_ports": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"pass_through_ports": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_device_bays(self):
         params = {"device_bays": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"device_bays": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
@@ -820,6 +1351,109 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
+    def test_comments(self):
+        params = {"comments": ["Device type 1", "Device type 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_instances(self):
+        instances = Device.objects.all()[:2]
+        params = {"instances": [instances[0].pk, instances[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_instances(self):
+        params = {"has_instances": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_instances": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_console_port_templates(self):
+        console_port_templates = ConsolePortTemplate.objects.all()[:2]
+        params = {"console_port_templates": [console_port_templates[0].pk, console_port_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_console_port_templates(self):
+        params = {"has_console_port_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_console_port_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_console_server_port_templates(self):
+        csp_templates = ConsoleServerPortTemplate.objects.all()[:2]
+        params = {"console_server_port_templates": [csp_templates[0].pk, csp_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_console_server_port_templates(self):
+        params = {"has_console_server_port_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_console_server_port_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_power_port_templates(self):
+        power_port_templates = PowerPortTemplate.objects.all()[:2]
+        params = {"power_port_templates": [power_port_templates[0].pk, power_port_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_port_templates(self):
+        params = {"has_power_port_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_power_port_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_power_outlet_templates(self):
+        power_outlet_templates = PowerOutletTemplate.objects.all()[:2]
+        params = {"power_outlet_templates": [power_outlet_templates[0].pk, power_outlet_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_outlet_templates(self):
+        params = {"has_power_outlet_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_power_outlet_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_interface_templates(self):
+        interface_templates = InterfaceTemplate.objects.all()[:2]
+        params = {"interface_templates": [interface_templates[0].pk, interface_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_interface_templates(self):
+        params = {"has_interface_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_interface_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_front_port_templates(self):
+        front_port_templates = FrontPortTemplate.objects.all()[:2]
+        params = {"front_port_templates": [front_port_templates[0].pk, front_port_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_front_port_templates(self):
+        params = {"has_front_port_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_front_port_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_rear_port_templates(self):
+        rear_port_templates = RearPortTemplate.objects.all()[:2]
+        params = {"rear_port_templates": [rear_port_templates[0].pk, rear_port_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_rear_port_templates(self):
+        params = {"has_rear_port_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_rear_port_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_device_bay_templates(self):
+        device_bay_templates = DeviceBayTemplate.objects.all()[:2]
+        params = {"device_bay_templates": [device_bay_templates[0].pk, device_bay_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_device_bay_templates(self):
+        params = {"has_device_bay_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_device_bay_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsolePortTemplate.objects.all()
@@ -827,18 +1461,7 @@ class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
-        ConsolePortTemplate.objects.create(device_type=device_types[0], name="Console Port 1")
-        ConsolePortTemplate.objects.create(device_type=device_types[1], name="Console Port 2")
-        ConsolePortTemplate.objects.create(device_type=device_types[2], name="Console Port 3")
+        common_test_data(cls)
 
     def test_name(self):
         params = {"name": ["Console Port 1", "Console Port 2"]}
@@ -849,6 +1472,21 @@ class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"devicetype_id": [device_types[0].pk, device_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["console1", "console2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Front Console Port 1", "Front Console Port 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class ConsoleServerPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPortTemplate.objects.all()
@@ -856,18 +1494,7 @@ class ConsoleServerPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
-        ConsoleServerPortTemplate.objects.create(device_type=device_types[0], name="Console Server Port 1")
-        ConsoleServerPortTemplate.objects.create(device_type=device_types[1], name="Console Server Port 2")
-        ConsoleServerPortTemplate.objects.create(device_type=device_types[2], name="Console Server Port 3")
+        common_test_data(cls)
 
     def test_name(self):
         params = {"name": ["Console Server Port 1", "Console Server Port 2"]}
@@ -878,6 +1505,21 @@ class ConsoleServerPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"devicetype_id": [device_types[0].pk, device_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Front Console Server Port 1", "Front Console Server Port 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["consoleserverport1", "consoleserverport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerPortTemplate.objects.all()
@@ -885,32 +1527,16 @@ class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
+        device_type = DeviceType.objects.get(model="Model 3")
         PowerPortTemplate.objects.create(
-            device_type=device_types[0],
-            name="Power Port 1",
-            maximum_draw=100,
-            allocated_draw=50,
-        )
-        PowerPortTemplate.objects.create(
-            device_type=device_types[1],
-            name="Power Port 2",
-            maximum_draw=200,
-            allocated_draw=100,
-        )
-        PowerPortTemplate.objects.create(
-            device_type=device_types[2],
-            name="Power Port 3",
-            maximum_draw=300,
-            allocated_draw=150,
+            device_type=device_type,
+            name="Power Port 4",
+            maximum_draw=400,
+            allocated_draw=450,
+            label="powerport4",
+            description="Power Port Description 4",
         )
 
     def test_name(self):
@@ -930,6 +1556,32 @@ class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"allocated_draw": [50, 100]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.exclude(model="Model 3")[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_power_outlet_templates(self):
+        power_outlet_templates = PowerOutletTemplate.objects.all()[:2]
+        params = {"power_outlet_templates": [power_outlet_templates[0].pk, power_outlet_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_outlet_templates(self):
+        params = {"has_power_outlet_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_power_outlet_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_label(self):
+        labels = ["powerport1", "powerport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Power Port Description 1", "Power Port Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerOutletTemplate.objects.all()
@@ -937,29 +1589,15 @@ class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
+        device_type = DeviceType.objects.get(model="Model 3")
         PowerOutletTemplate.objects.create(
-            device_type=device_types[0],
-            name="Power Outlet 1",
+            device_type=device_type,
+            name="Power Outlet 4",
             feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
-        )
-        PowerOutletTemplate.objects.create(
-            device_type=device_types[1],
-            name="Power Outlet 2",
-            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
-        )
-        PowerOutletTemplate.objects.create(
-            device_type=device_types[2],
-            name="Power Outlet 3",
-            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
+            label="poweroutlet4",
+            description="Power Outlet Description 4",
         )
 
     def test_name(self):
@@ -974,7 +1612,27 @@ class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
     def test_feed_leg(self):
         # TODO: Support filtering for multiple values
         params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_device_type(self):
+        device_type = DeviceType.objects.exclude(model="Model 3")[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_power_port_template(self):
+        power_port_templates = PowerPortTemplate.objects.all()[:2]
+        params = {"power_port_template": [power_port_templates[0].pk, power_port_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["poweroutlet1", "poweroutlet2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Power Outlet Description 1", "Power Outlet Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
@@ -983,33 +1641,7 @@ class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
-        InterfaceTemplate.objects.create(
-            device_type=device_types[0],
-            name="Interface 1",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            mgmt_only=True,
-        )
-        InterfaceTemplate.objects.create(
-            device_type=device_types[1],
-            name="Interface 2",
-            type=InterfaceTypeChoices.TYPE_1GE_GBIC,
-            mgmt_only=False,
-        )
-        InterfaceTemplate.objects.create(
-            device_type=device_types[2],
-            name="Interface 3",
-            type=InterfaceTypeChoices.TYPE_1GE_SFP,
-            mgmt_only=False,
-        )
+        common_test_data(cls)
 
     def test_name(self):
         params = {"name": ["Interface 1", "Interface 2"]}
@@ -1031,6 +1663,21 @@ class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"mgmt_only": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["interface1", "interface2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Interface Description 1", "Interface Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = FrontPortTemplate.objects.all()
@@ -1038,51 +1685,7 @@ class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
-        rear_ports = (
-            RearPortTemplate.objects.create(
-                device_type=device_types[0],
-                name="Rear Port 1",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=device_types[1],
-                name="Rear Port 2",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=device_types[2],
-                name="Rear Port 3",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-        )
-
-        FrontPortTemplate.objects.create(
-            device_type=device_types[0],
-            name="Front Port 1",
-            rear_port=rear_ports[0],
-            type=PortTypeChoices.TYPE_8P8C,
-        )
-        FrontPortTemplate.objects.create(
-            device_type=device_types[1],
-            name="Front Port 2",
-            rear_port=rear_ports[1],
-            type=PortTypeChoices.TYPE_110_PUNCH,
-        )
-        FrontPortTemplate.objects.create(
-            device_type=device_types[2],
-            name="Front Port 3",
-            rear_port=rear_ports[2],
-            type=PortTypeChoices.TYPE_BNC,
-        )
+        common_test_data(cls)
 
     def test_name(self):
         params = {"name": ["Front Port 1", "Front Port 2"]}
@@ -1098,6 +1701,30 @@ class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"type": PortTypeChoices.TYPE_8P8C}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rear_port_position(self):
+        params = {"rear_port_position": [1, 2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rear_port_template(self):
+        rear_port_templates = RearPortTemplate.objects.all()[:2]
+        params = {"rear_port_template": [rear_port_templates[0].pk, rear_port_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["frontport1", "frontport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Front Port Description 1", "Front Port Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = RearPortTemplate.objects.all()
@@ -1105,32 +1732,16 @@ class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
+        device_type = DeviceType.objects.get(model="Model 3")
         RearPortTemplate.objects.create(
-            device_type=device_types[0],
-            name="Rear Port 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            positions=1,
-        )
-        RearPortTemplate.objects.create(
-            device_type=device_types[1],
-            name="Rear Port 2",
-            type=PortTypeChoices.TYPE_110_PUNCH,
-            positions=2,
-        )
-        RearPortTemplate.objects.create(
-            device_type=device_types[2],
-            name="Rear Port 3",
+            device_type=device_type,
+            name="Rear Port 4",
             type=PortTypeChoices.TYPE_BNC,
-            positions=3,
+            positions=4,
+            label="rearport4",
+            description="Rear Port Description 4",
         )
 
     def test_name(self):
@@ -1151,6 +1762,32 @@ class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"positions": [1, 2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.exclude(model="Model 3")[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_front_port_templates(self):
+        front_port_templates = FrontPortTemplate.objects.all()[:2]
+        params = {"front_port_templates": [front_port_templates[0].pk, front_port_templates[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_front_port_templates(self):
+        params = {"has_front_port_templates": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_front_port_templates": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_label(self):
+        labels = ["rearport1", "rearport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Rear Port Description 1", "Rear Port Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceBayTemplate.objects.all()
@@ -1158,18 +1795,7 @@ class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 2", slug="model-2"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Model 3", slug="model-3"),
-        )
-
-        DeviceBayTemplate.objects.create(device_type=device_types[0], name="Device Bay 1")
-        DeviceBayTemplate.objects.create(device_type=device_types[1], name="Device Bay 2")
-        DeviceBayTemplate.objects.create(device_type=device_types[2], name="Device Bay 3")
+        common_test_data(cls)
 
     def test_name(self):
         params = {"name": ["Device Bay 1", "Device Bay 2"]}
@@ -1180,6 +1806,21 @@ class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
         params = {"devicetype_id": [device_types[0].pk, device_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_device_type(self):
+        device_type = DeviceType.objects.all()[:2]
+        params = {"device_type": [device_type[0].pk, device_type[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["devicebay1", "devicebay2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Device Bay Description 1", "Device Bay Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = DeviceRole.objects.all()
@@ -1187,14 +1828,14 @@ class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000", vm_role=True)
-        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2", color="00ff00", vm_role=True)
         DeviceRole.objects.create(
-            name="Device Role 3",
-            slug="device-role-3",
-            color="0000ff",
-            vm_role=False,
+            name="Device Role 4",
+            slug="device-role-4",
+            color="abcdef",
+            vm_role=True,
+            description="Device Role Description 4",
         )
 
     def test_color(self):
@@ -1203,8 +1844,35 @@ class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_vm_role(self):
         params = {"vm_role": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"vm_role": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_description(self):
+        descriptions = ["Device Role Description 1", "Device Role Description 2"]
+        params = {"description": descriptions}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_devices(self):
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_virtual_machines(self):
+        virtual_machines = VirtualMachine.objects.all()[:2]
+        params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_virtual_machines(self):
+        params = {"has_virtual_machines": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_virtual_machines": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
@@ -1214,34 +1882,9 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        manufacturers = (
-            Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
-            Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
-            Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
-        )
-
-        Platform.objects.create(
-            name="Platform 1",
-            slug="platform-1",
-            manufacturer=manufacturers[0],
-            napalm_driver="driver-1",
-            description="A",
-        )
-        Platform.objects.create(
-            name="Platform 2",
-            slug="platform-2",
-            manufacturer=manufacturers[1],
-            napalm_driver="driver-2",
-            description="B",
-        )
-        Platform.objects.create(
-            name="Platform 3",
-            slug="platform-3",
-            manufacturer=manufacturers[2],
-            napalm_driver="driver-3",
-            description="C",
-        )
+        Platform.objects.create(name="Platform 4", slug="platform-4")
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -1257,6 +1900,33 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"manufacturer": [manufacturers[0].slug, manufacturers[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_napalm_args(self):
+        napalm_args = ['["--test", "--arg1"]', '["--test", "--arg2"]']
+        params = {"napalm_args": napalm_args}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_devices(self):
+        devices = Device.objects.all()[:2]
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_devices(self):
+        params = {"has_devices": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_devices": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_virtual_machines(self):
+        virtual_machines = VirtualMachine.objects.all()[:2]
+        params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_virtual_machines(self):
+        params = {"has_virtual_machines": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_virtual_machines": False}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class DeviceTestCase(FilterTestCases.FilterTestCase):
@@ -1717,59 +2387,22 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
-            Device.objects.create(
-                name=None,
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[3],
-            ),  # For cable connections
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
         )
 
         console_server_ports = (
-            ConsoleServerPort.objects.create(device=devices[3], name="Console Server Port 1"),
-            ConsoleServerPort.objects.create(device=devices[3], name="Console Server Port 2"),
+            devices[1].consoleserverports.get(name="Console Server Port 2"),
+            devices[2].consoleserverports.get(name="Console Server Port 3"),
         )
 
         console_ports = (
-            ConsolePort.objects.create(device=devices[0], name="Console Port 1", description="First"),
-            ConsolePort.objects.create(device=devices[1], name="Console Port 2", description="Second"),
-            ConsolePort.objects.create(device=devices[2], name="Console Port 3", description="Third"),
+            devices[0].consoleports.get(name="Console Port 1"),
+            devices[1].consoleports.get(name="Console Port 2"),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -1793,7 +2426,7 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
+        params = {"description": ["Front Console Port 1", "Front Console Port 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_connected(self):
@@ -1832,6 +2465,11 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_label(self):
+        labels = ["console1", "console2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPort.objects.all()
@@ -1839,59 +2477,22 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
-            Device.objects.create(
-                name=None,
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[3],
-            ),  # For cable connections
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
         )
 
         console_ports = (
-            ConsolePort.objects.create(device=devices[3], name="Console Server Port 1"),
-            ConsolePort.objects.create(device=devices[3], name="Console Server Port 2"),
+            devices[0].consoleports.get(name="Console Port 1"),
+            devices[1].consoleports.get(name="Console Port 2"),
         )
 
         console_server_ports = (
-            ConsoleServerPort.objects.create(device=devices[0], name="Console Server Port 1", description="First"),
-            ConsoleServerPort.objects.create(device=devices[1], name="Console Server Port 2", description="Second"),
-            ConsoleServerPort.objects.create(device=devices[2], name="Console Server Port 3", description="Third"),
+            devices[1].consoleserverports.get(name="Console Server Port 2"),
+            devices[2].consoleserverports.get(name="Console Server Port 3"),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -1915,7 +2516,7 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
+        params = {"description": ["Front Console Server Port 1", "Front Console Server Port 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_connected(self):
@@ -1954,6 +2555,11 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_label(self):
+        labels = ["consoleserverport1", "consoleserverport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class PowerPortTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerPort.objects.all()
@@ -1961,77 +2567,23 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
-            Device.objects.create(
-                name=None,
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[3],
-            ),  # For cable connections
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
         )
 
         power_outlets = (
-            PowerOutlet.objects.create(device=devices[3], name="Power Outlet 1"),
-            PowerOutlet.objects.create(device=devices[3], name="Power Outlet 2"),
+            devices[1].poweroutlets.get(name="Power Outlet 2"),
+            devices[2].poweroutlets.get(name="Power Outlet 3"),
         )
 
         power_ports = (
-            PowerPort.objects.create(
-                device=devices[0],
-                name="Power Port 1",
-                maximum_draw=100,
-                allocated_draw=50,
-                description="First",
-            ),
-            PowerPort.objects.create(
-                device=devices[1],
-                name="Power Port 2",
-                maximum_draw=200,
-                allocated_draw=100,
-                description="Second",
-            ),
-            PowerPort.objects.create(
-                device=devices[2],
-                name="Power Port 3",
-                maximum_draw=300,
-                allocated_draw=150,
-                description="Third",
-            ),
+            devices[0].powerports.get(name="Power Port 1"),
+            devices[1].powerports.get(name="Power Port 2"),
+            PowerPort.objects.create(name="Power Port 4", device=devices[2]),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -2055,7 +2607,7 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
+        params = {"description": ["Power Port Description 1", "Power Port Description 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_maximum_draw(self):
@@ -2070,17 +2622,23 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         params = {"connected": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"connected": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = [
+            Region.objects.get(name="Region 1"),
+            Region.objects.get(name="Region 2"),
+        ]
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = [
+            Site.objects.get(name="Site 1"),
+            Site.objects.get(name="Site 2"),
+        ]
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -2100,6 +2658,22 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"cabled": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        labels = ["powerport1", "powerport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_power_outlets(self):
+        power_outlets = PowerOutlet.objects.all()[:2]
+        params = {"power_outlets": [power_outlets[0].pk, power_outlets[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_power_outlets(self):
+        params = {"has_power_outlets": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_power_outlets": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
@@ -2109,74 +2683,22 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
-            Device.objects.create(
-                name=None,
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[3],
-            ),  # For cable connections
-        )
-
-        power_ports = (
-            PowerPort.objects.create(device=devices[3], name="Power Outlet 1"),
-            PowerPort.objects.create(device=devices[3], name="Power Outlet 2"),
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
         )
 
         power_outlets = (
-            PowerOutlet.objects.create(
-                device=devices[0],
-                name="Power Outlet 1",
-                feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
-                description="First",
-            ),
-            PowerOutlet.objects.create(
-                device=devices[1],
-                name="Power Outlet 2",
-                feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
-                description="Second",
-            ),
-            PowerOutlet.objects.create(
-                device=devices[2],
-                name="Power Outlet 3",
-                feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
-                description="Third",
-            ),
+            devices[1].poweroutlets.get(name="Power Outlet 2"),
+            devices[2].poweroutlets.get(name="Power Outlet 3"),
+        )
+
+        power_ports = (
+            devices[0].powerports.get(name="Power Port 1"),
+            devices[1].powerports.get(name="Power Port 2"),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -2200,7 +2722,7 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
+        params = {"description": ["Power Outlet Description 1", "Power Outlet Description 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_feed_leg(self):
@@ -2244,6 +2766,16 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_label(self):
+        labels = ["poweroutlet1", "poweroutlet2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_power_port(self):
+        power_port = PowerPort.objects.all()[:2]
+        params = {"power_port": [power_port[0].pk, power_port[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class InterfaceTestCase(FilterTestCases.FilterTestCase):
     queryset = Interface.objects.all()
@@ -2251,138 +2783,99 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
-            Device.objects.create(
-                name=None,
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[3],
-            ),  # For cable connections
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
+        )
+        vlans = (
+            VLAN.objects.get(name="VLAN 101"),
+            VLAN.objects.get(name="VLAN 102"),
+            VLAN.objects.get(name="VLAN 103"),
         )
 
-        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1)
-        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2)
-        vlan3 = VLAN.objects.create(name="VLAN 3", vid=3)
-
-        statuses = Status.objects.get_for_model(Interface)
+        interface_statuses = Status.objects.get_for_model(Interface)
+        interface_status_map = {s.slug: s for s in interface_statuses.all()}
 
         interfaces = (
-            Interface.objects.create(
-                device=devices[0],
-                name="Interface 1",
-                type=InterfaceTypeChoices.TYPE_1GE_SFP,
-                enabled=True,
-                mgmt_only=True,
-                mtu=100,
-                mode=InterfaceModeChoices.MODE_ACCESS,
-                mac_address="00-00-00-00-00-01",
-                untagged_vlan=vlan1,
-                description="First",
-                status=statuses.get(slug="active"),
-            ),
-            Interface.objects.create(
-                device=devices[1],
-                name="Interface 2",
-                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
-                enabled=True,
-                mgmt_only=True,
-                mtu=200,
-                mode=InterfaceModeChoices.MODE_TAGGED,
-                mac_address="00-00-00-00-00-02",
-                untagged_vlan=vlan2,
-                description="Second",
-                status=statuses.get(slug="planned"),
-            ),
+            Interface.objects.get(name="Interface 1"),
+            Interface.objects.get(name="Interface 2"),
+            Interface.objects.get(name="Interface 3"),
             Interface.objects.create(
                 device=devices[2],
-                name="Interface 3",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-                enabled=False,
-                mgmt_only=False,
-                mtu=300,
-                mode=InterfaceModeChoices.MODE_TAGGED_ALL,
-                mac_address="00-00-00-00-00-03",
-                description="Third",
-                status=statuses.get(slug="failed"),
-            ),
-            Interface.objects.create(
-                device=devices[3],
                 name="Interface 4",
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=True,
                 mgmt_only=True,
-                status=statuses.get(slug="failed"),
+                status=interface_status_map["failed"],
             ),
             Interface.objects.create(
-                device=devices[3],
+                device=devices[2],
                 name="Interface 5",
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=True,
                 mgmt_only=True,
-                status=statuses.get(slug="planned"),
+                status=interface_status_map["planned"],
             ),
             Interface.objects.create(
-                device=devices[3],
+                device=devices[2],
                 name="Interface 6",
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 enabled=False,
-                mgmt_only=False,
-                status=statuses.get(slug="active"),
+                mgmt_only=True,
+                status=interface_status_map["active"],
             ),
         )
 
+        Interface.objects.filter(pk=interfaces[0].pk).update(
+            enabled=True,
+            mac_address="00-00-00-00-00-01",
+            mode=InterfaceModeChoices.MODE_ACCESS,
+            mtu=100,
+            status=interface_status_map["active"],
+            untagged_vlan=vlans[0],
+        )
+
+        Interface.objects.filter(pk=interfaces[1].pk).update(
+            enabled=True,
+            mac_address="00-00-00-00-00-02",
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            mtu=200,
+            status=interface_status_map["planned"],
+            untagged_vlan=vlans[1],
+        )
+
+        Interface.objects.filter(pk=interfaces[2].pk).update(
+            enabled=False,
+            mac_address="00-00-00-00-00-03",
+            mode=InterfaceModeChoices.MODE_TAGGED_ALL,
+            mtu=300,
+            status=interface_status_map["failed"],
+        )
+
+        interfaces[0].refresh_from_db()
+        interfaces[1].refresh_from_db()
+        interfaces[2].refresh_from_db()
+
         # Tagged VLAN interface is "Interface 6"
         tagged_interface = interfaces[-1]
-        tagged_interface.tagged_vlans.add(vlan3)
+        tagged_interface.tagged_vlans.add(vlans[2])
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(slug="connected")
+        cable_status_map = {cs.slug: cs for cs in cable_statuses.all()}
 
         # Cables
         Cable.objects.create(
             termination_a=interfaces[0],
             termination_b=interfaces[3],
-            status=status_connected,
+            status=cable_status_map["connected"],
         )
         Cable.objects.create(
             termination_a=interfaces[1],
             termination_b=interfaces[4],
-            status=status_connected,
+            status=cable_status_map["connected"],
         )
         # Third pair is not connected
 
@@ -2417,7 +2910,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
+        params = {"description": ["Interface Description 1", "Interface Description 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent(self):
@@ -2534,21 +3027,21 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
         params = {"device_with_common_vc": devices[0].pk}
         queryset = self.filterset(params, self.queryset).qs
-        self.assertEqual(queryset.count(), 3)
+        self.assertEqual(queryset.count(), 5)
         # Assert interface of a device belonging to same VC as device[0] are returned
         self.assertTrue(queryset.filter(name="int3").exists())
         # Assert interface of a device not belonging as device[0] to same VC are not returned
         self.assertFalse(queryset.filter(name="int4").exists())
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = (Region.objects.get(name="Region 1"), Region.objects.get(name="Region 2"))
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = (Site.objects.get(name="Site 1"), Site.objects.get(name="Site 2"))
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -2590,16 +3083,21 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_vlan(self):
-        params = {"vlan": VLAN.objects.first().vid}
+        params = {"vlan": 101}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_vlan_id(self):
-        params = {"vlan_id": VLAN.objects.last().id}
+        params = {"vlan_id": VLAN.objects.get(name="VLAN 101").id}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_status(self):
         params = {"status": ["active", "failed"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_label(self):
+        labels = ["interface1", "interface2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class FrontPortTestCase(FilterTestCases.FilterTestCase):
@@ -2608,133 +3106,48 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
-            Device.objects.create(
-                name=None,
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[3],
-            ),  # For cable connections
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
         )
 
         rear_ports = (
-            RearPort.objects.create(
-                device=devices[0],
-                name="Rear Port 1",
-                type=PortTypeChoices.TYPE_8P8C,
-                positions=6,
-            ),
-            RearPort.objects.create(
-                device=devices[1],
-                name="Rear Port 2",
-                type=PortTypeChoices.TYPE_8P8C,
-                positions=6,
-            ),
+            devices[0].rearports.get(name="Rear Port 1"),
+            devices[1].rearports.get(name="Rear Port 2"),
+            devices[2].rearports.get(name="Rear Port 3"),
             RearPort.objects.create(
                 device=devices[2],
-                name="Rear Port 3",
-                type=PortTypeChoices.TYPE_8P8C,
-                positions=6,
-            ),
-            RearPort.objects.create(
-                device=devices[3],
                 name="Rear Port 4",
                 type=PortTypeChoices.TYPE_8P8C,
                 positions=6,
             ),
             RearPort.objects.create(
-                device=devices[3],
+                device=devices[2],
                 name="Rear Port 5",
-                type=PortTypeChoices.TYPE_8P8C,
-                positions=6,
-            ),
-            RearPort.objects.create(
-                device=devices[3],
-                name="Rear Port 6",
                 type=PortTypeChoices.TYPE_8P8C,
                 positions=6,
             ),
         )
 
         front_ports = (
-            FrontPort.objects.create(
-                device=devices[0],
-                name="Front Port 1",
-                type=PortTypeChoices.TYPE_8P8C,
-                rear_port=rear_ports[0],
-                rear_port_position=1,
-                description="First",
-            ),
-            FrontPort.objects.create(
-                device=devices[1],
-                name="Front Port 2",
-                type=PortTypeChoices.TYPE_110_PUNCH,
-                rear_port=rear_ports[1],
-                rear_port_position=2,
-                description="Second",
-            ),
+            devices[0].frontports.get(name="Front Port 1"),
+            devices[1].frontports.get(name="Front Port 2"),
+            devices[2].frontports.get(name="Front Port 3"),
             FrontPort.objects.create(
                 device=devices[2],
-                name="Front Port 3",
-                type=PortTypeChoices.TYPE_BNC,
-                rear_port=rear_ports[2],
-                rear_port_position=3,
-                description="Third",
-            ),
-            FrontPort.objects.create(
-                device=devices[3],
                 name="Front Port 4",
                 type=PortTypeChoices.TYPE_FC,
                 rear_port=rear_ports[3],
                 rear_port_position=1,
             ),
             FrontPort.objects.create(
-                device=devices[3],
+                device=devices[2],
                 name="Front Port 5",
                 type=PortTypeChoices.TYPE_FC,
                 rear_port=rear_ports[4],
-                rear_port_position=1,
-            ),
-            FrontPort.objects.create(
-                device=devices[3],
-                name="Front Port 6",
-                type=PortTypeChoices.TYPE_FC,
-                rear_port=rear_ports[5],
                 rear_port_position=1,
             ),
         )
@@ -2765,18 +3178,18 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
+        params = {"description": ["Front Port Description 1", "Front Port Description 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = (Region.objects.get(name="Region 1"), Region.objects.get(name="Region 2"))
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = (Site.objects.get(name="Site 1"), Site.objects.get(name="Site 2"))
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -2796,6 +3209,20 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"cabled": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_label(self):
+        labels = ["frontport1", "frontport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rear_port(self):
+        rear_port = (RearPort.objects.get(name="Rear Port 1"), RearPort.objects.get(name="Rear Port 2"))
+        params = {"rear_port": [rear_port[0].pk, rear_port[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rear_port_position(self):
+        params = {"rear_port_position": [2, 3]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -2805,88 +3232,28 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
-            Device.objects.create(
-                name=None,
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[3],
-            ),  # For cable connections
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
         )
 
         rear_ports = (
+            devices[0].rearports.get(name="Rear Port 1"),
+            devices[1].rearports.get(name="Rear Port 2"),
+            devices[2].rearports.get(name="Rear Port 3"),
             RearPort.objects.create(
-                device=devices[0],
-                name="Rear Port 1",
+                device=devices[2],
+                name="Rear Port 4",
                 type=PortTypeChoices.TYPE_8P8C,
-                positions=1,
-                description="First",
-            ),
-            RearPort.objects.create(
-                device=devices[1],
-                name="Rear Port 2",
-                type=PortTypeChoices.TYPE_110_PUNCH,
-                positions=2,
-                description="Second",
+                positions=6,
             ),
             RearPort.objects.create(
                 device=devices[2],
-                name="Rear Port 3",
-                type=PortTypeChoices.TYPE_BNC,
-                positions=3,
-                description="Third",
-            ),
-            RearPort.objects.create(
-                device=devices[3],
-                name="Rear Port 4",
-                type=PortTypeChoices.TYPE_FC,
-                positions=4,
-            ),
-            RearPort.objects.create(
-                device=devices[3],
                 name="Rear Port 5",
-                type=PortTypeChoices.TYPE_FC,
-                positions=5,
-            ),
-            RearPort.objects.create(
-                device=devices[3],
-                name="Rear Port 6",
-                type=PortTypeChoices.TYPE_FC,
+                type=PortTypeChoices.TYPE_8P8C,
                 positions=6,
             ),
         )
@@ -2914,25 +3281,25 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
     def test_type(self):
         # TODO: Test for multiple values
         params = {"type": PortTypeChoices.TYPE_8P8C}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_positions(self):
         params = {"positions": [1, 2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
+        params = {"description": ["Rear Port Description 1", "Rear Port Description 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = (Region.objects.get(name="Region 1"), Region.objects.get(name="Region 2"))
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = (Site.objects.get(name="Site 1"), Site.objects.get(name="Site 2"))
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -2952,6 +3319,22 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
         params = {"cabled": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"cabled": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_label(self):
+        labels = ["rearport1", "rearport2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_front_ports(self):
+        front_ports = (FrontPort.objects.get(name="Front Port 1"), FrontPort.objects.get(name="Front Port 2"))
+        params = {"front_ports": [front_ports[0].pk, front_ports[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_has_front_ports(self):
+        params = {"has_front_ports": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"has_front_ports": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -2961,65 +3344,76 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        common_test_data(cls)
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
+        device_role = DeviceRole.objects.first()
+        parent_device_type = DeviceType.objects.get(slug="model-2")
+        child_device_type = DeviceType.objects.get(slug="model-3")
+        site = Site.objects.get(name="Site 3")
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-            Site.objects.create(name="Site X", slug="site-x"),
-        )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        device_statuses = Status.objects.get_for_model(Device)
+        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
 
-        devices = (
+        child_devices = (
             Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
+                name="Child Device 1",
+                device_type=child_device_type,
                 device_role=device_role,
-                site=sites[0],
+                site=site,
+                status=device_status_map["active"],
             ),
             Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
+                name="Child Device 2",
+                device_type=child_device_type,
                 device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
+                site=site,
+                status=device_status_map["active"],
             ),
         )
 
-        DeviceBay.objects.create(device=devices[0], name="Device Bay 1", description="First")
-        DeviceBay.objects.create(device=devices[1], name="Device Bay 2", description="Second")
-        DeviceBay.objects.create(device=devices[2], name="Device Bay 3", description="Third")
+        parent_devices = (
+            Device.objects.create(
+                name="Parent Device 1",
+                device_type=parent_device_type,
+                device_role=device_role,
+                site=site,
+                status=device_status_map["active"],
+            ),
+            Device.objects.create(
+                name="Parent Device 2",
+                device_type=parent_device_type,
+                device_role=device_role,
+                site=site,
+                status=device_status_map["active"],
+            ),
+        )
+
+        device_bays = (
+            parent_devices[0].devicebays.first(),
+            parent_devices[1].devicebays.first(),
+        )
+        device_bays[0].installed_device = child_devices[0]
+        device_bays[1].installed_device = child_devices[1]
+        device_bays[0].save()
+        device_bays[1].save()
 
     def test_name(self):
         params = {"name": ["Device Bay 1", "Device Bay 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_description(self):
-        params = {"description": ["First", "Second"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"description": ["Device Bay Description 1", "Device Bay Description 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = (Region.objects.get(name="Region 1"), Region.objects.get(name="Region 2"))
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = (Site.objects.get(name="Site 1"), Site.objects.get(name="Site 2"))
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -3035,6 +3429,16 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
         params = {"device": [devices[0].name, devices[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_label(self):
+        labels = ["devicebay1", "devicebay2"]
+        params = {"label": labels}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_installed_device(self):
+        installed_device = Device.objects.filter(name__startswith="Child")
+        params = {"installed_device": [installed_device[0], installed_device[1]]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
 
 class InventoryItemTestCase(FilterTestCases.FilterTestCase):
     queryset = InventoryItem.objects.all()
@@ -3042,47 +3446,18 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturers = (
-            Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
-            Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
-            Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3"),
-        )
-
-        device_type = DeviceType.objects.create(manufacturer=manufacturers[0], model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1", region=regions[0]),
-            Site.objects.create(name="Site 2", slug="site-2", region=regions[1]),
-            Site.objects.create(name="Site 3", slug="site-3", region=regions[2]),
-        )
+        common_test_data(cls)
 
         devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[0],
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[1],
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                device_role=device_role,
-                site=sites[2],
-            ),
+            Device.objects.get(name="Device 1"),
+            Device.objects.get(name="Device 2"),
+            Device.objects.get(name="Device 3"),
+        )
+
+        manufacturers = (
+            Manufacturer.objects.get(name="Manufacturer 1"),
+            Manufacturer.objects.get(name="Manufacturer 2"),
+            Manufacturer.objects.get(name="Manufacturer 3"),
         )
 
         inventory_items = (
@@ -3095,6 +3470,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 asset_tag="1001",
                 discovered=True,
                 description="First",
+                label="inventoryitem1",
             ),
             InventoryItem.objects.create(
                 device=devices[1],
@@ -3105,6 +3481,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 asset_tag="1002",
                 discovered=True,
                 description="Second",
+                label="inventoryitem2",
             ),
             InventoryItem.objects.create(
                 device=devices[2],
@@ -3115,6 +3492,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 asset_tag="1003",
                 discovered=False,
                 description="Third",
+                label="inventoryitem3",
             ),
         )
 
@@ -3168,6 +3546,11 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         params = {"parent_id": [parent_items[0].pk, parent_items[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_parent(self):
+        parent = InventoryItem.objects.exclude(name__contains="A")[:2]
+        params = {"parent": [parent[0].name, parent[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
     def test_manufacturer(self):
         manufacturers = Manufacturer.objects.all()[:2]
         params = {"manufacturer_id": [manufacturers[0].pk, manufacturers[1].pk]}
@@ -3185,6 +3568,14 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_description(self):
+        params = {"description": ["First", "Second"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_label(self):
+        params = {"label": ["inventoryitem2", "inventoryitem3"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class VirtualChassisTestCase(FilterTestCases.FilterTestCase):

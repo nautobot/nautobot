@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
@@ -14,7 +15,7 @@ from nautobot.dcim.choices import (
 
 from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel
+from nautobot.extras.models import CustomField, CustomFieldModel, ObjectChange, RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
@@ -84,7 +85,20 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         """
         Helper method to self.instantiate().
         """
-        return model(device=device, name=self.name, label=self.label, description=self.description, **kwargs)
+        custom_field_data = {}
+        content_type = ContentType.objects.get_for_model(model)
+        fields = CustomField.objects.filter(content_types=content_type)
+        for field in fields:
+            custom_field_data[field.name] = field.default
+
+        return model(
+            device=device,
+            name=self.name,
+            label=self.label,
+            description=self.description,
+            _custom_field_data=custom_field_data,
+            **kwargs,
+        )
 
 
 @extras_features(
