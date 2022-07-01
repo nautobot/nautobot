@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterUniqueTogether(
-            name='dynamicgroupmembership',
-            unique_together={('group', 'parent_group', 'operator', 'weight')},
+            name="dynamicgroupmembership",
+            unique_together={("group", "parent_group", "operator", "weight")},
         ),
     ]
