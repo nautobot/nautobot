@@ -137,7 +137,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
             Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
         )
 
-        clusteres = (
+        clusters = (
             Cluster.objects.create(
                 name="Cluster 1",
                 type=cluster_types[0],
@@ -169,16 +169,16 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")
 
         cls.device = Device.objects.create(
-            name="Device 1", device_type=devicetype, device_role=devicerole, site=sites[0], cluster=clusteres[0]
+            name="Device 1", device_type=devicetype, device_role=devicerole, site=sites[0], cluster=clusters[0]
         )
 
-        cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusteres[1])
+        cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[1])
 
         tag = Tag.objects.create(name="Tag 1", slug="tag-1")
         tag.content_types.add(ContentType.objects.get_for_model(Cluster))
 
-        clusteres[0].tags.add(tag)
-        clusteres[1].tags.add(tag)
+        clusters[0].tags.add(tag)
+        clusters[1].tags.add(tag)
 
     def test_name(self):
         params = {"name": ["Cluster 1", "Cluster 2"]}
@@ -193,7 +193,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_device(self):
-        params = {"devices": [self.device.pk]}
+        params = {"devices": [self.device.pk, self.device.name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
         params = {"has_devices": True}
@@ -203,7 +203,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_virtual_machines(self):
-        params = {"virtual_machines": [self.virtualmachine.pk]}
+        params = {"virtual_machines": [self.virtualmachine.pk, self.virtualmachine.name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
         params = {"has_virtual_machines": True}
@@ -443,7 +443,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_services(self):
-        params = {"services": [self.services[0].pk, self.services[1].pk]}
+        params = {"services": [self.services[0].pk, self.services[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         params = {"has_services": True}

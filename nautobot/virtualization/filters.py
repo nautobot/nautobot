@@ -12,14 +12,14 @@ from nautobot.ipam.models import IPAddress, Service, VLAN
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     BaseFilterSet,
+    MultiValueCharFilter,
     MultiValueMACAddressFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
-    MultiValueCharFilter,
-    RelatedMembershipBooleanFilter,
-    NaturalKeyOrPKMultipleChoiceFilter,
 )
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -94,15 +94,17 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
-    devices = django_filters.ModelMultipleChoiceFilter(
-        field_name="devices", queryset=Device.objects.all(), label="Device (ID)"
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name", queryset=Device.objects.all(), label="Device (name or ID)"
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
         label="Has devices",
     )
-    virtual_machines = django_filters.ModelMultipleChoiceFilter(
-        field_name="virtual_machines", queryset=VirtualMachine.objects.all(), label="Virtual Machines (ID)"
+    virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name",
+        queryset=VirtualMachine.objects.all(),
+        label="Virtual Machines (name or ID)",
     )
     has_virtual_machines = RelatedMembershipBooleanFilter(
         field_name="virtual_machines",
@@ -228,8 +230,8 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         method="filter_primary_ip6",
         label="Primary IPv6 Address",
     )
-    services = django_filters.ModelMultipleChoiceFilter(
-        field_name="services", queryset=Service.objects.all(), label="Services (ID)"
+    services = NaturalKeyOrPKMultipleChoiceFilter(
+        natural_key="name", queryset=Service.objects.all(), label="Services (name or ID)"
     )
     has_services = RelatedMembershipBooleanFilter(
         field_name="services",
