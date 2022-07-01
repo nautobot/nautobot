@@ -166,3 +166,17 @@
     {% endwith %}
 </form>
 {% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+$(() => {
+    $('#select2-id_termination_b_device-container').on("click", () => {
+        /*
+        * This clears the list of cable destination choices when the device drop-down is clicked.
+        * */
+        $('#id_termination_b_id').find("option").remove();
+    })
+});
+</script>
+{% endblock %}
