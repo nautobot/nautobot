@@ -36,7 +36,7 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         natural_key="name",
-        label="Cluster (name or ID)",
+        label="Clusters (name or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
@@ -52,7 +52,7 @@ class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         natural_key="name",
-        label="Cluster (name or ID)",
+        label="Clusters (name or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
@@ -95,7 +95,7 @@ class ClusterFilterSet(NautobotFilterSet, TenancyFilterSet):
         label="Site (slug)",
     )
     devices = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name", queryset=Device.objects.all(), label="Device (name or ID)"
+        natural_key="name", queryset=Device.objects.all(), label="Devices (name or ID)"
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -306,7 +306,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
         natural_key="vid",
         queryset=VLAN.objects.all(),
-        label="Tagged VLAN (VID or ID)",
+        label="Tagged VLANs (VID or ID)",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
         natural_key="vid",
