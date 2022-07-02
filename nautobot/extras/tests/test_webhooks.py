@@ -78,7 +78,7 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["event"], "created")
             self.assertEqual(body["timestamp"], timestamp)
             self.assertEqual(body["model"], "site")
-            self.assertEqual(body["username"], "testuser")
+            self.assertEqual(body["username"], "nautobotuser")
             self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Site Update")
             self.assertEqual(body["data"]["status"]["value"], self.planned_status.slug)

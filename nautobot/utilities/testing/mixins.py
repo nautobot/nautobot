@@ -34,7 +34,7 @@ class NautobotTestCaseMixin:
         populate_status_choices(apps, None)
 
         # Create the test user and assign permissions
-        self.user = User.objects.create_user(username="testuser")
+        self.user = User.objects.create_user(username="nautobotuser")
         self.add_permissions(*self.user_permissions)
 
         if client:
