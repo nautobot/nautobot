@@ -144,6 +144,9 @@ class Job(PrimaryModel):
     read_only = models.BooleanField(
         default=False, help_text="Whether the job is prevented from making lasting changes to the database"
     )
+    atomic = models.BooleanField(
+        default=True, help_text="Whether the job treats db changes as a single transaction or not"
+    )
     soft_time_limit = models.FloatField(
         default=0,
         validators=[MinValueValidator(0)],

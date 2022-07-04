@@ -97,6 +97,7 @@ class BaseJob:
         - approval_required (bool)
         - soft_time_limit (int)
         - time_limit (int)
+        - atomic (bool)
         """
 
         pass
@@ -219,6 +220,10 @@ class BaseJob:
         return getattr(cls.Meta, "time_limit", 0)
 
     @classproperty
+    def atomic(cls):
+        return getattr(cls.Meta, "atomic", True)
+
+    @classproperty
     def properties_dict(cls):
         """
         Return all relevant classproperties as a dict.
@@ -235,6 +240,7 @@ class BaseJob:
             "read_only": cls.read_only,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
+            "atomic": cls.atomic,
         }
 
     @classmethod
@@ -299,15 +305,17 @@ class BaseJob:
         try:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
             read_only = job_model.read_only if job_model.read_only_override else self.read_only
+            atomic = job_model.atomic if job_model.atomic else self.atomic
             commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
         except JobModel.DoesNotExist:
             # 2.0 TODO: remove this fallback, Job records should always exist.
             logger.error("No Job instance found in the database corresponding to %s", self.class_path)
             read_only = self.read_only
             commit_default = self.commit_default
+            atomic = self.atomic
 
-        if read_only:
-            # Hide the commit field for read only jobs
+        if read_only or not atomic:
+            # Hide the commit field for read only & not atomic jobs
             form.fields["_commit"].widget = forms.HiddenInput()
             form.fields["_commit"].initial = False
         else:
@@ -1094,7 +1102,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job.delete_files(*file_ids)  # Cleanup FileProxy objects
         return False
 
-    if job_model.read_only:
+    if job_model.read_only or not job_model.atomic:
         # Force commit to false for read only jobs.
         commit = False
 
@@ -1120,10 +1128,33 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         """
         started = timezone.now()
         job.results["output"] = ""
+
         try:
-            with transaction.atomic():
-                # Script-like behavior
-                job.active_test = "run"
+            job.active_test = "run"
+            if job.atomic:
+                with transaction.atomic():
+                    # Script-like behavior
+                    output = job.run(data=data, commit=commit)
+                    if output:
+                        job.results["output"] += "\n" + str(output)
+
+                    # Report-like behavior
+                    for method_name in job.test_methods:
+                        job.active_test = method_name
+                        output = getattr(job, method_name)()
+                        if output:
+                            job.results["output"] += "\n" + str(output)
+
+                    if job.failed:
+                        job.logger.warning("job failed")
+                        job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
+                    else:
+                        job.logger.info("job completed successfully")
+                        job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+
+                    if not commit:
+                        raise AbortTransaction()
+            else:  # non atomic job, clean this up a bit 
                 output = job.run(data=data, commit=commit)
                 if output:
                     job.results["output"] += "\n" + str(output)
@@ -1142,9 +1173,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                     job.logger.info("job completed successfully")
                     job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
 
-                if not commit:
-                    raise AbortTransaction()
-
         except AbortTransaction:
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted automatically.")
@@ -1152,7 +1180,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         except Exception as exc:
             stacktrace = traceback.format_exc()
             job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
-            if not job_model.read_only:
+            
+            if not job_model.read_only and job.atomic:
                 job.log_info(message="Database changes have been reverted due to error.")
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 

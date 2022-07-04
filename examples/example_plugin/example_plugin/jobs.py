@@ -14,7 +14,7 @@ class ExampleJob(Job):
 
             *This is italicized*
         """
-
+        atomic = False
 
 class ExampleHiddenJob(Job):
     class Meta:
@@ -40,4 +40,11 @@ class ExampleLoggingJob(Job):
         return f"Ran for {interval} seconds"
 
 
-jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob)
+class ExampleNonAtomicJob(Job):
+    class Meta:
+        hidden = True
+        name = "Example Non atomic job"
+        description = "I should not show in the UI!z"
+        atomic = False
+
+jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob, ExampleNonAtomicJob,)
