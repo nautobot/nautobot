@@ -534,14 +534,14 @@ class JobResultTable(BaseTable):
     )
     actions = tables.TemplateColumn(
         template_code="""
-            {% load url_encode %}
+            {% load helpers %}
             <div class="row">
             {% if record.job_kwargs %}
-                <a href="/extras/jobs/{{record.name}}/?{% url_encode record.job_kwargs.data %}" class="btn btn-xs btn-info" title="re-run job">
+                <a href="/extras/jobs/{{record.name}}/?{% url_encode record.job_kwargs.data %}" class="btn btn-xs btn-info"title="Re-run job with same arguments.">
                     <i class="mdi mdi mdi-recycle"></i>
                 </a>
             {% endif %}
-                <a href="/extras/job-results/{{ record.pk }}/delete/" class="btn btn-xs btn-danger" title="delete">
+                <a href="/extras/job-results/{{ record.pk }}/delete/" class="btn btn-xs btn-danger" title="Delete this job result.">
                     <i class="mdi mdi mdi-minus-thick"></i>
                 </a>
             </div>
@@ -591,7 +591,7 @@ class JobResultTable(BaseTable):
             "summary",
             "actions",
         )
-        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
+        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary", "actions")
 
 
 #

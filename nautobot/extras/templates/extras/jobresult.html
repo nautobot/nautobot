@@ -1,7 +1,6 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
 {% load custom_links %}
-{% load url_encode %}
 {% load form_helpers %}
 {% load log_levels %}
 {% load plugins %}
@@ -46,7 +45,7 @@
         {% if perms.extras.run_job %}
             {% if result.job_kwargs %}
             <a href="/extras/jobs/{{result.name}}/?{% url_encode result.job_kwargs.data %}" class="btn btn-info">
-                <span class="mdi mdi-recycle" aria-hidden="true"></span> Re Run
+                <span class="mdi mdi-recycle" aria-hidden="true"></span> Re-Run
             </a>
             {% endif %}
         {% endif %}

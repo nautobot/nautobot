@@ -2,6 +2,8 @@ import datetime
 import json
 import re
 
+from urllib.parse import urlencode
+
 import yaml
 from django import template
 from django.conf import settings
@@ -635,3 +637,17 @@ def custom_branding_or_static(branding_asset, static_asset):
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
     return StaticNode.handle_simple(static_asset)
+
+
+@register.simple_tag
+def url_encode(val=None):
+    """ This function is a wrapper for the standard urllib urlencode, this is required as the OOTB django
+    urlencode does not work properly in some cases.
+
+    Args:
+        val (dict): dict of values to be encoded.
+    Returns:
+        str: formatted URL encoded string.
+    This tag is used to to correctly format URL params based of a dictionary.
+    """
+    return urlencode(val)
