@@ -270,6 +270,86 @@ class RelationshipModelForm(forms.ModelForm):
         return obj
 
 
+class RelationshipModelBulkEditFormMixin(BulkEditForm):
+    """Bulk-edit form mixin for models that support Relationships.
+
+    For different relationship types there are different expectations of the UI:
+
+    - For one-to-one (symmetric or non-symmetric) we only provide a "clear" checkbox
+    - For one-to-many (source, i.e. "one" side) we only provide a "clear" checkbox
+    - For one-to-many (destination, i.e. "many" side) we provide a single-select field as well as a "clear" checkbox
+    - For many-to-many (symmetric or non-symmetric) we provide "add" and "remove" multi-select fields, similar to the
+      AddRemoveTagsForm, as well as a "clear" checkbox.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.relationships = []
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+
+        source_relationships = Relationship.objects.filter(source_type=self.obj_type)
+        for rel in source_relationships:
+            if rel.type in [
+                RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+            ]:
+                peer_side = "peer"
+            else:
+                peer_side = "destination"
+            field_name = f"cr_{rel.slug}__{peer_side}"
+            if rel.type in [
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+            ]:
+                self.fields[f"add_{field_name}"] = rel.to_form_field(side="source")
+                self.fields[f"add_{field_name}"].label = "Add " + self.fields[f"add_{field_name}"].label
+                self.fields[f"remove_{field_name}"] = rel.to_form_field(side="source")
+                self.fields[f"remove_{field_name}"].label = "Remove " + self.fields[f"remove_{field_name}"].label
+            else:
+                self.fields[field_name] = rel.to_form_field(side="source")
+                self.fields[field_name].disabled = True
+            self.nullable_fields.append(field_name)
+            self.relationships.append(field_name)
+
+        destination_relationships = Relationship.objects.filter(destination_type=self.obj_type)
+        for rel in destination_relationships:
+            if rel.type in [
+                RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+            ]:
+                peer_side = "peer"
+            else:
+                peer_side = "source"
+            field_name = f"cr_{rel.slug}__{peer_side}"
+            if field_name in self.relationships:
+                # A symmetric relationship, already handled under source_relationships
+                continue
+            if rel.type in [
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,  # redundant with "continue" above, but harmless
+            ]:
+                self.fields[f"add_{field_name}"] = rel.to_form_field(side="destination")
+                self.fields[f"add_{field_name}"].label = "Add " + self.fields[f"add_{field_name}"].label
+                self.fields[f"remove_{field_name}"] = rel.to_form_field(side="destination")
+                self.fields[f"remove_{field_name}"].label = "Remove " + self.fields[f"remove_{field_name}"].label
+            elif rel.type in [
+                RelationshipTypeChoices.TYPE_ONE_TO_MANY,  # only applicable from "destination" side!
+            ]:
+                self.fields[field_name] = rel.to_form_field(side="destination")
+            else:
+                self.fields[field_name] = rel.to_form_field(side="destination")
+                self.fields[field_name].disabled = True
+            self.nullable_fields.append(field_name)
+            self.relationships.append(field_name)
+
+    def clean(self):
+        """
+        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
+        """
+
+
+
 #
 # Computed Fields
 #
@@ -556,6 +636,7 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
 
 
 class CustomFieldBulkEditForm(BulkEditForm):
+    # Note that this is a form mixin for bulk-editing custom-field-having models, not for the CustomField model itself!
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

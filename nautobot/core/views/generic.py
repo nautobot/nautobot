@@ -22,7 +22,8 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
-from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.choices import RelationshipSideChoices
+from nautobot.extras.models import CustomField, ExportTemplate, Relationship, RelationshipAssociation
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -952,8 +953,11 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
-                standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
+                custom_fields = getattr(form, "custom_fields", [])
+                relationships = getattr(form, "relationships", [])
+                standard_fields = [
+                    field for field in form.fields if field not in custom_fields + relationships + ["pk"]
+                ]
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
@@ -979,7 +983,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     if isinstance(model_field, ManyToManyField):
                                         getattr(obj, name).set([])
                                     else:
-                                        setattr(obj, name, None if model_field.null else "")
+                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
 
                                 # ManyToManyFields
                                 elif isinstance(model_field, ManyToManyField):
@@ -1006,6 +1010,101 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                 obj.tags.add(*form.cleaned_data["add_tags"])
                             if form.cleaned_data.get("remove_tags", None):
                                 obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                            # Add/remove relationship associations
+                            if relationships:
+                                obj_relationships = obj.get_relationships()
+                                for field_name in relationships:
+                                    # "cr_foo-bar__destination" --> "foo-bar", "destination"
+                                    rel_slug, side = field_name[3:].rsplit("__", 1)
+                                    logger.info("Processing relationship %s %s", rel_slug, side)
+                                    try:
+                                        rel = Relationship.objects.get(slug=rel_slug)
+                                    except Relationship.DoesNotExist:
+                                        raise ValidationError({field_name: "No such relationship found!"})
+                                    peer_side = RelationshipSideChoices.OPPOSITE[side]
+                                    if rel not in obj_relationships[peer_side]:
+                                        raise ValidationError(
+                                            {
+                                                field_name: f"Relationship {rel} is not valid (should be one of: "
+                                                f"{list(obj_relationships[peer_side].keys())}"
+                                            }
+                                        )
+                                    if field_name in form.nullable_fields and field_name in nullified_fields:
+                                        logger.info("Deleting existing relationships from %s for %s", obj, rel)
+                                        obj_relationships[peer_side][rel].delete()
+                                    elif form.cleaned_data.get(field_name) not in (None, ""):
+                                        logger.info("Value for %s: %s", field_name, form.cleaned_data.get(field_name))
+                                    else:
+                                        added = form.cleaned_data.get(f"add_{field_name}")
+                                        removed = form.cleaned_data.get(f"remove_{field_name}")
+                                        if added:
+                                            # Adding instances of a many-to-many relationship
+                                            logger.info("add_%s: %s", field_name, added)
+                                            for target in added:
+                                                if side == "source":
+                                                    ra, created = RelationshipAssociation.objects.get_or_create(
+                                                        relationship=rel,
+                                                        source_id=target.pk,
+                                                        source_type=rel.source_type,
+                                                        destination_id=obj.pk,
+                                                        destination_type=rel.destination_type,
+                                                    )
+                                                elif side == "destination":
+                                                    ra, created = RelationshipAssociation.objects.get_or_create(
+                                                        relationship=rel,
+                                                        source_id=obj.pk,
+                                                        source_type=rel.source_type,
+                                                        destination_id=target.pk,
+                                                        destination_type=rel.destination_type,
+                                                    )
+                                                else:
+                                                    # Symmetric
+                                                    candidates = RelationshipAssociation.objects.filter(
+                                                        relationship=rel, source_id=obj.pk, destination_id=target.pk
+                                                    )
+                                                    if candidates.exists():
+                                                        ra = candidates.first()
+                                                        created = False
+                                                    else:
+                                                        candidates = RelationshipAssociation.objects.filter(
+                                                            relationship=rel, source_id=target.pk, destination_id=obj.pk
+                                                        )
+                                                        if candidates.exists():
+                                                            ra = candidates.first()
+                                                            created = False
+                                                        else:
+                                                            ra = RelationshipAssociation.objects.create(
+                                                                relationship=rel,
+                                                                source_type=rel.source_type,
+                                                                source_id=obj.pk,
+                                                                destination_type=rel.destination_type,
+                                                                destination_id=target.pk,
+                                                            )
+                                                            created = True
+                                                if created:
+                                                    ra.validated_save()
+                                                    logger.info("Created %s", ra)
+                                                else:
+                                                    logger.info("%s already exists", ra)
+
+                                        if removed:
+                                            logger.info("remove_%s: %s", field_name, removed)
+                                            for target in removed:
+                                                # TODO: could do something with obj_relationships[peer_side][rel],
+                                                # but would it be more efficient?
+                                                source_count = 0
+                                                dest_count = 0
+                                                if side == "source" or side == "peer":
+                                                    source_count, _ = RelationshipAssociation.objects.filter(
+                                                        relationship=rel, source_id=target.pk, destination_id=obj.pk
+                                                    ).delete()
+                                                if side == "destination" or side == "peer":
+                                                    dest_count, _ = RelationshipAssociation.objects.filter(
+                                                        relationship=rel, source_id=obj.pk, destination_id=target.pk
+                                                    ).delete()
+                                                count = source_count + dest_count
+                                                logger.info("Deleted %s RelationshipAssociation(s)", count)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(

@@ -29,6 +29,7 @@ from nautobot.extras.forms import (
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    RelationshipModelBulkEditFormMixin,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -2099,6 +2100,7 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
 
 class DeviceBulkEditForm(
     BootstrapMixin,
+    RelationshipModelBulkEditFormMixin,
     AddRemoveTagsForm,
     LocatableModelBulkEditFormMixin,
     StatusBulkEditFormMixin,
