@@ -7,13 +7,13 @@ import nautobot.core.celery
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0034_configcontextschema__remove_name_unique__create_constraint_unique_name_owner'),
+        ("extras", "0034_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='jobresult',
-            name='job_kwargs',
+            model_name="jobresult",
+            name="job_kwargs",
             field=models.JSONField(blank=True, default=dict, encoder=nautobot.core.celery.NautobotKombuJSONEncoder),
         ),
     ]

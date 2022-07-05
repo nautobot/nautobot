@@ -641,7 +641,7 @@ def custom_branding_or_static(branding_asset, static_asset):
 
 @register.simple_tag
 def url_encode(val=None):
-    """ This function is a wrapper for the standard urllib urlencode, this is required as the OOTB django
+    """This function is a wrapper for the standard urllib urlencode, this is required as the OOTB django
     urlencode does not work properly in some cases.
 
     Args:
