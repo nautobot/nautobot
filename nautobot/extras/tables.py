@@ -535,16 +535,18 @@ class JobResultTable(BaseTable):
     actions = tables.TemplateColumn(
         template_code="""
             {% load helpers %}
-            <div class="row">
             {% if record.job_kwargs %}
-                <a href="/extras/jobs/{{record.name}}/?{% url_encode record.job_kwargs.data %}" class="btn btn-xs btn-info"title="Re-run job with same arguments.">
+                <a href="/extras/jobs/{{record.name}}/?{% url_encode record.job_kwargs.data %}" class="btn btn-xs btn-success"title="Re-run job with same arguments.">
                     <i class="mdi mdi mdi-recycle"></i>
+                </a>
+            {% else %}
+                <a href="#" class="btn btn-xs btn-default disabled" title="No saved job arguments, cannot be re-run">
+                    <i class="mdi mdi-repeat-off"></i>
                 </a>
             {% endif %}
                 <a href="/extras/job-results/{{ record.pk }}/delete/" class="btn btn-xs btn-danger" title="Delete this job result.">
-                    <i class="mdi mdi mdi-minus-thick"></i>
+                    <i class="mdi mdi-trash-can-outline"></i>
                 </a>
-            </div>
         """
     )
 
