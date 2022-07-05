@@ -46,8 +46,9 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_clusters(self):
-        params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest("Clusters"):
+            params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         with self.subTest("Has Clusters"):
             params = {"has_clusters": True}
@@ -85,8 +86,9 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_clusters(self):
-        params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest("Clusters"):
+            params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         with self.subTest("Has Clusters"):
             params = {"has_clusters": True}
@@ -195,8 +197,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_device(self):
-        params = {"devices": [self.device.pk, self.device.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        with self.subTest("Devices"):
+            params = {"devices": [self.device.pk, self.device.name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
         with self.subTest("Has Devices"):
             params = {"has_devices": True}
@@ -206,8 +209,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_virtual_machines(self):
-        params = {"virtual_machines": [self.virtualmachine.pk, self.virtualmachine.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        with self.subTest("Virtual Machines"):
+            params = {"virtual_machines": [self.virtualmachine.pk, self.virtualmachine.name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
         with self.subTest("Has Virtual Machines"):
             params = {"has_virtual_machines": True}
@@ -447,8 +451,9 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_services(self):
-        params = {"services": [self.services[0].pk, self.services[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest("Services"):
+            params = {"services": [self.services[0].pk, self.services[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         with self.subTest("Has Services"):
             params = {"has_services": True}
@@ -458,8 +463,9 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_interfaces(self):
-        params = {"interfaces": [self.interfaces[0].pk, self.interfaces[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest("Interfaces"):
+            params = {"interfaces": [self.interfaces[0].pk, self.interfaces[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         with self.subTest("Has Interfaces"):
             params = {"has_interfaces": True}
@@ -676,8 +682,9 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_ip_addresses(self):
-        params = {"ip_addresses": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest("Primary Addresses"):
+            params = {"ip_addresses": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         with self.subTest("Has Primary Addresses"):
             params = {"has_ip_addresses": False}
@@ -707,9 +714,9 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         VMInterface.objects.bulk_create(child_interfaces)
-
-        params = {"parent_interface": [parent_interface.pk, parent_interface.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        with self.subTest("Parent Interface"):
+            params = {"parent_interface": [parent_interface.pk, parent_interface.name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
         with self.subTest("Has Parent Interface"):
             params = {"has_parent_interface": True}
@@ -733,9 +740,9 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         VMInterface.objects.bulk_create(child_interfaces)
-
-        params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        with self.subTest("Child Interfaces"):
+            params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
         with self.subTest("Has child Interfaces"):
             params = {"has_child_interfaces": True}
@@ -754,8 +761,9 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
         VMInterface.objects.bulk_create(bridged_interfaces)
 
-        params = {"bridge": [bridge_interface.pk, bridge_interface.name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        with self.subTest("Bridge Interface"):
+            params = {"bridge": [bridge_interface.pk, bridge_interface.name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
         with self.subTest("Has Bridge Interface"):
             params = {"has_bridge": True}
