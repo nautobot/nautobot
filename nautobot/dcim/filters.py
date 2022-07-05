@@ -132,7 +132,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         to_field_name="slug",
         label="Parent region (slug)",
     )
-    children = TreeNodeMultipleChoiceFilter(
+    children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Region.objects.all(),
         label="Children (slug or ID)",
     )
@@ -194,16 +194,22 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="circuit_terminations",
         label="Has circuit terminations",
     )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Devices (name or ID)",
+    )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
         label="Has devices",
     )
     # The reverse relation here is misnamed as `powerpanel`, but fixing it would be a breaking API change.
     # 2.0 TODO: fix the reverse relation name, at which point this filter can be deleted here and added to Meta.fields.
-    power_panels = django_filters.ModelMultipleChoiceFilter(
+    power_panels = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="powerpanel",
+        to_field_name="name",
         queryset=PowerPanel.objects.all(),
-        label="Power panels",
+        label="Power panels (name or ID)",
     )
     has_power_panels = RelatedMembershipBooleanFilter(
         field_name="powerpanel",
@@ -259,7 +265,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "contact_name",
             "contact_phone",
             "description",
-            "devices",
             "facility",
             "id",
             "latitude",
