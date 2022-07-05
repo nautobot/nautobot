@@ -976,9 +976,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         template_name = "extras/job.html"
         try:
             job_class = job_model.job_class()
-            job_form = (
-                job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
-            )
+            job_form = job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
             if hasattr(job_class, "template_name"):
                 template_name = job_class.template_name
         except RuntimeError as err:
