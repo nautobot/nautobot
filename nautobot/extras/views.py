@@ -17,6 +17,7 @@ from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
+from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
@@ -954,7 +955,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_class = job_model.job_class()
             job_form = job_class.as_form(initial=normalize_querydict(request.GET))
             if hasattr(job_class, "template_name"):
-                template_name = job_class.template_name
+                try:
+                    template_name = get_template(job_class.template_name)
+                except TemplateDoesNotExist as err:
+                    messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -978,7 +982,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_class = job_model.job_class()
             job_form = job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
             if hasattr(job_class, "template_name"):
-                template_name = job_class.template_name
+                try:
+                    template_name = get_template(job_class.template_name)
+                except TemplateDoesNotExist as err:
+                    messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
