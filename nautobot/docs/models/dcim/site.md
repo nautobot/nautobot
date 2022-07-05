@@ -13,3 +13,6 @@ Each site must be assigned a unique name and operational [`status`](https://naut
 The site model also provides a facility ID field which can be used to annotate a facility ID (such as a data center name) associated with the site. Each site may also have an autonomous system (AS) number and time zone associated with it. (Time zones are provided by the [pytz](https://pypi.org/project/pytz/) package.)
 
 The site model also includes several fields for storing contact and address information as well as geo-location data (GPS coordinates).
+
+!!! info
+    In a future Nautobot release, sites may become just another Location Type, and the Site model may be collapsed into the Location model.

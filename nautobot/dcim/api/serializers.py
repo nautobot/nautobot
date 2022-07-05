@@ -49,6 +49,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     InventoryItem,
     Platform,
@@ -75,6 +77,7 @@ from nautobot.extras.api.serializers import (
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.extras.models import Status
+from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -104,6 +107,8 @@ from .nested_serializers import (  # noqa: F401
     NestedInterfaceSerializer,
     NestedInterfaceTemplateSerializer,
     NestedInventoryItemSerializer,
+    NestedLocationSerializer,
+    NestedLocationTypeSerializer,
     NestedManufacturerSerializer,
     NestedPlatformSerializer,
     NestedPowerFeedSerializer,
@@ -255,6 +260,93 @@ class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
 
 
 #
+# Locations
+#
+
+
+class LocationTypeSerializer(CustomFieldModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
+    parent = NestedLocationTypeSerializer(required=False, allow_null=True, default=None)
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()),
+        required=False,
+        many=True,
+    )
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)
+
+    class Meta:
+        model = LocationType
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "parent",
+            "content_types",
+            "description",
+            "tree_depth",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+class LocationSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
+    location_type = NestedLocationTypeSerializer()
+    parent = NestedLocationSerializer(required=False, allow_null=True)
+    tenant = NestedTenantSerializer(required=False, allow_null=True)
+    site = NestedSiteSerializer(required=False, allow_null=True)
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)
+
+    class Meta:
+        model = Location
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "status",
+            "location_type",
+            "parent",
+            "site",
+            "tenant",
+            "description",
+            "tree_depth",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("parent") and data.get("name"):
+            validator = UniqueTogetherValidator(queryset=Location.objects.all(), fields=("parent", "name"))
+            validator(data, self)
+
+        super().validate(data)
+
+        return data
+
+
+#
 # Racks
 #
 
@@ -262,6 +354,7 @@ class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
 class RackGroupSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
     site = NestedSiteSerializer()
+    location = NestedLocationSerializer(required=False, allow_null=True)
     parent = NestedRackGroupSerializer(required=False, allow_null=True)
     rack_count = serializers.IntegerField(read_only=True)
     _depth = serializers.IntegerField(source="level", read_only=True)
@@ -274,6 +367,7 @@ class RackGroupSerializer(CustomFieldModelSerializer):
             "name",
             "slug",
             "site",
+            "location",
             "parent",
             "description",
             "rack_count",
@@ -327,6 +421,7 @@ class RackRoleSerializer(CustomFieldModelSerializer):
 class RackSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     site = NestedSiteSerializer()
+    location = NestedLocationSerializer(required=False, allow_null=True)
     group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     role = NestedRackRoleSerializer(required=False, allow_null=True)
@@ -344,6 +439,7 @@ class RackSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "name",
             "facility_id",
             "site",
+            "location",
             "group",
             "tenant",
             "status",
@@ -754,6 +850,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer()
+    location = NestedLocationSerializer(required=False, allow_null=True)
     rack = NestedRackSerializer(required=False, allow_null=True)
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     primary_ip = NestedIPAddressSerializer(read_only=True)
@@ -778,6 +875,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "serial",
             "asset_tag",
             "site",
+            "location",
             "rack",
             "position",
             "face",
@@ -1431,6 +1529,7 @@ class VirtualChassisSerializer(TaggedObjectSerializer, CustomFieldModelSerialize
 class PowerPanelSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
     site = NestedSiteSerializer()
+    location = NestedLocationSerializer(required=False, allow_null=True)
     rack_group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     powerfeed_count = serializers.IntegerField(read_only=True)
 
@@ -1440,6 +1539,7 @@ class PowerPanelSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "id",
             "url",
             "site",
+            "location",
             "rack_group",
             "name",
             "tags",

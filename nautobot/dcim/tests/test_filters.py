@@ -1,5 +1,6 @@
 import netaddr
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
@@ -18,38 +19,40 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.filters import (
+    CableFilterSet,
+    ConsolePortFilterSet,
+    ConsolePortTemplateFilterSet,
+    ConsoleServerPortFilterSet,
+    ConsoleServerPortTemplateFilterSet,
+    DeviceBayFilterSet,
+    DeviceBayTemplateFilterSet,
+    DeviceFilterSet,
+    DeviceRoleFilterSet,
+    DeviceTypeFilterSet,
+    FrontPortFilterSet,
+    FrontPortTemplateFilterSet,
+    InterfaceFilterSet,
+    InterfaceTemplateFilterSet,
+    InventoryItemFilterSet,
+    LocationFilterSet,
+    LocationTypeFilterSet,
+    ManufacturerFilterSet,
+    PlatformFilterSet,
+    PowerFeedFilterSet,
+    PowerPanelFilterSet,
+    PowerPortFilterSet,
+    PowerPortTemplateFilterSet,
+    PowerOutletFilterSet,
+    PowerOutletTemplateFilterSet,
+    RackFilterSet,
+    RackGroupFilterSet,
+    RackReservationFilterSet,
+    RackRoleFilterSet,
+    RearPortFilterSet,
+    RearPortTemplateFilterSet,
     RegionFilterSet,
     SiteFilterSet,
-    RackGroupFilterSet,
-    RackRoleFilterSet,
-    RackFilterSet,
-    RackReservationFilterSet,
-    ManufacturerFilterSet,
-    DeviceTypeFilterSet,
-    ConsolePortTemplateFilterSet,
-    ConsoleServerPortTemplateFilterSet,
-    PowerPortTemplateFilterSet,
-    PowerOutletTemplateFilterSet,
-    InterfaceTemplateFilterSet,
-    FrontPortTemplateFilterSet,
-    RearPortTemplateFilterSet,
-    DeviceBayTemplateFilterSet,
-    DeviceRoleFilterSet,
-    PlatformFilterSet,
-    DeviceFilterSet,
-    ConsolePortFilterSet,
-    ConsoleServerPortFilterSet,
-    PowerPortFilterSet,
-    PowerOutletFilterSet,
-    InterfaceFilterSet,
-    FrontPortFilterSet,
-    RearPortFilterSet,
-    DeviceBayFilterSet,
-    InventoryItemFilterSet,
     VirtualChassisFilterSet,
-    CableFilterSet,
-    PowerPanelFilterSet,
-    PowerFeedFilterSet,
 )
 
 from nautobot.dcim.models import (
@@ -68,6 +71,8 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceTemplate,
     InventoryItem,
+    Location,
+    LocationType,
     Manufacturer,
     Platform,
     PowerFeed,
@@ -882,6 +887,99 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"description": "nomatch"}
         self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+
+class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+    queryset = LocationType.objects.all()
+    filterset = LocationTypeFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        lt1 = LocationType.objects.create(name="Campus", description="A campus")
+        lt2 = LocationType.objects.create(name="Building", parent=lt1, description="A building")
+        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        for lt in [lt1, lt2, lt3]:
+            lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
+        lt4.content_types.add(ContentType.objects.get_for_model(Rack))
+        lt4.content_types.add(ContentType.objects.get_for_model(Device))
+
+    def test_description(self):
+        params = {"description": ["A campus", "A building"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_parent(self):
+        params = {"parent": ["building", LocationType.objects.get(name="Campus").pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_types(self):
+        params = {"content_types": ["dcim.rackgroup"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"content_types": ["dcim.device", "dcim.rack"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+    queryset = Location.objects.all()
+    filterset = LocationFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        lt1 = LocationType.objects.create(name="Campus")
+        lt2 = LocationType.objects.create(name="Building", parent=lt1)
+        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        lt4.content_types.add(ContentType.objects.get_for_model(Device))
+
+        status_active = Status.objects.get(slug="active")
+        site = Site.objects.create(name="Research Triangle Area", status=status_active)
+        tenant = Tenant.objects.create(name="Test Tenant")
+
+        loc1 = Location.objects.create(
+            name="RTP", location_type=lt1, status=status_active, site=site, description="Research Triangle Park"
+        )
+        loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
+        loc3 = Location.objects.create(name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2)
+        loc4 = Location.objects.create(
+            name="RTP4E-3-0101", location_type=lt4, status=status_active, parent=loc3, tenant=tenant, description="Cube"
+        )
+        for loc in [loc1, loc2, loc3, loc4]:
+            loc.validated_save()
+
+    def test_location_type(self):
+        params = {
+            "location_type": [LocationType.objects.get(name="Campus").slug, LocationType.objects.get(name="Room").pk]
+        }
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_parent(self):
+        params = {"parent": ["rtp", Location.objects.get(name="RTP4E").pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_child_location_type(self):
+        params = {"child_location_type": ["room", LocationType.objects.get(name="Building").pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_type(self):
+        params = {"content_type": ["dcim.device"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_description(self):
+        params = {"description": ["Research Triangle Park", "Cube"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_site(self):
+        params = {"site": [Site.objects.first().slug, Site.objects.first().pk]}
+        # TODO: should this filter return descendant locations as well?
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_tenant_id(self):
+        params = {"tenant_id": [Tenant.objects.first().pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_tenant(self):
+        params = {"tenant": [Tenant.objects.first().slug, Tenant.objects.first().pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):

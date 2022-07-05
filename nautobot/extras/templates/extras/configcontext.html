@@ -76,6 +76,20 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Locations</td>
+                        <td>
+                            {% if object.locations.all %}
+                                <ul>
+                                    {% for location in object.locations.all %}
+                                        <li>{{ location|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Roles</td>
                         <td>
                             {% if object.roles.all %}

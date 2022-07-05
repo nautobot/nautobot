@@ -17,12 +17,13 @@ from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceRoleSerializer,
     NestedDeviceTypeSerializer,
+    NestedLocationSerializer,
     NestedPlatformSerializer,
     NestedRackSerializer,
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Rack, Region, Site
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -198,6 +199,12 @@ class ConfigContextSerializer(ValidatedModelSerializer):
         required=False,
         many=True,
     )
+    locations = SerializedPKRelatedField(
+        queryset=Location.objects.all(),
+        serializer=NestedLocationSerializer,
+        required=False,
+        many=True,
+    )
     roles = SerializedPKRelatedField(
         queryset=DeviceRole.objects.all(),
         serializer=NestedDeviceRoleSerializer,
@@ -257,6 +264,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "is_active",
             "regions",
             "sites",
+            "locations",
             "roles",
             "device_types",
             "platforms",
@@ -598,6 +606,8 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         # Static mapping of models to their nested serializers
         if isinstance(obj.parent, Device):
             serializer = NestedDeviceSerializer
+        elif isinstance(obj.parent, Location):
+            serializer = NestedLocationSerializer
         elif isinstance(obj.parent, Rack):
             serializer = NestedRackSerializer
         elif isinstance(obj.parent, Site):

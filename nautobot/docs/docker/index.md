@@ -136,7 +136,7 @@ If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_
 
 ### uWSGI
 
-The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uWSGI defaults:
+The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](https://github.com/nautobot/nautobot/blob/main/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uWSGI defaults:
 
 #### `NAUTOBOT_UWSGI_LISTEN`
 
@@ -191,7 +191,7 @@ COPY nautobot_config.py /opt/nautobot/nautobot_config.py
 
 ## Building the Image
 
-If you have a [development environment](/development/getting-started/#setting-up-your-development-environment) you can use invoke to build the docker images.  By default `invoke build` will build the development containers:
+If you have a [development environment](../development/getting-started/#setting-up-your-development-environment) you can use invoke to build the docker images.  By default `invoke build` will build the development containers:
 
 ```no-highlight
 $ invoke build

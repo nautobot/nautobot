@@ -400,6 +400,26 @@ class APIViewTestCases:
                 response = self.client.post(url, self.create_data[0], format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
+        def check_expected_slug(self, obj):
+            slug_source = [self.slug_source] if isinstance(self.slug_source, str) else self.slug_source
+            expected_slug = ""
+            for source_item in slug_source:
+                # e.g. self.slug_source = ["parent__name", "name"]
+                source_keys = source_item.split("__")
+                try:
+                    val = getattr(obj, source_keys[0])
+                    for key in source_keys[1:]:
+                        val = getattr(val, key)
+                except AttributeError:
+                    val = ""
+                if val:
+                    if expected_slug != "":
+                        expected_slug += "-"
+                    expected_slug += slugify(val)
+
+            self.assertNotEqual(expected_slug, "")
+            self.assertEqual(obj.slug, expected_slug)
+
         def test_create_object(self):
             """
             POST a single object with permission.
@@ -422,11 +442,10 @@ class APIViewTestCases:
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
+
                 # Check if Slug field is automatically created
                 if self.slug_source is not None and "slug" not in create_data:
-                    object = self._get_queryset().get(pk=response.data["id"])
-                    expected_slug = slugify(getattr(object, self.slug_source))
-                    self.assertEqual(object.slug, expected_slug)
+                    self.check_expected_slug(self._get_queryset().get(pk=response.data["id"]))
 
                 # Verify ObjectChange creation
                 if hasattr(self.model, "to_objectchange"):
@@ -467,9 +486,7 @@ class APIViewTestCases:
                     api=True,
                 )
                 if self.slug_source is not None and "slug" not in self.create_data[i]:
-                    object = self._get_queryset().get(pk=obj["id"])
-                    expected_slug = slugify(getattr(object, self.slug_source))
-                    self.assertEqual(object.slug, expected_slug)
+                    self.check_expected_slug(self._get_queryset().get(pk=obj["id"]))
 
     class UpdateObjectViewTestCase(APITestCase):
         update_data = {}

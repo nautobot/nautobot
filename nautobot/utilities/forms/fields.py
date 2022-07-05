@@ -39,6 +39,7 @@ __all__ = (
     "JSONArrayFormField",
     "LaxURLField",
     "MultipleContentTypeField",
+    "MultiMatchModelMultipleChoiceField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
@@ -264,7 +265,8 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
 
     def prepare_value(self, value):
         """Parse a comma-separated string of model names into a list of PKs."""
-        if isinstance(value, str):
+        # "".split(",") yields [""] rather than [], which we don't want!
+        if isinstance(value, str) and value:
             value = value.split(",")
 
         # For each model name, retrieve the model object and extract its
@@ -361,10 +363,18 @@ class SlugField(forms.SlugField):
     """
 
     def __init__(self, slug_source="name", *args, **kwargs):
-        label = kwargs.pop("label", "Slug")
-        help_text = kwargs.pop("help_text", "URL-friendly unique shorthand")
-        widget = kwargs.pop("widget", widgets.SlugWidget)
-        super().__init__(label=label, help_text=help_text, widget=widget, *args, **kwargs)
+        """
+        Instantiate a SlugField.
+
+        Args:
+            slug_source (str, tuple): Name of the field (or a list of field names) that will be used to suggest a slug.
+        """
+        kwargs.setdefault("label", "Slug")
+        kwargs.setdefault("help_text", "URL-friendly unique shorthand")
+        kwargs.setdefault("widget", widgets.SlugWidget)
+        super().__init__(*args, **kwargs)
+        if isinstance(slug_source, (tuple, list)):
+            slug_source = " ".join(slug_source)
         self.widget.attrs["slug-source"] = slug_source
 
 
@@ -671,13 +681,13 @@ class NumericArrayField(SimpleArrayField):
 
 class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
     """
-    Filter field to support matching on the PK or supplied `natural_key` fields. `natural_key`
-    defaults to `slug` if not provided. Raises ValidationError if none of the fields match the
-    requested value.
+    Filter field to support matching on the PK *or* `to_field_name` fields (defaulting to `slug` if not specified).
+
+    Raises ValidationError if none of the fields match the requested value.
     """
 
     def __init__(self, *args, **kwargs):
-        self.natural_key = kwargs.pop("natural_key", "slug")
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
         super().__init__(*args, **kwargs)
 
     def _check_values(self, values):
@@ -686,6 +696,9 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
         re-using some of that method's existing logic and adding support for coupling this field with
         multiple model fields.
         """
+        null = self.null_label is not None and values and self.null_value in values
+        if null:
+            values = [v for v in values if v != self.null_value]
         # deduplicate given values to avoid creating many querysets or
         # requiring the database backend deduplicate efficiently.
         try:
@@ -716,4 +729,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
                 )
         query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": values})
         qs = self.queryset.filter(query)
-        return qs
+        result = list(qs)
+        if null:
+            result += [self.null_value]
+        return result
