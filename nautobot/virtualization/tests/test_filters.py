@@ -421,13 +421,13 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         )
 
         # Assign primary IPs for filtering
-        ipaddresses = (
+        cls.ipaddresses = (
             IPAddress.objects.create(address="192.0.2.1/24", assigned_object=cls.interfaces[0]),
             IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=cls.interfaces[1]),
         )
 
-        VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=ipaddresses[0])
-        VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip6=ipaddresses[1])
+        VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=cls.ipaddresses[0])
+        VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip6=cls.ipaddresses[1])
 
         tag = Tag.objects.create(name="Tag 1", slug="tag-1")
         tag.content_types.add(ContentType.objects.get_for_model(VirtualMachine))
@@ -444,10 +444,10 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_primary_ip(self):
-        params = {"primary_ip4": ["192.0.2.1/24"]}
+        params = {"primary_ip4": ["192.0.2.1/24", self.ipaddresses[0].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-        params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24"]}
+        params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24", self.ipaddresses[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_services(self):

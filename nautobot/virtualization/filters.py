@@ -34,6 +34,8 @@ __all__ = (
     "VMInterfaceFilterSet",
 )
 
+from ..utilities.utils import is_uuid
+
 
 class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
@@ -231,11 +233,11 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     )
     primary_ip4 = MultiValueCharFilter(
         method="filter_primary_ip4",
-        label="Primary IPv4 Address",
+        label="Primary IPv4 Address (name or ID)",
     )
     primary_ip6 = MultiValueCharFilter(
         method="filter_primary_ip6",
-        label="Primary IPv6 Address",
+        label="Primary IPv6 Address (name or ID)",
     )
     services = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name", queryset=Service.objects.all(), label="Services (name or ID)"
@@ -264,11 +266,17 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         return queryset.exclude(params)
 
     def filter_primary_ip4(self, queryset, name, value):
-        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses=value)
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
         return queryset.filter(primary_ip4__in=ip_queryset)
 
     def filter_primary_ip6(self, queryset, name, value):
-        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses=value)
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
@@ -342,17 +350,10 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     tags = TagFilter()
 
     def filter_ip_address(self, queryset, name, value):
-        pk_values = set()
-        address_values = set()
-        for item in value:
-            try:
-                # query pk field if this is a uuid object or a valid uuid string
-                isinstance(item, uuid.UUID) or uuid.UUID(item)
-                pk_values.add(item)
-            except (ValueError, TypeError, AttributeError):
-                address_values.add(item)
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
 
-        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses=address_values, pk=pk_values)
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
         return queryset.filter(ip_addresses__in=ip_queryset)
 
     class Meta:
