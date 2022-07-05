@@ -701,7 +701,13 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
         VMInterface.objects.bulk_create(child_interfaces)
 
-        params = {"parent_interface_id": [parent_interface.pk]}
+        params = {"parent_interface": [parent_interface.pk, parent_interface.name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+        params = {"has_parent_interface": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+        params = {"has_parent_interface": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_bridge(self):
@@ -714,7 +720,13 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
         VMInterface.objects.bulk_create(bridged_interfaces)
 
-        params = {"bridge_id": [bridge_interface.pk]}
+        params = {"bridge": [bridge_interface.pk, bridge_interface.name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+        params = {"has_bridge": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+        params = {"has_bridge": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_mtu(self):

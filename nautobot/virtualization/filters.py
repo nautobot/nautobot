@@ -295,15 +295,23 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         to_field_name="name",
         label="Virtual machine",
     )
-    parent_interface_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="parent_interface",
+    parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=VMInterface.objects.all(),
-        label="Parent interface (ID)",
+        label="Parent interface (name or ID)",
     )
-    bridge_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="bridge",
+    has_parent_interface = RelatedMembershipBooleanFilter(
+        field_name="parent_interface",
+        label="Has Parent Interface",
+    )
+    bridge = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=VMInterface.objects.all(),
-        label="Bridge interface (ID)",
+        label="Bridge interface (name or ID)",
+    )
+    has_bridge = RelatedMembershipBooleanFilter(
+        field_name="bridge",
+        label="Has Bridge Interface",
     )
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
