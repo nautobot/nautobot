@@ -1341,7 +1341,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "site": sites[1].pk,
             "rack": racks[1].pk,
             "position": None,
-            "face": "",
+            "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
         }
 
