@@ -383,9 +383,9 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
 
-    def filter_address_in(self, addresses):
+    def filter_address_or_pk_in(self, addresses, pk=None):
         """
-        Filters by a list of address
+        Filters by a list of address and or pk
 
         Similar to .filter(address__in=[<address>]`)
         """
@@ -397,5 +397,8 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             host = _address.ip
             broadcast = last_ip
             q |= Q(prefix_length=prefix_length, host=host, broadcast=broadcast)
+
+        if pk is not None:
+            q |= Q(pk__in=pk)
 
         return super().filter(q)

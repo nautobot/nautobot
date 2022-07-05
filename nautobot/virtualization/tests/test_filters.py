@@ -683,7 +683,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_ip_addresses(self):
         with self.subTest("Primary Addresses"):
-            params = {"ip_addresses": ["192.0.2.1/24", "fe80::8ef:3eff:fe4c:3895/24"]}
+            ipaddress = IPAddress.objects.last()
+            params = {"ip_addresses": ["192.0.2.1/24", ipaddress.id]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         with self.subTest("Has Primary Addresses"):

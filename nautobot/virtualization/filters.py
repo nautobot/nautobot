@@ -1,3 +1,5 @@
+import uuid
+
 import django_filters
 from django.db.models import Q
 
@@ -335,12 +337,22 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
     )
-    ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP Addresses")
+    ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP Addresses (address or ID)")
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP Addresses")
     tags = TagFilter()
 
     def filter_ip_address(self, queryset, name, value):
-        ip_queryset = IPAddress.objects.filter_address_in(addresses=value)
+        pk_values = set()
+        address_values = set()
+        for item in value:
+            try:
+                # query pk field if this is a uuid object or a valid uuid string
+                isinstance(item, uuid.UUID) or uuid.UUID(item)
+                pk_values.add(item)
+            except (ValueError, TypeError, AttributeError):
+                address_values.add(item)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses=address_values, pk=pk_values)
         return queryset.filter(ip_addresses__in=ip_queryset)
 
     class Meta:
