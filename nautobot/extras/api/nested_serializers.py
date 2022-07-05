@@ -1,11 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
-from nautobot.extras.models.relationships import RelationshipAssociation
 from rest_framework import serializers
 
 from nautobot.core.api import ChoiceField, ContentTypeField, WritableNestedSerializer
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.extras.utils import FeatureQuery
 
 __all__ = [
     "NestedConfigContextSerializer",
@@ -159,9 +157,6 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
     class Meta:
         model = models.RelationshipAssociation
         fields = ["id", "url", "relationship", "source_id", "destination_id", "destination"]
-    
-    def get_destination(self, instance):
-        return instance.get_destination().name
 
 
 class NestedScheduledJobSerializer(serializers.ModelSerializer):

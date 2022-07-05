@@ -1,4 +1,3 @@
-import re
 import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -6,7 +5,6 @@ from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.models import relationships
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
@@ -15,7 +13,6 @@ from nautobot.utilities.filters import (
     ContentTypeMultipleChoiceFilter,
     SearchFilter,
     TagFilter,
-    TreeNodeMultipleChoiceFilter,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
@@ -748,33 +745,48 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]
 
 
+class RelationshipFilter(django_filters.Filter):
+    """
+    Filter objects by the presence of a CustomFieldValue. The filter's name is used as the CustomField name.
+    """
+
+    def __init__(self, relationship, value_list, queryset, *args, **kwargs):
+        self.relationship = relationship
+        self.value_list = value_list
+        self.qs = queryset
+        super().__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value is None:
+            return self.qs
+        else:
+            values = RelationshipAssociation.objects.filter(
+                destination_id__in=self.value_list, source_type=self.relationship.source_type
+            ).values_list("source_id", flat=True)
+            return self.qs.filter(id__in=values)
+
+
 class RelationshipAssociationModelFilterSet(BaseFilterSet):
     """
     Filterset for  applicable to the parent model.
     """
 
     def __init__(self, *args, **kwargs):
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        relationships = Relationship.objects.filter(source_type=self.obj_type)
+        self.uuids = []
+        if args:
+            for relationship in relationships:
+                field_name = "Destination for {} relationship".format(relationship.slug)
+                for id in args[0].getlist(field_name, []):
+                    self.uuids.append(id)
         super().__init__(*args, **kwargs)
-
-        relationships = Relationship.objects.filter(
-            source_type=ContentType.objects.get_for_model(self._meta.model)
-        )
-        for relationship in relationships:
-            filter_name = "destination_for_{}".format(relationship.name)
-            self.filters[filter_name] = django_filters.CharFilter(
-                field_name="destination_for_associations__id",
-                method="relationship_association_filter",
-            )
-            self.dest_value_list = []
-            if args:
-                self.dest_value_list = args[0].getlist(filter_name)
-            self.filters[filter_name].queryset = self._meta.model.objects.all()
-    
-    def relationship_association_filter(self, queryset, *args, **kwargs):
-        print(self.source_value_list)
-        relationship_associations = RelationshipAssociation.objects.filter(destination_id__in=self.dest_value_list)
-        self.source_value_list = relationship_associations.values_list("source_id", flat=True)
-        return queryset.filter(id__in=self.source_value_list).distinct()
+        if args:
+            for relationship in relationships:
+                field_name = "Destination for {} relationship".format(relationship.slug)
+                self.filters[field_name] = RelationshipFilter(
+                    relationship=relationship, value_list=self.uuids, queryset=self._meta.model.objects.all()
+                )
 
 
 #

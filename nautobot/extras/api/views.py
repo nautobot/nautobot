@@ -1,6 +1,4 @@
 from datetime import datetime
-from urllib import response
-from operator import itemgetter
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -16,9 +14,6 @@ from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
-from rest_framework.viewsets import ViewSet
-from rest_framework.permissions import IsAuthenticated
-from itertools import chain
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
@@ -29,7 +24,6 @@ from nautobot.core.api.views import (
     ReadOnlyModelViewSet,
 )
 from nautobot.core.graphql import execute_saved_query
-from nautobot.dcim.models import Device
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
@@ -841,25 +835,6 @@ class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
-
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
-    def unique_destination(self, request):
-        # source_type = request.GET.get("source_type")
-        search_query = request.GET.get("q")
-        source_type = ContentType.objects.get_for_model(Device)
-        uuids = RelationshipAssociation.objects.filter(source_type=source_type).values_list("destination_id", flat=True).distinct()
-        types = RelationshipAssociation.objects.filter(source_type=source_type).values_list("destination_type", flat=True).distinct()
-        result = {"results": []}
-        if not search_query:
-            search_query = ""             
-        for type in types:
-            model = ContentType.objects.get_for_id(type).model_class()
-            serializer = serializers.DestinationSerializer(model.objects.filter(id__in=uuids, name__icontains=search_query), many=True)
-            for entry in serializer.data:
-                result["results"].append(entry)
-            result["results"]= sorted(result["results"], key=itemgetter("name"))
-            
-        return Response(result)
 
 
 #
