@@ -36,7 +36,7 @@ __all__ = (
 class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
-        natural_key="name",
+        to_field_name="name",
         label="Clusters (name or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
@@ -52,7 +52,7 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
-        natural_key="name",
+        to_field_name="name",
         label="Clusters (name or ID)",
     )
     has_clusters = RelatedMembershipBooleanFilter(
@@ -96,14 +96,14 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyF
         label="Site (slug)",
     )
     devices = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name", queryset=Device.objects.all(), label="Devices (name or ID)"
+        to_field_name="name", queryset=Device.objects.all(), label="Devices (name or ID)"
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
         label="Has devices",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=VirtualMachine.objects.all(),
         label="Virtual Machines (name or ID)",
     )
@@ -236,14 +236,14 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         label="Primary IPv6 Address",
     )
     services = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name", queryset=Service.objects.all(), label="Services (name or ID)"
+        to_field_name="name", queryset=Service.objects.all(), label="Services (name or ID)"
     )
     has_services = RelatedMembershipBooleanFilter(
         field_name="services",
         label="Has services",
     )
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=VMInterface.objects.all(), natural_key="name", label="Interfaces (name or ID)"
+        queryset=VMInterface.objects.all(), to_field_name="name", label="Interfaces (name or ID)"
     )
     has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",
@@ -309,16 +309,17 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="MAC address",
     )
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="vid",
+        to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="vid",
+        to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
     )
     ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP Addresses")
+    has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP Addresses")
     tags = TagFilter()
 
     def filter_ip_address(self, queryset, name, value):

@@ -720,7 +720,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
                 query |= Q(pk=item)
             except (ValueError, TypeError, AttributeError):
                 natural_key_values.add(item)
-                query |= Q(**{self.natural_key: str(item)})
+                query |= Q(**{self.natural_key: item})
             qs = self.queryset.filter(query)
             if not qs.exists():
                 raise ValidationError(
