@@ -710,6 +710,32 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"has_parent_interface": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
+    def test_child(self):
+        # Create child interfaces
+        parent_interface = VMInterface.objects.first()
+        child_interfaces = (
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 1", parent_interface=parent_interface
+            ),
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 2", parent_interface=parent_interface
+            ),
+            VMInterface(
+                virtual_machine=parent_interface.virtual_machine, name="Child 3", parent_interface=parent_interface
+            ),
+        )
+        VMInterface.objects.bulk_create(child_interfaces)
+
+        params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        with self.subTest("Has child Interfaces"):
+            params = {"has_child_interfaces": True}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+            params = {"has_child_interfaces": False}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+
     def test_bridge(self):
         # Create bridged interfaces
         bridge_interface = VMInterface.objects.first()
