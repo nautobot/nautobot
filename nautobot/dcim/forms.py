@@ -23,6 +23,8 @@ from nautobot.extras.forms import (
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    RelationshipAssociationFilterForm,
+    RelationshipAssociationModelFilterForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -2001,6 +2003,7 @@ class DeviceFilterForm(
     TenancyFilterForm,
     StatusFilterFormMixin,
     CustomFieldFilterForm,
+    RelationshipAssociationModelFilterForm,
 ):
     model = Device
     field_order = [

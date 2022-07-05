@@ -6,6 +6,7 @@ from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
     NautobotFilterSet,
+    RelationshipAssociationModelFilterSet,
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
@@ -528,7 +529,7 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "napalm_driver", "description"]
 
 
-class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, LocalContextFilterSet, StatusModelFilterSetMixin):
+class DeviceFilterSet(NautobotFilterSet, TenancyFilterSet, RelationshipAssociationModelFilterSet, LocalContextFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",

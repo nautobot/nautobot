@@ -8,8 +8,10 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site, Interface
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.forms.fields import DynamicModelChoiceMixin
+from nautobot.utilities.forms import widgets
 from nautobot.utilities.forms import (
     add_blank_choice,
     APISelect,
@@ -1191,6 +1193,8 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
 
 class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     model = RelationshipAssociation
+    
+    q = forms.CharField(required=False, label="Search")
 
     relationship = DynamicModelMultipleChoiceField(
         queryset=Relationship.objects.all(),
@@ -1206,8 +1210,29 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
         feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
+class RelationshipAssociationModelFilterForm(forms.Form):
+    
+    def __init__(self, *args, **kwargs):
+        # app, model = object.split(" | ")
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+        relationships = Relationship.objects.filter(source_type=self.obj_type)
+        super().__init__(*args, **kwargs)
+        for relationship in relationships:
+            field_name = "destination_for_{}".format(relationship.slug)
+            self.fields[field_name] = DynamicModelMultipleChoiceField(
+                display_field="name",
+                to_field_name="id",
+                queryset=RelationshipAssociation.objects.filter(relationship=relationship),
+                required=False,
+                label=f"{field_name}",
+                widget = APISelectMultiple(
+                    api_url=f'/api/extras/relationship-associations/unique_destination/',
+                ),
+            )        
+        
 
-#
+
+# 
 # Secrets
 #
 

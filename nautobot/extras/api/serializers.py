@@ -913,6 +913,22 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
             "destination_id",
         ]
 
+class DestinationSerializer(ValidatedModelSerializer):
+
+    name = serializers.CharField()
+    id = serializers.UUIDField()
+
+    class Meta:
+        model = RelationshipAssociation
+        fields = [
+            "name",
+            "id",
+        ]
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_name(self, instance):
+        return instance.name
+
 
 #
 # Secrets
