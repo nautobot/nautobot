@@ -2005,7 +2005,7 @@ class DeviceBulkEditForm(
     def __init__(self, *args, **kwrags):
         super().__init__(*args, **kwrags)
 
-        # Disable position and face because only setting null values for these fields is needed
+        # Disable position because only setting null value is required
         self.fields["position"].disabled = True
 
 
