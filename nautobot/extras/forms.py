@@ -1214,13 +1214,10 @@ class RelationshipAssociationModelFilterForm(forms.Form):
         super().__init__(*args, **kwargs)
         for relationship in relationships:
             app, model = str(relationship.destination_type).lower().split(" | ")
-            ids = list(
-                RelationshipAssociation.objects.filter(relationship__slug=relationship.slug)
-                .values_list("destination_id", flat=True)
-                .distinct()
-            )
             if relationship.source_label and relationship.destination_label:
-                field_name = "Destination for {} to {} relationship".format(relationship.source_label, relationship.destination_label)
+                field_name = "Destination for {} to {} relationship".format(
+                    relationship.source_label, relationship.destination_label
+                )
             else:
                 field_name = "Destination for {} relationship".format(relationship.slug)
             destination_model = relationship.destination_type.model_class()
@@ -1233,7 +1230,6 @@ class RelationshipAssociationModelFilterForm(forms.Form):
                 widget=APISelectMultiple(
                     api_url=f"/api/{app}/{model}s/",
                 ),
-                # query_params={"id": ids},
             )
 
 

@@ -152,11 +152,10 @@ class NestedRelationshipSerializer(WritableNestedSerializer):
 
 class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationshipassociation-detail")
-    destination = serializers.CharField()
 
     class Meta:
         model = models.RelationshipAssociation
-        fields = ["id", "url", "relationship", "source_id", "destination_id", "destination"]
+        fields = ["id", "url", "relationship", "source_id", "destination_id"]
 
 
 class NestedScheduledJobSerializer(serializers.ModelSerializer):
