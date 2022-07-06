@@ -4,6 +4,10 @@ from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
+from social_core.backends.utils import user_backends_data
+from social_django.utils import Storage
+
+from nautobot.core.settings_funcs import sso_auth_enabled
 
 from .permissions import resolve_permission
 
@@ -24,6 +28,16 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
     """
 
     additional_permissions = list()
+
+    def get_login_url(self):
+        login_url = super().get_login_url()
+
+        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
+        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
+        if backends and is_sso_auth_enabled:
+            return reverse("social:begin", args=[backends[0]])
+
+        return login_url
 
     def get_required_permission(self):
         """
@@ -53,6 +67,16 @@ class AdminRequiredMixin(AccessMixin):
     Allows access only to admin users.
     """
 
+    def get_login_url(self):
+        login_url = super().get_login_url()
+
+        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
+        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
+        if backends and is_sso_auth_enabled:
+            return reverse("social:begin", args=[backends[0]])
+
+        return login_url
+
     def has_permission(self):
         return bool(
             self.request.user
@@ -78,6 +102,16 @@ class ObjectPermissionRequiredMixin(AccessMixin):
     """
 
     additional_permissions = list()
+
+    def get_login_url(self):
+        login_url = super().get_login_url()
+
+        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
+        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
+        if backends and is_sso_auth_enabled:
+            return reverse("social:begin", args=[backends[0]])
+
+        return login_url
 
     def get_required_permission(self):
         """
