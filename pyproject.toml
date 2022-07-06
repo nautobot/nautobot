@@ -92,7 +92,7 @@ GitPython = "~3.1.27"
 graphene-django = "~2.15.0"
 # Graphene Optimizer
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
-graphene-django-optimizer = "~0.8.0"
+graphene-django-optimizer = "~0.9.0"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~4.4", python = "<3.10"}
 # Template rendering engine

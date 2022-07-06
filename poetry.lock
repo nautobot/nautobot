@@ -918,7 +918,7 @@ test = ["pytest (>=3.6.3)", "pytest-cov", "coveralls", "mock", "pytz", "pytest-d
 
 [[package]]
 name = "graphene-django-optimizer"
-version = "0.8.0"
+version = "0.9.1"
 description = "Optimize database access inside graphene queries."
 category = "main"
 optional = false
@@ -2232,7 +2232,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "d9464e9f1942f47bfa0be21126d8586079b81d593c6b15ec45a459495f7f85f6"
+content-hash = "c437626887b2f0d1925c731f42a981b797c10a38a852d542baa9ef5b5eaf259c"
 
 [metadata.files]
 amqp = [
@@ -2633,7 +2633,7 @@ graphene-django = [
     {file = "graphene_django-2.15.0-py2.py3-none-any.whl", hash = "sha256:02671d195f0c09c8649acff2a8f4ad4f297d0f7d98ea6e6cdf034b81bab92880"},
 ]
 graphene-django-optimizer = [
-    {file = "graphene-django-optimizer-0.8.0.tar.gz", hash = "sha256:79269880d59d0a35d41751ddcb419220c4ad3871960416371119f447cb2e1a77"},
+    {file = "graphene-django-optimizer-0.9.1.tar.gz", hash = "sha256:c652091d8fb8b93c36c359d46c095b35ce3a6d8fbf9b5ea2ca94e290b1ba3230"},
 ]
 graphql-core = [
     {file = "graphql-core-2.3.2.tar.gz", hash = "sha256:aac46a9ac524c9855910c14c48fc5d60474def7f99fd10245e76608eba7af746"},
