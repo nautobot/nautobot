@@ -31,39 +31,39 @@ class NautobotViewSet(
         if kwargs.get("suffix") == "List":
             self.action = "view"
             self.template_name = self.get_template_name("list")
-            self.queryset = self.table_queryset
+            self.queryset = self.table_queryset()
         elif kwargs.get("suffix") == "Detail":
             self.action = "view"
             self.template_name = self.get_template_name("detail")
-            self.queryset = self.detail_queryset
+            self.queryset = self.detail_queryset()
         elif kwargs.get("suffix") == "Add":
             self.action = "add"
             self.template_name = self.get_template_name("edit")
-            self.queryset = self.detail_queryset
+            self.queryset = self.detail_queryset()
         elif kwargs.get("suffix") == "Import":
             self.action = "add"
             self.template_name = self.get_template_name("bulk_import")
-            self.queryset = self.table_queryset
+            self.queryset = self.table_queryset()
         elif kwargs.get("suffix") == "Edit":
             self.action = "change"
             self.template_name = self.get_template_name("edit")
-            self.queryset = self.detail_queryset
+            self.queryset = self.detail_queryset()
         elif kwargs.get("suffix") == "Bulk Edit":
             self.action = "change"
             self.template_name = self.get_template_name("bulk_edit")
-            self.queryset = self.table_queryset
+            self.queryset = self.table_queryset()
         elif kwargs.get("suffix") == "Delete":
             self.action = "delete"
             self.template_name = self.get_template_name("delete")
-            self.queryset = self.detail_queryset
+            self.queryset = self.detail_queryset()
         elif kwargs.get("suffix") == "Bulk Delete":
             self.action = "delete"
             self.template_name = self.get_template_name("bulk_delete")
-            self.queryset = self.table_queryset
+            self.queryset = self.table_queryset()
         else:
             self.action = "view"
             self.template_name = self.get_template_name("list")
-            self.queryset = self.detail_queryset
+            self.queryset = self.detail_queryset()
 
         super().__init__(*args, **kwargs)
 

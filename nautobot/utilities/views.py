@@ -26,7 +26,7 @@ from django.template.loader import select_template, TemplateDoesNotExist
 from rest_framework.routers import Route
 
 from nautobot.utilities.permissions import get_permission_for_model, resolve_permission
-from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models import CustomField, ExportTemplate, ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
     BootstrapMixin,
@@ -200,14 +200,9 @@ class NautobotViewSetMixin:
     import_form = None
     prefetch_related = []
 
-    def __init__(self):
-        self.routes = self.define_routes()
-
-    @property
     def detail_queryset(self):
         return self.model.objects.all()
 
-    @property
     def table_queryset(self):
         return self.model.objects.prefetch_related(*self.prefetch_related)
 
@@ -243,9 +238,6 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
     template_name: Name of the template to use
     """
 
-    def __init__(self, *args, **kwargs):
-        self.routes = self.define_routes()
-
     def define_routes(self):
         return super().define_routes() + [
             Route(
@@ -264,7 +256,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin):
         meta = self.queryset.model._meta
 
         # Don't try to generate a changelog_url for an ObjectChange.
-        if meta.model_name == "objectchange":
+        if not issubclass(self.queryset.model, ChangeLoggedModel):
             return None
 
         route = f"{meta.app_label}:{meta.model_name}_changelog"
@@ -316,9 +308,6 @@ class ObjectListViewMixin(NautobotViewSetMixin):
     """
 
     object_list_action_buttons = ("add", "import", "export")
-
-    def __init__(self, *args, **kwargs):
-        self.routes = self.define_routes()
 
     def define_routes(self):
         return super().define_routes() + [
@@ -451,9 +440,6 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     template_name: The name of the template
     """
 
-    def __init__(self, *args, **kwargs):
-        self.routes = self.define_routes()
-
     def define_routes(self):
         return super().define_routes() + [
             Route(
@@ -582,9 +568,6 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     template_name: The name of the template
     """
 
-    def __init__(self, *args, **kwargs):
-        self.routes = self.define_routes()
-
     def define_routes(self):
         return super().define_routes() + [
             Route(
@@ -672,9 +655,6 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
     """
 
     bulk_import_widget_attrs = {}
-
-    def __init__(self, *args, **kwargs):
-        self.routes = self.define_routes()
 
     def define_routes(self):
         return super().define_routes() + [
@@ -796,9 +776,6 @@ class BulkEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
 
     bulk_edit_filterset = None
     bulk_edit_form = None
-
-    def __init__(self, *args, **kwargs):
-        self.routes = self.define_routes()
 
     def define_routes(self):
         return super().define_routes() + [
@@ -960,9 +937,6 @@ class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
 
     bulk_delete_filterset = None
     bulk_delete_form = None
-
-    def __init__(self, *args, **kwargs):
-        self.routes = self.define_routes()
 
     def define_routes(self):
         return super().define_routes() + [
