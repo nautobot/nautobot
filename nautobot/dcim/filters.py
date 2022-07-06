@@ -1236,9 +1236,15 @@ class InterfaceFilterSet(
         queryset=Interface.objects.all(),
         label="LAG interface (name or ID)",
     )
-    untagged_vlan = django_filters.ModelMultipleChoiceFilter(
+    untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="vid",
         queryset=VLAN.objects.all(),
-        label="Untagged vlan",
+        label="Untagged VLAN (VID or ID)",
+    )
+    tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="Tagged VLANs (VID or ID)",
     )
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -1676,15 +1682,15 @@ class PowerFeedFilterSet(
         queryset=PowerPanel.objects.all(),
         label="Power panel (ID)",
     )
-    rack_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="rack",
-        queryset=Rack.objects.all(),
-        label="Rack (ID)",
-    )
     power_panel = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=PowerPanel.objects.all(),
         to_field_name="name",
         label="Power panel (name or ID)",
+    )
+    rack_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="rack",
+        queryset=Rack.objects.all(),
+        label="Rack (ID)",
     )
     rack = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Rack.objects.all(),

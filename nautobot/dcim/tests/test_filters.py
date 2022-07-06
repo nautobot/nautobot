@@ -3107,6 +3107,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
                 device=devices[2],
                 name="Parent Interface 1",
                 type=InterfaceTypeChoices.TYPE_OTHER,
+                mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=True,
                 mgmt_only=True,
                 status=interface_status_map["failed"],
@@ -3116,6 +3117,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
                 device=devices[2],
                 name="Parent Interface 2",
                 type=InterfaceTypeChoices.TYPE_OTHER,
+                mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=True,
                 mgmt_only=True,
                 status=interface_status_map["planned"],
@@ -3124,11 +3126,16 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
                 device=devices[2],
                 name="Parent Interface 3",
                 type=InterfaceTypeChoices.TYPE_OTHER,
+                mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=False,
                 mgmt_only=True,
                 status=interface_status_map["active"],
             ),
         )
+
+        cabled_interfaces[3].tagged_vlans.add(vlans[0])
+        cabled_interfaces[4].tagged_vlans.add(vlans[1])
+        cabled_interfaces[5].tagged_vlans.add(vlans[2])
 
         Interface.objects.filter(pk=cabled_interfaces[0].pk).update(
             enabled=True,
@@ -3156,13 +3163,8 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             status=interface_status_map["failed"],
         )
 
-        cabled_interfaces[0].refresh_from_db()
-        cabled_interfaces[1].refresh_from_db()
-        cabled_interfaces[2].refresh_from_db()
-
-        # Tagged VLAN interface is "Parent Interface 3"
-        tagged_interface = cabled_interfaces[-1]
-        tagged_interface.tagged_vlans.add(vlans[2])
+        for interface in cabled_interfaces:
+            interface.refresh_from_db()
 
         cable_statuses = Status.objects.get_for_model(Cable)
         cable_status_map = {cs.slug: cs for cs in cable_statuses.all()}
@@ -3463,12 +3465,12 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_vlan(self):
-        params = {"vlan": 101}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"vlan": 103}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_vlan_id(self):
-        params = {"vlan_id": VLAN.objects.get(name="VLAN 101").id}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"vlan_id": VLAN.objects.get(name="VLAN 103").id}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
         params = {"status": ["active", "failed"]}
@@ -3486,7 +3488,12 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_untagged_vlan(self):
         untagged_vlan = VLAN.objects.all()[:2]
-        params = {"untagged_vlan": [untagged_vlan[0].pk, untagged_vlan[1].pk]}
+        params = {"untagged_vlan": [untagged_vlan[0].pk, untagged_vlan[1].vid]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_tagged_vlans(self):
+        tagged_vlans = VLAN.objects.all()[:2]
+        params = {"tagged_vlans": [tagged_vlans[0].pk, tagged_vlans[1].vid]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_child_interfaces(self):

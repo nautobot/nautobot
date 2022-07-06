@@ -710,6 +710,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
                 code="invalid_list",
             )
         pk_values = set()
+        natural_key_values = set()
         for item in values:
             query = Q()
             try:
@@ -717,9 +718,9 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
                 isinstance(item, uuid.UUID) or uuid.UUID(item)
                 pk_values.add(item)
                 query |= Q(pk=item)
-            except (ValueError, TypeError):
-                pass
-            query |= Q(**{self.natural_key: str(item)})
+            except (ValueError, TypeError, AttributeError):
+                natural_key_values.add(item)
+                query |= Q(**{self.natural_key: item})
             qs = self.queryset.filter(query)
             if not qs.exists():
                 raise ValidationError(
@@ -727,7 +728,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
                     code="invalid_choice",
                     params={"value": item},
                 )
-        query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": values})
+        query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": natural_key_values})
         qs = self.queryset.filter(query)
         result = list(qs)
         if null:
