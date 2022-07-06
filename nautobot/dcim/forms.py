@@ -372,7 +372,13 @@ class SiteCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         }
 
 
-class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class SiteBulkEditForm(
+    BootstrapMixin,
+    RelationshipModelBulkEditFormMixin,
+    AddRemoveTagsForm,
+    StatusBulkEditFormMixin,
+    CustomFieldBulkEditForm,
+):
     pk = forms.ModelMultipleChoiceField(queryset=Site.objects.all(), widget=forms.MultipleHiddenInput)
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)

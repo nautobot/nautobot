@@ -15,6 +15,7 @@ from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
     NautobotModelForm,
+    RelationshipModelBulkEditFormMixin,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -879,7 +880,13 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldMo
         return ipaddress
 
 
-class IPAddressBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class IPAddressBulkEditForm(
+    BootstrapMixin,
+    RelationshipModelBulkEditFormMixin,
+    AddRemoveTagsForm,
+    StatusBulkEditFormMixin,
+    CustomFieldBulkEditForm,
+):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddress.objects.all(), widget=forms.MultipleHiddenInput())
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),

@@ -373,9 +373,11 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                 elif field_name in self.cleaned_data:
                     value = self.cleaned_data.get(field_name)
                     logger.info("Value for %s: %s", field_name, value)
-                    if value is not None:
+                    if value and not relationship.has_many(peer_side):
                         ra, created = RelationshipAssociation.objects.update_or_create(
                             relationship=relationship,
+                            source_type=relationship.source_type,
+                            destination_type=relationship.destination_type,
                             defaults={f"{peer_side}_id": value.pk},
                             **{f"{side}_id": instance.pk},
                         )
