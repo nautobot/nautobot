@@ -1,3 +1,5 @@
+import logging
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -73,6 +75,8 @@ from .models import (
 from .registry import registry
 from .utils import FeatureQuery, TaggableClassesQuery
 
+
+logger = logging.getLogger(__name__)
 
 #
 # Form mixins
@@ -271,83 +275,177 @@ class RelationshipModelForm(forms.ModelForm):
 
 
 class RelationshipModelBulkEditFormMixin(BulkEditForm):
-    """Bulk-edit form mixin for models that support Relationships.
-
-    For different relationship types there are different expectations of the UI:
-
-    - For one-to-one (symmetric or non-symmetric) we only provide a "clear" checkbox
-    - For one-to-many (source, i.e. "one" side) we only provide a "clear" checkbox
-    - For one-to-many (destination, i.e. "many" side) we provide a single-select field as well as a "clear" checkbox
-    - For many-to-many (symmetric or non-symmetric) we provide "add" and "remove" multi-select fields, similar to the
-      AddRemoveTagsForm, as well as a "clear" checkbox.
-    """
+    """Bulk-edit form mixin for models that support Relationships."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.relationships = []
         self.obj_type = ContentType.objects.get_for_model(self.model)
+        self.relationships = []
 
-        source_relationships = Relationship.objects.filter(source_type=self.obj_type)
-        for rel in source_relationships:
-            if rel.type in [
-                RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
-                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
-            ]:
-                peer_side = "peer"
-            else:
-                peer_side = "destination"
-            field_name = f"cr_{rel.slug}__{peer_side}"
-            if rel.type in [
-                RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
-            ]:
-                self.fields[f"add_{field_name}"] = rel.to_form_field(side="source")
-                self.fields[f"add_{field_name}"].label = "Add " + self.fields[f"add_{field_name}"].label
-                self.fields[f"remove_{field_name}"] = rel.to_form_field(side="source")
-                self.fields[f"remove_{field_name}"].label = "Remove " + self.fields[f"remove_{field_name}"].label
-            else:
-                self.fields[field_name] = rel.to_form_field(side="source")
-                self.fields[field_name].disabled = True
-            self.nullable_fields.append(field_name)
-            self.relationships.append(field_name)
+        self._append_relationships()
 
-        destination_relationships = Relationship.objects.filter(destination_type=self.obj_type)
-        for rel in destination_relationships:
-            if rel.type in [
-                RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
-                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
-            ]:
-                peer_side = "peer"
+    def _append_relationships(self):
+        """
+        Append form fields for all Relationships assigned to this model.
+        """
+        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
+        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE)
+
+        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
+        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION)
+
+    def _append_relationships_side(self, relationships, initial_side):
+        """
+        Helper method to _append_relationships, for processing one "side" of the relationships for this model.
+
+        For different relationship types there are different expectations of the UI:
+
+        - For one-to-one (symmetric or non-symmetric) it doesn't make sense to bulk-set this relationship,
+          but we want it to be clearable/nullable.
+        - For one-to-many (from the source, "one", side) we likewise want it clearable/nullable but not settable.
+        - For one-to-many (from the destination, "many", side) a single value can be set, or it can be nulled.
+        - For many-to-many (symmetric or non-symmetric) we provide "add" and "remove" multi-select fields,
+          similar to the AddRemoveTagsForm behavior. No nullability is provided here.
+        """
+        for relationship in relationships:
+            if relationship.symmetric:
+                side = RelationshipSideChoices.SIDE_PEER
             else:
-                peer_side = "source"
-            field_name = f"cr_{rel.slug}__{peer_side}"
+                side = initial_side
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+
+            # If this model is on the "source" side of the relationship, then the field will be named
+            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
+            field_name = f"cr_{relationship.slug}__{peer_side}"
+
             if field_name in self.relationships:
-                # A symmetric relationship, already handled under source_relationships
+                # This is a symmetric relationship that we already processed from the opposing "initial_side".
+                # No need to process it a second time!
                 continue
-            if rel.type in [
-                RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,  # redundant with "continue" above, but harmless
-            ]:
-                self.fields[f"add_{field_name}"] = rel.to_form_field(side="destination")
-                self.fields[f"add_{field_name}"].label = "Add " + self.fields[f"add_{field_name}"].label
-                self.fields[f"remove_{field_name}"] = rel.to_form_field(side="destination")
-                self.fields[f"remove_{field_name}"].label = "Remove " + self.fields[f"remove_{field_name}"].label
-            elif rel.type in [
-                RelationshipTypeChoices.TYPE_ONE_TO_MANY,  # only applicable from "destination" side!
-            ]:
-                self.fields[field_name] = rel.to_form_field(side="destination")
+
+            if relationship.has_many(side):
+                if relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_MANY:
+                    # Destination side of a one-to-many field - provide a standard form field for selecting the "one",
+                    # as well as making this field nullable.
+                    self.fields[field_name] = relationship.to_form_field(side=side)
+                    self.nullable_fields.append(field_name)
+                else:
+                    # Many-to-many field - provide "add" and "remove" form fields like with tags, no nullable option.
+                    self.fields[f"add_{field_name}"] = relationship.to_form_field(side=side)
+                    self.fields[f"add_{field_name}"].label = "Add " + self.fields[f"add_{field_name}"].label
+                    self.fields[f"remove_{field_name}"] = relationship.to_form_field(side=side)
+                    self.fields[f"remove_{field_name}"].label = "Remove " + self.fields[f"remove_{field_name}"].label
             else:
-                self.fields[field_name] = rel.to_form_field(side="destination")
+                # The "one" side of a one-to-one or one-to-many relationship.
+                # In this case, the only valid bulk-edit operation is nulling/clearing the relationship,
+                # but the "Set null" checkbox only appears if we have a form field for the the relationship itself.
+                # This could probably be refined, but for now we just add the field and disable it.
+                self.fields[field_name] = relationship.to_form_field(side=side)
                 self.fields[field_name].disabled = True
-            self.nullable_fields.append(field_name)
+                self.nullable_fields.append(field_name)
+
             self.relationships.append(field_name)
 
-    def clean(self):
-        """
-        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
-        """
+    def save_relationships(self, *, instance, nullified_fields):
+        """Helper method to be called from BulkEditView.post()."""
+        # TODO the below is inefficient as it re-loads the Relationship objects afresh for each instance;
+        # however this is necessary at present as applies the source/destination filters (if any) to determine
+        # whether each relationship actually applies to the given instance.
+        instance_relationships = instance.get_relationships(include_hidden=True)
 
+        for side, relationships_data in instance_relationships.items():
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+            for relationship, relationshipassociation_queryset in relationships_data.items():
+                field_name = f"cr_{relationship.slug}__{peer_side}"
+                logger.info(
+                    "Processing relationship %s %s (field %s) for instance %s",
+                    relationship,
+                    side,
+                    field_name,
+                    instance,
+                )
+                if field_name in self.nullable_fields and field_name in nullified_fields:
+                    logger.info("Deleting existing relationship associations for %s on %s", relationship, instance)
+                    relationshipassociation_queryset.delete()
+                elif field_name in self.cleaned_data:
+                    value = self.cleaned_data.get(field_name)
+                    logger.info("Value for %s: %s", field_name, value)
+                    if value is not None:
+                        ra, created = RelationshipAssociation.objects.update_or_create(
+                            relationship=relationship,
+                            defaults={f"{peer_side}_id": value.pk},
+                            **{f"{side}_id": instance.pk},
+                        )
+                        if created:
+                            logger.info("Created %s", ra)
+                        else:
+                            logger.info("Updated %s", ra)
+                else:
+                    if f"add_{field_name}" in self.cleaned_data:
+                        added = self.cleaned_data.get(f"add_{field_name}")
+                        logger.info("Value for add_%s: %s", field_name, added)
+                        for target in added:
+                            if peer_side != RelationshipSideChoices.SIDE_PEER:
+                                ra, created = RelationshipAssociation.objects.get_or_create(
+                                    relationship=relationship,
+                                    source_type=relationship.source_type,
+                                    destination_type=relationship.destination_type,
+                                    **{
+                                        f"{side}_id": instance.pk,
+                                        f"{peer_side}_id": target.pk,
+                                    },
+                                )
+                            else:
+                                if (
+                                    RelationshipAssociation.objects.filter(
+                                        relationship=relationship,
+                                        source_id=instance.pk,
+                                        destination_id=target.pk,
+                                    ).exists()
+                                    or RelationshipAssociation.objects.filter(
+                                        relationship=relationship,
+                                        source_id=target.pk,
+                                        destination_id=instance.pk,
+                                    ).exists()
+                                ):
+                                    ra = None
+                                    created = False
+                                else:
+                                    ra = RelationshipAssociation.objects.create(
+                                        relationship=relationship,
+                                        source_type=relationship.source_type,
+                                        source_id=instance.pk,
+                                        destination_type=relationship.destination_type,
+                                        destination_id=target.pk,
+                                    )
+                                    created = True
+
+                            if created:
+                                ra.validated_save()
+                                logger.info("Created %s", ra)
+
+                    if f"remove_{field_name}" in self.cleaned_data:
+                        removed = self.cleaned_data.get(f"remove_{field_name}")
+                        logger.info("Value for remove_%s: %s", field_name, removed)
+
+                        source_count = 0
+                        destination_count = 0
+                        if side in [RelationshipSideChoices.SIDE_SOURCE, RelationshipSideChoices.SIDE_PEER]:
+                            source_count, _ = RelationshipAssociation.objects.filter(
+                                relationship=relationship,
+                                source_id=instance.pk,
+                                destination_id__in=[target.pk for target in removed],
+                            ).delete()
+                        if side in [RelationshipSideChoices.SIDE_DESTINATION, RelationshipSideChoices.SIDE_PEER]:
+                            destination_count, _ = RelationshipAssociation.objects.filter(
+                                relationship=relationship,
+                                source_id__in=[target.pk for target in removed],
+                                destination_id=instance.pk,
+                            ).delete()
+                        logger.info("Deleted %s RelationshipAssociation(s)", source_count + destination_count)
 
 
 #
