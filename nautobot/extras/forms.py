@@ -1224,7 +1224,7 @@ class RelationshipAssociationModelFilterForm(forms.Form):
             self.fields[field_name] = DynamicModelMultipleChoiceField(
                 display_field="name",
                 to_field_name="id",
-                queryset=destination_model.objects.all(),
+                queryset=destination_model.objects.all().order_by("name"),
                 required=False,
                 label=f"{field_name}",
                 widget=APISelectMultiple(

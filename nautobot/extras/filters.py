@@ -757,13 +757,17 @@ class RelationshipFilter(django_filters.Filter):
         super().__init__(*args, **kwargs)
 
     def filter(self, qs, value):
-        if value is None:
-            return self.qs
+        if not value:
+            return super().filter(qs, value)
         else:
             values = RelationshipAssociation.objects.filter(
                 destination_id__in=self.value_list, source_type=self.relationship.source_type
             ).values_list("source_id", flat=True)
-            return self.qs.filter(id__in=values)
+            if len(qs) == len(self.qs):
+                qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
+            else:
+                qs |= self.get_method(self.qs)(Q(**{"id__in": values}))
+            return qs
 
 
 class RelationshipAssociationModelFilterSet(BaseFilterSet):
@@ -774,18 +778,14 @@ class RelationshipAssociationModelFilterSet(BaseFilterSet):
     def __init__(self, *args, **kwargs):
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         relationships = Relationship.objects.filter(source_type=self.obj_type)
-        self.uuids = []
-        if args:
-            for relationship in relationships:
-                field_name = "Destination for {} relationship".format(relationship.slug)
-                for id in args[0].getlist(field_name, []):
-                    self.uuids.append(id)
         super().__init__(*args, **kwargs)
         if args:
             for relationship in relationships:
                 field_name = "Destination for {} relationship".format(relationship.slug)
                 self.filters[field_name] = RelationshipFilter(
-                    relationship=relationship, value_list=self.uuids, queryset=self._meta.model.objects.all()
+                    relationship=relationship,
+                    value_list=args[0].getlist(field_name, []),
+                    queryset=self._meta.model.objects.all(),
                 )
 
 
