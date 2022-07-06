@@ -1,5 +1,3 @@
-import uuid
-
 import django_filters
 from django.db.models import Q
 
@@ -24,6 +22,8 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.utilities.utils import is_uuid
+
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (
@@ -33,8 +33,6 @@ __all__ = (
     "VirtualMachineFilterSet",
     "VMInterfaceFilterSet",
 )
-
-from ..utilities.utils import is_uuid
 
 
 class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
