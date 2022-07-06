@@ -17,8 +17,7 @@
       "groupName": "Problematic Minor Updates",
       "matchBaseBranches": ["next"],
       "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field"],
-      "matchUpdateTypes": ["major", "minor"],
-      "rangeStrategy": "update-lockfile"
+      "matchUpdateTypes": ["major", "minor"]
     },
     {
       "description": "Require dashboard approval for major updates for django-taggit.",
@@ -26,8 +25,7 @@
       "groupName": "Problematic Major Updates",
       "matchBaseBranches": ["next"],
       "matchPackageNames": ["django-taggit"],
-      "matchUpdateTypes": ["major"],
-      "rangeStrategy": "update-lockfile"
+      "matchUpdateTypes": ["major"]
     },
     {
       "description": "Group updates to next cut down on PR noise.",
