@@ -1219,7 +1219,10 @@ class RelationshipAssociationModelFilterForm(forms.Form):
                 .values_list("destination_id", flat=True)
                 .distinct()
             )
-            field_name = "Destination for {} relationship".format(relationship.slug)
+            if relationship.source_label and relationship.destination_label:
+                field_name = "Destination for {} to {} relationship".format(relationship.source_label, relationship.destination_label)
+            else:
+                field_name = "Destination for {} relationship".format(relationship.slug)
             destination_model = relationship.destination_type.model_class()
             self.fields[field_name] = DynamicModelMultipleChoiceField(
                 display_field="name",
@@ -1230,7 +1233,7 @@ class RelationshipAssociationModelFilterForm(forms.Form):
                 widget=APISelectMultiple(
                     api_url=f"/api/{app}/{model}s/",
                 ),
-                query_params={"id": ids},
+                # query_params={"id": ids},
             )
 
 

@@ -781,7 +781,11 @@ class RelationshipAssociationModelFilterSet(BaseFilterSet):
         super().__init__(*args, **kwargs)
         if args:
             for relationship in relationships:
-                field_name = "Destination for {} relationship".format(relationship.slug)
+                if relationship.source_label and relationship.destination_label:
+                    field_name = "Destination for {} to {} relationship".format(relationship.source_label, relationship.destination_label)
+                else:
+                    field_name = "Destination for {} relationship".format(relationship.slug)
+                print(args[0].getlist(field_name, []))
                 self.filters[field_name] = RelationshipFilter(
                     relationship=relationship,
                     value_list=args[0].getlist(field_name, []),
