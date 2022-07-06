@@ -17,7 +17,19 @@ from .permissions import resolve_permission
 #
 
 
-class ContentTypePermissionRequiredMixin(AccessMixin):
+class LoginMixin(AccessMixin):
+    def get_login_url(self):
+        login_url = super().get_login_url()
+
+        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
+        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
+        if backends and is_sso_auth_enabled:
+            return reverse("social:begin", args=[backends[0]])
+
+        return login_url
+
+
+class ContentTypePermissionRequiredMixin(LoginMixin):
     """
     Similar to Django's built-in PermissionRequiredMixin, but extended to check model-level permission assignments.
     This is related to ObjectPermissionRequiredMixin, except that is does not enforce object-level permissions,
@@ -28,16 +40,6 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
     """
 
     additional_permissions = list()
-
-    def get_login_url(self):
-        login_url = super().get_login_url()
-
-        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
-        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
-        if backends and is_sso_auth_enabled:
-            return reverse("social:begin", args=[backends[0]])
-
-        return login_url
 
     def get_required_permission(self):
         """
@@ -62,20 +64,10 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class AdminRequiredMixin(AccessMixin):
+class AdminRequiredMixin(LoginMixin):
     """
     Allows access only to admin users.
     """
-
-    def get_login_url(self):
-        login_url = super().get_login_url()
-
-        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
-        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
-        if backends and is_sso_auth_enabled:
-            return reverse("social:begin", args=[backends[0]])
-
-        return login_url
 
     def has_permission(self):
         return bool(
@@ -91,7 +83,7 @@ class AdminRequiredMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class ObjectPermissionRequiredMixin(AccessMixin):
+class ObjectPermissionRequiredMixin(LoginMixin):
     """
     Similar to Django's built-in PermissionRequiredMixin, but extended to check for both model-level and object-level
     permission assignments. If the user has only object-level permissions assigned, the view's queryset is filtered
@@ -102,16 +94,6 @@ class ObjectPermissionRequiredMixin(AccessMixin):
     """
 
     additional_permissions = list()
-
-    def get_login_url(self):
-        login_url = super().get_login_url()
-
-        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
-        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
-        if backends and is_sso_auth_enabled:
-            return reverse("social:begin", args=[backends[0]])
-
-        return login_url
 
     def get_required_permission(self):
         """
