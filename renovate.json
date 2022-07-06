@@ -13,18 +13,25 @@
   "packageRules": [
     {
       "description": "Require dashboard approval for non-patch updates to graphene-django-optimizer and django-timezone-field.",
+      "dependencyDashboardApproval": true,
+      "groupName": "Problematic Minor Updates",
+      "matchBaseBranches": ["next"],
       "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field"],
       "matchUpdateTypes": ["major", "minor"],
-      "dependencyDashboardApproval": true
+      "rangeStrategy": "update-lockfile"
     },
     {
       "description": "Require dashboard approval for major updates for django-taggit.",
+      "dependencyDashboardApproval": true,
+      "groupName": "Problematic Major Updates",
+      "matchBaseBranches": ["next"],
       "matchPackageNames": ["django-taggit"],
       "matchUpdateTypes": ["major"],
-      "dependencyDashboardApproval": true
+      "rangeStrategy": "update-lockfile"
     },
     {
       "description": "Group updates to next cut down on PR noise.",
+      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
       "groupName": "Next Updates",
       "matchBaseBranches": ["next"],
       "rangeStrategy": "update-lockfile",
@@ -34,6 +41,7 @@
     },
     {
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
+      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
       "groupName": "Develop Updates",
       "matchBaseBranches": ["develop"],
       "rangeStrategy": "in-range-only",
