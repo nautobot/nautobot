@@ -77,7 +77,7 @@ django-tables2 = "~2.4.1"
 django-taggit = "~1.5.1"
 # Represent time zones in Django
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
-django-timezone-field = "~4.1.2"
+django-timezone-field = "~4.2.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
