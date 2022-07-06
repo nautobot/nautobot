@@ -443,10 +443,11 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         params = {"comments": ["This is VM 1", "This is VM 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_primary_ip(self):
+    def test_primary_ip4(self):
         params = {"primary_ip4": ["192.0.2.1/24", self.ipaddresses[0].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_primary_ip6(self):
         params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24", self.ipaddresses[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
