@@ -360,7 +360,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
             for relationship, relationshipassociation_queryset in relationships_data.items():
                 field_name = f"cr_{relationship.slug}__{peer_side}"
-                logger.info(
+                logger.debug(
                     "Processing relationship %s %s (field %s) for instance %s",
                     relationship,
                     side,
@@ -368,11 +368,10 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                     instance,
                 )
                 if field_name in self.nullable_fields and field_name in nullified_fields:
-                    logger.info("Deleting existing relationship associations for %s on %s", relationship, instance)
+                    logger.debug("Deleting existing relationship associations for %s on %s", relationship, instance)
                     relationshipassociation_queryset.delete()
                 elif field_name in self.cleaned_data:
                     value = self.cleaned_data.get(field_name)
-                    logger.info("Value for %s: %s", field_name, value)
                     if value and not relationship.has_many(peer_side):
                         ra, created = RelationshipAssociation.objects.update_or_create(
                             relationship=relationship,
@@ -382,13 +381,12 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                             **{f"{side}_id": instance.pk},
                         )
                         if created:
-                            logger.info("Created %s", ra)
+                            logger.debug("Created %s", ra)
                         else:
-                            logger.info("Updated %s", ra)
+                            logger.debug("Updated %s", ra)
                 else:
                     if f"add_{field_name}" in self.cleaned_data:
                         added = self.cleaned_data.get(f"add_{field_name}")
-                        logger.info("Value for add_%s: %s", field_name, added)
                         for target in added:
                             if peer_side != RelationshipSideChoices.SIDE_PEER:
                                 ra, created = RelationshipAssociation.objects.get_or_create(
@@ -427,11 +425,10 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
 
                             if created:
                                 ra.validated_save()
-                                logger.info("Created %s", ra)
+                                logger.debug("Created %s", ra)
 
                     if f"remove_{field_name}" in self.cleaned_data:
                         removed = self.cleaned_data.get(f"remove_{field_name}")
-                        logger.info("Value for remove_%s: %s", field_name, removed)
 
                         source_count = 0
                         destination_count = 0
@@ -447,7 +444,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                                 source_id__in=[target.pk for target in removed],
                                 destination_id=instance.pk,
                             ).delete()
-                        logger.info("Deleted %s RelationshipAssociation(s)", source_count + destination_count)
+                        logger.debug("Deleted %s RelationshipAssociation(s)", source_count + destination_count)
 
 
 #
