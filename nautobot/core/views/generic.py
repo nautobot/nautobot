@@ -22,8 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
-from nautobot.extras.choices import RelationshipSideChoices
-from nautobot.extras.models import CustomField, ExportTemplate, Relationship, RelationshipAssociation
+from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (

@@ -602,40 +602,6 @@ class LocalContextModelBulkEditForm(BulkEditForm):
 
 
 #
-# Config context schemas
-#
-
-
-class ConfigContextSchemaForm(BootstrapMixin, forms.ModelForm):
-    data_schema = JSONField(label="")
-    slug = SlugField()
-
-    class Meta:
-        model = ConfigContextSchema
-        fields = (
-            "name",
-            "slug",
-            "description",
-            "data_schema",
-        )
-
-
-class ConfigContextSchemaBulkEditForm(BootstrapMixin, BulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=ConfigContextSchema.objects.all(), widget=forms.MultipleHiddenInput)
-    description = forms.CharField(required=False, max_length=100)
-
-    class Meta:
-        nullable_fields = [
-            "description",
-        ]
-
-
-class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
-    q = forms.CharField(required=False, label="Search")
-    # FIXME(glenn) filtering by owner_content_type
-
-
-#
 # Custom fields
 #
 
@@ -792,7 +758,7 @@ class CustomFieldFilterForm(forms.Form):
 
 
 #
-# Nautobot base form for use in most new custom model forms.
+# Nautobot base forms for use in most new custom model forms.
 #
 
 
@@ -802,6 +768,44 @@ class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelF
     codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are
     needed.
     """
+
+
+class NautobotBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm, RelationshipModelBulkEditFormMixin):
+    """Base class for bulk-edit forms for models that support relationships and custom fields."""
+
+
+#
+# Config context schemas
+#
+
+
+class ConfigContextSchemaForm(NautobotModelForm):
+    data_schema = JSONField(label="")
+    slug = SlugField()
+
+    class Meta:
+        model = ConfigContextSchema
+        fields = (
+            "name",
+            "slug",
+            "description",
+            "data_schema",
+        )
+
+
+class ConfigContextSchemaBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ConfigContextSchema.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(required=False, max_length=100)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
+class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
+    q = forms.CharField(required=False, label="Search")
+    # FIXME(glenn) filtering by owner_content_type
 
 
 #
@@ -1009,7 +1013,7 @@ class GitRepositoryCSVForm(CSVModelForm):
         )
 
 
-class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
+class GitRepositoryBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=GitRepository.objects.all(),
         widget=forms.MultipleHiddenInput(),
@@ -1523,7 +1527,7 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
 
-class StatusBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class StatusBulkEditForm(NautobotBulkEditForm):
     """Bulk edit/delete form for `Status` objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
@@ -1634,7 +1638,7 @@ class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
     )
 
 
-class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class TagBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
     description = forms.CharField(max_length=200, required=False)
