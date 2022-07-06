@@ -1246,6 +1246,10 @@ class InterfaceFilterSet(
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
     )
+    has_tagged_vlans = RelatedMembershipBooleanFilter(
+        field_name="tagged_vlans",
+        label="Has tagged VLANs",
+    )
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Interface.objects.all(),

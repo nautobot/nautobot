@@ -3496,6 +3496,14 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         params = {"tagged_vlans": [tagged_vlans[0].pk, tagged_vlans[1].vid]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_has_tagged_vlans(self):
+        with self.subTest():
+            params = {"has_tagged_vlans": True}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        with self.subTest():
+            params = {"has_tagged_vlans": False}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 18)
+
     def test_child_interfaces(self):
         child_interfaces = Interface.objects.filter(name__startswith="Child")[:2]
         params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
