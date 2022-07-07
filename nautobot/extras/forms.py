@@ -1227,11 +1227,6 @@ class RelationshipAssociationModelFilterForm(forms.Form):
     def _append_relationships_side(self, relationships, initial_side):
         """
         Helper method to _append_relationships, for processing one "side" of the relationships for this model.
-        For different relationship types:
-        - For one-to-one filter relationships DynamicModelChoiceField for source_type = model or destination_type = model.
-        - For one-to-many (from the source, "one", side) we likewise want it clearable/nullable but not settable.
-        - For many-to-many (symmetric or non-symmetric) we provide "add" and "remove" multi-select fields,
-          similar to the AddRemoveTagsForm behavior. No nullability is provided here.
         """
         for relationship in relationships:
             if relationship.symmetric:
@@ -1253,11 +1248,14 @@ class RelationshipAssociationModelFilterForm(forms.Form):
 
             self.fields[field_name] = relationship.to_form_field(side=side)
             if relationship.source_label and relationship.destination_label:
-                self.fields[field_name].label = f"{relationship.source_label} to {relationship.destination_label}__{peer_side}" + f" {relationship.type}"
+                self.fields[
+                    field_name
+                ].label = f"{relationship.source_label} to {relationship.destination_label}__{peer_side}"
             else:
-                self.fields[field_name].label = field_name + f" {relationship.type}"
-
+                self.fields[field_name].label = field_name
             self.relationships.append(field_name)
+
+
 #
 # Secrets
 #

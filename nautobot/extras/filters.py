@@ -22,7 +22,6 @@ from .choices import (
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
     RelationshipSideChoices,
-    RelationshipTypeChoices,
 )
 from .models import (
     ComputedField,
@@ -760,27 +759,29 @@ class RelationshipFilter(django_filters.Filter):
         super().__init__(*args, **kwargs)
 
     def filter(self, qs, value):
-        # value here is the latest/last uuid in value_list and we have no use for a single value.
-        # we need the complete list of uuids to filter
-        # print(value)
-        # print(self.value_list)
-        # f774eba4-085c-47f9-abb7-65593f7d9167
-        # ['1bf86119-c88f-42de-9b14-da60cb9f3b32', 'f29d330d-78e4-46ab-b156-f108434d626f', 'f774eba4-085c-47f9-abb7-65593f7d9167']
-        # f6fa98ac-ce12-4ea5-bea1-54651ba91262
-        # ['f6fa98ac-ce12-4ea5-bea1-54651ba91262']
-        if not self.value_list or '' in self.value_list:
+        # We are not using value here because it only contains the latest/last uuid in value_list and we have no use for a single value.
+        # We need the complete list of uuids to filter
+
+        # When getting value_list from empty DynamicModelChoiceField self.value_list = ['']
+        # When getting value_list from empty DynamicMultipleModelChoiceField self.value_list = []
+        # The conditional here accounts for both situations
+        if not self.value_list or "" in self.value_list:
             # value_list is here to check whether a dropdown value has been entered
             return super().filter(qs, value)
         else:
             if self.side == "source":
                 values = RelationshipAssociation.objects.filter(
-                    destination_id__in=self.value_list, source_type=self.relationship.source_type, relationship=self.relationship
+                    destination_id__in=self.value_list,
+                    source_type=self.relationship.source_type,
+                    relationship=self.relationship,
                 ).values_list("source_id", flat=True)
             else:
                 values = RelationshipAssociation.objects.filter(
-                    source_id__in=self.value_list, destination_type=self.relationship.destination_type, relationship=self.relationship
+                    source_id__in=self.value_list,
+                    destination_type=self.relationship.destination_type,
+                    relationship=self.relationship,
                 ).values_list("destination_id", flat=True)
-            
+
             if len(qs) == len(self.qs):
                 # If qs has not been modified from the original queryset, we take the intersection of the original queryset and the filtered queryset.
                 # Essentially the filtered queryset.
@@ -823,12 +824,6 @@ class RelationshipAssociationModelFilterSet(BaseFilterSet):
     def _append_relationships_side(self, relationships, initial_side, model):
         """
         Helper method to _append_relationships, for processing one "side" of the relationships for this model.
-        For different relationship types there are different expectations of the UI:
-        - One-to-one (symmetric or non-symmetric)
-        - For one-to-many (from the source, "one", side).
-        - For one-to-many (from the destination, "many", side) a single value can be set, or it can be nulled.
-        - For many-to-many (symmetric or non-symmetric) we provide "add" and "remove" multi-select fields,
-          similar to the AddRemoveTagsForm behavior. No nullability is provided here.
         """
         for relationship in relationships:
             if relationship.symmetric:
@@ -847,7 +842,9 @@ class RelationshipAssociationModelFilterSet(BaseFilterSet):
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".
                 # No need to process it a second time!
                 continue
-            self.filters[field_name] = RelationshipFilter(relationship=relationship, side=side, queryset=model.objects.all())
+            self.filters[field_name] = RelationshipFilter(
+                relationship=relationship, side=side, queryset=model.objects.all()
+            )
             # Keeping a record of field_names to access it later on for value_list=
             self.relationships.append(field_name)
 
