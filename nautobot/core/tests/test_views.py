@@ -155,3 +155,24 @@ class NavRestrictedUI(TestCase):
         search_result = self.make_request()
 
         self.assertIsNone(search_result)
+
+
+class LoginRedirect(TestCase):
+    def test_login_redirects_to_login(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("dcim:site_list"), follow=True)
+        self.assertIn("/login/", response.redirect_chain[0][0])
+
+    @override_settings(
+        AUTHENTICATION_BACKENDS=[
+            "social_core.backends.google.GoogleOAuth2",
+            "nautobot.core.authentication.ObjectPermissionBackend",
+        ]
+    )
+    def test_login_redirects_to_sso_login(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("dcim:site_list"), follow=True)
+        print(response.redirect_chain)
+        self.assertIn("/login/google-oauth2/", response.redirect_chain[0][0])
