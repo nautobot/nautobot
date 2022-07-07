@@ -17,7 +17,9 @@
       "matchBaseBranches": ["develop"],
       "schedule": [
         "before 3am on Friday"
-      ]
+      ],
+      "major": {"enabled": false},
+      "minor": {"enabled": false}
     },
     {
       "description": "Schedule next updates.",
