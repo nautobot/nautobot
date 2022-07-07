@@ -683,16 +683,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_untagged_vlan(self):
-        with self.subTest("Has Untagged VLAN"):
-            params = {"untagged_vlan": [self.vlan1.pk, self.vlan2.vid]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-        with self.subTest("Has Untagged VLAN"):
-            params = {"has_untagged_vlan": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-            params = {"has_untagged_vlan": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"untagged_vlan": [self.vlan1.pk, self.vlan2.vid]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_mode(self):
         params = {"mode": [InterfaceModeChoices.MODE_ACCESS, InterfaceModeChoices.MODE_TAGGED]}
@@ -732,16 +724,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         VMInterface.objects.bulk_create(child_interfaces)
-        with self.subTest("Parent Interface"):
-            params = {"parent_interface": [parent_interface.pk, parent_interface.name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-        with self.subTest("Has Parent Interface"):
-            params = {"has_parent_interface": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-            params = {"has_parent_interface": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"parent_interface": [parent_interface.pk, parent_interface.name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_child(self):
         # Create child interfaces
@@ -779,16 +763,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
         VMInterface.objects.bulk_create(bridged_interfaces)
 
-        with self.subTest("Bridge Interface"):
-            params = {"bridge": [bridge_interface.pk, bridge_interface.name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-        with self.subTest("Has Bridge Interface"):
-            params = {"has_bridge": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-            params = {"has_bridge": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"bridge": [bridge_interface.pk, bridge_interface.name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_bridged_interfaces(self):
         # Create bridged interfaces

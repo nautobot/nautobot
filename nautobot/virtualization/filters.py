@@ -74,29 +74,6 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyF
             "comments": "icontains",
         },
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
-    )
     devices = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name", queryset=Device.objects.all(), label="Devices (name or ID)"
     )
@@ -308,10 +285,6 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         queryset=VMInterface.objects.all(),
         label="Parent interface (name or ID)",
     )
-    has_parent_interface = RelatedMembershipBooleanFilter(
-        field_name="parent_interface",
-        label="Has Parent Interface",
-    )
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=VMInterface.objects.all(),
@@ -325,10 +298,6 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         to_field_name="name",
         queryset=VMInterface.objects.all(),
         label="Bridge interface (name or ID)",
-    )
-    has_bridge = RelatedMembershipBooleanFilter(
-        field_name="bridge",
-        label="Has Bridge Interface",
     )
     bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -355,10 +324,6 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
-    )
-    has_untagged_vlan = RelatedMembershipBooleanFilter(
-        field_name="untagged_vlan",
-        label="Has Untagged VLAN",
     )
     ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP addresses (address or ID)")
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
