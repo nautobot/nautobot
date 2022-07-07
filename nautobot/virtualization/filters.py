@@ -249,7 +249,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     )
     has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",
-        label="Has Interfaces",
+        label="Has interfaces",
     )
     tag = TagFilter()
 
