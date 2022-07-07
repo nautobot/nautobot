@@ -35,7 +35,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
 
         # Click add button
         # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("§").click()
+        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
 
         # Fill out form
         self.browser.fill("name", "Integration Schema 1")
