@@ -1209,30 +1209,55 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
 
 class RelationshipAssociationModelFilterForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        self.obj_type = ContentType.objects.get_for_model(self.model)
-        relationships = Relationship.objects.filter(source_type=self.obj_type)
         super().__init__(*args, **kwargs)
+        self.relationships = []
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+        self._append_relationships()
+
+    def _append_relationships(self):
+        """
+        Append form fields for all Relationships assigned to this model.
+        """
+        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
+        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE)
+
+        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
+        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION)
+
+    def _append_relationships_side(self, relationships, initial_side):
+        """
+        Helper method to _append_relationships, for processing one "side" of the relationships for this model.
+        For different relationship types:
+        - For one-to-one filter relationships DynamicModelChoiceField for source_type = model or destination_type = model.
+        - For one-to-many (from the source, "one", side) we likewise want it clearable/nullable but not settable.
+        - For many-to-many (symmetric or non-symmetric) we provide "add" and "remove" multi-select fields,
+          similar to the AddRemoveTagsForm behavior. No nullability is provided here.
+        """
         for relationship in relationships:
-            app, model = str(relationship.destination_type).lower().split(" | ")
-            if relationship.source_label and relationship.destination_label:
-                field_name = "Destination for {} to {} relationship".format(
-                    relationship.source_label, relationship.destination_label
-                )
+            if relationship.symmetric:
+                side = RelationshipSideChoices.SIDE_PEER
             else:
-                field_name = "Destination for {} relationship".format(relationship.slug)
-            destination_model = relationship.destination_type.model_class()
-            self.fields[field_name] = DynamicModelMultipleChoiceField(
-                display_field="name",
-                to_field_name="id",
-                queryset=destination_model.objects.all().order_by("name"),
-                required=False,
-                label=f"{field_name}",
-                widget=APISelectMultiple(
-                    api_url=f"/api/{app}/{model}s/",
-                ),
-            )
+                side = initial_side
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
 
+            # If this model is on the "source" side of the relationship, then the field will be named
+            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
+            field_name = f"cr_{relationship.slug}__{peer_side}"
 
+            if field_name in self.relationships:
+                # This is a symmetric relationship that we already processed from the opposing "initial_side".
+                # No need to process it a second time!
+                continue
+
+            self.fields[field_name] = relationship.to_form_field(side=side)
+            if relationship.source_label and relationship.destination_label:
+                self.fields[field_name].label = f"{relationship.source_label} to {relationship.destination_label}__{peer_side}" + f" {relationship.type}"
+            else:
+                self.fields[field_name].label = field_name + f" {relationship.type}"
+
+            self.relationships.append(field_name)
 #
 # Secrets
 #
