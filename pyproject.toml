@@ -43,7 +43,7 @@ django-auth-ldap = {version = "~4.1.0", optional = true}
 # Caching with Redis
 django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
-django-celery-beat = "~2.3.0"
+django-celery-beat = "~2.2.1"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
@@ -96,7 +96,7 @@ graphene-django = "~2.15.0"
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Package version detection in older versions of Python
-importlib-metadata = {version = "~4.4", python = "<3.10"}
+importlib-metadata = "^4.4"
 # Template rendering engine
 Jinja2 = "~3.1.0"
 # Optional data validation of config contexts
