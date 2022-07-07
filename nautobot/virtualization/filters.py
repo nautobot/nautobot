@@ -111,7 +111,7 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyF
     )
     has_virtual_machines = RelatedMembershipBooleanFilter(
         field_name="virtual_machines",
-        label="Has Virtual Machines",
+        label="Has virtual machines",
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ClusterGroup.objects.all(),
