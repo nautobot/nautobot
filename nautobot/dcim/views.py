@@ -2389,9 +2389,11 @@ class CableCreateView(generic.ObjectEditView):
         form = self.model_form(exclude_id=kwargs.get("termination_a_id"), instance=obj, initial=initial_data)
         js_select_onchange_css_query = ", ".join(
             [
-                f"select#id_{field}"
-                for field in form.fields.keys()
-                if field.startswith("termination_b") and field != "termination_b_id"
+                f"select#id_{field_name}"
+                for field_name, field in form.fields.items()
+                if field_name.startswith("termination_b")
+                and field_name != "termination_b_id"
+                and field.widget.input_type == "select"
             ]
         )
         return render(
