@@ -170,13 +170,14 @@
 {% block javascript %}
 {{ block.super }}
 <script>
-$(() => {
-    $('#select2-id_termination_b_device-container').on("click", () => {
-        /*
-        * This clears the list of cable destination choices when the device drop-down is clicked.
-        * */
-        $('#id_termination_b_id').find("option").remove();
-    })
-});
+    $(() => {
+        $("{{ js_select_onchange_css_query }}").on("change", () => {
+            /*
+            * This clears the list of cable destination choices when any of the termination_b drop-downs
+            * (except the name/id drop-down) is changed.
+            * */
+            $('#id_termination_b_id').find("option").remove();
+        });
+    });
 </script>
 {% endblock %}

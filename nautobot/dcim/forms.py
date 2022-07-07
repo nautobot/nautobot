@@ -140,8 +140,8 @@ def get_device_by_name_or_pk(name):
     return device
 
 
-class ExcludeIDMixin:
-    def __init__(self, exclude_id=None, *args, **kwargs):
+class ConnectCableExcludeIDMixin:
+    def __init__(self, *args, exclude_id=None, **kwargs):
         super().__init__(*args, **kwargs)
         if exclude_id is not None:
             self.fields["termination_b_id"].widget.add_query_param("id__n", str(exclude_id))
@@ -3294,7 +3294,8 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
-class ConnectCableToDeviceForm(ExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
+
     """
     Base form for connecting a Cable to a Device component
     """
@@ -3418,7 +3419,7 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
     )
 
 
-class ConnectCableToCircuitTerminationForm(ExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
     termination_b_provider = DynamicModelChoiceField(queryset=Provider.objects.all(), label="Provider", required=False)
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
@@ -3464,7 +3465,7 @@ class ConnectCableToCircuitTerminationForm(ExcludeIDMixin, BootstrapMixin, Custo
         return getattr(self.cleaned_data["termination_b_id"], "pk", None)
 
 
-class ConnectCableToPowerFeedForm(ExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
