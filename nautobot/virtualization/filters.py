@@ -231,11 +231,11 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
     )
     primary_ip4 = MultiValueCharFilter(
         method="filter_primary_ip4",
-        label="Primary IPv4 Address (name or ID)",
+        label="Primary IPv4 Address (address or ID)",
     )
     primary_ip6 = MultiValueCharFilter(
         method="filter_primary_ip6",
-        label="Primary IPv6 Address (name or ID)",
+        label="Primary IPv6 Address (address or ID)",
     )
     services = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name", queryset=Service.objects.all(), label="Services (name or ID)"
