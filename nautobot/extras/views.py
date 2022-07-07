@@ -978,16 +978,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
     def post(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
-        template_name = "extras/job.html"
         try:
             job_class = job_model.job_class()
             job_form = job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
-            if hasattr(job_class, "template_name"):
-                try:
-                    get_template(job_class.template_name)
-                    template_name = job_class.template_name
-                except TemplateDoesNotExist as err:
-                    messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -1066,6 +1059,14 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 )
 
                 return redirect("extras:job_jobresult", pk=job_result.pk)
+
+        if hasattr(job_class, "template_name"):
+            try:
+                get_template(job_class.template_name)
+                template_name = job_class.template_name
+            except TemplateDoesNotExist as err:
+                messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
+                template_name = "extras/job.html"
 
         return render(
             request,
