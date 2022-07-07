@@ -1,4 +1,5 @@
 {
+  "baseBranches": ["develop", "next"],
   "constraints": {
     "python": "3.7"
   },
@@ -11,9 +12,30 @@
   ],
   "packageRules": [
     {
+      "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
+      "groupName": "Develop Updates",
+      "matchBaseBranches": ["develop"],
+      "schedule": [
+        "before 3am on Friday"
+      ]
+    },
+    {
+      "description": "Schedule next updates.",
+      "matchBaseBranches": ["next"],
+      "schedule": [
+        "before 2am"
+      ],
+      "rangeStrategy": "update-lockfile"
+    },
+    {
+      "description": "Group updates to next cut down on PR noise.",
+      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
+      "groupName": "Next Updates",
+      "matchBaseBranches": ["next"]
+    },
+    {
       "description": "Require dashboard approval for non-patch updates to graphene-django-optimizer and django-timezone-field.",
       "dependencyDashboardApproval": true,
-      "groupName": "Problematic Minor Updates",
       "matchBaseBranches": ["next"],
       "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field"],
       "matchUpdateTypes": ["major", "minor"]
@@ -21,29 +43,10 @@
     {
       "description": "Require dashboard approval for major updates for django-taggit.",
       "dependencyDashboardApproval": true,
-      "groupName": "Problematic Major Updates",
       "matchBaseBranches": ["next"],
       "matchPackageNames": ["django-taggit"],
       "matchUpdateTypes": ["major"]
-    },
-    {
-      "description": "Group updates to next cut down on PR noise.",
-      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
-      "groupName": "Next Updates",
-      "matchBaseBranches": ["next"],
-      "rangeStrategy": "update-lockfile",
-      "schedule": [
-        "before 2am"
-      ]
-    },
-    {
-      "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
-      "groupName": "Develop Updates",
-      "matchBaseBranches": ["develop"],
-      "rangeStrategy": "in-range-only",
-      "schedule": [
-        "before 3am on Friday"
-      ]
     }
-  ]
+  ],
+  "rangeStrategy": "in-range-only"
 }
