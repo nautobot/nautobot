@@ -288,7 +288,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=VMInterface.objects.all(),
-        label="Child interface (name or ID)",
+        label="Child interfaces (name or ID)",
     )
     has_child_interfaces = RelatedMembershipBooleanFilter(
         field_name="child_interfaces",
