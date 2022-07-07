@@ -17,6 +17,7 @@ from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
+from nautobot.utilities.utils import is_uuid
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
@@ -713,12 +714,10 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
         natural_key_values = set()
         for item in values:
             query = Q()
-            try:
-                # query pk field if this is a uuid object or a valid uuid string
-                isinstance(item, uuid.UUID) or uuid.UUID(item)
+            if is_uuid(item):
                 pk_values.add(item)
                 query |= Q(pk=item)
-            except (ValueError, TypeError, AttributeError):
+            else:
                 natural_key_values.add(item)
                 query |= Q(**{self.natural_key: item})
             qs = self.queryset.filter(query)
