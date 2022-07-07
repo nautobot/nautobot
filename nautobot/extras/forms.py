@@ -351,8 +351,8 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
 
     def save_relationships(self, *, instance, nullified_fields):
         """Helper method to be called from BulkEditView.post()."""
-        # TODO the below is inefficient as it re-loads the Relationship objects afresh for each instance;
-        # however this is necessary at present as applies the source/destination filters (if any) to determine
+        # The below may seem inefficient as it re-loads the Relationship objects afresh for each instance;
+        # however this is necessary as it applies the source/destination filters (if any) to determine
         # whether each relationship actually applies to the given instance.
         instance_relationships = instance.get_relationships(include_hidden=True)
 
