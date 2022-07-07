@@ -360,8 +360,8 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         field_name="untagged_vlan",
         label="Has Untagged VLAN",
     )
-    ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP Addresses (address or ID)")
-    has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP Addresses")
+    ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP addresses (address or ID)")
+    has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
     tags = TagFilter()
 
     def filter_ip_address(self, queryset, name, value):
