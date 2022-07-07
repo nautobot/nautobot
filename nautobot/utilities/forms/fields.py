@@ -1,7 +1,6 @@
 import csv
 import json
 import re
-import uuid
 from io import StringIO
 
 import django_filters
