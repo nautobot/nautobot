@@ -330,6 +330,15 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         field_name="bridge",
         label="Has Bridge Interface",
     )
+    bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=VMInterface.objects.all(),
+        label="Bridged interfaces (name or ID)",
+    )
+    has_bridged_interfaces = RelatedMembershipBooleanFilter(
+        field_name="bridged_interfaces",
+        label="Has Bridged Interfaces",
+    )
     mac_address = MultiValueMACAddressFilter(
         label="MAC address",
     )
@@ -338,10 +347,18 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
     )
+    has_tagged_vlans = RelatedMembershipBooleanFilter(
+        field_name="tagged_vlans",
+        label="Has Tagged VLANs",
+    )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
+    )
+    has_untagged_vlan = RelatedMembershipBooleanFilter(
+        field_name="untagged_vlan",
+        label="Has Untagged VLAN",
     )
     ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP Addresses (address or ID)")
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP Addresses")

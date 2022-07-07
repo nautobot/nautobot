@@ -671,12 +671,28 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tagged_vlans(self):
-        params = {"tagged_vlans": [self.vlan1.pk, self.vlan2.vid]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        with self.subTest("Tagged VLANs"):
+            params = {"tagged_vlans": [self.vlan1.pk, self.vlan2.vid]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        with self.subTest("Has Tagged VLANs"):
+            params = {"has_tagged_vlans": False}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+            params = {"has_tagged_vlans": True}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_untagged_vlan(self):
-        params = {"untagged_vlan": [self.vlan1.pk, self.vlan2.vid]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest("Has Untagged VLAN"):
+            params = {"untagged_vlan": [self.vlan1.pk, self.vlan2.vid]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+        with self.subTest("Has Untagged VLAN"):
+            params = {"has_untagged_vlan": False}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+            params = {"has_untagged_vlan": True}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_mode(self):
         params = {"mode": [InterfaceModeChoices.MODE_ACCESS, InterfaceModeChoices.MODE_TAGGED]}
@@ -773,6 +789,27 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
             params = {"has_bridge": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_bridged_interfaces(self):
+        # Create bridged interfaces
+        bridge_interface = VMInterface.objects.first()
+        bridged_interfaces = (
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 1", bridge=bridge_interface),
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 2", bridge=bridge_interface),
+            VMInterface(virtual_machine=bridge_interface.virtual_machine, name="Bridged 3", bridge=bridge_interface),
+        )
+        VMInterface.objects.bulk_create(bridged_interfaces)
+
+        with self.subTest("Bridged Interfaces"):
+            params = {"bridged_interfaces": [bridged_interfaces[0].pk, bridged_interfaces[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+        with self.subTest("Has Bridged Interfaces"):
+            params = {"has_bridged_interfaces": True}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+            params = {"has_bridged_interfaces": False}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
     def test_mtu(self):
         params = {"mtu": [100, 200]}
