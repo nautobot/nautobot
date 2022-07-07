@@ -319,7 +319,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     )
     has_child_interfaces = RelatedMembershipBooleanFilter(
         field_name="child_interfaces",
-        label="Has Child Interface",
+        label="Has child interfaces",
     )
     bridge = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
