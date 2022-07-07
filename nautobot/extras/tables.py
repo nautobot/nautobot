@@ -544,7 +544,7 @@ class JobResultTable(BaseTable):
                     <i class="mdi mdi-repeat-off"></i>
                 </a>
             {% endif %}
-                <a href="/extras/job-results/{{ record.pk }}/delete/" class="btn btn-xs btn-danger" title="Delete this job result.">
+                <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger" title="Delete this job result.">
                     <i class="mdi mdi-trash-can-outline"></i>
                 </a>
         """
