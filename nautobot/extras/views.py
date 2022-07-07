@@ -956,7 +956,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_form = job_class.as_form(initial=normalize_querydict(request.GET))
             if hasattr(job_class, "template_name"):
                 try:
-                    template_name = get_template(job_class.template_name)
+                    get_template(job_class.template_name)
+                    template_name = job_class.template_name
                 except TemplateDoesNotExist as err:
                     messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
@@ -983,7 +984,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_form = job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
             if hasattr(job_class, "template_name"):
                 try:
-                    template_name = get_template(job_class.template_name)
+                    get_template(job_class.template_name)
+                    template_name = job_class.template_name
                 except TemplateDoesNotExist as err:
                     messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
