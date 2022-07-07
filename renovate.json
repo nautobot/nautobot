@@ -1,5 +1,4 @@
 {
-  "baseBranches": ["develop", "next"],
   "constraints": {
     "python": "3.7"
   },
@@ -39,7 +38,6 @@
     },
     {
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
-      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
       "groupName": "Develop Updates",
       "matchBaseBranches": ["develop"],
       "rangeStrategy": "in-range-only",
