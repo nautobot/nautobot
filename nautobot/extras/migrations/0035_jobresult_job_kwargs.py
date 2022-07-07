@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="jobresult",
             name="job_kwargs",
-            field=models.JSONField(blank=True, default=dict, encoder=nautobot.core.celery.NautobotKombuJSONEncoder),
+            field=models.JSONField(blank=True, null=True, encoder=nautobot.core.celery.NautobotKombuJSONEncoder),
         ),
     ]

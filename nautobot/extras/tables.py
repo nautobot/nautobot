@@ -535,9 +535,9 @@ class JobResultTable(BaseTable):
     actions = tables.TemplateColumn(
         template_code="""
             {% load helpers %}
-            {% if record.job_kwargs %}
-                <a href="/extras/jobs/{{record.name}}/?{% url_encode record.job_kwargs.data %}" class="btn btn-xs btn-success"title="Re-run job with same arguments.">
-                    <i class="mdi mdi mdi-recycle"></i>
+            {% if record.job_model and record.job_kwargs %}
+                <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?{% url_encode record.job_kwargs.data %}" class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+                    <i class="mdi mdi mdi-repeat"></i>
                 </a>
             {% else %}
                 <a href="#" class="btn btn-xs btn-default disabled" title="No saved job arguments, cannot be re-run">
