@@ -667,7 +667,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tags(self):
-        params = {"tags": ["tag-1"]}
+        params = {"tag": ["tag-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tagged_vlans(self):

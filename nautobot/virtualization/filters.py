@@ -327,7 +327,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     )
     ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP addresses (address or ID)")
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
-    tags = TagFilter()
+    tag = TagFilter()
 
     def filter_ip_address(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
