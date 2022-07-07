@@ -67,6 +67,7 @@ class ObjectChange(BaseModel):
     changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.PROTECT, related_name="+")
     changed_object_id = models.UUIDField(db_index=True)
     changed_object = GenericForeignKey(ct_field="changed_object_type", fk_field="changed_object_id")
+    event_source = models.CharField(max_length=100, editable=False, blank=True, null=True)
     related_object_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.PROTECT,

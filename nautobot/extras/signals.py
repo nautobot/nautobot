@@ -17,6 +17,7 @@ from prometheus_client import Counter
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.utilities.config import get_settings_or_config
+from django.urls import resolve
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
@@ -72,6 +73,7 @@ def _handle_changed_object(request, sender, instance, **kwargs):
             objectchange = instance.to_objectchange(action)
             objectchange.user = _get_user_if_authenticated(request, objectchange)
             objectchange.request_id = request.id
+            objectchange.event_source = resolve(request.path).view_name
             objectchange.save()
 
     # Enqueue webhooks
@@ -99,6 +101,7 @@ def _handle_deleted_object(request, sender, instance, **kwargs):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
         objectchange.user = _get_user_if_authenticated(request, objectchange)
         objectchange.request_id = request.id
+        objectchange.event_source = resolve(request.path).view_name
         objectchange.save()
 
     # Enqueue webhooks
