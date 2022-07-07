@@ -6,18 +6,13 @@ from . import views
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 app_name = "circuits"
-circuit_type_router = views.CircuitTypeRouter()
-provider_router = views.ProviderRouter()
-provider_network_router = views.ProviderNetworkRouter()
-circuit_termination_router = views.CircuitTerminationRouter()
-circuit_router = views.CircuitRouter()
-circuit_type_router.register("circuit-types", views.CircuitTypeViewSet, basename="circuittype")
-provider_router.register("providers", views.ProviderViewSet, basename="provider")
-provider_network_router.register("provider-networks", views.ProviderNetworkViewSet, basename="providernetwork")
-circuit_termination_router.register(
-    "circuit-terminations", views.CircuitTerminationViewset, basename="circuittermination"
+circuit_type_router = views.CircuitTypeViewSetRouter(prefix="circuit_types", basename="circuittype")
+provider_router = views.ProviderViewSetRouter(prefix="providers", basename="provider")
+provider_network_router = views.ProviderNetworkViewSetRouter(prefix="provider-networks", basename="providernetwork")
+circuit_termination_router = views.CircuitTerminationViewSetRouter(
+    prefix="circuit-terminations", basename="circuittermination"
 )
-circuit_router.register("circuits", views.CircuitViewSet, basename="circuit")
+circuit_router = views.CircuitViewSetRouter(prefix="circuits", basename="circuit")
 
 
 urlpatterns = [

@@ -1,6 +1,5 @@
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.views import (
-    NautobotViewSetMixin,
     ObjectPermissionRequiredMixin,
     ObjectDetailViewMixin,
     ObjectDeleteViewMixin,
@@ -71,7 +70,29 @@ class NautobotViewSet(
         return get_permission_for_model(self.queryset.model, self.action)
 
 
-class NautobotRouter(SimpleRouter, NautobotViewSetMixin):
-    def __init__(self):
+class NautobotRouter(
+    SimpleRouter,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDeleteViewMixin,
+    BulkDeleteViewMixin,
+    BulkEditViewMixin,
+    BulkImportViewMixin,
+):
+
+    viewset = None
+    exclude_views = []
+
+    def __init__(self, prefix, basename):
         super().__init__()
         self.routes = super().define_routes()
+        self.exclude_routes()
+        self.register(prefix=prefix, viewset=self.viewset, basename=basename)
+
+    def exclude_routes(self):
+        for view in self.exclude_views:
+            for route in self.routes:
+                if view in route.name:
+                    self.routes.remove(route)
+                    break

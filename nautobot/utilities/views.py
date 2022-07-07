@@ -42,6 +42,7 @@ from nautobot.utilities.utils import (
     normalize_querydict,
     prepare_cloned_fields,
 )
+from nautobot.utilities.templatetags.helpers import validated_viewname
 
 #
 # View Mixins
@@ -139,8 +140,8 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         if not hasattr(self, "queryset"):
             raise ImproperlyConfigured(
-                "{} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define "
-                "a base queryset".format(self.__class__.__name__)
+                f"{self.__class__.__name__} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define "
+                "a base queryset"
             )
 
         if not self.has_permission():
@@ -307,7 +308,7 @@ class ObjectListViewMixin(NautobotViewSetMixin):
     template_name: The name of the template
     """
 
-    object_list_action_buttons = ("add", "import", "export")
+    action_buttons = ("add", "import", "export")
 
     def define_routes(self):
         return super().define_routes() + [
@@ -359,6 +360,22 @@ class ObjectListViewMixin(NautobotViewSetMixin):
 
         return "\n".join(csv_data)
 
+    def validate_action_buttons(self, request):
+        """Verify actions in self.action_buttons are valid view actions."""
+
+        always_valid_actions = ("export",)
+        valid_actions = []
+        invalid_actions = []
+
+        for action in self.action_buttons:
+            if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
+                valid_actions.append(action)
+            else:
+                invalid_actions.append(action)
+        if invalid_actions:
+            messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
+        return valid_actions
+
     def handle_object_list_get(self, request):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
@@ -377,21 +394,21 @@ class ObjectListViewMixin(NautobotViewSetMixin):
             except Exception as e:
                 messages.error(
                     request,
-                    "There was an error rendering the selected export template ({}): {}".format(et.name, e),
+                    f"There was an error rendering the selected export template ({et.name}): {e}",
                 )
 
         # Check for YAML export support
         elif "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
-            filename = "nautobot_{}.yaml".format(self.queryset.model._meta.verbose_name_plural)
-            response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
+            filename = f"nautobot_{self.queryset.model._meta.verbose_name_plural}.yaml"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
         # Fall back to built-in CSV formatting if export requested but no template specified
         elif "export" in request.GET and hasattr(model, "to_csv"):
             response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = "nautobot_{}.csv".format(self.queryset.model._meta.verbose_name_plural)
-            response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
+            filename = f"nautobot_{self.queryset.model._meta.verbose_name_plural}.csv"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
         # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
@@ -415,11 +432,13 @@ class ObjectListViewMixin(NautobotViewSetMixin):
         }
         RequestConfig(request, paginate).configure(table)
 
+        valid_actions = self.validate_action_buttons(request)
+
         context = {
             "content_type": content_type,
             "table": table,
             "permissions": permissions,
-            "action_buttons": self.object_list_action_buttons,
+            "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": self.filterset_form(request.GET, label_suffix="") if self.filterset_form else None,
         }
@@ -514,22 +533,19 @@ class ObjectEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
 
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} { escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -619,7 +635,7 @@ class ObjectDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 handle_protectederror([obj], request, e)
                 return redirect(obj.get_absolute_url())
 
-            msg = "Deleted {} {}".format(self.queryset.model._meta.verbose_name, obj)
+            msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
             logger.info(msg)
             messages.success(request, msg)
 
@@ -717,7 +733,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                             new_objs.append(obj)
                         else:
                             for field, err in obj_form.errors.items():
-                                form.add_error("csv", "Row {} {}: {}".format(row, field, err[0]))
+                                form.add_error("csv", f"Row {row} {field}: {err[0]}")
                             raise ValidationError("")
 
                     # Enforce object-level permissions
@@ -728,7 +744,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                 obj_table = self.table(new_objs)
 
                 if new_objs:
-                    msg = "Imported {} {}".format(len(new_objs), new_objs[0]._meta.verbose_name_plural)
+                    msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
                     logger.info(msg)
                     messages.success(request, msg)
 
@@ -877,14 +893,14 @@ class BulkEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                             raise ObjectDoesNotExist
 
                     if updated_objects:
-                        msg = "Updated {} {}".format(len(updated_objects), model._meta.verbose_name_plural)
+                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
                         logger.info(msg)
                         messages.success(self.request, msg)
 
                     return redirect(self.get_return_url(request))
 
                 except ValidationError as e:
-                    messages.error(self.request, "{} failed validation: {}".format(obj, e))
+                    messages.error(self.request, f"{obj} failed validation: {e}")
 
                 except ObjectDoesNotExist:
                     msg = "Object update failed due to object-level permissions violation"
@@ -912,7 +928,7 @@ class BulkEditViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
         # Retrieve objects being edited
         table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
         if not table.rows:
-            messages.warning(request, "No {} were selected.".format(model._meta.verbose_name_plural))
+            messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
 
         context = {
@@ -984,7 +1000,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                     handle_protectederror(queryset, request, e)
                     return redirect(self.get_return_url(request))
 
-                msg = "Deleted {} {}".format(deleted_count, model._meta.verbose_name_plural)
+                msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 logger.info(msg)
                 messages.success(request, msg)
                 return redirect(self.get_return_url(request))
@@ -1005,7 +1021,7 @@ class BulkDeleteViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
         if not table.rows:
             messages.warning(
                 request,
-                "No {} were selected for deletion.".format(model._meta.verbose_name_plural),
+                f"No {model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
 

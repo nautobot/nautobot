@@ -16,15 +16,6 @@ from . import filters, forms, tables
 from .choices import CircuitTerminationSideChoices
 from .models import Circuit, CircuitType, CircuitTermination, Provider, ProviderNetwork
 from nautobot.utilities.viewsets import NautobotViewSet, NautobotRouter
-from nautobot.utilities.views import (
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDeleteViewMixin,
-    BulkDeleteViewMixin,
-    BulkImportViewMixin,
-    BulkEditViewMixin,
-)
 
 
 #
@@ -70,18 +61,11 @@ class ProviderViewSet(NautobotViewSet):
             return {}
 
 
-class ProviderRouter(
-    NautobotRouter,
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDeleteViewMixin,
-    BulkDeleteViewMixin,
-    BulkImportViewMixin,
-    BulkEditViewMixin,
-):
-    def __init__(self):
-        super().__init__()
+class ProviderViewSetRouter(NautobotRouter):
+    viewset = ProviderViewSet
+
+    def __init__(self, prefix, basename):
+        super().__init__(prefix, basename)
 
 
 class ProviderNetworkViewSet(NautobotViewSet):
@@ -120,18 +104,11 @@ class ProviderNetworkViewSet(NautobotViewSet):
             return {}
 
 
-class ProviderNetworkRouter(
-    NautobotRouter,
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDeleteViewMixin,
-    BulkDeleteViewMixin,
-    BulkImportViewMixin,
-    BulkEditViewMixin,
-):
-    def __init__(self):
-        super().__init__()
+class ProviderNetworkViewSetRouter(NautobotRouter):
+    viewset = ProviderNetworkViewSet
+
+    def __init__(self, prefix, basename):
+        super().__init__(prefix, basename)
 
 
 #
@@ -177,17 +154,12 @@ class CircuitTypeViewSet(NautobotViewSet):
             return {}
 
 
-class CircuitTypeRouter(
-    NautobotRouter,
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDeleteViewMixin,
-    BulkDeleteViewMixin,
-    BulkImportViewMixin,
-):
-    def __init__(self):
-        super().__init__()
+class CircuitTypeViewSetRouter(NautobotRouter):
+    viewset = CircuitTypeViewSet
+    exclude_views = ["bulk_edit"]
+
+    def __init__(self, prefix, basename):
+        super().__init__(prefix, basename)
 
 
 #
@@ -253,18 +225,11 @@ class CircuitViewSet(NautobotViewSet):
             return {}
 
 
-class CircuitRouter(
-    NautobotRouter,
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDeleteViewMixin,
-    BulkImportViewMixin,
-    BulkEditViewMixin,
-    BulkDeleteViewMixin,
-):
-    def __init__(self):
-        super().__init__()
+class CircuitViewSetRouter(NautobotRouter):
+    viewset = CircuitViewSet
+
+    def __init__(self, prefix, basename):
+        super().__init__(prefix, basename)
 
 
 class CircuitTerminationViewset(NautobotViewSet):
@@ -282,13 +247,13 @@ class CircuitTerminationViewset(NautobotViewSet):
         return obj.circuit.get_absolute_url()
 
 
-class CircuitTerminationRouter(
-    NautobotRouter,
-    ObjectDetailViewMixin,
-    ObjectDeleteViewMixin,
-):
-    def __init__(self):
-        super().__init__()
+class CircuitTerminationViewSetRouter(NautobotRouter):
+    viewset = CircuitTerminationViewset
+    # Excluding add and edit views here because the add view needs to be re-declared according to a different pattern.
+    exclude_views = ["bulk_edit", "bulk_delete", "list", "add", "edit", "import"]
+
+    def __init__(self, prefix, basename):
+        super().__init__(prefix, basename)
         self.routes = self.define_routes()
 
     def define_routes(self):
@@ -331,7 +296,7 @@ class CircuitSwapTerminations(generic.ObjectEditView):
         if not circuit.termination_a and not circuit.termination_z:
             messages.error(
                 request,
-                "No terminations have been defined for circuit {}.".format(circuit),
+                f"No terminations have been defined for circuit {circuit}.",
             )
             return redirect("circuits:circuit", pk=circuit.pk)
 
@@ -378,7 +343,7 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 termination_z.term_side = "A"
                 termination_z.save()
 
-            messages.success(request, "Swapped terminations for circuit {}.".format(circuit))
+            messages.success(request, f"Swapped terminations for circuit {circuit}.")
             return redirect("circuits:circuit", pk=circuit.pk)
 
         return render(
