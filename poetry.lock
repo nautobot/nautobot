@@ -352,7 +352,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "django"
-version = "3.2.13"
+version = "3.2.14"
 description = "A high-level Python Web framework that encourages rapid development and clean, pragmatic design."
 category = "main"
 optional = false
@@ -2232,7 +2232,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "d9464e9f1942f47bfa0be21126d8586079b81d593c6b15ec45a459495f7f85f6"
+content-hash = "207fb70e2804ce7acb65705379b7bf88a1c313493d6a733cb7709d2665680aac"
 
 [metadata.files]
 amqp = [
@@ -2474,8 +2474,8 @@ deprecated = [
     {file = "Deprecated-1.2.13.tar.gz", hash = "sha256:43ac5335da90c31c24ba028af536a91d41d53f9e6901ddb021bcc572ce44e38d"},
 ]
 django = [
-    {file = "Django-3.2.13-py3-none-any.whl", hash = "sha256:b896ca61edc079eb6bbaa15cf6071eb69d6aac08cce5211583cfb41515644fdf"},
-    {file = "Django-3.2.13.tar.gz", hash = "sha256:6d93497a0a9bf6ba0e0b1a29cccdc40efbfc76297255b1309b3a884a688ec4b6"},
+    {file = "Django-3.2.14-py3-none-any.whl", hash = "sha256:a8681e098fa60f7c33a4b628d6fcd3fe983a0939ff1301ecacac21d0b38bad56"},
+    {file = "Django-3.2.14.tar.gz", hash = "sha256:677182ba8b5b285a4e072f3ac17ceee6aff1b5ce77fd173cc5b6a2d3dc022fcf"},
 ]
 django-ajax-tables = [
     {file = "django_ajax_tables-1.1.1-py3-none-any.whl", hash = "sha256:62e0138949153c0a994eefbf469f5496b1ad98bc073e170bc021a1aada7a32d0"},
