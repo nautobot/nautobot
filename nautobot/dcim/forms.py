@@ -1977,7 +1977,7 @@ class DeviceBulkEditForm(
         query_params={"manufacturer_id": "$manufacturer"},
     )
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
-    position = forms.CharField(required=False)
+    position = forms.IntegerField(required=False)
     face = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(DeviceFaceChoices),
