@@ -107,7 +107,7 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyF
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=VirtualMachine.objects.all(),
-        label="Virtual Machines (name or ID)",
+        label="Virtual machines (name or ID)",
     )
     has_virtual_machines = RelatedMembershipBooleanFilter(
         field_name="virtual_machines",
