@@ -2387,7 +2387,13 @@ class CableCreateView(generic.ObjectEditView):
             initial_data["termination_b_rack"] = getattr(obj.termination_a.parent, "rack", None)
 
         form = self.model_form(exclude_id=kwargs.get("termination_a_id"), instance=obj, initial=initial_data)
-
+        js_select_onchange_css_query = ", ".join(
+            [
+                f"select#id_{field}"
+                for field in form.fields.keys()
+                if field.startswith("termination_b") and field != "termination_b_id"
+            ]
+        )
         return render(
             request,
             self.template_name,
@@ -2397,6 +2403,7 @@ class CableCreateView(generic.ObjectEditView):
                 "termination_b_type": self.termination_b_type.name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
+                "js_select_onchange_css_query": js_select_onchange_css_query,
             },
         )
 
