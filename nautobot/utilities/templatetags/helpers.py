@@ -643,6 +643,7 @@ def custom_branding_or_static(branding_asset, static_asset):
 def url_encode(val=None):
     """This function is a wrapper for the standard urllib urlencode, this is required as the OOTB django
     urlencode does not work properly in some cases.
+    for e.g {"interval": 4} using this tag returns interval=4, using djangos urlencode will return %7B%27interval%27%3A%204%7D
 
     Args:
         val (dict): dict of values to be encoded.
