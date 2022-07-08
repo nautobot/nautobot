@@ -39,7 +39,6 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         region = TreeNodeMultipleChoiceFilter(
             queryset=Region.objects.all(),
             field_name="region",
-            lookup_expr="in",
             to_field_name="slug",
         )
 
@@ -451,8 +450,7 @@ class BaseFilterSetTest(TestCase):
 
     def test_tree_node_multiple_choice_filter(self):
         self.assertIsInstance(self.filters["treeforeignkeyfield"], TreeNodeMultipleChoiceFilter)
-        # TODO: lookup_expr different for negation?
-        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "exact")
+        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "in")
         self.assertEqual(self.filters["treeforeignkeyfield"].exclude, False)
         self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "in")
         self.assertEqual(self.filters["treeforeignkeyfield__n"].exclude, True)

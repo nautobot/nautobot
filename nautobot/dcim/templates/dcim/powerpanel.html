@@ -19,6 +19,10 @@
                     <td>{{ object.site|hyperlinked_object }}</td>
                 </tr>
                 <tr>
+                    <td>Location</td>
+                    <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                </tr>
+                <tr>
                     <td>Rack Group</td>
                     <td>{{ object.rack_group|hyperlinked_object }}</td>
                 </tr>

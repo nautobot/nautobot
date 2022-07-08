@@ -66,3 +66,10 @@ class AutoSlugField(_AutoSlugField):
         kwargs.setdefault("overwrite_on_add", False)
         kwargs.setdefault("unique", True)
         super().__init__(*args, **kwargs)
+
+    def get_slug_fields(self, model_instance, lookup_value):
+        """Workaround for https://github.com/django-extensions/django-extensions/issues/1713."""
+        try:
+            return super().get_slug_fields(model_instance, lookup_value)
+        except AttributeError:
+            return ""

@@ -221,8 +221,9 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Because Interface and VMInterface have the same set of default statuses, we get the error:
+        # Because Interface and VMInterface, and Site and Location, have the same default statuses, we get the error:
         #   enum naming encountered a non-optimally resolvable collision for fields named "status"
+        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
         "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
     },
 }
@@ -283,14 +284,14 @@ INSTALLED_APPS = [
     "django_tables2",
     "django_prometheus",
     "mptt",
-    "rest_framework",
     "social_django",
     "taggit",
     "timezone_field",
     "nautobot.core.apps.NautobotConstanceConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
-    "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
-    "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
+    "django.contrib.admin",  # Must be after `nautobot.core` for template overrides
+    "django_celery_beat",  # Must be after `nautobot.core` for template overrides
+    "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
     "nautobot.dcim",

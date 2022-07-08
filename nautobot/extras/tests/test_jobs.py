@@ -19,9 +19,6 @@ from nautobot.extras.models import FileProxy, Job, Status, CustomField, JobResul
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
 
-# Use the proper swappable User model
-User = get_user_model()
-
 
 def get_job_class_and_model(module, name):
     """Test helper function to look up a job class and job model and ensure the latter is enabled."""
@@ -57,7 +54,6 @@ class JobTest(TransactionTestCase):
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
-        self.user = User.objects.create_user(username="testuser")
         self.request.user = self.user
 
     def test_job_hard_time_limit_less_than_soft_time_limit(self):
@@ -363,7 +359,6 @@ class JobFileUploadTest(TransactionTestCase):
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
-        self.user = User.objects.create_user(username="testuser")
         self.request.user = self.user
 
     def test_run_job_pass(self):
@@ -536,11 +531,10 @@ class JobSiteCustomFieldTest(CeleryTestCase):
 
     def setUp(self):
         super().setUp()
-        user = User.objects.create(username="User1")
 
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
-        self.request.user = user
+        self.request.user = self.user
 
     def test_run(self):
         self.clear_worker()

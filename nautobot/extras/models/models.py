@@ -99,6 +99,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
+    locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
     roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
@@ -466,7 +467,7 @@ class FileAttachment(BaseModel):
 
     bytes = models.BinaryField()
     filename = models.CharField(max_length=255)
-    mimetype = models.CharField(max_length=50)
+    mimetype = models.CharField(max_length=255)
 
     def __str__(self):
         return self.filename

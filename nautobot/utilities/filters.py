@@ -12,6 +12,9 @@ import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 
+from mptt.models import MPTTModel
+from tree_queries.models import TreeNode
+
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
 from nautobot.utilities.constants import (
@@ -20,6 +23,9 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
+from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
+
+from taggit.managers import TaggableManager
 
 
 logger = logging.getLogger(__name__)
@@ -140,22 +146,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             exclude=exclude,
             **kwargs,
         )
-
-
-class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
-    """
-    Filters for a set of Models, including all descendant models within a Tree.  Example: [<Region: R1>,<Region: R2>]
-    """
-
-    def get_filter_predicate(self, v):
-        # Null value filtering
-        if v is None:
-            return {f"{self.field_name}__isnull": True}
-        return super().get_filter_predicate(v)
-
-    def filter(self, qs, value):
-        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
-        return super().filter(qs, value)
 
 
 class NullableCharFieldFilter(django_filters.CharFilter):
@@ -415,6 +405,30 @@ class MappedPredicatesFilterMixin:
         return qs.distinct()
 
 
+class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter that supports filtering on values matching the `pk` field and another
+    field of a foreign-key related object. The desired field is set using the `to_field_name`
+    keyword argument on filter initialization (defaults to `slug`).
+    """
+
+    field_class = MultiMatchModelMultipleChoiceField
+
+    def __init__(self, *args, **kwargs):
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        """
+        Override base filter behavior to use the natural key in the generated filter, if applicable.
+        """
+        result = super().get_filter_predicate(v)
+        # Don't use natural key for other lookup_expr such as "in"!
+        if self.lookup_expr == django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
+            result = {f"{key}__{self.natural_key}": value for key, value in result.items()}
+        return result
+
+
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
     Provide a search filter for use on filtersets as the `q=` parameter.
@@ -423,6 +437,46 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
 
     label = "Search"
+
+
+class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """
+    Filter that matches on the given model(s) (identified by slug and/or pk) _as well as their tree descendants._
+
+    For example, if we have:
+
+        Region "Earth"
+          Region "USA"
+            Region "GA" <- Site "Athens"
+            Region "NC" <- Site "Durham"
+
+    a NaturalKeyOrPKMultipleChoiceFilter on Site for {"region": "USA"} would have no matches,
+    since there are no Sites whose immediate Region is "USA",
+    but a TreeNodeMultipleChoiceFilter on Site for {"region": "USA"} or {"region": "Earth"}
+    would match both "Athens" and "Durham".
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("lookup_expr", "in")
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+        return super().get_filter_predicate(v)
+
+    def filter(self, qs, value):
+        if value:
+            if any(isinstance(node, TreeNode) for node in value):
+                # django-tree-queries
+                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            elif any(isinstance(node, MPTTModel) for node in value):
+                # django-mptt
+                value = [
+                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
+                ]
+        return super().filter(qs, value)
 
 
 #
@@ -458,6 +512,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            TaggableManager: {"filter_class": TagFilter},
         }
     )
 
