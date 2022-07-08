@@ -578,6 +578,14 @@ class JobResult(BaseModel, CustomFieldModel):
                 else:
                     logger.error("Neither a Job database record nor a Job source class were found for %s", name)
 
+        # If the job_kwargs contained Python objects such as a NautobotFakeRequest instance,
+        # they are correctly JSONified on write to the database, but the in-memory representation of the JobResult
+        # will still contain Python objects rather than a pure JSON-compatible dict.
+        # This could cause problems when other code consumes this JobResult object, for example in the REST API
+        # JobResult serializer which will try and fail to dump these objects to JSON.
+        # Workaround: force a reload of the JobResult from the database so that it contains proper JSON job_kwargs.
+        job_result.refresh_from_db()
+
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 
         return job_result
