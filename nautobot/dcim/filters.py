@@ -142,7 +142,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     sites = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
-        label="Site (slug or ID)",
+        label="Sites (slug or ID)",
     )
     has_sites = RelatedMembershipBooleanFilter(
         field_name="sites",
@@ -215,7 +215,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="powerpanel",
         label="Has power panels",
     )
-    rack_groups = TreeNodeMultipleChoiceFilter(
+    rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Rack groups (slug or ID)",
     )
@@ -525,7 +525,7 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
-        label="Device type (slug or ID)",
+        label="Device types (slug or ID)",
     )
     has_device_types = RelatedMembershipBooleanFilter(
         field_name="device_types",
@@ -533,7 +533,7 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     platforms = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(),
-        label="Platform (slug or ID)",
+        label="Platforms (slug or ID)",
     )
     has_platforms = RelatedMembershipBooleanFilter(
         field_name="platforms",
@@ -1253,7 +1253,7 @@ class InterfaceFilterSet(
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Interface.objects.all(),
-        label="Child interfaces",
+        label="Child interfaces (name or ID)",
     )
     has_child_interfaces = RelatedMembershipBooleanFilter(
         field_name="child_interfaces",
@@ -1262,7 +1262,7 @@ class InterfaceFilterSet(
     bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Interface.objects.all(),
-        label="Bridged interfaces",
+        label="Bridged interfaces (name or ID)",
     )
     has_bridged_interfaces = RelatedMembershipBooleanFilter(
         field_name="bridged_interfaces",
@@ -1271,7 +1271,7 @@ class InterfaceFilterSet(
     member_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Interface.objects.all(),
-        label="Member interfaces",
+        label="Member interfaces (name or ID)",
     )
     has_member_interfaces = RelatedMembershipBooleanFilter(
         field_name="member_interfaces",
@@ -1524,11 +1524,11 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     members = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Device.objects.all(),
-        label="Device (name or ID)",
+        label="Device members (name or ID)",
     )
     has_members = RelatedMembershipBooleanFilter(
         field_name="members",
-        label="Has members",
+        label="Has device members",
     )
     tag = TagFilter()
 
@@ -1648,7 +1648,7 @@ class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
     )
     has_power_feeds = RelatedMembershipBooleanFilter(
         field_name="powerfeeds",
-        label="Has powerfeeds",
+        label="Has power feeds",
     )
     tag = TagFilter()
 
