@@ -96,6 +96,9 @@ graphene-django = "~2.15.0"
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Package version detection in older versions of Python
+# NOTE: We want to permit newer versions of importlib-metadata to be installed while not forcing
+#       plugins to move their dependencies ahead. Currently this is a direct dependency until
+#       Python 3.8+ where our direct dependency becomes part of stdlib.
 importlib-metadata = {version = "^4.4", python = "<3.10"}
 # Template rendering engine
 Jinja2 = "~3.1.0"
