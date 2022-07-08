@@ -637,37 +637,29 @@ def register_custom_validators(class_list):
 
 def register_override_views(override_views, plugin):
 
-    override_warning = (
-        "Plugin {} tried to override view {}, but only namespaced views "
-        "are supported (e.g. `dcim:device`, `plugins:myplugin:myview`)."
+    validation_error = (
+        "Plugin '{}' tried to override view '{}' but did not contain a valid app name "
+        "(e.g. `dcim:device`, `plugins:myplugin:myview`)."
     )
 
     for qualified_view_name, view in override_views.items():
-
         resolver = get_resolver()
 
         try:
-            app_name, view_name = qualified_view_name.rsplit(":", 1)
-            app_resolver = resolver.namespace_dict.get(app_name)
+            qualified_app_name, view_name = qualified_view_name.rsplit(":", 1)
+            app_resolver = resolver
+            for app_name in qualified_app_name.split(":"):
+                app_resolver_tupl = app_resolver.namespace_dict.get(app_name)
+                if app_resolver_tupl is None:
+                    # We couldn't find the app, regardless of nesting
+                    raise ValidationError(validation_error.format(plugin, qualified_view_name))
+
+                app_resolver = app_resolver_tupl[1]
+
         except ValueError:
-            logger.log(WARNING, override_warning.format(plugin, qualified_view_name))
-            continue
+            # This is only thrown when qualified_view_name does not contain ":"
+            raise ValidationError(validation_error.format(plugin, qualified_view_name))
 
-        # Handle nested view namespaces, such as "plugins:myplugin"
-        try:
-            while ":" in app_name:
-                resolver_name, app_name = app_name.split(":", 1)
-                nested_resolver = resolver.namespace_dict[resolver_name][1]
-                app_resolver = nested_resolver.namespace_dict.get(app_name)
-        except ValueError:
-            logger.log(WARNING, override_warning.format(plugin, qualified_view_name))
-            continue
-
-        if not app_resolver:
-            raise ValidationError(
-                f"Plugin {plugin} tried to override view {qualified_view_name} but {app_name} is not a valid app name."
-            )
-
-        for pattern in app_resolver[1].url_patterns:
+        for pattern in app_resolver.url_patterns:
             if isinstance(pattern, URLPattern) and hasattr(pattern, "name") and pattern.name == view_name:
                 pattern.callback = view
