@@ -9,14 +9,14 @@ __version__ = metadata.version(__name__)
 from nautobot.extras.plugins import PluginConfig
 
 
-class PluginWithOverridesConfig(PluginConfig):
-    name = "plugin_with_view_override"
-    verbose_name = "Plugin With View Override"
+class ExamplePluginWithOverridesConfig(PluginConfig):
+    name = "example_plugin_with_view_override"
+    verbose_name = "Example Plugin With View Override"
     author = "Nautobot development team"
     author_email = "nautobot@example.com"
     version = __version__
     description = "For testing purposes only"
-    base_url = "plugin-with-view-overrides"
+    base_url = "example-plugin-with-view-overrides"
 
 
 config = PluginWithOverridesConfig
