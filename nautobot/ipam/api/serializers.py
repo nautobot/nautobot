@@ -12,6 +12,7 @@ from nautobot.core.api import (
 )
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
+    NestedLocationSerializer,
     NestedSiteSerializer,
 )
 from nautobot.extras.api.customfields import CustomFieldModelSerializer
@@ -214,6 +215,7 @@ class RoleSerializer(CustomFieldModelSerializer):
 class VLANGroupSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer(required=False, allow_null=True)
     vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -224,6 +226,7 @@ class VLANGroupSerializer(CustomFieldModelSerializer):
             "name",
             "slug",
             "site",
+            "location",
             "description",
             "vlan_count",
             "custom_fields",
@@ -254,6 +257,7 @@ class VLANGroupSerializer(CustomFieldModelSerializer):
 class VLANSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer(required=False, allow_null=True)
     group = NestedVLANGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     role = NestedRoleSerializer(required=False, allow_null=True)
@@ -265,6 +269,7 @@ class VLANSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "id",
             "url",
             "site",
+            "location",
             "group",
             "vid",
             "name",
@@ -306,6 +311,7 @@ class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
     site = NestedSiteSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer(required=False, allow_null=True)
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
@@ -319,6 +325,7 @@ class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "family",
             "prefix",
             "site",
+            "location",
             "vrf",
             "tenant",
             "vlan",

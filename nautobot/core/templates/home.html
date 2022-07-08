@@ -15,7 +15,9 @@
 
 
 {% block content %}
-    {% include 'search_form.html' %}
+    {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+        {% include 'search_form.html' %}
+    {% endif %}
     <div class="row">
         <div class="col-sm-12">
             <div class="homepage_column" style="columns: 4 360px">

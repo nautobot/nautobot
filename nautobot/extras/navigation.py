@@ -389,7 +389,7 @@ menu_items = (
                         link="plugins:plugins_list",
                         name="Installed Plugins",
                         weight=100,
-                        permissions=[],
+                        permissions=["is_staff"],
                         buttons=(),
                     ),
                 ),

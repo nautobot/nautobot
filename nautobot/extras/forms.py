@@ -8,7 +8,7 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
@@ -316,6 +316,7 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 class ConfigContextForm(BootstrapMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
+    locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
     device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
@@ -336,6 +337,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
             "is_active",
             "regions",
             "sites",
+            "locations",
             "roles",
             "device_types",
             "platforms",
@@ -368,6 +370,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
     type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
@@ -601,10 +604,10 @@ class CustomFieldFilterForm(forms.Form):
             field_name = "cf_{}".format(cf.name)
             if cf.type == "json":
                 self.fields[field_name] = cf.to_form_field(
-                    set_initial=True, enforce_required=False, simple_json_filter=True
+                    set_initial=False, enforce_required=False, simple_json_filter=True
                 )
             else:
-                self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
+                self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
 
 
 #
@@ -854,6 +857,18 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
     class Meta:
         model = GitRepository
         nullable_fields = ["secrets_group"]
+
+
+class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
+    model = GitRepository
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    branch = forms.CharField(required=False)
+    provided_contents = forms.ChoiceField(
+        required=False,
+        label="Provides",
+        choices=add_blank_choice(get_git_datasource_content_choices()),
+    )
 
 
 #

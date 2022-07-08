@@ -62,7 +62,7 @@ nav:
         - Power Tracking: 'core-functionality/power.md'
         - Secrets: 'core-functionality/secrets.md'
         - Service Mapping: 'core-functionality/services.md'
-        - Sites and Racks: 'core-functionality/sites-and-racks.md'
+        - Sites, Locations, and Racks: 'core-functionality/sites-and-racks.md'
         - Tenancy: 'core-functionality/tenancy.md'
         - Virtualization: 'core-functionality/virtualization.md'
         - VLAN Management: 'core-functionality/vlans.md'

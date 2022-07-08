@@ -36,6 +36,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     InventoryItem,
     Platform,
@@ -156,6 +158,28 @@ class SiteViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     )
     serializer_class = serializers.SiteSerializer
     filterset_class = filters.SiteFilterSet
+
+
+#
+# Location types
+#
+
+
+class LocationTypeViewSet(CustomFieldModelViewSet):
+    queryset = LocationType.objects.prefetch_related("parent", "content_types")
+    serializer_class = serializers.LocationTypeSerializer
+    filterset_class = filters.LocationTypeFilterSet
+
+
+#
+# Locations
+#
+
+
+class LocationViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "status")
+    serializer_class = serializers.LocationSerializer
+    filterset_class = filters.LocationFilterSet
 
 
 #

@@ -307,6 +307,25 @@ class PluginTemplateExtension:
         """
         raise NotImplementedError
 
+    def detail_tabs(self):
+        """
+        Tabs that will be rendered and added to the existing list of tabs on the detail page view.
+        Tabs will be ordered by their position in the list.
+
+        Content should be returned as a list of dicts in the format:
+        [
+            {
+                "title": "<title>",
+                "url": "<url for the tab link>",
+            },
+            {
+                "title": "<title>",
+                "url": "<url for the tab link>",
+            },
+        ]
+        """
+        raise NotImplementedError
+
 
 def register_template_extensions(class_list):
     """
@@ -561,7 +580,7 @@ class PluginCustomValidator:
     """
     This class is used to register plugin custom model validators which act on specified models. It contains the clean
     method which is overridden by plugin authors to execute custom validation logic. Plugin authors must raise
-    ValidationError within this method to trigger validation error messages which are propgated to the user.
+    ValidationError within this method to trigger validation error messages which are propagated to the user.
     A convenience method `validation_error(<message>)` may be used for this purpose.
 
     The `model` attribute on the class defines the model to which this validator is registered. It
@@ -576,7 +595,7 @@ class PluginCustomValidator:
     def validation_error(self, message):
         """
         Convenience method for raising `django.core.exceptions.ValidationError` which is required in order to
-        trigger validation error messages which are propgated to the user.
+        trigger validation error messages which are propagated to the user.
         """
         raise ValidationError(message)
 
@@ -584,7 +603,7 @@ class PluginCustomValidator:
         """
         Implement custom model validation in the standard Django clean method pattern. The model instance is accessed
         with the `object` key within `self.context`, e.g. `self.context['object']`. ValidationError must be raised to
-        prevent saving model instance changes, and propogate messages to the user. For convenience,
+        prevent saving model instance changes, and propagate messages to the user. For convenience,
         `self.validation_error(<message>)` may be called to raise a ValidationError.
         """
         raise NotImplementedError

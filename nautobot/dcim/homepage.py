@@ -15,6 +15,14 @@ layout = (
                 permissions=["dcim.view_site"],
                 weight=100,
             ),
+            HomePageItem(
+                name="Locations",
+                link="dcim:location_list",
+                model=models.Location,
+                description="Hierarchical geographic locations",
+                permissions=["dcim.view_location"],
+                weight=200,
+            ),
         ),
     ),
     HomePagePanel(

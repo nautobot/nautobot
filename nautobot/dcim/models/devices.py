@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import yaml
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -445,17 +446,19 @@ class Platform(OrganizationalModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
 )
 class Device(PrimaryModel, ConfigContextModel, StatusModel):
     """
-    A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
+    A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
-    Each Device must be assigned to a site, and optionally to a rack within that site. Associating a device with a
-    particular rack face or unit is optional (for example, vertically mounted PDUs do not consume rack units).
+    Each Device must be assigned to a Site and/or Location, and optionally to a Rack within that.
+    Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
+    do not consume rack units).
 
     When a new Device is created, console/power/interface/device bay components are created along with it as dictated
     by the component templates assigned to its DeviceType. Components can also be added, modified, or deleted after the
@@ -490,6 +493,13 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         help_text="A unique tag used to identify this device",
     )
     site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="devices",
+        blank=True,
+        null=True,
+    )
     rack = models.ForeignKey(
         to="dcim.Rack",
         on_delete=models.PROTECT,
@@ -564,6 +574,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "asset_tag",
         "status",
         "site",
+        "location",
         "rack_group",
         "rack_name",
         "position",
@@ -578,6 +589,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "tenant",
         "platform",
         "site",
+        "location",
         "rack",
         "status",
         "cluster",
@@ -619,6 +631,23 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                     "rack": f"Rack {self.rack} does not belong to site {self.site}.",
                 }
             )
+
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if self.rack is not None and self.rack.location is not None and self.rack.location != self.location:
+                raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
+
+            # self.cluster is validated somewhat later, see below
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
+                )
 
         if self.rack is None:
             if self.face:
@@ -731,6 +760,17 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                 {"cluster": "The assigned cluster belongs to a different site ({})".format(self.cluster.site)}
             )
 
+        # A Device can only be assigned to a Cluster in the same location or parent location, if any
+        if (
+            self.cluster is not None
+            and self.location is not None
+            and self.cluster.location is not None
+            and self.cluster.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {"cluster": f"The assigned cluster belongs to a location that does not include {self.location}."}
+            )
+
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
             raise ValidationError(
@@ -787,6 +827,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.asset_tag,
             self.get_status_display(),
             self.site.name,
+            self.location.name if self.location else None,
             self.rack.group.name if self.rack and self.rack.group else None,
             self.rack.name if self.rack else None,
             self.position,

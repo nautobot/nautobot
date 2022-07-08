@@ -27,6 +27,12 @@
                                         </td>
                                     </tr>
                                     <tr>
+                                        <td>Location</td>
+                                        <td>
+                                            {% include 'dcim/inc/location_hierarchy.html' with location=object.location %}
+                                        </td>
+                                    </tr>
+                                    <tr>
                                         <td>Rack</td>
                                         <td>
                                             {% if object.rack and object.rack_group %}

@@ -33,6 +33,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     InventoryItem,
     Platform,
@@ -54,6 +56,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -266,6 +269,112 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.json()["time_zone"], None)
 
 
+class LocationTypeTest(APIViewTestCases.APIViewTestCase):
+    model = LocationType
+    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
+    bulk_update_data = {
+        "description": "Some generic description of multiple types. Not very useful.",
+    }
+    choices_fields = []  # TODO: what would we need to get ["content_types"] added as a choices field?
+    slug_source = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        lt1 = LocationType.objects.create(name="Campus")
+        lt2 = LocationType.objects.create(name="Building", parent=lt1)
+        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        for lt in [lt1, lt2, lt3, lt4]:
+            lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
+
+        cls.create_data = [
+            {
+                "name": "Standalone",
+            },
+            {
+                "name": "Elevator",
+                "parent": lt2.pk,
+                "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
+            },
+            {
+                "name": "Closet",
+                "slug": "closet",
+                "parent": lt3.pk,
+                "content_types": ["dcim.device"],
+                "description": "An enclosed space smaller than a room",
+            },
+        ]
+
+
+class LocationTest(APIViewTestCases.APIViewTestCase):
+    model = Location
+    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
+    bulk_update_data = {
+        "status": "planned",
+    }
+    choices_fields = ["status"]
+    slug_source = ["parent__slug", "name"]
+
+    @classmethod
+    def setUpTestData(cls):
+        lt1 = LocationType.objects.create(name="Campus")
+        lt2 = LocationType.objects.create(name="Building", parent=lt1)
+        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+
+        status_active = Status.objects.get(slug="active")
+        site = Site.objects.create(name="Research Triangle Area", status=status_active)
+        tenant = Tenant.objects.create(name="Test Tenant")
+
+        loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)
+        loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
+        loc3 = Location.objects.create(name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2)
+        loc4 = Location.objects.create(
+            name="RTP4E-3-0101", location_type=lt4, status=status_active, parent=loc3, tenant=tenant
+        )
+        for loc in [loc1, loc2, loc3, loc4]:
+            loc.validated_save()
+
+        # FIXME(jathan): The writable serializer for `Device.status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]
+
+        cls.create_data = [
+            {
+                "name": "Downtown Durham",
+                "location_type": lt1.pk,
+                "site": site.pk,
+                "status": "active",
+            },
+            {
+                "name": "RTP12",
+                "slug": "rtp-12",
+                "location_type": lt2.pk,
+                "parent": loc1.pk,
+                "status": "active",
+            },
+            {
+                "name": "RTP4E-2",
+                "location_type": lt3.pk,
+                "parent": loc2.pk,
+                "status": "active",
+                "description": "Second floor of RTP4E",
+                "tenant": tenant.pk,
+            },
+        ]
+
+        # Changing location_type of an existing instance is not permitted
+        cls.update_data = {
+            "name": "A revised location",
+            "slug": "a-different-slug",
+            "status": "planned",
+        }
+
+
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
     brief_fields = ["_depth", "display", "id", "name", "rack_count", "slug", "url"]
@@ -276,61 +385,142 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.active = Status.objects.get(slug="active")
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
+        cls.sites = (
+            Site.objects.create(name="Site 1", slug="site-1", status=cls.active),
+            Site.objects.create(name="Site 2", slug="site-2", status=cls.active),
         )
 
-        parent_rack_groups = (
-            RackGroup.objects.create(site=sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
-            RackGroup.objects.create(site=sites[1], name="Parent Rack Group 2", slug="parent-rack-group-2"),
+        cls.parent_rack_groups = (
+            RackGroup.objects.create(site=cls.sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
+            RackGroup.objects.create(site=cls.sites[1], name="Parent Rack Group 2", slug="parent-rack-group-2"),
+        )
+
+        location_type = LocationType.objects.create(name="Location Type 1")
+        location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
+
+        cls.locations = (
+            Location.objects.create(
+                name="Location 1", location_type=location_type, site=cls.sites[0], status=cls.active
+            ),
+            Location.objects.create(
+                name="Location 2", location_type=location_type, site=cls.sites[1], status=cls.active
+            ),
         )
 
         RackGroup.objects.create(
-            site=sites[0],
+            site=cls.sites[0],
             name="Rack Group 1",
             slug="rack-group-1",
-            parent=parent_rack_groups[0],
+            parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
-            site=sites[0],
+            site=cls.sites[0],
             name="Rack Group 2",
             slug="rack-group-2",
-            parent=parent_rack_groups[0],
+            parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
-            site=sites[0],
+            site=cls.sites[0],
+            location=cls.locations[0],
             name="Rack Group 3",
             slug="rack-group-3",
-            parent=parent_rack_groups[0],
+            parent=cls.parent_rack_groups[0],
         )
 
         cls.create_data = [
             {
                 "name": "Test Rack Group 4",
                 "slug": "test-rack-group-4",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 5",
                 "slug": "test-rack-group-5",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 6",
                 "slug": "test-rack-group-6",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "location": cls.locations[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 7",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
         ]
+
+    def test_site_location_mismatch(self):
+        """The specified location (if any) must belong to the specified site."""
+        self.add_permissions("dcim.add_rackgroup")
+        url = reverse("dcim-api:rackgroup-list")
+        location = Location.objects.create(
+            name="Peer Location", location_type=LocationType.objects.first(), site=self.sites[0], status=self.active
+        )
+        data = {
+            "name": "Bad Group",
+            "parent": self.parent_rack_groups[1].pk,
+            "site": self.sites[1].pk,
+            "location": location.pk,
+        }
+
+        response = self.client.post(url, **self.header, data=data, format="json")
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("location", response.json())
+        self.assertEqual(response.json()["location"], ['Location "Peer Location" does not belong to site "Site 2".'])
+
+    def test_child_group_location_valid(self):
+        """A child group with a location may fall within the parent group's location."""
+        self.add_permissions("dcim.add_rackgroup")
+        url = reverse("dcim-api:rackgroup-list")
+
+        parent_group = RackGroup.objects.filter(site=self.sites[0], location=self.locations[0]).first()
+        child_location_type = LocationType.objects.create(
+            name="Child Location Type", parent=self.locations[0].location_type
+        )
+        child_location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
+        child_location = Location.objects.create(
+            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.active
+        )
+
+        data = {
+            "name": "Good Group",
+            "parent": parent_group.pk,
+            "site": self.sites[0].pk,
+            "location": child_location.pk,
+        }
+        response = self.client.post(url, **self.header, data=data, format="json")
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_child_group_location_invalid(self):
+        """A child group with a location must not fall outside its parent group's location."""
+        self.add_permissions("dcim.add_rackgroup")
+        url = reverse("dcim-api:rackgroup-list")
+
+        parent_group = RackGroup.objects.filter(site=self.sites[0], location=self.locations[0]).first()
+        # Same site, but a sibling of locations[0], not a child of it.
+        sibling_location = Location.objects.create(
+            name="Location 1B", location_type=self.locations[0].location_type, site=self.sites[0], status=self.active
+        )
+
+        data = {
+            "name": "Good Group",
+            "parent": parent_group.pk,
+            "site": self.sites[0].pk,
+            "location": sibling_location.pk,
+        }
+        response = self.client.post(url, **self.header, data=data, format="json")
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["location"],
+            ['Location "Location 1B" is not descended from parent rack group "Rack Group 3" location "Location 1".'],
+        )
 
 
 class RackRoleTest(APIViewTestCases.APIViewTestCase):

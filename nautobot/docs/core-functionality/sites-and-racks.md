@@ -1,4 +1,4 @@
-# Sites and Racks
+# Sites, Locations, and Racks
 
 {%
     include-markdown "../models/dcim/site.md"
@@ -6,6 +6,17 @@
 %}
 {%
     include-markdown "../models/dcim/region.md"
+    heading-offset=1
+%}
+
+---
+
+{%
+    include-markdown "../models/dcim/locationtype.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/location.md"
     heading-offset=1
 %}
 
