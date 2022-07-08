@@ -491,7 +491,7 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet, CustomFieldModelFilterSet):
     """
     This class exists to combine common functionality and is used as a base class throughout the
-    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet
+    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet and CustomFieldModelFilterSet
     are needed.
     """
 
