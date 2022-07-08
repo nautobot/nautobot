@@ -225,6 +225,19 @@ class ObjectChangeActionChoices(ChoiceSet):
     }
 
 
+class ObjectChangeEventContextChoices(ChoiceSet):
+
+    CONTEXT_WEB = "web"
+    CONTEXT_JOB = "job"
+    CONTEXT_ORM = "orm"
+
+    CHOICES = (
+        (CONTEXT_WEB, "Web"),
+        (CONTEXT_JOB, "Job"),
+        (CONTEXT_ORM, "ORM"),
+    )
+
+
 #
 # Relationships
 #

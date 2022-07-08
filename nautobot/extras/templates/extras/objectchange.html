@@ -82,9 +82,15 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Event Source</td>
+                        <td>Change Context</td>
                         <td>
-                            {{ object.event_source|render_json }}
+                            {{ object.get_change_context_display }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Change Context Detail</td>
+                        <td>
+                            {{ object.change_context_detail }}
                         </td>
                     </tr>
                 </table>

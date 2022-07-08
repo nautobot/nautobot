@@ -2,25 +2,55 @@ import uuid
 from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
-from django.core.handlers.wsgi import WSGIRequest
 from django.db.models.signals import m2m_changed, pre_delete, post_save
-from django.test.client import RequestFactory
 
+from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
 from nautobot.utilities.utils import curry
 
 
+class ChangeContext(object):
+    def __init__(self, user, context=None, context_detail="", id=None):
+        self.context_detail = context_detail
+        self.user = user
+        if context is not None:
+            self.context = context
+
+        # Assign a random unique ID. This will be used to associate multiple object changes made during the same request.
+        self.id = id
+        if self.id is None:
+            self.id = uuid.uuid4()
+
+
+class JobChangeContext(ChangeContext):
+    """ChangeContext for Jobs"""
+
+    context = ObjectChangeEventContextChoices.CONTEXT_JOB
+
+
+class ORMChangeContext(ChangeContext):
+    """ChangeContext for changes made with web_request_context context manager"""
+
+    context = ObjectChangeEventContextChoices.CONTEXT_ORM
+
+
+class WebChangeContext(ChangeContext):
+    """ChangeContext for changes made through the Web UI"""
+
+    context = ObjectChangeEventContextChoices.CONTEXT_WEB
+
+
 @contextmanager
-def change_logging(request):
+def change_logging(change_context):
     """
     Enable change logging by connecting the appropriate signals to their receivers before code is run, and
     disconnecting them afterward.
 
-    :param request: WSGIRequest object with a unique `id` set
+    :param change_context: ChangeContext object with a unique `id` set
     """
     # Curry signals receivers to pass the current request
-    handle_changed_object = curry(_handle_changed_object, request)
-    handle_deleted_object = curry(_handle_deleted_object, request)
+    handle_changed_object = curry(_handle_changed_object, change_context)
+    handle_deleted_object = curry(_handle_deleted_object, change_context)
 
     # Connect our receivers to the post_save and post_delete signals.
     post_save.connect(handle_changed_object, dispatch_uid="handle_changed_object")
@@ -37,7 +67,7 @@ def change_logging(request):
 
 
 @contextmanager
-def web_request_context(user, request=None):
+def web_request_context(user):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
@@ -55,22 +85,11 @@ def web_request_context(user, request=None):
     ...     lax.validated_save()
 
     :param user: User object
-    :param request: WSGIRequest object with an optional unique `id` set (one will be set if not present)
     """
-
-    if request is None:
-        request = RequestFactory().request(SERVER_NAME="web_request_context")
-
-    if not isinstance(request, WSGIRequest):
-        raise TypeError("The request object must be an instance of django.core.handlers.wsgi.WSGIRequest")
 
     if not isinstance(user, get_user_model()):
         raise TypeError("The user object must be an instance of nautobot.users.models.User")
 
-    if not hasattr(request, "id"):
-        request.id = uuid.uuid4()
-
-    request.user = user
-
-    with change_logging(request):
+    change_context = ORMChangeContext(user)
+    with change_logging(change_context):
         yield

@@ -42,14 +42,6 @@ class WebRequestContextTestCase(TestCase):
             with web_request_context("a string is not a user object"):
                 pass
 
-    def test_request_object_type_error(self):
-        class NotARequest:
-            pass
-
-        with self.assertRaises(TypeError):
-            with web_request_context(self.user, NotARequest()):
-                pass
-
     def test_change_log_created(self):
 
         with web_request_context(self.user):
