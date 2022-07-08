@@ -641,15 +641,16 @@ def custom_branding_or_static(branding_asset, static_asset):
 
 
 @register.simple_tag
-def url_encode(val=None):
-    """This function is a wrapper for the standard urllib urlencode, this is required as the OOTB django
-    urlencode does not work properly in some cases.
-    for e.g {"interval": 4} using this tag returns interval=4, using djangos urlencode will return %7B%27interval%27%3A%204%7D
+def urlencode_dict(values):
+    """
+    Encode a dictionary of key-value pairs as URL parameters.
+
+    This is in contrast to the Django templating built-in `{{ value|urlencode }}`,
+    which only takes a single value rather than a dict.
 
     Args:
-        val (dict): dict of values to be encoded.
+        values (dict): dict of values to be encoded.
     Returns:
         str: formatted URL encoded string.
-    This tag is used to to correctly format URL params based of a dictionary.
     """
-    return urlencode(val)
+    return urlencode(values)

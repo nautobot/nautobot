@@ -44,7 +44,7 @@
         {% endif %}
         {% if perms.extras.run_job %}
             {% if result.job_model and result.job_kwargs %}
-            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?{% url_encode result.job_kwargs.data %}" class="btn btn-info">
+            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?{% urlencode_dict result.job_kwargs.data %}" class="btn btn-info">
                 <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
             </a>
             {% endif %}
