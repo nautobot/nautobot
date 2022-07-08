@@ -3,7 +3,7 @@ from django import forms
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
+    NautobotFilterform,
     CustomFieldModelCSVForm,
     NautobotModelForm,
 )
@@ -96,7 +96,7 @@ class TenantBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditF
         ]
 
 
-class TenantFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class TenantFilterForm(NautobotFilterform):
     model = Tenant
     q = forms.CharField(required=False, label="Search")
     group = DynamicModelMultipleChoiceField(

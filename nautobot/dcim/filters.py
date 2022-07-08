@@ -6,7 +6,6 @@ from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
     NautobotFilterSet,
-    RelationshipAssociationModelFilterSet,
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
@@ -532,7 +531,6 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 class DeviceFilterSet(
     NautobotFilterSet,
     TenancyFilterSet,
-    RelationshipAssociationModelFilterSet,
     LocalContextFilterSet,
     StatusModelFilterSetMixin,
 ):

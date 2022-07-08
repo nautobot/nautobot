@@ -4,8 +4,8 @@ from nautobot.dcim.models import Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
     CustomFieldModelCSVForm,
+    NautobotFilterform,
     NautobotModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
@@ -88,7 +88,7 @@ class ProviderBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdi
         ]
 
 
-class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class ProviderFilterForm(NautobotFilterform):
     model = Provider
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -152,7 +152,7 @@ class ProviderNetworkBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomField
         ]
 
 
-class ProviderNetworkFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class ProviderNetworkFilterForm(NautobotFilterform):
     model = ProviderNetwork
     field_order = ["q", "provider_id"]
     q = forms.CharField(required=False, label="Search")
@@ -271,7 +271,7 @@ class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormM
         ]
 
 
-class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class CircuitFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
     model = Circuit
     field_order = [
         "q",

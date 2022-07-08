@@ -10,9 +10,9 @@ from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
     CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     NautobotModelForm,
+    NautobotFilterform,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -169,7 +169,7 @@ class ClusterBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdit
         ]
 
 
-class ClusterFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class ClusterFilterForm(NautobotFilterform, TenancyFilterForm):
     model = Cluster
     field_order = ["q", "type", "region", "site", "group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
@@ -401,9 +401,7 @@ class VirtualMachineBulkEditForm(
         ]
 
 
-class VirtualMachineFilterForm(
-    BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm, LocalContextFilterForm
-):
+class VirtualMachineFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin, LocalContextFilterForm):
     model = VirtualMachine
     field_order = [
         "q",
@@ -654,7 +652,7 @@ class VMInterfaceBulkRenameForm(BulkRenameForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class VMInterfaceFilterForm(NautobotFilterform):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     virtual_machine_id = DynamicModelMultipleChoiceField(

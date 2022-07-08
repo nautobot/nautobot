@@ -84,7 +84,6 @@ class RelationshipModelForm(forms.ModelForm):
 
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         self.relationships = []
-
         super().__init__(*args, **kwargs)
 
         self._append_relationships()
@@ -608,6 +607,140 @@ class CustomFieldFilterForm(forms.Form):
 
 
 #
+# Relationship
+#
+
+
+class RelationshipForm(BootstrapMixin, forms.ModelForm):
+
+    slug = SlugField()
+    source_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The source object type to which this relationship applies.",
+    )
+    source_filter = JSONField(
+        required=False,
+        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
+    )
+    destination_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The destination object type to which this relationship applies.",
+    )
+    destination_filter = JSONField(
+        required=False,
+        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
+    )
+
+    class Meta:
+        model = Relationship
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "type",
+            "advanced_ui",
+            "source_type",
+            "source_label",
+            "source_hidden",
+            "source_filter",
+            "destination_type",
+            "destination_label",
+            "destination_hidden",
+            "destination_filter",
+        ]
+
+    def save(self, commit=True):
+
+        # TODO add support for owner when a CR is created in the UI
+        obj = super().save(commit)
+
+        return obj
+
+
+class RelationshipFilterForm(BootstrapMixin, forms.Form):
+    model = Relationship
+
+    type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
+
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
+    )
+
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
+    )
+
+
+class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
+    model = RelationshipAssociation
+
+    relationship = DynamicModelMultipleChoiceField(
+        queryset=Relationship.objects.all(),
+        to_field_name="slug",
+        required=False,
+    )
+
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
+    )
+
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
+    )
+
+
+class RelationshipModelFilterForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.relationships = []
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+        self._append_relationships()
+
+    def _append_relationships(self):
+        """
+        Append form fields for all Relationships assigned to this model.
+        """
+        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
+        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE)
+
+        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
+        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION)
+
+    def _append_relationships_side(self, relationships, initial_side):
+        """
+        Helper method to _append_relationships, for processing one "side" of the relationships for this model.
+        """
+        for relationship in relationships:
+            if relationship.symmetric:
+                side = RelationshipSideChoices.SIDE_PEER
+            else:
+                side = initial_side
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+
+            # If this model is on the "source" side of the relationship, then the field will be named
+            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
+            field_name = f"cr_{relationship.slug}__{peer_side}"
+
+            if field_name in self.relationships:
+                # This is a symmetric relationship that we already processed from the opposing "initial_side".
+                # No need to process it a second time!
+                continue
+
+            self.fields[field_name] = relationship.to_form_field(side=side)
+            if relationship.source_label and relationship.destination_label:
+                self.fields[
+                    field_name
+                ].label = f"{relationship.source_label} to {relationship.destination_label}__{peer_side}"
+            else:
+                self.fields[field_name].label = field_name
+            self.relationships.append(field_name)
+
+
+#
 # Nautobot base form for use in most new custom model forms.
 #
 
@@ -616,6 +749,14 @@ class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelF
     """
     This class exists to combine common functionality and is used to inherit from throughout the
     codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are
+    needed.
+    """
+
+
+class NautobotFilterform(BootstrapMixin, CustomFieldFilterForm, RelationshipModelFilterForm):
+    """
+    This class exists to combine common functionality and is used to inherit from throughout the
+    codebase where all three of BootstrapMixin, CustomFieldFilterForm and RelationshipModelFilterForm are
     needed.
     """
 
@@ -1120,140 +1261,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
             api_url="/api/extras/content-types/",
         ),
     )
-
-
-#
-# Relationship
-#
-
-
-class RelationshipForm(BootstrapMixin, forms.ModelForm):
-
-    slug = SlugField()
-    source_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        help_text="The source object type to which this relationship applies.",
-    )
-    source_filter = JSONField(
-        required=False,
-        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
-        'Enter in <a href="https://json.org/">JSON</a> format.',
-    )
-    destination_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        help_text="The destination object type to which this relationship applies.",
-    )
-    destination_filter = JSONField(
-        required=False,
-        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
-        'Enter in <a href="https://json.org/">JSON</a> format.',
-    )
-
-    class Meta:
-        model = Relationship
-        fields = [
-            "name",
-            "slug",
-            "description",
-            "type",
-            "advanced_ui",
-            "source_type",
-            "source_label",
-            "source_hidden",
-            "source_filter",
-            "destination_type",
-            "destination_label",
-            "destination_hidden",
-            "destination_filter",
-        ]
-
-    def save(self, commit=True):
-
-        # TODO add support for owner when a CR is created in the UI
-        obj = super().save(commit)
-
-        return obj
-
-
-class RelationshipFilterForm(BootstrapMixin, forms.Form):
-    model = Relationship
-
-    type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
-
-    source_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
-    )
-
-    destination_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
-    )
-
-
-class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
-    model = RelationshipAssociation
-
-    relationship = DynamicModelMultipleChoiceField(
-        queryset=Relationship.objects.all(),
-        to_field_name="slug",
-        required=False,
-    )
-
-    source_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
-    )
-
-    destination_type = MultipleContentTypeField(
-        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
-    )
-
-
-class RelationshipAssociationModelFilterForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.relationships = []
-        self.obj_type = ContentType.objects.get_for_model(self.model)
-        self._append_relationships()
-
-    def _append_relationships(self):
-        """
-        Append form fields for all Relationships assigned to this model.
-        """
-        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
-        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE)
-
-        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
-        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION)
-
-    def _append_relationships_side(self, relationships, initial_side):
-        """
-        Helper method to _append_relationships, for processing one "side" of the relationships for this model.
-        """
-        for relationship in relationships:
-            if relationship.symmetric:
-                side = RelationshipSideChoices.SIDE_PEER
-            else:
-                side = initial_side
-            peer_side = RelationshipSideChoices.OPPOSITE[side]
-
-            # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
-            field_name = f"cr_{relationship.slug}__{peer_side}"
-
-            if field_name in self.relationships:
-                # This is a symmetric relationship that we already processed from the opposing "initial_side".
-                # No need to process it a second time!
-                continue
-
-            self.fields[field_name] = relationship.to_form_field(side=side)
-            if relationship.source_label and relationship.destination_label:
-                self.fields[
-                    field_name
-                ].label = f"{relationship.source_label} to {relationship.destination_label}__{peer_side}"
-            else:
-                self.fields[field_name].label = field_name
-            self.relationships.append(field_name)
 
 
 #

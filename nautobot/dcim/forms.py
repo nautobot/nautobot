@@ -20,10 +20,10 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelForm,
     NautobotModelForm,
+    NautobotFilterform,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
-    RelationshipAssociationModelFilterForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -141,7 +141,7 @@ def get_device_by_name_or_pk(name):
     return device
 
 
-class DeviceComponentFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class DeviceComponentFilterForm(NautobotFilterform):
     field_order = ["q", "region", "site"]
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -273,7 +273,7 @@ class RegionCSVForm(CustomFieldModelCSVForm):
         fields = Region.csv_headers
 
 
-class RegionFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class RegionFilterForm(NautobotFilterform):
     model = Site
     q = forms.CharField(required=False, label="Search")
 
@@ -383,7 +383,7 @@ class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         ]
 
 
-class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class SiteFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
     model = Site
     field_order = ["q", "status", "region", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
@@ -435,7 +435,7 @@ class RackGroupCSVForm(CustomFieldModelCSVForm):
         fields = RackGroup.csv_headers
 
 
-class RackGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class RackGroupFilterForm(NautobotFilterform):
     model = RackGroup
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(
@@ -624,7 +624,7 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         ]
 
 
-class RackFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class RackFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
     model = Rack
     field_order = [
         "q",
@@ -789,7 +789,7 @@ class RackReservationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomField
         nullable_fields = []
 
 
-class RackReservationFilterForm(BootstrapMixin, TenancyFilterForm):
+class RackReservationFilterForm(NautobotFilterform, TenancyFilterForm):
     model = RackReservation
     field_order = [
         "q",
@@ -912,7 +912,7 @@ class DeviceTypeBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkE
         nullable_fields = []
 
 
-class DeviceTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class DeviceTypeFilterForm(NautobotFilterform):
     model = DeviceType
     q = forms.CharField(required=False, label="Search")
     manufacturer = DynamicModelMultipleChoiceField(
@@ -1997,12 +1997,11 @@ class DeviceBulkEditForm(
 
 
 class DeviceFilterForm(
-    BootstrapMixin,
+    NautobotFilterform,
     LocalContextFilterForm,
     TenancyFilterForm,
     StatusFilterFormMixin,
     CustomFieldFilterForm,
-    RelationshipAssociationModelFilterForm,
 ):
     model = Device
     field_order = [
@@ -3947,7 +3946,7 @@ class VirtualChassisCSVForm(CustomFieldModelCSVForm):
         fields = VirtualChassis.csv_headers
 
 
-class VirtualChassisFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class VirtualChassisFilterForm(NautobotFilterform):
     model = VirtualChassis
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -4038,7 +4037,7 @@ class PowerPanelBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkE
         nullable_fields = ["rack_group"]
 
 
-class PowerPanelFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class PowerPanelFilterForm(NautobotFilterform):
     model = PowerPanel
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -4190,7 +4189,7 @@ class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFor
         ]
 
 
-class PowerFeedFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilterForm):
+class PowerFeedFilterForm(NautobotFilterform, StatusFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)

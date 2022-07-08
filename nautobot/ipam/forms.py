@@ -5,10 +5,10 @@ from nautobot.dcim.models import Device, Interface, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
     NautobotModelForm,
+    NautobotFilterform,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -123,7 +123,7 @@ class VRFBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm
         ]
 
 
-class VRFFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class VRFFilterForm(NautobotFilterform, TenancyFilterForm):
     model = VRF
     field_order = ["q", "import_target", "export_target", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
@@ -178,7 +178,7 @@ class RouteTargetBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulk
         ]
 
 
-class RouteTargetFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class RouteTargetFilterForm(NautobotFilterform, TenancyFilterForm):
     model = RouteTarget
     field_order = [
         "q",
@@ -225,7 +225,7 @@ class RIRCSVForm(CustomFieldModelCSVForm):
         }
 
 
-class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class RIRFilterForm(NautobotFilterform):
     model = RIR
     is_private = forms.NullBooleanField(
         required=False,
@@ -293,7 +293,7 @@ class AggregateBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEd
         }
 
 
-class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class AggregateFilterForm(NautobotFilterform, TenancyFilterForm):
     model = Aggregate
     field_order = [
         "q",
@@ -475,7 +475,7 @@ class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMi
         ]
 
 
-class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class PrefixFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
     model = Prefix
     field_order = [
         "q",
@@ -919,7 +919,7 @@ class IPAddressAssignForm(BootstrapMixin, forms.Form):
     )
 
 
-class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class IPAddressFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
     model = IPAddress
     field_order = [
         "q",
@@ -1010,7 +1010,7 @@ class VLANGroupCSVForm(CustomFieldModelCSVForm):
         fields = VLANGroup.csv_headers
 
 
-class VLANGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class VLANGroupFilterForm(NautobotFilterform):
     model = VLANGroup
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(
@@ -1133,7 +1133,7 @@ class VLANBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         ]
 
 
-class VLANFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class VLANFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
     model = VLAN
     field_order = [
         "q",
@@ -1216,7 +1216,7 @@ class ServiceForm(NautobotModelForm):
             self.fields["ipaddresses"].choices = []
 
 
-class ServiceFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class ServiceFilterForm(NautobotFilterform):
     model = Service
     q = forms.CharField(required=False, label="Search")
     protocol = forms.ChoiceField(
