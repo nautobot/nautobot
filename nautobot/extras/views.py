@@ -1077,13 +1077,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
                 return redirect("extras:job_jobresult", pk=job_result.pk)
 
+        template_name = "extras/job.html"
         if hasattr(job_class, "template_name"):
             try:
                 get_template(job_class.template_name)
                 template_name = job_class.template_name
             except TemplateDoesNotExist as err:
                 messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
-                template_name = "extras/job.html"
 
         return render(
             request,
