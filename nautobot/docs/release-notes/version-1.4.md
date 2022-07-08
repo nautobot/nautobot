@@ -48,7 +48,7 @@ A plugin may now define extra tabs which will be appended to the object view's l
 
 #### Improved Filter Coverage for DCIM models ([#1729](https://github.com/nautobot/nautobot/issues/1729))
 
-The DCIM FilterSets have been updated with 103 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
+The DCIM FilterSets have been updated with 137 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
 ### Changed
 
@@ -81,7 +81,8 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
 - [#1052](https://github.com/nautobot/nautobot/issues/1052) - Initial prototype implementation of Location data model
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add new filter class `NaturalKeyOrPKMultipleChoiceFilter` to `nautobot.utilities.filters`.
-- [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 103 new filters to `nautobot.dcim.filters` FilterSets.
+- [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 137 new filters to `nautobot.dcim.filters` FilterSets.
+- [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add `cable_terminations` to the `model_features` registry.
 - [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.
 
 ### Changed
