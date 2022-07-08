@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
@@ -317,6 +318,9 @@ class Relationship(BaseModel, ChangeLoggedModel):
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
 
+    def get_absolute_url(self):
+        return reverse("extras:relationship", args=[self.slug])
+
     def get_label(self, side):
         """Return the label for a given side, source or destination.
 
@@ -448,7 +452,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
             error_messages = []
             if filterset.errors:
                 for key in filterset.errors:
-                    error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
+                    # When settings.STRICT_FILTERING is True, any extraneous filter parameters will result in
+                    # filterset.errors[key] = ["Unknown filter field"]
+                    # This is redundant with our custom (more specific) error message added below from filterset_params
+                    # So discard such a message if present.
+                    errors_list = [error for error in filterset.errors[key] if "Unknown filter field" not in str(error)]
+                    if errors_list:
+                        error_messages.append(f"'{key}': " + ", ".join(errors_list))
 
             filterset_params = set(filterset.filters.keys())
             for key in filter.keys():

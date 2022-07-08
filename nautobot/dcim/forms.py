@@ -12,6 +12,12 @@ from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelCSVFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
@@ -28,7 +34,7 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import SecretsGroup
+from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -44,10 +50,12 @@ from nautobot.utilities.forms import (
     CSVChoiceField,
     CSVContentTypeField,
     CSVModelChoiceField,
+    CSVMultipleContentTypeField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
+    MultipleContentTypeField,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -81,6 +89,7 @@ from .constants import (
     CABLE_TERMINATION_MODELS,
     INTERFACE_MTU_MAX,
     INTERFACE_MTU_MIN,
+    NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
@@ -100,6 +109,8 @@ from .models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     InventoryItem,
     Platform,
@@ -392,13 +403,139 @@ class SiteFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixi
 
 
 #
+# LocationTypes
+#
+
+
+class LocationTypeForm(NautobotModelForm):
+    parent = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
+    slug = SlugField()
+    content_types = MultipleContentTypeField(
+        feature="locations",
+        help_text="The object type(s) that can be associated to a Location of this type",
+        required=False,
+    )
+
+    class Meta:
+        model = LocationType
+        fields = ("parent", "name", "slug", "description", "content_types")
+
+
+class LocationTypeCSVForm(CustomFieldModelCSVForm):
+    parent = CSVModelChoiceField(
+        queryset=LocationType.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Name of parent location type",
+    )
+    content_types = CSVMultipleContentTypeField(
+        feature="locations",
+        required=False,
+        choices_as_strings=True,
+        help_text=mark_safe(
+            "The object types to which this status applies. Multiple values "
+            "must be comma-separated and wrapped in double quotes. (e.g. "
+            '<code>"dcim.device,dcim.rack"</code>)'
+        ),
+    )
+
+    class Meta:
+        model = LocationType
+        fields = LocationType.csv_headers
+
+
+class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = LocationType
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(feature="locations", choices_as_strings=True, required=False)
+
+
+#
+# Locations
+#
+
+
+class LocationForm(NautobotModelForm, TenancyForm):
+    slug = SlugField(slug_source=("parent", "name"))
+    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
+    parent = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        query_params={"child_location_type": "$location_type"},
+        to_field_name="slug",
+        required=False,
+    )
+    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
+
+    class Meta:
+        model = Location
+        fields = ["location_type", "parent", "site", "name", "slug", "status", "tenant_group", "tenant", "description"]
+
+
+class LocationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Location.objects.all(), widget=forms.MultipleHiddenInput)
+    # location_type is not editable on existing instances
+    parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
+    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    description = forms.CharField(max_length=100, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "parent",
+            "site",
+            "tenant",
+            "description",
+        ]
+
+
+class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    location_type = CSVModelChoiceField(
+        queryset=LocationType.objects.all(),
+        to_field_name="name",
+        help_text="Location type",
+    )
+    parent = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Parent location",
+    )
+    site = CSVModelChoiceField(
+        queryset=Site.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Parent site",
+    )
+    tenant = CSVModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Assigned tenant",
+    )
+
+    class Meta:
+        model = Location
+        fields = Location.csv_headers
+
+
+class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, TenancyFilterForm, CustomFieldFilterForm):
+    model = Location
+    field_order = ["q", "location_type", "parent", "status", "tenant_group", "tenant", "tag"]
+
+    q = forms.CharField(required=False, label="Search")
+    location_type = DynamicModelMultipleChoiceField(
+        queryset=LocationType.objects.all(), to_field_name="slug", required=False
+    )
+    parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    tag = TagFilterField(model)
+
+
+#
 # Rack groups
 #
 
 
-class RackGroupForm(NautobotModelForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
     parent = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -411,6 +548,7 @@ class RackGroupForm(NautobotModelForm):
         fields = (
             "region",
             "site",
+            "location",
             "parent",
             "name",
             "slug",
@@ -418,8 +556,7 @@ class RackGroupForm(NautobotModelForm):
         )
 
 
-class RackGroupCSVForm(CustomFieldModelCSVForm):
-    site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Assigned site")
+class RackGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
     parent = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -435,15 +572,8 @@ class RackGroupCSVForm(CustomFieldModelCSVForm):
         fields = RackGroup.csv_headers
 
 
-class RackGroupFilterForm(NautobotFilterform):
+class RackGroupFilterForm(NautobotFilterform, LocatableModelFilterFormMixin):
     model = RackGroup
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
     parent = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="slug",
@@ -487,9 +617,7 @@ class RackRoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class RackForm(NautobotModelForm, TenancyForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -503,6 +631,7 @@ class RackForm(NautobotModelForm, TenancyForm):
         fields = [
             "region",
             "site",
+            "location",
             "group",
             "name",
             "facility_id",
@@ -524,6 +653,7 @@ class RackForm(NautobotModelForm, TenancyForm):
         ]
         help_texts = {
             "site": "The site at which the rack exists",
+            "location": "The specific location of the rack",
             "name": "Organizational rack name",
             "facility_id": "The unique rack ID assigned by the facility",
             "u_height": "Height in rack units",
@@ -535,8 +665,7 @@ class RackForm(NautobotModelForm, TenancyForm):
         }
 
 
-class RackCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name")
+class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -572,14 +701,14 @@ class RackCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
 
 
-class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class RackBulkEditForm(
+    BootstrapMixin,
+    AddRemoveTagsForm,
+    LocatableModelBulkEditFormMixin,
+    StatusBulkEditFormMixin,
+    CustomFieldBulkEditForm,
+):
     pk = forms.ModelMultipleChoiceField(queryset=Rack.objects.all(), widget=forms.MultipleHiddenInput)
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region_id": "$region"},
-    )
     group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -611,7 +740,9 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
+        model = Rack
         nullable_fields = [
+            "location",
             "group",
             "tenant",
             "role",
@@ -624,12 +755,13 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         ]
 
 
-class RackFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
+class RackFilterForm(NautobotFilterform, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin):
     model = Rack
     field_order = [
         "q",
         "region",
         "site",
+        "location",
         "group_id",
         "status",
         "role",
@@ -637,13 +769,6 @@ class RackFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixi
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
     group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -1645,9 +1770,7 @@ class PlatformCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class DeviceForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -1711,6 +1834,7 @@ class DeviceForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "serial",
             "asset_tag",
             "site",
+            "location",
             "rack",
             "position",
             "face",
@@ -1864,8 +1988,7 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
 
 
-class DeviceCSVForm(BaseDeviceCSVForm):
-    site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Assigned site")
+class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
     rack_group = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
@@ -1892,6 +2015,7 @@ class DeviceCSVForm(BaseDeviceCSVForm):
             "asset_tag",
             "status",
             "site",
+            "location",
             "rack_group",
             "rack",
             "position",
@@ -1915,6 +2039,8 @@ class DeviceCSVForm(BaseDeviceCSVForm):
                 f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
+
+            # TODO: limit location queryset by assigned site
 
 
 class ChildDeviceCSVForm(BaseDeviceCSVForm):
@@ -1967,10 +2093,14 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
 
 
 class DeviceBulkEditForm(
-    BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
+    BootstrapMixin,
+    AddRemoveTagsForm,
+    LocatableModelBulkEditFormMixin,
+    StatusBulkEditFormMixin,
+    CustomFieldBulkEditForm,
+    LocalContextModelBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
@@ -1986,7 +2116,9 @@ class DeviceBulkEditForm(
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
 
     class Meta:
+        model = Device
         nullable_fields = [
+            "location",
             "tenant",
             "platform",
             "serial",
@@ -1999,6 +2131,7 @@ class DeviceBulkEditForm(
 class DeviceFilterForm(
     NautobotFilterform,
     LocalContextFilterForm,
+    LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusFilterFormMixin,
     CustomFieldFilterForm,
@@ -2008,6 +2141,7 @@ class DeviceFilterForm(
         "q",
         "region",
         "site",
+        "location",
         "rack_group_id",
         "rack_id",
         "status",
@@ -2020,13 +2154,6 @@ class DeviceFilterForm(
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
     rack_group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -2499,7 +2626,7 @@ class PowerOutletCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class InterfaceFilterForm(DeviceComponentFilterForm):
+class InterfaceFilterForm(DeviceComponentFilterForm, StatusFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -2509,6 +2636,30 @@ class InterfaceFilterForm(DeviceComponentFilterForm):
 
 
 class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
+    parent_interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Parent interface",
+        query_params={
+            "kind": "physical",
+        },
+        help_text="Assigned parent interface",
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Bridge interface",
+        help_text="Assigned bridge interface",
+    )
+    lag = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="LAG interface",
+        query_params={
+            "type": InterfaceTypeChoices.TYPE_LAG,
+        },
+        help_text="Assigned LAG interface",
+    )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -2536,6 +2687,8 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "label",
             "type",
             "enabled",
+            "parent_interface",
+            "bridge",
             "lag",
             "mac_address",
             "mtu",
@@ -2545,11 +2698,11 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "untagged_vlan",
             "tagged_vlans",
             "tags",
+            "status",
         ]
         widgets = {
             "device": forms.HiddenInput(),
             "type": StaticSelect2(),
-            "lag": StaticSelect2(),
             "mode": StaticSelect2(),
         }
         labels = {
@@ -2567,13 +2720,10 @@ class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
         else:
             device = self.instance.device
 
-        # Limit LAG choices to interfaces belonging to this device or a peer VC member
-        device_query = Q(device=device)
-        if device.virtual_chassis:
-            device_query |= Q(device__virtual_chassis=device.virtual_chassis)
-        self.fields["lag"].queryset = Interface.objects.filter(
-            device_query, type=InterfaceTypeChoices.TYPE_LAG
-        ).exclude(pk=self.instance.pk)
+        # Restrict parent/bridge/LAG interface assignment by device
+        self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
+        self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
+        self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
         # Add current site to VLANs query params
         self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
@@ -2585,12 +2735,38 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
     )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={
+            "content_types": Interface._meta.label_lower,
+        },
+    )
     enabled = forms.BooleanField(required=False, initial=True)
-    lag = forms.ModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
-        label="Parent LAG",
-        widget=StaticSelect2(),
+        query_params={
+            "device_with_common_vc": "$device",
+            "kind": "physical",
+        },
+        help_text="Assigned parent interface",
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "device_with_common_vc": "$device",
+        },
+        help_text="Assigned bridge interface",
+    )
+    lag = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "device_with_common_vc": "$device",
+            "type": InterfaceTypeChoices.TYPE_LAG,
+        },
+        help_text="Assigned LAG interface",
     )
     mtu = forms.IntegerField(
         required=False,
@@ -2614,23 +2790,24 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "available_on_device": "$device",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         brief_mode=False,
-        query_params={
-            "site_id": "null",
-        },
+        query_params={"available_on_device": "$device"},
     )
     field_order = (
         "device",
         "name_pattern",
         "label_pattern",
+        "status",
         "type",
         "enabled",
+        "parent_interface",
+        "bridge",
         "lag",
         "mtu",
         "mac_address",
@@ -2641,20 +2818,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "tagged_vlans",
         "tags",
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit LAG choices to interfaces belonging to this device or a peer VC member
-        device = Device.objects.get(pk=self.initial.get("device") or self.data.get("device"))
-        device_query = Q(device=device)
-        if device.virtual_chassis:
-            device_query |= Q(device__virtual_chassis=device.virtual_chassis)
-        self.fields["lag"].queryset = Interface.objects.filter(device_query, type=InterfaceTypeChoices.TYPE_LAG)
-
-        # Add current site to VLANs query params
-        self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
-        self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
 
 
 class InterfaceBulkCreateForm(
@@ -2674,9 +2837,12 @@ class InterfaceBulkCreateForm(
 
 
 class InterfaceBulkEditForm(
-    form_from_model(Interface, ["label", "type", "lag", "mac_address", "mtu", "description", "mode"]),
+    form_from_model(
+        Interface, ["label", "type", "parent_interface", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
+    ),
     BootstrapMixin,
     AddRemoveTagsForm,
+    StatusBulkEditFormMixin,
     CustomFieldBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
@@ -2687,6 +2853,24 @@ class InterfaceBulkEditForm(
         widget=forms.HiddenInput(),
     )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    parent_interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "kind": "physical",
+        },
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+    )
+    lag = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        query_params={
+            "type": InterfaceTypeChoices.TYPE_LAG,
+        },
+    )
     mgmt_only = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Management only")
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -2708,6 +2892,8 @@ class InterfaceBulkEditForm(
     class Meta:
         nullable_fields = [
             "label",
+            "parent_interface",
+            "bridge",
             "lag",
             "mac_address",
             "mtu",
@@ -2723,16 +2909,17 @@ class InterfaceBulkEditForm(
         # Limit LAG choices to interfaces which belong to the parent device (or VC master)
         if "device" in self.initial:
             device = Device.objects.filter(pk=self.initial["device"]).first()
-            self.fields["lag"].queryset = Interface.objects.filter(
-                device__in=[device, device.get_vc_master()],
-                type=InterfaceTypeChoices.TYPE_LAG,
-            )
+
+            # Restrict parent/bridge/LAG interface assignment by device
+            self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
+            self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
+            self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
             # Add current site to VLANs query params
             self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
             self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
         else:
-            # See 4523
+            # See netbox-community/netbox#4523
             if "pk" in self.initial:
                 site = None
                 interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).prefetch_related("device__site")
@@ -2750,6 +2937,10 @@ class InterfaceBulkEditForm(
                     self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
                     self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
+            self.fields["parent_interface"].choices = ()
+            self.fields["parent_interface"].widget.attrs["disabled"] = True
+            self.fields["bridge"].choices = ()
+            self.fields["bridge"].widget.attrs["disabled"] = True
             self.fields["lag"].choices = ()
             self.fields["lag"].widget.attrs["disabled"] = True
 
@@ -2765,8 +2956,14 @@ class InterfaceBulkEditForm(
             self.cleaned_data["tagged_vlans"] = []
 
 
-class InterfaceCSVForm(CustomFieldModelCSVForm):
+class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
+    parent_interface = CSVModelChoiceField(
+        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
+    )
+    bridge = CSVModelChoiceField(
+        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Bridge interface"
+    )
     lag = CSVModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
@@ -2780,29 +2977,37 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
         help_text="IEEE 802.1Q operational mode (for L2 interfaces)",
     )
 
+    def __init__(self, data=None, *args, **kwargs):
+        super().__init__(data, *args, **kwargs)
+
+        if data:
+            # Limit choices for parent, bridge, and LAG interfaces to the assigned device (or VC)
+            device_name = data.get("device")
+            if device_name is not None:
+                device = Device.objects.filter(name=device_name).first()
+
+                filter_by = Q(device=device)
+
+                if device and device.virtual_chassis:
+                    filter_by |= Q(device__virtual_chassis=device.virtual_chassis)
+
+                self.fields["parent_interface"].queryset = (
+                    self.fields["parent_interface"]
+                    .queryset.filter(Q(filter_by))
+                    .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+                )
+                self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(filter_by)
+
+                filter_by &= Q(type=InterfaceTypeChoices.TYPE_LAG)
+                self.fields["lag"].queryset = self.fields["lag"].queryset.filter(filter_by)
+            else:
+                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.none()
+                self.fields["bridge"].queryset = self.fields["bridge"].queryset.none()
+                self.fields["lag"].queryset = self.fields["lag"].queryset.none()
+
     class Meta:
         model = Interface
         fields = Interface.csv_headers
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit LAG choices to interfaces belonging to this device (or virtual chassis)
-        device = None
-        if self.is_bound and "device" in self.data:
-            try:
-                device = self.fields["device"].to_python(self.data["device"])
-            except forms.ValidationError:
-                pass
-        if device and device.virtual_chassis:
-            self.fields["lag"].queryset = Interface.objects.filter(
-                Q(device=device) | Q(device__virtual_chassis=device.virtual_chassis),
-                type=InterfaceTypeChoices.TYPE_LAG,
-            )
-        elif device:
-            self.fields["lag"].queryset = Interface.objects.filter(device=device, type=InterfaceTypeChoices.TYPE_LAG)
-        else:
-            self.fields["lag"].queryset = Interface.objects.none()
 
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data
@@ -3977,9 +4182,7 @@ class VirtualChassisFilterForm(NautobotFilterform):
 #
 
 
-class PowerPanelForm(NautobotModelForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
+class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -3991,18 +4194,14 @@ class PowerPanelForm(NautobotModelForm):
         fields = [
             "region",
             "site",
+            "location",
             "rack_group",
             "name",
             "tags",
         ]
 
 
-class PowerPanelCSVForm(CustomFieldModelCSVForm):
-    site = CSVModelChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="name",
-        help_text="Name of parent site",
-    )
+class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
     rack_group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
 
     class Meta:
@@ -4019,14 +4218,13 @@ class PowerPanelCSVForm(CustomFieldModelCSVForm):
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
 
-class PowerPanelBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class PowerPanelBulkEditForm(
+    BootstrapMixin,
+    AddRemoveTagsForm,
+    LocatableModelBulkEditFormMixin,
+    CustomFieldBulkEditForm,
+):
     pk = forms.ModelMultipleChoiceField(queryset=PowerPanel.objects.all(), widget=forms.MultipleHiddenInput)
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region_id": "$region"},
-    )
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -4034,19 +4232,13 @@ class PowerPanelBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkE
     )
 
     class Meta:
-        nullable_fields = ["rack_group"]
+        model = PowerPanel
+        nullable_fields = ["location", "rack_group"]
 
 
-class PowerPanelFilterForm(NautobotFilterform):
+class PowerPanelFilterForm(NautobotFilterform, LocatableModelFilterFormMixin):
     model = PowerPanel
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
     rack_group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,

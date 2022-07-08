@@ -45,19 +45,25 @@ __all__ = (
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
 )
 class RackGroup(MPTTModel, OrganizationalModel):
     """
-    Racks can be grouped as subsets within a Site. The scope of a group will depend on how Sites are defined. For
-    example, if a Site spans a corporate campus, a RackGroup might be defined to represent each building within that
-    campus. If a Site instead represents a single building, a RackGroup might represent a single room or floor.
+    Racks can be grouped as subsets within a Site or Location.
     """
 
     name = models.CharField(max_length=100, db_index=True)
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.CASCADE,
+        related_name="rack_groups",
+        blank=True,
+        null=True,
+    )
     parent = TreeForeignKey(
         to="self",
         on_delete=models.CASCADE,
@@ -70,7 +76,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
     objects = TreeManager()
 
-    csv_headers = ["site", "parent", "name", "slug", "description"]
+    csv_headers = ["site", "location", "parent", "name", "slug", "description"]
 
     class Meta:
         ordering = ["site", "name"]
@@ -92,6 +98,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
     def to_csv(self):
         return (
             self.site,
+            self.location.name if self.location else None,
             self.parent.name if self.parent else "",
             self.name,
             self.slug,
@@ -108,6 +115,31 @@ class RackGroup(MPTTModel, OrganizationalModel):
         # Parent RackGroup (if any) must belong to the same Site
         if self.parent and self.parent.site != self.site:
             raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
+
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Rack groups may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+            # Parent RackGroup (if any) must belong to the same or ancestor Location
+            if (
+                self.parent is not None
+                and self.parent.location is not None
+                and self.parent.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "location": f'Location "{self.location}" is not descended from '
+                        f'parent rack group "{self.parent}" location "{self.parent.location}".'
+                    }
+                )
 
 
 @extras_features(
@@ -155,6 +187,7 @@ class RackRole(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
@@ -175,6 +208,13 @@ class Rack(PrimaryModel, StatusModel):
         help_text="Locally-assigned identifier",
     )
     site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="racks")
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="racks",
+        blank=True,
+        null=True,
+    )
     group = models.ForeignKey(
         to="dcim.RackGroup",
         on_delete=models.SET_NULL,
@@ -237,6 +277,7 @@ class Rack(PrimaryModel, StatusModel):
 
     csv_headers = [
         "site",
+        "location",
         "group",
         "name",
         "facility_id",
@@ -256,6 +297,7 @@ class Rack(PrimaryModel, StatusModel):
     ]
     clone_fields = [
         "site",
+        "location",
         "group",
         "tenant",
         "status",
@@ -290,6 +332,31 @@ class Rack(PrimaryModel, StatusModel):
         if self.site and self.group and self.group.site != self.site:
             raise ValidationError(f"Assigned rack group must belong to parent site ({self.site}).")
 
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            # Validate group/location assignment
+            if (
+                self.group is not None
+                and self.group.location is not None
+                and self.group.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "group": f'The assigned rack group "{self.group}" belongs to a location '
+                        f'("{self.group.location}") that does not include location "{self.location}".'
+                    }
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Racks may not associate to locations of type "{self.location.location_type}".'}
+                )
+
         # Validate outer dimensions and unit
         if (self.outer_width is not None or self.outer_depth is not None) and not self.outer_unit:
             raise ValidationError("Must specify a unit when setting an outer width/depth")
@@ -317,6 +384,7 @@ class Rack(PrimaryModel, StatusModel):
     def to_csv(self):
         return (
             self.site.name,
+            self.location.name if self.location else None,
             self.group.name if self.group else None,
             self.name,
             self.facility_id,
@@ -469,6 +537,7 @@ class Rack(PrimaryModel, StatusModel):
         legend_width=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
         include_images=True,
         base_url=None,
+        display_fullname=True,
     ):
         """
         Return an SVG of the rack elevation
@@ -482,12 +551,17 @@ class Rack(PrimaryModel, StatusModel):
         :param legend_width: Width of the unit legend, in pixels
         :param include_images: Embed front/rear device images where available
         :param base_url: Base URL for links and images. If none, URLs will be relative.
+        :param display_fullname: Display the full name of devices in the rack elevation, hide the truncated.
+            Both full name and truncated name are generated. Alternates their hide/show state.
+            Defaults to True, showing device full name and hiding truncated.
         """
         if unit_width is None:
             unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH")
         if unit_height is None:
             unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
-        elevation = RackElevationSVG(self, user=user, include_images=include_images, base_url=base_url)
+        elevation = RackElevationSVG(
+            self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
+        )
 
         return elevation.render(face, unit_width, unit_height, legend_width)
 

@@ -9,6 +9,10 @@ router.APIRootView = views.DCIMRootView
 router.register("regions", views.RegionViewSet)
 router.register("sites", views.SiteViewSet)
 
+# Locations
+router.register("location-types", views.LocationTypeViewSet)
+router.register("locations", views.LocationViewSet)
+
 # Racks
 router.register("rack-groups", views.RackGroupViewSet)
 router.register("rack-roles", views.RackRoleViewSet)

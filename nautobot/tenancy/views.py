@@ -19,6 +19,7 @@ class TenantGroupListView(generic.ObjectListView):
     queryset = TenantGroup.objects.add_related_count(
         TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
     )
+    filterset = filters.TenantGroupFilterSet
     table = tables.TenantGroupTable
 
 

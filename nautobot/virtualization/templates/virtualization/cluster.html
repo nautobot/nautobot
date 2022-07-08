@@ -13,37 +13,23 @@
                 </tr>
                 <tr>
                     <td>Type</td>
-                    <td><a href="{{ object.type.get_absolute_url }}">{{ object.type }}</a></td>
+                    <td>{{ object.type|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Group</td>
-                    <td>
-                        {% if object.group %}
-                            <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.group|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Tenant</td>
-                    <td>
-                        {% if object.tenant %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.tenant|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Site</td>
-                    <td>
-                        {% if object.site %}
-                            <a href="{{ object.site.get_absolute_url }}">{{ object.site }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.site|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Location</td>
+                    <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                 </tr>
                 <tr>
                     <td>Virtual Machines</td>
