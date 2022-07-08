@@ -136,6 +136,29 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
         self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
 
+    def test_event_source(self):
+        form_data = {
+            "name": "Test Site 1",
+            "slug": "test-site-1",
+            "status": Status.objects.get(slug="active").pk,
+        }
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.add_permissions("dcim.add_site", "extras.view_tag", "extras.view_status")
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 302)
+
+        # Verify the creation of a new ObjectChange record
+        site = Site.objects.get(name="Test Site 1")
+        oc = ObjectChange.objects.get(
+            changed_object_type=ContentType.objects.get_for_model(Site),
+            changed_object_id=site.pk,
+        )
+        self.assertEqual(oc.event_source, "dcim:site_add")
+
 
 class ChangeLogAPITest(APITestCase):
     def setUp(self):
@@ -357,3 +380,23 @@ class ChangeLogAPITest(APITestCase):
         self.assertFalse(resp["data"].get("error"))
         self.assertIsInstance(resp["data"].get("query"), list)
         self.assertEqual(first=site_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
+
+    def test_event_source(self):
+        site_payload = {
+            "name": "Test Site 1",
+            "slug": "test-site-1",
+            "status": "active",
+        }
+        self.assertEqual(ObjectChange.objects.count(), 0)
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+
+        response = self.client.post(url, site_payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        site = Site.objects.get(pk=response.data["id"])
+        oc = ObjectChange.objects.get(
+            changed_object_type=ContentType.objects.get_for_model(Site),
+            changed_object_id=site.pk,
+        )
+        self.assertEqual(oc.event_source, "dcim-api:site-list")
