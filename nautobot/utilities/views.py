@@ -4,10 +4,6 @@ from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
-from social_core.backends.utils import user_backends_data
-from social_django.utils import Storage
-
-from nautobot.core.settings_funcs import sso_auth_enabled
 
 from .permissions import resolve_permission
 
@@ -17,19 +13,7 @@ from .permissions import resolve_permission
 #
 
 
-class LoginMixin(AccessMixin):
-    def get_login_url(self):
-        login_url = super().get_login_url()
-
-        is_sso_auth_enabled = sso_auth_enabled(settings.AUTHENTICATION_BACKENDS)
-        backends = user_backends_data(self.request.user, settings.AUTHENTICATION_BACKENDS, Storage)["backends"]
-        if backends and is_sso_auth_enabled:
-            return reverse("social:begin", args=[backends[0]])
-
-        return login_url
-
-
-class ContentTypePermissionRequiredMixin(LoginMixin):
+class ContentTypePermissionRequiredMixin(AccessMixin):
     """
     Similar to Django's built-in PermissionRequiredMixin, but extended to check model-level permission assignments.
     This is related to ObjectPermissionRequiredMixin, except that is does not enforce object-level permissions,
@@ -64,7 +48,7 @@ class ContentTypePermissionRequiredMixin(LoginMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class AdminRequiredMixin(LoginMixin):
+class AdminRequiredMixin(AccessMixin):
     """
     Allows access only to admin users.
     """
@@ -83,7 +67,7 @@ class AdminRequiredMixin(LoginMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-class ObjectPermissionRequiredMixin(LoginMixin):
+class ObjectPermissionRequiredMixin(AccessMixin):
     """
     Similar to Django's built-in PermissionRequiredMixin, but extended to check for both model-level and object-level
     permission assignments. If the user has only object-level permissions assigned, the view's queryset is filtered

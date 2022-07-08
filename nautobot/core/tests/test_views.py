@@ -157,12 +157,18 @@ class NavRestrictedUI(TestCase):
         self.assertIsNone(search_result)
 
 
-class LoginRedirect(TestCase):
-    def test_login_redirects_to_login(self):
+class LoginUI(TestCase):
+    def make_request(self):
+        response = self.client.get(reverse("login"))
+        sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
+        return sso_login_pattern.search(response.content.decode(response.charset))
+
+    def test_sso_login_button_not_visible(self):
+        """Test Continue with SSO button not visible if SSO is enabled"""
         self.client.logout()
 
-        response = self.client.get(reverse("dcim:site_list"), follow=True)
-        self.assertIn("/login/", response.redirect_chain[0][0])
+        sso_login_search_result = self.make_request()
+        self.assertIsNone(sso_login_search_result)
 
     @override_settings(
         AUTHENTICATION_BACKENDS=[
@@ -170,9 +176,7 @@ class LoginRedirect(TestCase):
             "nautobot.core.authentication.ObjectPermissionBackend",
         ]
     )
-    def test_login_redirects_to_sso_login(self):
+    def test_sso_login_button_visible(self):
         self.client.logout()
-
-        response = self.client.get(reverse("dcim:site_list"), follow=True)
-        print(response.redirect_chain)
-        self.assertIn("/login/google-oauth2/", response.redirect_chain[0][0])
+        sso_login_search_result = self.make_request()
+        self.assertIsNotNone(sso_login_search_result)
