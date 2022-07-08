@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
+from django.http import QueryDict
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
@@ -161,7 +162,10 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
             for relationship in self.relationships:
                 # args[0] is a QueryDict object contains all the filter form field names and their respective values.
                 # e.g. <QueryDict: {'q': ['']...'cr_device-to-vlan__destination': ['1bf86119-c88f-42de-9b14-da60cb9f3b32']>
-                self.filters[relationship].value_list = args[0].getlist(relationship, [])
+                if type(args[0]) == QueryDict:
+                    self.filters[relationship].value_list = args[0].getlist(relationship, [])
+                else:
+                    self.filters[relationship].value_list = args[0].get(relationship, [])
 
     def _append_relationships(self, model):
         """
