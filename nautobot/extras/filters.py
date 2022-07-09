@@ -165,8 +165,6 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
                 # e.g. <QueryDict: {'q': ['']...'cr_device-to-vlan__destination': ['1bf86119-c88f-42de-9b14-da60cb9f3b32']>
                 if type(args[0]) == QueryDict:
                     self.filters[relationship].value_list = args[0].getlist(relationship, [])
-                else:
-                    self.filters[relationship].value_list = args[0].get(relationship, [])
 
     def _append_relationships(self, model):
         """
