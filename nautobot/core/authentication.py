@@ -47,9 +47,11 @@ class ObjectPermissionBackend(ModelBackend):
         return perms
 
     def has_perm(self, user_obj, perm, obj=None):
-
         if perm == "is_staff":
             return user_obj.is_active and (user_obj.obj.is_staff or user_obj.is_superuser)
+
+        if "users" in perm and "admingroup" in perm:
+            perm = perm.replace("users", "auth").replace("admingroup", "group")
 
         app_label, action, model_name = resolve_permission(perm)
 
