@@ -91,7 +91,7 @@ class ProviderBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdi
         ]
 
 
-class ProviderFilterForm(NautobotFilterform):
+class ProviderFilterForm(NautobotFilterform, LocatableModelFilterFormMixin):
     model = Provider
     q = forms.CharField(required=False, label="Search")
     asn = forms.IntegerField(required=False, label="ASN")
@@ -267,7 +267,7 @@ class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormM
         ]
 
 
-class CircuitFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
+class CircuitFilterForm(NautobotFilterform, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin):
     model = Circuit
     field_order = [
         "q",

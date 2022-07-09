@@ -415,7 +415,9 @@ class VirtualMachineBulkEditForm(
         ]
 
 
-class VirtualMachineFilterForm(NautobotFilterform, LocatableModelFilterFormMixin,TenancyFilterForm, StatusFilterFormMixin, LocalContextFilterForm):
+class VirtualMachineFilterForm(
+    NautobotFilterform, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin, LocalContextFilterForm
+):
     model = VirtualMachine
     field_order = [
         "q",

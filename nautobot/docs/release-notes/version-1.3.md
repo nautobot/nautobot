@@ -140,19 +140,6 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.8 (2022-MM-DD)
-
-### Added
-
-### Changed
-
-- [#1977](https://github.com/nautobot/nautobot/pull/1977) - Update Renovate config to batch updates.
-
-### Fixed
-
-- [#1838](https://github.com/nautobot/nautobot/issues/1838) - Fixed job result to show latest not oldest.
-- [#1874](https://github.com/nautobot/nautobot/issues/1874) - Fixed Git repo sync issue with Sentinel with deprecated rq_count check.
-
 ## v1.3.7 (2022-06-27)
 
 ### Added
