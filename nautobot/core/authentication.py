@@ -50,10 +50,10 @@ class ObjectPermissionBackend(ModelBackend):
         if perm == "is_staff":
             return user_obj.is_active and (user_obj.obj.is_staff or user_obj.is_superuser)
 
-        if "users" in perm and "admingroup" in perm:
-            perm = perm.replace("users", "auth").replace("admingroup", "group")
-
         app_label, action, model_name = resolve_permission(perm)
+
+        if app_label == "users" and model_name == "admingroup":
+            perm = perm.replace("users", "auth").replace("admingroup", "group")
 
         # Superusers implicitly have all permissions
         if user_obj.is_active and user_obj.is_superuser:
