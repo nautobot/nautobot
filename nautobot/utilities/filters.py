@@ -420,13 +420,16 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
 
     def get_filter_predicate(self, v):
         """
-        Override base filter behavior to use the natural key in the generated filter, if applicable.
+        Override base filter behavior to force the filter to use the `pk` field instead of
+        the natural key in the generated filter.
         """
-        result = super().get_filter_predicate(v)
-        # Don't use natural key for other lookup_expr such as "in"!
-        if self.lookup_expr == django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
-            result = {f"{key}__{self.natural_key}": value for key, value in result.items()}
-        return result
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+        name = self.field_name
+        if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
+            name = "__".join([name, self.lookup_expr])
+        return {name: v}
 
 
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
@@ -459,12 +462,6 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("lookup_expr", "in")
         super().__init__(*args, **kwargs)
-
-    def get_filter_predicate(self, v):
-        # Null value filtering
-        if v is None:
-            return {f"{self.field_name}__isnull": True}
-        return super().get_filter_predicate(v)
 
     def filter(self, qs, value):
         if value:
