@@ -858,7 +858,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         to_field_name = self.field.to_field_name
         name = f"{self.field_name}__{to_field_name}"
         # Sometimes the incoming value is an instance. This block of logic comes from the base
-        # `get_filter_predicate()` and was added here to support his.
+        # `get_filter_predicate()` and was added here to support this.
         try:
             return {name: getattr(value, to_field_name)}
         except (AttributeError, TypeError):

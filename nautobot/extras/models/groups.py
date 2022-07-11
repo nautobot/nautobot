@@ -454,9 +454,12 @@ class DynamicGroup(OrganizationalModel):
             Value passed to the filter
         """
         q = models.Q()
+
         if isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
                 q |= models.Q(**filter_field.get_filter_predicate(v))
+        # The method `get_filter_predicate()` is only available on subclasses of
+        # `MultipleChoiceFilter`, so we must construct a lookup if a filter is not multiple-choice.
         else:
             lookup = f"{filter_field.field_name}__{filter_field.lookup_expr}"
             q |= models.Q(**{lookup: value})
@@ -510,7 +513,7 @@ class DynamicGroup(OrganizationalModel):
             logger.debug("Processing group %s...", group)
 
             if group.filter:
-                logger.debug("%s -> %s -> %s", group, group.filter, operator)
+                logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
 
             next_set = group.generate_members_query()
 
@@ -553,49 +556,41 @@ class DynamicGroup(OrganizationalModel):
         instance = self.children.through.objects.get(parent_group=self, group=child)
         return instance.delete()
 
-    def get_descendants(self, group=None, descendants=None):
+    def get_descendants(self, group=None):
         """
         Recursively return a list of the children of all child groups.
 
         :param group:
             DynamicGroup from which to traverse. If not set, this group is used.
-        :param descendants:
-            List of descendant objects used to iterate recursively. If not set,
-            defaults to an empty list.
         """
         if group is None:
             group = self
-        if descendants is None:
-            descendants = []
 
+        descendants = []
         for child_group in group.children.all():
             logger.debug("Processing group %s...", child_group)
             descendants.append(child_group)
             if child_group.children.exists():
-                self.get_descendants(child_group, descendants)
+                descendants.extend(self.get_descendants(child_group))
 
         return descendants
 
-    def get_ancestors(self, group=None, ancestors=None):
+    def get_ancestors(self, group=None):
         """
         Recursively return a list of the parents of all parent groups.
 
         :param group:
             DynamicGroup from which to traverse. If not set, this group is used.
-        :param ancestors:
-            List of ancestor objects used to iterate recursively. If not set,
-            defaults to an empty list.
         """
         if group is None:
             group = self
-        if ancestors is None:
-            ancestors = []
 
+        ancestors = []
         for parent_group in group.parents.all():
             logger.debug("Processing group %s...", parent_group)
             ancestors.append(parent_group)
             if parent_group.parents.exists():
-                self.get_ancestors(parent_group, ancestors)
+                ancestors.extend(self.get_ancestors(parent_group))
 
         return ancestors
 
@@ -611,27 +606,58 @@ class DynamicGroup(OrganizationalModel):
         """Return whether this is a leaf node (has parents, but no children)."""
         return self.parents.exists() and not self.children.exists()
 
-    @property
-    def ancestors(self):
+    def get_ancestors_queryset(self):
         """Return a queryset of all ancestors."""
         pks = [obj.pk for obj in self.get_ancestors()]
         return self.ordered_queryset_from_pks(pks)
 
-    @property
-    def descendants(self):
+    def get_descendants_queryset(self):
         """Return a queryset of all descendants."""
         pks = [obj.pk for obj in self.get_descendants()]
         return self.ordered_queryset_from_pks(pks)
 
     def ancestors_tree(self):
-        """Return a nested mapping of ancestors `{parent: child}, ...}`."""
+        """
+        Return a nested mapping of ancestors with the following structure:
+
+            {
+                parent_1: {
+                    grandparent_1: {},
+                    grandparent_2: {},
+                },
+                parent_2: {
+                    grandparent_3: {
+                        greatgrandparent_1: {},
+                    },
+                    grandparent_4: {},
+                }
+            }
+
+        Each key is a `DynamicGroup` instance.
+        """
         tree = {}
         for f in self.parents.all():
             tree[f] = f.ancestors_tree()
         return tree
 
     def descendants_tree(self):
-        """Return a nested mapping of descendants `{parent: child}, ...}`."""
+        """
+        Return a nested mapping of descendants with the following structure:
+
+        {
+            child_1: {
+                grandchild_1: {},
+                grandchild_2: {},
+            },
+            child_2: {
+                grandchild_3: {
+                     great_grand_child_1: {},
+                }
+            }
+        }
+
+        Each key is a `DynamicGroup` instance.
+        """
         tree = {}
         for f in self.children.all():
             tree[f] = f.descendants_tree()

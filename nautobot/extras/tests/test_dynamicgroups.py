@@ -48,7 +48,7 @@ class DynamicGroupTestBase(TestCase):
             ),
             Device.objects.create(
                 name="device-site-2",
-                status=cls.status_planned,
+                status=cls.status_active,
                 device_role=cls.device_role,
                 device_type=cls.device_type,
                 serial="abc123",
@@ -56,7 +56,7 @@ class DynamicGroupTestBase(TestCase):
             ),
             Device.objects.create(
                 name="device-site-3",
-                status=cls.status_active,
+                status=cls.status_planned,
                 device_role=cls.device_role,
                 device_type=cls.device_type,
                 site=cls.sites[2],
@@ -426,7 +426,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device_qs = Device.objects.filter(site__slug__in=multi_value)
         self.assertQuerySetEqual(group_qs, device_qs)
 
-        # Now do a non-multi-value filter
+        # Now do a non-multi-value filter.
+        # TODO(jathan): If we ever make "serial" a multi-value filter, this will need to be revised.
         solo_field = fs.filters["serial"]
         solo_value = "abc123"
         solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)
@@ -491,16 +492,16 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertFalse(self.parent.is_leaf())
         self.assertTrue(self.nested_child.is_leaf())
 
-    def test_ancestors(self):
-        """Test `DynamicGroup.ancestors`."""
+    def test_get_ancestors_queryset(self):
+        """Test `DynamicGroup.get_ancestors_queryset()`."""
         a1 = self.parent.get_ancestors()
-        a2 = self.parent.ancestors.all()
+        a2 = self.parent.get_ancestors_queryset()
         self.assertEqual(list(a1), list(a2))
 
     def test_descendants(self):
-        """Test `DynamicGroup.descendants`."""
+        """Test `DynamicGroup.get_descendants_queryset()`."""
         d1 = self.parent.get_descendants()
-        d2 = self.parent.descendants.all()
+        d2 = self.parent.get_descendants_queryset()
         self.assertEqual(list(d1), list(d2))
 
     def test_ancestors_tree(self):
@@ -583,10 +584,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group_qs.count(), len(child_set))
 
         # And have the same members...
-        self.assertEqual(
-            sorted(group_qs.values_list("pk", flat=True)),
-            sorted(c.pk for c in child_set),
-        )
+        expected = ["device-site-3"]
+        self.assertEqual(sorted(group_qs.values_list("name", flat=True)), expected)
 
 
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
