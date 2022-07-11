@@ -10,20 +10,35 @@ from nautobot.utilities.utils import curry
 
 
 class ChangeContext:
+    """
+    ChangeContext is used to describe a single transaction that may be related
+    to one or more object changes. A unique id can be provided, otherwise
+    one will be generated to relate any changes to this transaction. Convenience
+    classes are provided for each context.
+
+    :param user: User object
+    :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
+    :param context_details: Optional extra details about the transaction (ex: the plugin name that initiated the change)
+    :param id: Optional uuid object to uniquely identify the transaction
+    """
+
     def __init__(self, user, context=None, context_detail="", id=None):
-        self.context_detail = context_detail
         self.user = user
         if context is not None:
             self.context = context
+        if self.context not in ObjectChangeEventContextChoices.values():
+            raise ValueError("Context must be a choice within ObjectChangeEventContextChoices")
+        self.context_detail = context_detail
 
-        # Assign a random unique ID. This will be used to associate multiple object changes made during the same request.
+        # Assign a random unique ID. This will be used to associate
+        # multiple object changes made during the same request.
         self.id = id
         if self.id is None:
             self.id = uuid.uuid4()
 
 
 class JobChangeContext(ChangeContext):
-    """ChangeContext for Jobs"""
+    """ChangeContext for changes made by jobs"""
 
     context = ObjectChangeEventContextChoices.CONTEXT_JOB
 
@@ -35,7 +50,7 @@ class ORMChangeContext(ChangeContext):
 
 
 class WebChangeContext(ChangeContext):
-    """ChangeContext for changes made through the Web UI"""
+    """ChangeContext for changes made through the web interface"""
 
     context = ObjectChangeEventContextChoices.CONTEXT_WEB
 
@@ -72,9 +87,8 @@ def web_request_context(user):
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
     nbshell management command. By default, when working with the Django ORM, neither change logging nor webhook
-    processing occur unless manually invoked and this context manager handles those functions. A User object must be
-    provided and a WSGIRequest request object may optionally be passed. If not provided, the request object will
-    be created automatically.
+    processing occur unless manually invoked and this context manager handles those functions. A valid User object
+    must be provided.
 
     Example usage:
 
