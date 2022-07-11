@@ -18,7 +18,7 @@ class ChangeContext:
 
     :param user: User object
     :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
-    :param context_details: Optional extra details about the transaction (ex: the plugin name that initiated the change)
+    :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param id: Optional uuid object to uniquely identify the transaction
     """
 
@@ -79,7 +79,7 @@ def change_logging(change_context):
 
 
 @contextmanager
-def web_request_context(user):
+def web_request_context(user, context_detail=""):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
@@ -91,16 +91,17 @@ def web_request_context(user):
 
     >>> from nautobot.extras.context_managers import web_request_context
     >>> user = User.objects.get(username="admin")
-    >>> with web_request_context(user):
+    >>> with web_request_context(user, "manual-fix"):
     ...     lax = Site(name="LAX")
     ...     lax.validated_save()
 
     :param user: User object
+    :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     """
 
     if not isinstance(user, get_user_model()):
         raise TypeError("The user object must be an instance of nautobot.users.models.User")
 
-    change_context = ORMChangeContext(user)
+    change_context = ORMChangeContext(user, context_detail=context_detail)
     with change_logging(change_context):
         yield
