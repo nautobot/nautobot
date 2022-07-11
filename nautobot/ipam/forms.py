@@ -12,7 +12,6 @@ from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkEditForm,
     CustomFieldModelCSVForm,
-    CustomFieldModelForm,
     NautobotModelForm,
     NautobotFilterform,
     StatusBulkEditFormMixin,
@@ -751,7 +750,7 @@ class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
-class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, CustomFieldModelForm):
+class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,

@@ -24,7 +24,6 @@ from nautobot.extras.forms import (
     CustomFieldBulkEditForm,
     CustomFieldModelCSVForm,
     CustomFieldFilterForm,
-    CustomFieldModelForm,
     NautobotModelForm,
     NautobotFilterform,
     LocalContextFilterForm,
@@ -444,7 +443,7 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
         fields = LocationType.csv_headers
 
 
-class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class LocationTypeFilterForm(NautobotFilterform):
     model = LocationType
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(feature="locations", choices_as_strings=True, required=False)
@@ -518,7 +517,7 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = Location.csv_headers
 
 
-class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, TenancyFilterForm, CustomFieldFilterForm):
+class LocationFilterForm(NautobotFilterform, StatusFilterFormMixin, TenancyFilterForm):
     model = Location
     field_order = ["q", "location_type", "parent", "status", "tenant_group", "tenant", "tag"]
 
@@ -3493,7 +3492,7 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
-class ConnectCableToDeviceForm(BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToDeviceForm(NautobotModelForm):
     """
     Base form for connecting a Cable to a Device component
     """
@@ -3617,7 +3616,7 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
     )
 
 
-class ConnectCableToCircuitTerminationForm(BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToCircuitTerminationForm(NautobotModelForm):
     termination_b_provider = DynamicModelChoiceField(queryset=Provider.objects.all(), label="Provider", required=False)
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
@@ -3663,7 +3662,7 @@ class ConnectCableToCircuitTerminationForm(BootstrapMixin, CustomFieldModelForm)
         return getattr(self.cleaned_data["termination_b_id"], "pk", None)
 
 
-class ConnectCableToPowerFeedForm(BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToPowerFeedForm(NautobotModelForm):
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -3713,7 +3712,7 @@ class ConnectCableToPowerFeedForm(BootstrapMixin, CustomFieldModelForm):
         return getattr(self.cleaned_data["termination_b_id"], "pk", None)
 
 
-class CableForm(BootstrapMixin, CustomFieldModelForm):
+class CableForm(NautobotModelForm):
     class Meta:
         model = Cable
         fields = [
