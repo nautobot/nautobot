@@ -5,6 +5,7 @@ import json
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from decimal import Decimal
+from rest_framework.renderers import JSONRenderer
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -185,6 +186,17 @@ def serialize_object_v2(obj):
         data = serialize_object(obj)
 
     return data
+
+
+def model_to_json(obj, cls=None):
+    """
+    Convenience method to convert object instance to json via a serializer.
+    """
+    if cls:
+        # By default serialize_object_v2 will find a serializer, this is used to send in the serializer
+        # you would prefer, via a `import_string` dotted path to the serializer
+        return json.loads(JSONRenderer().render(import_string(cls)(obj, context={"request": None}).data))
+    return json.loads(JSONRenderer().render(serialize_object_v2(obj)))
 
 
 def dict_to_filter_params(d, prefix=""):

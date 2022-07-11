@@ -10,9 +10,10 @@ from nautobot.utilities.utils import (
     get_model_from_name,
     get_route_for_model,
     get_table_for_model,
+    model_to_json,
     normalize_querydict,
 )
-from nautobot.dcim.models import Device, Site
+from nautobot.dcim.models import Device, Region, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
 from nautobot.dcim.tables import DeviceTable, SiteTable
@@ -215,3 +216,31 @@ class IsTruthyTest(TestCase):
         self.assertFalse(is_truthy("n"))
         self.assertFalse(is_truthy(0))
         self.assertFalse(is_truthy("0"))
+
+
+class ModelToJson(TestCase):
+    """
+    Validate model_to_json() utility function.
+    """
+
+    def setUp(self):
+        self.region_a = Region.objects.create(name="Region A", slug="region-a")
+        self.site1 = Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
+
+    def test_model_to_json(self):
+        site_json = model_to_json(self.site1)
+        self.assertIn("url", site_json.keys())
+        self.assertIn("url", site_json["region"].keys())
+        self.assertIn("id", site_json.keys())
+        self.assertIn("id", site_json["region"].keys())
+        self.assertEqual(site_json["slug"], "site-1")
+        self.assertEqual(site_json["region"]["slug"], "region-a")
+
+    def test_model_to_json_with_filterset(self):
+        site_json = model_to_json(self.site1, "nautobot.dcim.api.serializers.SiteSerializer")
+        self.assertIn("url", site_json.keys())
+        self.assertIn("url", site_json["region"].keys())
+        self.assertIn("id", site_json.keys())
+        self.assertIn("id", site_json["region"].keys())
+        self.assertEqual(site_json["slug"], "site-1")
+        self.assertEqual(site_json["region"]["slug"], "region-a")
