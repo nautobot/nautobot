@@ -7,7 +7,7 @@ from django.urls.exceptions import Resolver404
 from django.utils.deprecation import MiddlewareMixin
 
 from nautobot.core.views import server_error
-from nautobot.extras.context_managers import WebChangeContext, change_logging
+from nautobot.extras.context_managers import change_logging, WebChangeContext
 from nautobot.utilities.api import is_api_request, rest_api_server_error
 from nautobot.core.settings_funcs import (
     sso_auth_enabled,

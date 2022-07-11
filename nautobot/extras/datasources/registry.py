@@ -1,7 +1,7 @@
 """Registry-related APIs for datasources."""
 
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.context_managers import JobChangeContext, change_logging
+from nautobot.extras.context_managers import change_logging, JobChangeContext
 from nautobot.extras.registry import registry
 
 

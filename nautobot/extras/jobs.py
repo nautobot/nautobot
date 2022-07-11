@@ -1178,7 +1178,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
     if commit:
-        change_context = JobChangeContext(request.user, id=request.id, context_detail=job.name)
+        change_context = JobChangeContext(request.user, id=request.id, context_detail=job_model.slug)
         with change_logging(change_context):
             _run_job()
     else:
