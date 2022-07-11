@@ -9,7 +9,7 @@ from nautobot.extras.signals import _handle_changed_object, _handle_deleted_obje
 from nautobot.utilities.utils import curry
 
 
-class ChangeContext(object):
+class ChangeContext:
     def __init__(self, user, context=None, context_detail="", id=None):
         self.context_detail = context_detail
         self.user = user
@@ -46,7 +46,7 @@ def change_logging(change_context):
     Enable change logging by connecting the appropriate signals to their receivers before code is run, and
     disconnecting them afterward.
 
-    :param change_context: ChangeContext object with a unique `id` set
+    :param change_context: ChangeContext instance
     """
     # Curry signals receivers to pass the current request
     handle_changed_object = curry(_handle_changed_object, change_context)
