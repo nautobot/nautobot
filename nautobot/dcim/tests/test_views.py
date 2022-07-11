@@ -2492,35 +2492,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Sanity check:
         self.assertIn("<th >Name</th>", str(response.content))
 
-    def test_onchange_js(self):
-        """
-        This checks to see whether the javascript is loaded to reset the termination_b_id select options on "change"
-        of the other termination_b drop-downs.
-        """
-        js_string = (
-            """<script>
-    $(() => {
-        $("select#id_termination_b_region, select#id_termination_b_site, select#id_termination_b_rack, """
-            """select#id_termination_b_device").on("change", () => {
-            /*
-            * This clears the list of cable destination choices when any of the termination_b drop-downs
-            * (except the name/id drop-down) is changed.
-            * */
-            $('#id_termination_b_id').find("option").remove();
-        });
-    });
-</script>"""
-        )
-        self.user.is_superuser = True
-        self.user.save()
-        interface1 = Interface.objects.create(device=self.devices[0], name="Interface 1")
-        Interface.objects.create(device=self.devices[0], name="Interface 2")
-        cable_connect_form_url = reverse(
-            "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
-        )
-        response = self.client.get(cable_connect_form_url)
-        self.assertIn(js_string, response.content.decode())
-
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerPanel
