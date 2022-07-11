@@ -23,12 +23,18 @@ class ChangeContext:
     """
 
     def __init__(self, user, context=None, context_detail="", id=None):
+
+        if not isinstance(user, get_user_model()):
+            raise TypeError("The user object must be an instance of nautobot.users.models.User")
         self.user = user
+
         if context is not None:
             self.context = context
         if self.context not in ObjectChangeEventContextChoices.values():
             raise ValueError("Context must be a choice within ObjectChangeEventContextChoices")
+
         self.context_detail = context_detail
+
         self.id = id
         if self.id is None:
             self.id = uuid.uuid4()
