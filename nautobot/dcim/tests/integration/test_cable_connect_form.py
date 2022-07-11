@@ -17,17 +17,24 @@ class CableConnectFormTestCase(SeleniumTestCase):
        (except the name dropdown)
     """
 
-    def test_js_functionality(self):
+    def setUp(self):
+        super().setUp()
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
-        device1 = create_test_device("Device 1")
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.device1 = create_test_device("Device 1")
         create_test_device("Device 2")
-        interface1 = Interface.objects.create(device=device1, name="Interface 1")
-        Interface.objects.create(device=device1, name="Interface 2")
-        Interface.objects.create(device=device1, name="Interface 3")
+        cls.interface1 = Interface.objects.create(device=cls.device1, name="Interface 1")
+        Interface.objects.create(device=cls.device1, name="Interface 2")
+        Interface.objects.create(device=cls.device1, name="Interface 3")
+
+    def test_js_functionality(self):
         cable_connect_form_url = reverse(
-            "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
+            "dcim:interface_connect", kwargs={"termination_a_id": self.interface1.pk, "termination_b_type": "interface"}
         )
         self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
         self.browser.find_by_xpath("(//label[contains(text(),'Device')])[2]").click()
@@ -70,3 +77,14 @@ class CableConnectFormTestCase(SeleniumTestCase):
         with self.assertRaises(ElementDoesNotExist) as context:
             selected = self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first
         self.assertIn("no elements could be found", str(context.exception))
+
+    def test_js_select_onchange_query_is_present(self):
+        cable_connect_form_url = reverse(
+            "dcim:interface_connect", kwargs={"termination_a_id": self.interface1.pk, "termination_b_type": "interface"}
+        )
+        self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
+        js_query = (
+            "select#id_termination_b_region, select#id_termination_b_site, "
+            "select#id_termination_b_rack, select#id_termination_b_device"
+        )
+        self.browser.is_text_present(js_query)
