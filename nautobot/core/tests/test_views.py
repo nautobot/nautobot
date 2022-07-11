@@ -155,3 +155,28 @@ class NavRestrictedUI(TestCase):
         search_result = self.make_request()
 
         self.assertIsNone(search_result)
+
+
+class LoginUI(TestCase):
+    def make_request(self):
+        response = self.client.get(reverse("login"))
+        sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
+        return sso_login_pattern.search(response.content.decode(response.charset))
+
+    def test_sso_login_button_not_visible(self):
+        """Test Continue with SSO button not visible if SSO is enabled"""
+        self.client.logout()
+
+        sso_login_search_result = self.make_request()
+        self.assertIsNone(sso_login_search_result)
+
+    @override_settings(
+        AUTHENTICATION_BACKENDS=[
+            "social_core.backends.google.GoogleOAuth2",
+            "nautobot.core.authentication.ObjectPermissionBackend",
+        ]
+    )
+    def test_sso_login_button_visible(self):
+        self.client.logout()
+        sso_login_search_result = self.make_request()
+        self.assertIsNotNone(sso_login_search_result)

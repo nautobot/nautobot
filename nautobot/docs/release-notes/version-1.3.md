@@ -140,6 +140,31 @@ We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.8 (2022-07-11)
+
+### Added
+
+- [#1464](https://github.com/nautobot/nautobot/issues/1464) - Added "Continue with SSO" link on login page.
+
+### Changed
+
+- [#1407](https://github.com/nautobot/nautobot/issues/1407) - Changed custom field export column headings to prefix with `cf_`.
+- [#1603](https://github.com/nautobot/nautobot/issues/1603) - Changed GraphQL schema generation to call time for GraphQL API.
+- [#1977](https://github.com/nautobot/nautobot/pull/1977) - Updated Renovate config to batch updates (additional PRs included to further refine config).
+- [#2020](https://github.com/nautobot/nautobot/pull/2020) - Updated `celery >= 5.2.7`, `django-jinja  >= 2.10.2`, and `mysqlclient >= 2.1.1` versions in lock file (patch updates).
+
+### Fixed
+
+- [#1838](https://github.com/nautobot/nautobot/issues/1838) - Fixed job result to show latest not oldest.
+- [#1874](https://github.com/nautobot/nautobot/issues/1874) - Fixed Git repo sync issue with Sentinel with deprecated rq_count check.
+
+### Security
+
+!!! important
+    CVE in Django versions `>= 3.2, < 3.2.14`. This update upgrades Django to `3.2.14`.
+
+- [#2004](https://github.com/nautobot/nautobot/pull/2004) - Bump Django from 3.2.13 to 3.2.14 for for [CVE-2022-34265](https://github.com/advisories/GHSA-p64x-8rxx-wf6q).
+
 ## v1.3.7 (2022-06-27)
 
 ### Added
