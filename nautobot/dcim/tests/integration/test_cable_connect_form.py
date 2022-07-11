@@ -84,7 +84,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
         )
         self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
         js_query = (
-            "select#id_termination_b_region, select#id_termination_b_site, "
-            "select#id_termination_b_rack, select#id_termination_b_device"
+            "\"select#id_termination_b_region, select#id_termination_b_site, "
+            "select#id_termination_b_rack, select#id_termination_b_device\""
         )
         self.browser.is_text_present(js_query)
