@@ -2514,8 +2514,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.user.is_superuser = True
         self.user.save()
         interface1 = Interface.objects.create(device=self.devices[0], name="Interface 1")
-        interface2 = Interface.objects.create(device=self.devices[0], name="Interface 2")
-        interface3 = Interface.objects.create(device=self.devices[0], name="Interface 3")
+        Interface.objects.create(device=self.devices[0], name="Interface 2")
         cable_connect_form_url = reverse(
             "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
         )
