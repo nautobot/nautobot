@@ -29,9 +29,6 @@ class ChangeContext:
         if self.context not in ObjectChangeEventContextChoices.values():
             raise ValueError("Context must be a choice within ObjectChangeEventContextChoices")
         self.context_detail = context_detail
-
-        # Assign a random unique ID. This will be used to associate
-        # multiple object changes made during the same request.
         self.id = id
         if self.id is None:
             self.id = uuid.uuid4()
