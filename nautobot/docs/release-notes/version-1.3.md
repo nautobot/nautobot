@@ -148,6 +148,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Fixed
 
+- [#1947](https://github.com/nautobot/nautobot/issues/1947) - Fixed unbound local error by initializing template variable before conditional logic statements.
+
 ## v1.3.8 (2022-07-11)
 
 ### Added
