@@ -369,9 +369,10 @@ class CustomFieldColumn(tables.Column):
         if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-            if value:
-                for v in value:
-                    template += format_html('<span class="label label-default">{}</span> ', v)
+            if not value:
+                return self.default
+            for v in value:
+                template += format_html('<span class="label label-default">{}</span> ', v)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
             template = format_html('<span class="label label-default">{}</span>', value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
