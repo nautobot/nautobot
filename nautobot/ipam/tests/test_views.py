@@ -1,10 +1,12 @@
 import datetime
 
 from netaddr import IPNetwork
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import Status
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import CustomField, Status
 from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
@@ -416,6 +418,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             site=sites[0],
             role=roles[0],
             status=statuses[0],
+            _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
             group=vlangroups[0],
@@ -424,6 +427,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             site=sites[0],
             role=roles[0],
             status=statuses[0],
+            _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
             group=vlangroups[0],
@@ -432,7 +436,11 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             site=sites[0],
             role=roles[0],
             status=statuses[0],
+            _custom_field_data={"field": "Value"},
         )
+
+        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field", default="")
+        custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -463,6 +471,21 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "role": roles[1].pk,
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_queryset_to_csv(self):
+        """This view has a custom queryset_to_csv() implementation."""
+        response = self.client.get("{}?export".format(self._get_url("list")))
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response.get("Content-Type"), "text/csv")
+        self.assertEqual(
+            """\
+site,group,vid,name,tenant,status,role,description,cf_field
+Site 1,VLAN Group 1,101,VLAN101,,Active,Role 1,,Value
+Site 1,VLAN Group 1,102,VLAN102,,Active,Role 1,,Value
+Site 1,VLAN Group 1,103,VLAN103,,Active,Role 1,,Value""",
+            response.content.decode(response.charset),
+        )
 
 
 # TODO: Update base class to PrimaryObjectViewTestCase

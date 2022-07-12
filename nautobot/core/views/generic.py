@@ -170,7 +170,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append(custom_field.name)
+                headers.append("cf_" + custom_field.name)
                 custom_fields.append(custom_field.name)
 
         csv_data.append(",".join(headers))
