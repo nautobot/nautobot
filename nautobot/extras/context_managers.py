@@ -23,9 +23,6 @@ class ChangeContext:
     """
 
     def __init__(self, user, context=None, context_detail="", id=None):
-
-        if not isinstance(user, get_user_model()):
-            raise TypeError("The user object must be an instance of nautobot.users.models.User")
         self.user = user
 
         if context is not None:
