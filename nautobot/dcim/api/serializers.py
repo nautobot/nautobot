@@ -804,7 +804,11 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
 
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
         if data.get("rack") and data.get("position") and data.get("face"):
-            validator = UniqueTogetherValidator(queryset=Device.objects.all(), fields=("rack", "position", "face"))
+            validator = UniqueTogetherValidator(
+                queryset=Device.objects.all(),
+                fields=("rack", "position", "face"),
+                message=f"The position and face is already occupied on this rack. {UniqueTogetherValidator.message}",
+            )
             validator(data, self)
 
         # Enforce model validation
