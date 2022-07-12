@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 import logging
+import uuid
 
 from django import forms
 from django.conf import settings
@@ -426,9 +427,28 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
         # Null value filtering
         if v is None:
             return {f"{self.field_name}__isnull": True}
-        name = self.field_name
+
+        # If value is a model instance, stringify it to a pk.
+        if isinstance(v, models.Model):
+            logger.debug("Model instance detected. Casting to a PK.")
+            v = str(v.pk)
+
+        # Try to cast the value to a UUID. If it is not a UUID, then it's a slug and the filter
+        # predicate needs to be nested (e.g. `{"site__slug": "ams01"}`) so that it can be useable in
+        # `Q` objects.
+        try:
+            uuid.UUID(str(v))
+        except (AttributeError, TypeError, ValueError):
+            logger.debug("Non-UUID value detected: Filtering using natural key")
+            name = f"{self.field_name}__{self.field.to_field_name}"
+        else:
+            logger.debug("UUID detected: Filtering using PK")
+            v = str(v)
+            name = self.field_name
+
         if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
             name = "__".join([name, self.lookup_expr])
+
         return {name: v}
 
 
