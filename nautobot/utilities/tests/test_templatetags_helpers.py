@@ -4,29 +4,28 @@ from django.conf import settings
 from unittest import skipIf
 
 from nautobot.utilities.templatetags.helpers import (
-    as_range,
-    bettertitle,
-    divide,
-    fgcolor,
-    get_docs_url,
-    get_item,
-    has_one_or_more_perms,
-    has_perms,
-    humanize_speed,
     hyperlinked_object,
-    meta,
-    meters_to_feet,
-    percentage,
     placeholder,
     render_boolean,
     render_json,
-    render_markdown,
     render_yaml,
-    split,
-    tzoffset,
-    urlencode_dict,
-    validated_viewname,
+    render_markdown,
+    meta,
     viewname,
+    validated_viewname,
+    bettertitle,
+    humanize_speed,
+    tzoffset,
+    fgcolor,
+    divide,
+    percentage,
+    get_docs_url,
+    has_perms,
+    has_one_or_more_perms,
+    split,
+    as_range,
+    meters_to_feet,
+    get_item,
 )
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
@@ -180,6 +179,3 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 render_boolean(value), '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
             )
         self.assertEqual(render_boolean(None), '<span class="text-muted">&mdash;</span>')
-
-    def test_urlencode_dict(self):
-        self.assertEqual(urlencode_dict({"interval": 5, "commit": True}), "interval=5&commit=True")

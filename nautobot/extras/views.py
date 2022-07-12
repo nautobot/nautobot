@@ -967,13 +967,26 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
 
+        initial = normalize_querydict(request.GET)
+        if "kwargs_from_job_result" in initial:
+            job_result_pk = initial.pop("kwargs_from_job_result")
+            try:
+                job_result = JobResult.objects.get(pk=job_result_pk)
+                # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
+                # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
+                explicit_initial = initial
+                initial = job_result.job_kwargs.get("data", {}).copy()
+                initial.update(explicit_initial)
+            except JobResult.DoesNotExist:
+                messages.warning(request, f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.")
+
         try:
-            job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+            job_form = job_model.job_class().as_form(initial=initial)
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
 
-        schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
+        schedule_form = forms.JobScheduleForm(initial=initial)
 
         return render(
             request,

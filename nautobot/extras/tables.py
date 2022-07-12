@@ -536,7 +536,8 @@ class JobResultTable(BaseTable):
         template_code="""
             {% load helpers %}
             {% if record.job_model and record.job_kwargs %}
-                <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?{% urlencode_dict record.job_kwargs.data %}" class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+                <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
+                   class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                     <i class="mdi mdi-repeat"></i>
                 </a>
             {% else %}
@@ -544,9 +545,10 @@ class JobResultTable(BaseTable):
                     <i class="mdi mdi-repeat-off"></i>
                 </a>
             {% endif %}
-                <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger" title="Delete this job result.">
-                    <i class="mdi mdi-trash-can-outline"></i>
-                </a>
+            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger"
+               title="Delete this job result.">
+                <i class="mdi mdi-trash-can-outline"></i>
+            </a>
         """
     )
 
