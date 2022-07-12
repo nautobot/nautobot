@@ -7,7 +7,7 @@ from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
-from django.urls import URLPattern
+from django.urls import get_resolver, URLPattern
 
 from nautobot.core.apps import (
     NautobotConfig,
@@ -95,6 +95,7 @@ class PluginConfig(NautobotConfig):
     menu_items = "navigation.menu_items"
     secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
+    override_views = "views.override_views"
 
     def ready(self):
         """Callback after plugin app is loaded."""
@@ -190,6 +191,15 @@ class PluginConfig(NautobotConfig):
                     self.features["filter_extensions"]["filterform_fields"].append(
                         f"{filter_extension.model} -> {filterform_field_name}"
                     )
+
+        # Register override view (if any)
+        override_views = import_object(f"{self.__module__}.{self.override_views}")
+        if override_views is not None:
+            for qualified_view_name, view in override_views.items():
+                self.features.setdefault("overridden_views", []).append(
+                    (qualified_view_name, f"{view.__module__}.{view.__name__}")
+                )
+            register_override_views(override_views, self.name)
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -623,3 +633,33 @@ def register_custom_validators(class_list):
             raise TypeError(f"PluginCustomValidator class {custom_validator} does not define a valid model!")
 
         registry["plugin_custom_validators"][custom_validator.model].append(custom_validator)
+
+
+def register_override_views(override_views, plugin):
+
+    validation_error = (
+        "Plugin '{}' tried to override view '{}' but did not contain a valid app name "
+        "(e.g. `dcim:device`, `plugins:myplugin:myview`)."
+    )
+
+    for qualified_view_name, view in override_views.items():
+        resolver = get_resolver()
+
+        try:
+            qualified_app_name, view_name = qualified_view_name.rsplit(":", 1)
+            app_resolver = resolver
+            for app_name in qualified_app_name.split(":"):
+                app_resolver_tupl = app_resolver.namespace_dict.get(app_name)
+                if app_resolver_tupl is None:
+                    # We couldn't find the app, regardless of nesting
+                    raise ValidationError(validation_error.format(plugin, qualified_view_name))
+
+                app_resolver = app_resolver_tupl[1]
+
+        except ValueError:
+            # This is only thrown when qualified_view_name does not contain ":"
+            raise ValidationError(validation_error.format(plugin, qualified_view_name))
+
+        for pattern in app_resolver.url_patterns:
+            if isinstance(pattern, URLPattern) and hasattr(pattern, "name") and pattern.name == view_name:
+                pattern.callback = view

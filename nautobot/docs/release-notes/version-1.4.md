@@ -42,9 +42,11 @@ A new version of the `/dcim/interfaces/*` REST API endpoints have been implement
 
 Visit the documentation on [REST API versioning](../rest-api/overview/#versioning) for more information on using the versioned APIs.
 
-#### Object Detail Tabs
+#### Object Detail Tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000))
 
-A plugin may now define extra tabs which will be appended to the object view's list of tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000)).
+A plugin may now define extra tabs which will be appended to the object view's list of tabs.
+
+You can refer to the [plugin development guide](../plugins/development.md##adding-extra-tabs) on how to add tabs to existing object detail views.
 
 #### Improved Filter Coverage for DCIM models ([#1729](https://github.com/nautobot/nautobot/issues/1729))
 
@@ -61,11 +63,19 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 !!! warning
     Setting `STRICT_FILTERING` to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
 
+#### Moved Registry Template Context ([#1945](https://github.com/nautobot/nautobot/issues/1945))
+
+The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
+
+## v1.4.0a3 (2022-MM-DD)
+
+### Added
+
+### Changed
+
 ### Fixed
 
-### Removed
-
-## v1.4.0a2 (2022-MM-DD)
+## v1.4.0a2 (2022-07-11)
 
 !!! attention
     `next` and `develop` introduced conflicting migration numbers during the release cycle. This necessitates reordering the migration in `next`. If you installed `v1.4.0a1`, you will need to roll back a migration before upgrading/installing `v1.4.0a2` and newer. If you have not installed `v1.4.0a` this will not be an issue.
@@ -80,10 +90,13 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
 - [#1052](https://github.com/nautobot/nautobot/issues/1052) - Initial prototype implementation of Location data model
+- [#1318](https://github.com/nautobot/nautobot/issues/1318) - Added `nautobot.extras.forms.NautobotBulkEditForm` base class. All bulk-edit forms for models that support both custom fields and relationships now inherit from this class.
+- [#1466](https://github.com/nautobot/nautobot/issues/1466) - Plugins can now override views.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add new filter class `NaturalKeyOrPKMultipleChoiceFilter` to `nautobot.utilities.filters`.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 137 new filters to `nautobot.dcim.filters` FilterSets.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add `cable_terminations` to the `model_features` registry.
 - [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.
+- [#1949](https://github.com/nautobot/nautobot/issues/1949) - Added TestCaseMixin for Helper Functions across all test case bases.
 
 ### Changed
 
@@ -100,6 +113,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 - [#1925](https://github.com/nautobot/nautobot/pull/1925) - Update dependency django-debug-toolbar to ~3.4.0
 - [#1928](https://github.com/nautobot/nautobot/pull/1928) - Update dependency napalm to ~3.4.1
 - [#1929](https://github.com/nautobot/nautobot/pull/1929) - Update dependency selenium to ~4.2.0
+- [#1945](https://github.com/nautobot/nautobot/issues/1945) - Change the `settings_and_registry` default context processor to purely `settings`, moving registry dictionary to be accessible via `registry` template tag.
 
 ### Fixed
 
@@ -108,6 +122,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 ### Removed
 
 - [#1462](https://github.com/nautobot/nautobot/issues/1462) - Removed job source tab from Job and Job Result view.
+- [#2002](https://github.com/nautobot/nautobot/issues/2002) - Removed rqworker container from default Docker development environment.
 
 ## v1.4.0a1 (2022-06-13)
 

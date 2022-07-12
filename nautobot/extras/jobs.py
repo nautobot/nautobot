@@ -918,7 +918,7 @@ def _get_job_source_paths():
                 continue
 
             try:
-                # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
+                # In the case where we have multiple Nautobot instances, or multiple worker instances,
                 # they are not required to share a common filesystem; therefore, we may need to refresh our local clone
                 # of the Git repository to ensure that it is in sync with the latest repository clone from any instance.
                 ensure_git_repository(

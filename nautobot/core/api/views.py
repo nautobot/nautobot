@@ -380,6 +380,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "nautobot-version": {"type": "string"},
                     "plugins": {"type": "object"},
                     "python-version": {"type": "string"},
+                    # 2.0 TODO: remove rq-workers-running property
                     "rq-workers-running": {"type": "integer"},
                     "celery-workers-running": {"type": "integer"},
                 },
@@ -417,6 +418,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
+                # 2.0 TODO: remove rq-workers-running
                 "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }

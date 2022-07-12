@@ -21,11 +21,11 @@ from nautobot.dcim.form_mixins import (
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
-    CustomFieldBulkEditForm,
     CustomFieldModelCSVForm,
     CustomFieldFilterForm,
+    NautobotBulkEditForm,
     NautobotModelForm,
-    NautobotFilterform,
+    NautobotFilterForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -151,7 +151,7 @@ def get_device_by_name_or_pk(name):
     return device
 
 
-class DeviceComponentFilterForm(NautobotFilterform):
+class DeviceComponentFilterForm(NautobotFilterForm):
     field_order = ["q", "region", "site"]
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -283,7 +283,7 @@ class RegionCSVForm(CustomFieldModelCSVForm):
         fields = Region.csv_headers
 
 
-class RegionFilterForm(NautobotFilterform):
+class RegionFilterForm(NautobotFilterForm):
     model = Site
     q = forms.CharField(required=False, label="Search")
 
@@ -371,7 +371,7 @@ class SiteCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         }
 
 
-class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class SiteBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Site.objects.all(), widget=forms.MultipleHiddenInput)
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -393,7 +393,7 @@ class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixi
         ]
 
 
-class SiteFilterForm(NautobotFilterform, TenancyFilterForm, StatusFilterFormMixin):
+class SiteFilterForm(NautobotFilterForm, TenancyFilterForm, StatusFilterFormMixin):
     model = Site
     field_order = ["q", "status", "region", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
@@ -443,7 +443,7 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
         fields = LocationType.csv_headers
 
 
-class LocationTypeFilterForm(NautobotFilterform):
+class LocationTypeFilterForm(NautobotFilterForm):
     model = LocationType
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(feature="locations", choices_as_strings=True, required=False)
@@ -470,7 +470,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
         fields = ["location_type", "parent", "site", "name", "slug", "status", "tenant_group", "tenant", "description"]
 
 
-class LocationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class LocationBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Location.objects.all(), widget=forms.MultipleHiddenInput)
     # location_type is not editable on existing instances
     parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
@@ -517,7 +517,7 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = Location.csv_headers
 
 
-class LocationFilterForm(NautobotFilterform, StatusFilterFormMixin, TenancyFilterForm):
+class LocationFilterForm(NautobotFilterForm, StatusFilterFormMixin, TenancyFilterForm):
     model = Location
     field_order = ["q", "location_type", "parent", "status", "tenant_group", "tenant", "tag"]
 
@@ -571,7 +571,7 @@ class RackGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = RackGroup.csv_headers
 
 
-class RackGroupFilterForm(NautobotFilterform, LocatableModelFilterFormMixin):
+class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = RackGroup
     parent = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
@@ -701,11 +701,10 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
 
 
 class RackBulkEditForm(
-    BootstrapMixin,
     AddRemoveTagsForm,
     LocatableModelBulkEditFormMixin,
     StatusBulkEditFormMixin,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Rack.objects.all(), widget=forms.MultipleHiddenInput)
     group = DynamicModelChoiceField(
@@ -754,7 +753,7 @@ class RackBulkEditForm(
         ]
 
 
-class RackFilterForm(NautobotFilterform, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin):
+class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin):
     model = Rack
     field_order = [
         "q",
@@ -899,7 +898,7 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
 
-class RackReservationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class RackReservationBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackReservation.objects.all(), widget=forms.MultipleHiddenInput())
     user = forms.ModelChoiceField(
         queryset=get_user_model().objects.order_by("username"),
@@ -913,7 +912,7 @@ class RackReservationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomField
         nullable_fields = []
 
 
-class RackReservationFilterForm(NautobotFilterform, TenancyFilterForm):
+class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
     model = RackReservation
     field_order = [
         "q",
@@ -1026,7 +1025,7 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
         ]
 
 
-class DeviceTypeBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class DeviceTypeBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     u_height = forms.IntegerField(required=False)
@@ -1036,7 +1035,7 @@ class DeviceTypeBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkE
         nullable_fields = []
 
 
-class DeviceTypeFilterForm(NautobotFilterform):
+class DeviceTypeFilterForm(NautobotFilterForm):
     model = DeviceType
     q = forms.CharField(required=False, label="Search")
     manufacturer = DynamicModelMultipleChoiceField(
@@ -1129,7 +1128,7 @@ class ConsolePortTemplateCreateForm(ComponentTemplateCreateForm):
     )
 
 
-class ConsolePortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class ConsolePortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConsolePortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=64, required=False)
     type = forms.ChoiceField(
@@ -1169,7 +1168,7 @@ class ConsoleServerPortTemplateCreateForm(ComponentTemplateCreateForm):
     )
 
 
-class ConsoleServerPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=ConsoleServerPortTemplate.objects.all(),
         widget=forms.MultipleHiddenInput(),
@@ -1219,7 +1218,7 @@ class PowerPortTemplateCreateForm(ComponentTemplateCreateForm):
     )
 
 
-class PowerPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=64, required=False)
     type = forms.ChoiceField(
@@ -1293,7 +1292,7 @@ class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
         self.fields["power_port"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
 
 
-class PowerOutletTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerOutletTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     device_type = forms.ModelChoiceField(
         queryset=DeviceType.objects.all(),
@@ -1361,7 +1360,7 @@ class InterfaceTemplateCreateForm(ComponentTemplateCreateForm):
     )
 
 
-class InterfaceTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=InterfaceTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=64, required=False)
     type = forms.ChoiceField(
@@ -1469,7 +1468,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         }
 
 
-class FrontPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class FrontPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=FrontPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=64, required=False)
     type = forms.ChoiceField(
@@ -1522,7 +1521,7 @@ class RearPortTemplateCreateForm(ComponentTemplateCreateForm):
     )
 
 
-class RearPortTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class RearPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RearPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=64, required=False)
     type = forms.ChoiceField(
@@ -1560,7 +1559,7 @@ class DeviceBayTemplateCreateForm(ComponentTemplateCreateForm):
     )
 
 
-class DeviceBayTemplateBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=64, required=False)
     description = forms.CharField(required=False)
@@ -2092,11 +2091,10 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
 
 
 class DeviceBulkEditForm(
-    BootstrapMixin,
     AddRemoveTagsForm,
     LocatableModelBulkEditFormMixin,
     StatusBulkEditFormMixin,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
     LocalContextModelBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
@@ -2128,7 +2126,7 @@ class DeviceBulkEditForm(
 
 
 class DeviceFilterForm(
-    NautobotFilterform,
+    NautobotFilterForm,
     LocalContextFilterForm,
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
@@ -2303,9 +2301,8 @@ class ConsolePortBulkCreateForm(form_from_model(ConsolePort, ["type"]), DeviceBu
 
 class ConsolePortBulkEditForm(
     form_from_model(ConsolePort, ["label", "type", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=ConsolePort.objects.all(), widget=forms.MultipleHiddenInput())
 
@@ -2371,9 +2368,8 @@ class ConsoleServerPortBulkCreateForm(form_from_model(ConsoleServerPort, ["type"
 
 class ConsoleServerPortBulkEditForm(
     form_from_model(ConsoleServerPort, ["label", "type", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=ConsoleServerPort.objects.all(), widget=forms.MultipleHiddenInput())
 
@@ -2456,9 +2452,8 @@ class PowerPortBulkCreateForm(
 
 class PowerPortBulkEditForm(
     form_from_model(PowerPort, ["label", "type", "maximum_draw", "allocated_draw", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=PowerPort.objects.all(), widget=forms.MultipleHiddenInput())
 
@@ -2553,9 +2548,8 @@ class PowerOutletBulkCreateForm(form_from_model(PowerOutlet, ["type", "feed_leg"
 
 class PowerOutletBulkEditForm(
     form_from_model(PowerOutlet, ["label", "type", "feed_leg", "power_port", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=PowerOutlet.objects.all(), widget=forms.MultipleHiddenInput())
     device = forms.ModelChoiceField(
@@ -2839,10 +2833,9 @@ class InterfaceBulkEditForm(
     form_from_model(
         Interface, ["label", "type", "parent_interface", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
     ),
-    BootstrapMixin,
     AddRemoveTagsForm,
     StatusBulkEditFormMixin,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
     device = forms.ModelChoiceField(
@@ -3134,9 +3127,8 @@ class FrontPortCreateForm(ComponentCreateForm):
 
 class FrontPortBulkEditForm(
     form_from_model(FrontPort, ["label", "type", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=FrontPort.objects.all(), widget=forms.MultipleHiddenInput())
 
@@ -3245,9 +3237,8 @@ class RearPortBulkCreateForm(form_from_model(RearPort, ["type", "positions"]), D
 
 class RearPortBulkEditForm(
     form_from_model(RearPort, ["label", "type", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=RearPort.objects.all(), widget=forms.MultipleHiddenInput())
 
@@ -3324,9 +3315,8 @@ class DeviceBayBulkCreateForm(DeviceBulkAddComponentForm):
 
 class DeviceBayBulkEditForm(
     form_from_model(DeviceBay, ["label", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceBay.objects.all(), widget=forms.MultipleHiddenInput())
 
@@ -3465,9 +3455,8 @@ class InventoryItemBulkCreateForm(
 
 class InventoryItemBulkEditForm(
     form_from_model(InventoryItem, ["label", "manufacturer", "part_id", "description"]),
-    BootstrapMixin,
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=InventoryItem.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
@@ -3834,7 +3823,7 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().add_error(field, final_error)
 
 
-class CableBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class CableBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Cable.objects.all(), widget=forms.MultipleHiddenInput)
     type = forms.ChoiceField(
         choices=add_blank_choice(CableTypeChoices),
@@ -4129,7 +4118,7 @@ class VCMemberSelectForm(BootstrapMixin, forms.Form):
         return device
 
 
-class VirtualChassisBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class VirtualChassisBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualChassis.objects.all(), widget=forms.MultipleHiddenInput())
     domain = forms.CharField(max_length=30, required=False)
 
@@ -4150,7 +4139,7 @@ class VirtualChassisCSVForm(CustomFieldModelCSVForm):
         fields = VirtualChassis.csv_headers
 
 
-class VirtualChassisFilterForm(NautobotFilterform):
+class VirtualChassisFilterForm(NautobotFilterForm):
     model = VirtualChassis
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -4218,10 +4207,9 @@ class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
 
 class PowerPanelBulkEditForm(
-    BootstrapMixin,
     AddRemoveTagsForm,
     LocatableModelBulkEditFormMixin,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=PowerPanel.objects.all(), widget=forms.MultipleHiddenInput)
     rack_group = DynamicModelChoiceField(
@@ -4235,7 +4223,7 @@ class PowerPanelBulkEditForm(
         nullable_fields = ["location", "rack_group"]
 
 
-class PowerPanelFilterForm(NautobotFilterform, LocatableModelFilterFormMixin):
+class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = PowerPanel
     q = forms.CharField(required=False, label="Search")
     rack_group_id = DynamicModelMultipleChoiceField(
@@ -4346,7 +4334,7 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
 
-class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class PowerFeedBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerFeed.objects.all(), widget=forms.MultipleHiddenInput)
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
@@ -4380,7 +4368,7 @@ class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFor
         ]
 
 
-class PowerFeedFilterForm(NautobotFilterform, StatusFilterFormMixin):
+class PowerFeedFilterForm(NautobotFilterForm, StatusFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
