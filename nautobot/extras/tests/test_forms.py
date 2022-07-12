@@ -3,12 +3,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import TestCase
 
-from nautobot.dcim.forms import DeviceForm
+from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm
 import nautobot.dcim.models as dcim_models
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import WebhookForm
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status, Webhook
-from nautobot.ipam.forms import IPAddressForm, VLANGroupForm
+from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
 
 
@@ -460,6 +460,236 @@ class RelationshipModelFormTestCase(TestCase):
             "Object Device 1 cannot form a relationship to itself!",
             form.errors[f"cr_{self.relationship_3.slug}__peer"][0],
         )
+
+
+class RelationshipModelBulkEditFormMixinTestCase(TestCase):
+    """
+    Test RelationshipModelBulkEditFormMixin validation and saving.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        active = Status.objects.get(slug="active")
+        cls.sites = [
+            dcim_models.Site.objects.create(name="Site 1", slug="site-1", status=active),
+            dcim_models.Site.objects.create(name="Site 2", slug="site-2", status=active),
+        ]
+        cls.ipaddresses = [
+            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
+            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),
+        ]
+
+        cls.rel_1to1 = Relationship(
+            name="Primary IP Address",
+            slug="primary-ip-address",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+        )
+        cls.rel_1to1.validated_save()
+
+        cls.rel_1tom = Relationship(
+            name="Addresses per site",
+            slug="addresses-per-site",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+        cls.rel_1tom.validated_save()
+
+        cls.rel_mtom = Relationship(
+            name="Multiplexing",
+            slug="multiplexing",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        cls.rel_mtom.validated_save()
+
+        cls.rel_mtom_s = Relationship(
+            name="Peer Sites",
+            slug="peer-sites",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(dcim_models.Site),
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        )
+        cls.rel_mtom_s.validated_save()
+
+    def test_site_form_rendering(self):
+        form = SiteBulkEditForm(dcim_models.Site)
+        self.assertEqual(
+            set(form.relationships),
+            {
+                "cr_addresses-per-site__destination",
+                "cr_multiplexing__destination",
+                "cr_peer-sites__peer",
+                "cr_primary-ip-address__destination",
+            },
+        )
+
+        # One-to-many relationship is nullable but not editable
+        self.assertIn("cr_addresses-per-site__destination", form.fields)
+        self.assertTrue(form.fields["cr_addresses-per-site__destination"].disabled)
+        self.assertIn("cr_addresses-per-site__destination", form.nullable_fields)
+
+        # Many-to-many relationship has add/remove fields but is not directly editable or nullable
+        self.assertNotIn("cr_multiplexing__destination", form.fields)
+        self.assertIn("add_cr_multiplexing__destination", form.fields)
+        self.assertIn("remove_cr_multiplexing__destination", form.fields)
+        self.assertNotIn("cr_multiplexing__destination", form.nullable_fields)
+
+        # Symmetric many-to-many relationship has add/remove fields but is not directly editable or nullable
+        self.assertNotIn("cr_peer-sites__peer", form.fields)
+        self.assertIn("add_cr_peer-sites__peer", form.fields)
+        self.assertIn("remove_cr_peer-sites__peer", form.fields)
+        self.assertNotIn("cr_peer-sites__peer", form.nullable_fields)
+
+        # One-to-one relationship is nullable but not editable
+        self.assertIn("cr_primary-ip-address__destination", form.fields)
+        self.assertTrue(form.fields["cr_primary-ip-address__destination"].disabled)
+        self.assertIn("cr_primary-ip-address__destination", form.nullable_fields)
+
+    def test_ipaddress_form_rendering(self):
+        form = IPAddressBulkEditForm(ipam_models.IPAddress)
+        self.assertEqual(
+            set(form.relationships),
+            {
+                "cr_addresses-per-site__source",
+                "cr_multiplexing__source",
+                "cr_primary-ip-address__source",
+            },
+        )
+
+        # Many-to-one relationship is editable and nullable
+        self.assertIn("cr_addresses-per-site__source", form.fields)
+        self.assertIn("cr_addresses-per-site__source", form.nullable_fields)
+
+        # Many-to-many relationship has add/remove fields but is not directly editable or nullable
+        self.assertNotIn("cr_multiplexing__source", form.fields)
+        self.assertIn("add_cr_multiplexing__source", form.fields)
+        self.assertIn("remove_cr_multiplexing__source", form.fields)
+        self.assertNotIn("cr_multiplexing__source", form.nullable_fields)
+
+        # One-to-one relationship is nullable but not editable
+        self.assertIn("cr_primary-ip-address__source", form.fields)
+        self.assertTrue(form.fields["cr_primary-ip-address__source"].disabled)
+        self.assertIn("cr_primary-ip-address__source", form.nullable_fields)
+
+    def test_site_form_nullification(self):
+        """Test nullification of existing relationship-associations."""
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1to1,
+            source=self.sites[0],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1to1,
+            source=self.sites[1],
+            destination=self.ipaddresses[1],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1tom,
+            source=self.sites[0],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1tom,
+            source=self.sites[0],
+            destination=self.ipaddresses[1],
+        )
+
+        form = SiteBulkEditForm(model=dcim_models.Site, data={"pks": [site.pk for site in self.sites]})
+        form.is_valid()
+        form.save_relationships(
+            instance=self.sites[0],
+            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-site__destination"],
+        )
+        form.save_relationships(
+            instance=self.sites[1],
+            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-site__destination"],
+        )
+
+        self.assertEqual(0, RelationshipAssociation.objects.count())
+
+    def test_site_form_add_mtom(self):
+        """Test addition of relationship-associations for many-to-many relationships."""
+        form = SiteBulkEditForm(
+            model=dcim_models.Site,
+            data={
+                "pks": [self.sites[0].pk],
+                "add_cr_multiplexing__destination": [ipaddress.pk for ipaddress in self.ipaddresses],
+                "add_cr_peer-sites__peer": [self.sites[1].pk],
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.sites[0], nullified_fields=[])
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom, source_id=self.sites[0].pk)
+        self.assertEqual(2, ras.count())
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom_s)
+        self.assertEqual(1, ras.count())
+
+    def test_site_form_remove_mtom(self):
+        """Test removal of relationship-associations for many-to-many relationships."""
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[0],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[0],
+            destination=self.ipaddresses[1],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[1],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[1],
+            destination=self.ipaddresses[1],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom_s,
+            source=self.sites[0],
+            destination=self.sites[1],
+        )
+        form = SiteBulkEditForm(
+            model=dcim_models.Site,
+            data={
+                "pks": [self.sites[0].pk, self.sites[1].pk],
+                "remove_cr_multiplexing__destination": [self.ipaddresses[0].pk],
+                "remove_cr_peer-sites__peer": [self.sites[0].pk, self.sites[1].pk],
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.sites[0], nullified_fields=[])
+        form.save_relationships(instance=self.sites[1], nullified_fields=[])
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom)
+        self.assertEqual(2, ras.count())
+        for ra in ras:
+            self.assertEqual(self.ipaddresses[1], ra.destination)
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom_s)
+        self.assertEqual(0, ras.count())
+
+    def test_ipaddress_form_add_mto1(self):
+        """Test addition of relationship-associations for many-to-one relationships."""
+        form = IPAddressBulkEditForm(
+            model=ipam_models.IPAddress,
+            data={
+                "pks": [self.ipaddresses[0].pk],
+                "cr_addresses-per-site__source": self.sites[0].pk,
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.ipaddresses[0], nullified_fields=[])
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_1tom)
+        self.assertEqual(1, ras.count())
 
 
 class WebhookFormTestCase(TestCase):

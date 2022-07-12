@@ -49,7 +49,7 @@ plugin_name/
       - plugin_name/
         - *.html            # UI content templates
     - urls.py               # UI URL Patterns
-    - views.py              # UI Views
+    - views.py              # UI Views and any view override definitions
   - pyproject.toml          # *** REQUIRED *** - Project package definition
   - README.md
 ```
@@ -1093,4 +1093,31 @@ plugin_name/                   # "nautobot_animal_sounds"
         - index.html
         - models/
           - object_model.html  # "animal.html"
+```
+
+## Overriding Existing Functionality
+
+### Replacing Views
+
+You may override any of the core or plugin views by providing an `override_views` `dict` in a plugin's `views.py` file.
+
+To override a view, you must specify the view's fully qualified name as the `dict` key which consists of the app name followed by the view's name separated by a colon, for instance `dcim:device`. The `dict` value should be the overriding view function.
+
+A simple example to override the device detail view:
+
+```python
+# views.py
+from django.shortcuts import HttpResponse
+from nautobot.core.views import generic
+
+
+class DeviceViewOverride(generic.View):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse(("Hello world! I'm a view which "
+                             "overrides the device object detail view."))
+
+
+override_views = {
+    "dcim:device": DeviceViewOverride.as_view(),
+}
 ```
