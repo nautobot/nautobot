@@ -10,10 +10,10 @@ from nautobot.dcim.form_mixins import (
 from nautobot.dcim.models import Device, Interface, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
+    NautobotBulkEditForm,
     NautobotModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
@@ -114,7 +114,7 @@ class VRFCSVForm(CustomFieldModelCSVForm):
         fields = VRF.csv_headers
 
 
-class VRFBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class VRFBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     enforce_unique = forms.NullBooleanField(
@@ -172,7 +172,7 @@ class RouteTargetCSVForm(CustomFieldModelCSVForm):
         fields = RouteTarget.csv_headers
 
 
-class RouteTargetBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class RouteTargetBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RouteTarget.objects.all(), widget=forms.MultipleHiddenInput())
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=200, required=False)
@@ -282,7 +282,7 @@ class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
         fields = Aggregate.csv_headers
 
 
-class AggregateBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class AggregateBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Aggregate.objects.all(), widget=forms.MultipleHiddenInput())
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -445,11 +445,10 @@ class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSV
 
 
 class PrefixBulkEditForm(
-    BootstrapMixin,
     AddRemoveTagsForm,
     LocatableModelBulkEditFormMixin,
     StatusBulkEditFormMixin,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Prefix.objects.all(), widget=forms.MultipleHiddenInput())
     vrf = DynamicModelChoiceField(
@@ -879,7 +878,7 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldMo
         return ipaddress
 
 
-class IPAddressBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class IPAddressBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddress.objects.all(), widget=forms.MultipleHiddenInput())
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
@@ -1078,11 +1077,10 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
 
 
 class VLANBulkEditForm(
-    BootstrapMixin,
     AddRemoveTagsForm,
     LocatableModelBulkEditFormMixin,
     StatusBulkEditFormMixin,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
     group = DynamicModelChoiceField(
@@ -1222,7 +1220,7 @@ class ServiceCSVForm(CustomFieldModelCSVForm):
         fields = Service.csv_headers
 
 
-class ServiceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class ServiceBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Service.objects.all(), widget=forms.MultipleHiddenInput())
     protocol = forms.ChoiceField(
         choices=add_blank_choice(ServiceProtocolChoices),

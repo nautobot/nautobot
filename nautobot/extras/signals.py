@@ -188,7 +188,7 @@ def git_repository_pre_delete(instance, **kwargs):
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
     job_result.save()
 
-    # TODO: In a distributed Nautobot deployment, each Django instance and/or RQ worker instance may have its own clone
+    # TODO: In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
     # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
     # to clean up other clones as they're encountered.

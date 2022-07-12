@@ -6,9 +6,9 @@ from nautobot.dcim.form_mixins import (
 )
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
+    NautobotBulkEditForm,
     NautobotModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
@@ -71,7 +71,7 @@ class ProviderCSVForm(CustomFieldModelCSVForm):
         fields = Provider.csv_headers
 
 
-class ProviderBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class ProviderBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Provider.objects.all(), widget=forms.MultipleHiddenInput)
     asn = forms.IntegerField(required=False, label="ASN")
     account = forms.CharField(max_length=100, required=False, label="Account number")
@@ -135,7 +135,7 @@ class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
         ]
 
 
-class ProviderNetworkBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class ProviderNetworkBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ProviderNetwork.objects.all(), widget=forms.MultipleHiddenInput)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
@@ -249,7 +249,7 @@ class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         ]
 
 
-class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class CircuitBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Circuit.objects.all(), widget=forms.MultipleHiddenInput)
     type = DynamicModelChoiceField(queryset=CircuitType.objects.all(), required=False)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)

@@ -9,7 +9,9 @@ from django.urls import reverse
 
 import netaddr
 
+from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
@@ -627,3 +629,41 @@ class LoadPluginTest(TestCase):
         # Move to the example plugin. No errors should be raised (which is good).
         plugin_name = "example_plugin"
         load_plugin(plugin_name, settings)
+
+
+class TestPluginCoreViewOverrides(TestCase):
+    """
+    Validate that overridden core views work as expected.
+
+    The functionality is loaded and unloaded by this test case to isolate it from the rest of the test suite.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.device = create_test_device("Device")
+        provider = Provider.objects.create(name="Provider", slug="provider", asn=65001)
+        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        self.circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            type=circuit_type,
+            status=Status.objects.get_for_model(Circuit).get(slug="active"),
+        )
+        self.user.is_superuser = True
+        self.user.save()
+
+    def test_views_are_overridden(self):
+
+        response = self.client.get(reverse("plugins:example_plugin:view_to_be_overridden"))
+        self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
+
+        response = self.client.get(
+            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin_with_view_override"})}'
+        )
+        self.assertIn(
+            (
+                b"plugins:example_plugin:view_to_be_overridden <code>"
+                b"example_plugin_with_view_override.views.ViewOverride</code>"
+            ),
+            response.content,
+        )
