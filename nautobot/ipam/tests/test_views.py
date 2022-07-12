@@ -480,10 +480,10 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
             """\
-site,group,vid,name,tenant,status,role,description,cf_field
-Site 1,VLAN Group 1,101,VLAN101,,Active,Role 1,,Value
-Site 1,VLAN Group 1,102,VLAN102,,Active,Role 1,,Value
-Site 1,VLAN Group 1,103,VLAN103,,Active,Role 1,,Value""",
+site,location,group,vid,name,tenant,status,role,description,cf_field
+Site 1,,VLAN Group 1,101,VLAN101,,Active,Role 1,,Value
+Site 1,,VLAN Group 1,102,VLAN102,,Active,Role 1,,Value
+Site 1,,VLAN Group 1,103,VLAN103,,Active,Role 1,,Value""",
             response.content.decode(response.charset),
         )
 
