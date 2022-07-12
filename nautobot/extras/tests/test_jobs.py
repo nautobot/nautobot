@@ -122,6 +122,29 @@ class JobTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
+    def test_field_default(self):
+        """
+        Job test with field that is a default value that is falsey.
+        https://github.com/nautobot/nautobot/issues/2039
+        """
+        module = "test_field_default"
+        name = "TestFieldDefault"
+        job_class = get_job(f"local/{module}/{name}")
+        form = job_class().as_form()
+
+        self.assertHTMLEqual(
+            form.as_table(),
+            """<tr><th><label for="id_var_int">Var int:</label></th><td>
+<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
+<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
+<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
+<br><span class="helptext">Test default without default</span></td></tr>
+<tr><th><label for="id__commit">Commit changes:</label></th><td>
+<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
+<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+        )
+
     def test_field_order(self):
         """
         Job test with field order.
@@ -350,19 +373,6 @@ class JobTest(TransactionTestCase):
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
         self.assertIn("Data should be a dictionary", log_failure.message)
-
-    def test_job_data_with_falsey_value(self):
-        """
-        Test a default value of 0 as an input.
-        https://github.com/nautobot/nautobot/issues/2039
-        """
-        module = "test_integer_default"
-        name = "TestIntegerDefault"
-        data = {"timer": 0}
-
-        job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-        self.assertEqual(job_result.data.get("timer"), 0)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
 
     def test_job_latest_result_property(self):
         """
