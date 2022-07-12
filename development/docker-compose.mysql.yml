@@ -4,9 +4,6 @@ services:
   nautobot:
     environment:
       - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
-  worker:
-    environment:
-      - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
   celery_worker:
     environment:
       - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
