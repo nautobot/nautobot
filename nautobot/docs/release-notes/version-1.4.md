@@ -67,6 +67,14 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
+## v1.4.0a3 (2022-MM-DD)
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## v1.4.0a2 (2022-07-11)
 
 !!! attention
