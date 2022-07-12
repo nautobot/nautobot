@@ -156,6 +156,8 @@ class ObjectChange(BaseModel):
             self.related_object_id,
             self.object_repr,
             self.object_data,
+            self.change_context,
+            self.change_context_detail,
         )
 
     def get_action_class(self):
