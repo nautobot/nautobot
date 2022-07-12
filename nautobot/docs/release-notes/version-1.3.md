@@ -144,6 +144,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#1595](https://github.com/nautobot/nautobot/issues/1595) - Add ability to specify uWSGI buffer size via environment variable.
 - [#1757](https://github.com/nautobot/nautobot/issues/1757) - Added nullable face, position to Device bulk edit form to provided desired behavior to bulk assigning to a new rack.
 
 ### Changed
