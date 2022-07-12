@@ -153,6 +153,8 @@ coverage = "~6.4.1"
 django-debug-toolbar = "~3.4.0"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
+# Nautobot test plugin used for testing core view overrides
+example-plugin-with-view-override = { path = "examples/example_plugin_with_view_override", develop = true }
 # Code style checking and limited static analysis
 # NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
 flake8 = "~3.9.1"
