@@ -1,23 +1,26 @@
 import json
-from io import StringIO
 import re
 import uuid
+from io import StringIO
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.test.client import RequestFactory
-
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, Job, Status, CustomField, JobResult
+from nautobot.extras.models import CustomField, FileProxy, Job, JobResult, Status
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
+from nautobot.utilities.testing import (
+    CeleryTestCase,
+    TransactionTestCase,
+    run_job_for_testing,
+)
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -347,6 +350,19 @@ class JobTest(TransactionTestCase):
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
         self.assertIn("Data should be a dictionary", log_failure.message)
+
+    def test_job_data_with_falsey_value(self):
+        """
+        Test a default value of 0 as an input.
+        https://github.com/nautobot/nautobot/issues/2039
+        """
+        module = "test_integer_default"
+        name = "TestIntegerDefault"
+        data = {"timer": 0}
+
+        job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
+        self.assertEqual(job_result.data.get("timer"), 0)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
 
     def test_job_latest_result_property(self):
         """
