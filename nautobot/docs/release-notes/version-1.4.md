@@ -71,6 +71,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
+- [#2035](https://github.com/nautobot/nautobot/pull/2035) - Update object change context manager to be aware of the change source
+
 ### Changed
 
 ### Fixed
