@@ -274,6 +274,7 @@ class Circuit(PrimaryModel, StatusModel):
 
 
 @extras_features(
+    "cable_terminations",
     "custom_fields",
     "custom_links",
     "custom_validators",

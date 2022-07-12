@@ -14,7 +14,5 @@ services:
         - "curl"
         - "-fk"
         - "https://localhost:8443/health/"
-  worker:
-    image: "networktocode/nautobot-py${PYTHON_VER}:local"
   celery_worker:
     image: "networktocode/nautobot-py${PYTHON_VER}:local"

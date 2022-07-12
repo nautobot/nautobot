@@ -15,9 +15,9 @@ from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, R
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
-    CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
+    NautobotBulkEditForm,
     NautobotModelForm,
     LocalContextFilterForm,
     LocalContextModelForm,
@@ -148,10 +148,9 @@ class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
 
 class ClusterBulkEditForm(
-    BootstrapMixin,
     AddRemoveTagsForm,
     LocatableModelBulkEditFormMixin,
-    CustomFieldBulkEditForm,
+    NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
@@ -387,7 +386,7 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 
 class VirtualMachineBulkEditForm(
-    BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
+    AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
@@ -657,7 +656,7 @@ class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
             return self.cleaned_data["enabled"]
 
 
-class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class VMInterfaceBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
     virtual_machine = forms.ModelChoiceField(
         queryset=VirtualMachine.objects.all(),
