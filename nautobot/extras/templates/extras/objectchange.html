@@ -81,6 +81,18 @@
                             {{ object.request_id }}
                         </td>
                     </tr>
+                    <tr>
+                        <td>Change Context</td>
+                        <td>
+                            {{ object.get_change_context_display }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Change Context Detail</td>
+                        <td>
+                            {{ object.change_context_detail | placeholder }}
+                        </td>
+                    </tr>
                 </table>
             </div>
             <div class="panel panel-default">
