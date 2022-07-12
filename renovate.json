@@ -43,7 +43,7 @@
       "matchUpdateTypes": ["major", "minor"]
     },
     {
-      "description": "Require dashboard approval for major updates for django-taggit.",
+      "description": "Require dashboard approval for major updates for packages known to have breaking changes.",
       "dependencyDashboardApproval": true,
       "matchBaseBranches": ["next"],
       "matchPackageNames": ["django-taggit", "flake8"],
