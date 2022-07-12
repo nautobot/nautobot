@@ -146,7 +146,7 @@ Default: `4096`
 
 Max: `65535`
 
-The max size of non-body request payload, roughly the size of request headers for uWSGI. Request headers that might contain lengthy query parameters, for example GraphQL or Relationship filtered lookups, might go well over this limit. Increasing this limit will have an impact on running memory usage. please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=buffer-size#buffer-size) for more information.
+The max size of non-body request payload, roughly the size of request headers for uWSGI. Request headers that might contain lengthy query parameters, for example GraphQL or Relationship filtered lookups, might go well over this limit. Increasing this limit will have an impact on running memory usage. Please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=buffer-size#buffer-size) for more information.
 
 This can also be overridden by appending `-b DESIRED_BUFFER_SIZE`, ex: `-b 8192`, to the entry command in all Nautobot containers running uWSGI if you are on a release before `1.3.9`.
 
