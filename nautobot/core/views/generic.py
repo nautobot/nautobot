@@ -952,8 +952,11 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
-                standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
+                custom_fields = getattr(form, "custom_fields", [])
+                relationships = getattr(form, "relationships", [])
+                standard_fields = [
+                    field for field in form.fields if field not in custom_fields + relationships + ["pk"]
+                ]
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
@@ -979,7 +982,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     if isinstance(model_field, ManyToManyField):
                                         getattr(obj, name).set([])
                                     else:
-                                        setattr(obj, name, None if model_field.null else "")
+                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
 
                                 # ManyToManyFields
                                 elif isinstance(model_field, ManyToManyField):
@@ -1006,6 +1009,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                 obj.tags.add(*form.cleaned_data["add_tags"])
                             if form.cleaned_data.get("remove_tags", None):
                                 obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
+                                # Add/remove relationship associations
+                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
