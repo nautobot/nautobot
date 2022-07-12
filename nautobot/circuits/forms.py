@@ -8,7 +8,6 @@ from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldModelCSVForm,
     NautobotFilterForm,
-    CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     StatusBulkEditFormMixin,

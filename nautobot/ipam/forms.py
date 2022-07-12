@@ -11,7 +11,6 @@ from nautobot.dcim.models import Device, Interface, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldModelCSVForm,
-    CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,

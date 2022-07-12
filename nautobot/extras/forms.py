@@ -908,6 +908,7 @@ class NautobotFilterForm(BootstrapMixin, CustomFieldFilterForm, RelationshipMode
     needed.
     """
 
+
 class NautobotBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm, RelationshipModelBulkEditFormMixin):
     """Base class for bulk-edit forms for models that support relationships and custom fields."""
 
