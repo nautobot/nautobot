@@ -22,6 +22,8 @@ Additionally, there are two *symmetric* relationship types that can be used when
 
 Filters can be defined to restrict the type or selection of objects for either side of the connection.
 
+An important note is that the filters have to be defined in **Filterset** Format.
+
 As an example, let's create a relationship between Circuits and Devices.
 In our situation we only would terminate Circuits on Devices with the Device Role of `edge`.
 
