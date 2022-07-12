@@ -144,6 +144,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#1757](https://github.com/nautobot/nautobot/issues/1757) - Added nullable face, position to Device bulk edit form to provided desired behavior to bulk assigning to a new rack.
+
 ### Changed
 
 ### Fixed
@@ -151,6 +153,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1795](https://github.com/nautobot/nautobot/issues/1795) - Corrected relationship source/destination filter help text from queryset Filter to filterset Filter and updated documentations.
 - [#1839](https://github.com/nautobot/nautobot/issues/1795) - Fixed staff users with auth > group permissions unable to view groups in admin UI.
 - [#1947](https://github.com/nautobot/nautobot/issues/1947) - Fixed unbound local error by initializing template variable before conditional logic statements.
+- [#2036](https://github.com/nautobot/nautobot/pull/2036) - Fixed outdated UI navigation references in documentation.
 
 ## v1.3.8 (2022-07-11)
 
