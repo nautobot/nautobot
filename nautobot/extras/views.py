@@ -995,7 +995,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
     def post(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
-        
+
         job_form = (
             job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         )
