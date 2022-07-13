@@ -4,7 +4,9 @@ Class-modifying mixins that need to be standalone to avoid circular imports.
 import sys
 
 from cacheops.utils import family_has_profile
+from django.conf import settings
 from django.db.models import Q
+from django.urls import NoReverseMatch, reverse
 from funcy import once_per
 
 from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
@@ -42,6 +44,25 @@ class NotesMixin:
             self._notes_queryset = queryset
 
         return self._notes_queryset
+
+    def get_notes_url(self):
+        """Return the changelog URL for a given instance."""
+        meta = self._meta
+
+        route = f"{meta.app_label}:{meta.model_name}_notes"
+        if meta.app_label in settings.PLUGINS:
+            route = f"plugins:{route}"
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
 
 
 # 2.0 TODO: Remove after v2 since we will no longer care about backwards-incompatibility.

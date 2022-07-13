@@ -328,12 +328,5 @@
          </div>
      </div>
  </div>
- <div id="notes" role="tabpanel" class="tab-pane {% if request.GET.tab == 'notes' %}active{% else %}fade{% endif %}">
-    <div class="row">
-        <div class="col-md-12">
-            {% include 'inc/notes_panel.html' with table=notes_table %}
-        </div>
-    </div>
-</div>
 <div>
 {% endblock content %}

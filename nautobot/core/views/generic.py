@@ -12,7 +12,6 @@ from django.core.exceptions import (
 )
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
-from django.db.models.query import QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -23,9 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
-from nautobot.extras.forms import NotesForm
 from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.tables import NotesTable
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -113,20 +110,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         # This object likely doesn't have a changelog route defined.
         return None
 
-    def add_notes_tab(self, request, instance):
-        """Adds the Notes tab if the model has the NotesMixin."""
-        ctx = {}
-        if hasattr(instance, "notes") and isinstance(instance.notes, QuerySet):
-            ctx["notes_form"] = NotesForm(
-                initial={
-                    "assigned_object_type": ContentType.objects.get_for_model(instance),
-                    "assigned_object_id": instance.pk,
-                }
-            )
-            ctx["notes_table"] = NotesTable(instance.notes)
-        
-        return ctx
-
     def get(self, request, *args, **kwargs):
         """
         Generic GET handler for accessing an object by PK or slug
@@ -142,7 +125,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 "changelog_url": self.get_changelog_url(instance),
                 **self.get_extra_context(request, instance),
-                **self.add_notes_tab(request, instance),
             },
         )
 
