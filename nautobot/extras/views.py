@@ -1,8 +1,9 @@
 import inspect
 from datetime import datetime
-from celery import chain
 import logging
 
+from celery import chain
+from celery.states import FAILURE
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -24,8 +25,9 @@ from jsonschema.validators import Draft7Validator
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
-from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.extras.tasks import delete_custom_field_data
+from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -40,7 +42,6 @@ from nautobot.utilities.views import ObjectPermissionRequiredMixin
 from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
-from nautobot.utilities.error_handlers import handle_protectederror
 from . import filters, forms, tables
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
@@ -462,6 +463,8 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         """
         Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
         """
+        # si (*args, **kwargs) creates immuatable signature.
+        # That makes the result of the task is independent of that of the previous task
         tasks = [
             delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
             for obj in queryset
@@ -491,10 +494,35 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
 
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
+                # Clean up the models's _custom_field_data first by running celery tasks
                 try:
+
+                    class TaskFailure(Exception):
+                        """
+                        Custom Exception for when a celery task / tasks failed to execute.
+                        """
+
+                        pass
+
+                    # chain() from celery takes a list of task signatures as parameters.
                     tasks = self.construct_custom_field_delete_tasks(queryset=queryset)
-                    chain(*tasks).apply_async()
-                    deleted_count = queryset.delete()[1][model._meta.label]
+                    # It returns a lazy signature that can be called to apply the first task in the chain.
+                    # When the task succeeds the next task in the chain is applied, and so on.
+                    # apply_async() apply tasks asynchronously by sending a message.
+                    result = chain(*tasks).apply_async()
+                    # Wait until the list of tasks fully executes and returns a result of either SUCCESS or FAILURE.
+                    while result.ready() is False:
+                        continue
+
+                    if result.state == FAILURE:
+                        # raise an exception if tasks failed.
+                        raise TaskFailure(f"Celery tasks failed. Status: {result.state}")
+                except TaskFailure:
+                    return redirect(self.get_return_url(request))
+
+                try:
+                    _, deleted_info = queryset.delete()
+                    deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
