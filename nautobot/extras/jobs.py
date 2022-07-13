@@ -37,7 +37,6 @@ from .utils import get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.extras.context_managers import JobChangeContext
-from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -829,19 +828,11 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
-class JobHookReceiver(Job):
-    class Meta:
-        hidden = True
-
-    def __init__(self):
-        self.object_change = ObjectVar(model=ObjectChange)
-        super().__init__()
-
-
 def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
     """
+    from .jobhooks import JobHookReceiver
     from .scripts import Script, BaseScript
     from .reports import Report
 
