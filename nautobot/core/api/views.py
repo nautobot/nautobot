@@ -380,6 +380,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "nautobot-version": {"type": "string"},
                     "plugins": {"type": "object"},
                     "python-version": {"type": "string"},
+                    # 2.0 TODO: remove rq-workers-running property
                     "rq-workers-running": {"type": "integer"},
                     "celery-workers-running": {"type": "integer"},
                 },
@@ -417,6 +418,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
+                # 2.0 TODO: remove rq-workers-running
                 "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }
@@ -495,28 +497,11 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     root_value = None
 
     def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None):
-        if not schema:
-            schema = graphene_settings.SCHEMA
-
-        if backend is None:
-            backend = get_default_backend()
-
-        if middleware is None:
-            middleware = graphene_settings.MIDDLEWARE
-
-        self.graphql_schema = self.graphql_schema or schema
-
-        if middleware is not None:
-            if isinstance(middleware, MiddlewareManager):
-                self.middleware = middleware
-            else:
-                self.middleware = list(instantiate_middleware(middleware))
-
+        self.schema = schema
         self.executor = executor
+        self.middleware = middleware
         self.root_value = root_value
         self.backend = backend
-
-        assert isinstance(self.graphql_schema, GraphQLSchema), "A Schema is required to be provided to GraphQLAPIView."
 
     def get_root_value(self, request):
         return self.root_value
@@ -556,6 +541,26 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
                 {"errors": [GraphQLView.format_error(e)]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+    def init_graphql(self):
+        if not self.schema:
+            self.schema = graphene_settings.SCHEMA
+
+        if self.backend is None:
+            self.backend = get_default_backend()
+
+        self.graphql_schema = self.graphql_schema or self.schema
+
+        if self.middleware is not None:
+            if isinstance(self.middleware, MiddlewareManager):
+                self.middleware = graphene_settings.MIDDLEWARE
+            else:
+                self.middleware = list(instantiate_middleware(self.middleware))
+
+        self.executor = self.executor
+        self.root_value = self.root_value
+
+        assert isinstance(self.graphql_schema, GraphQLSchema), "A Schema is required to be provided to GraphQLAPIView."
 
     def get_response(self, request, data):
         """Extract the information from the request, execute the GraphQL query and form the response.
@@ -625,6 +630,8 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         Returns:
             ExecutionResult: Execution result object from GraphQL with response or error message.
         """
+
+        self.init_graphql()
         if not query:
             raise HttpError(HttpResponseBadRequest("Must provide query string."))
 

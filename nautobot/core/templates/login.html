@@ -2,6 +2,53 @@
 {% load helpers %}
 {% load form_helpers %}
 
+{% block extra_styles %}
+<style>
+    .style-line {
+        overflow: hidden;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .style-line span {
+        text-align: center;
+        font-size: 15px;
+        color: #acacac;
+        display: inline-block;
+        position: relative;
+        padding: 0 25px;
+        z-index: 1;
+    }
+    .style-line span:before {
+        display: inline-block;
+        content: "";
+        height: 2px;
+        width: 100%;
+        background-color: #cfcfcf;
+        left: 100%;
+        top: 50%;
+        -webkit-transform: translateY(-50%);
+        -ms-transform: translateY(-50%);
+        transform: translateY(-50%);
+        position: absolute;
+        z-index: 1;
+    }
+    .style-line span:after {
+        display: inline-block;
+        content: "";
+        height: 2px;
+        width: 100%;
+        background-color: #cfcfcf;
+        right: 100%;
+        top: 50%;
+        -webkit-transform: translateY(-50%);
+        -ms-transform: translateY(-50%);
+        transform: translateY(-50%);
+        position: absolute;
+        z-index: 1;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row" style="margin-top: {% if 'BANNER_LOGIN'|settings_or_config %}100{% else %}150{% endif %}px;">
     <div class="col-sm-4 col-sm-offset-4">
@@ -34,6 +81,12 @@
                 </div>
             </div>
         </form>
+        {% if SSO_AUTH_ENABLED %}
+        <div class="style-line">
+            <span>Or</span>
+        </div>
+        <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with SSO</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

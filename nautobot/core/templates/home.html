@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load helpers %}
+{% load registry %}
 
 {% block header %}
     {{ block.super }}
@@ -15,6 +16,7 @@
 
 
 {% block content %}
+    {% registry %}
     {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
         {% include 'search_form.html' %}
     {% endif %}

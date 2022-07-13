@@ -2,9 +2,9 @@ from django import forms
 
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
+    NautobotBulkEditForm,
     NautobotModelForm,
 )
 from nautobot.utilities.forms import (
@@ -86,7 +86,7 @@ class TenantCSVForm(CustomFieldModelCSVForm):
         fields = Tenant.csv_headers
 
 
-class TenantBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class TenantBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Tenant.objects.all(), widget=forms.MultipleHiddenInput())
     group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
 

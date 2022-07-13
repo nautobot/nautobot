@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import HttpResponse, render
 from django.views.generic import View
 
 from nautobot.core.views import generic
@@ -159,3 +159,8 @@ class AnotherExampleModelView(generic.ObjectView):
     """Detail view for a single `AnotherExampleModel` object."""
 
     queryset = AnotherExampleModel.objects.all()
+
+
+class ViewToBeOverridden(generic.View):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse("I am a view in the example plugin which will be overridden by another plugin.")

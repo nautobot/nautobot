@@ -55,21 +55,21 @@ class RelationshipModel(models.Model):
 
     def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
-        Return a dictionary of queryset for all custom relationships
+        Return a dictionary of RelationshipAssociation querysets for all custom relationships
 
         Returns:
             response {
                 "source": {
-                    <relationship #1>: <queryset #1>,
-                    <relationship #2>: <queryset #2>,
+                    <Relationship instance #1>: <RelationshipAssociation queryset #1>,
+                    <Relationship instance #2>: <RelationshipAssociation queryset #2>,
                 },
                 "destination": {
-                    <relationship #3>: <queryset #3>,
-                    <relationship #4>: <queryset #4>,
+                    <Relationship instance #3>: <RelationshipAssociation queryset #3>,
+                    <Relationship instance #4>: <RelationshipAssociation queryset #4>,
                 },
                 "peer": {
-                    <relationship #5>: <queryset #5>,
-                    <relationship #6>: <queryset #6>,
+                    <Relationship instance #5>: <RelationshipAssociation queryset #5>,
+                    <Relationship instance #6>: <RelationshipAssociation queryset #6>,
                 },
             }
         """
@@ -132,26 +132,26 @@ class RelationshipModel(models.Model):
         Returns:
             response {
                 "source": {
-                    <relationship #1>: {   # one-to-one relationship that self is the source of
+                    <Relationship instance #1>: {   # one-to-one relationship that self is the source of
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": False,
-                        "value": <model>,     # single destination for this relationship
+                        "value": <model instance>,     # single destination for this relationship
                         "url": "...",
                     },
-                    <relationship #2>: {   # one-to-many or many-to-many relationship that self is a source for
+                    <Relationship instance #2>: {   # one-to-many or many-to-many relationship that self is a source for
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": True,
                         "value": None,
-                        "queryset": <queryset #2>   # set of destinations for the relationship
+                        "queryset": <RelationshipAssociation queryset #2>   # set of destinations for the relationship
                     },
                 },
                 "destination": {
-                    (same format as source - relationships that self is the destination of)
+                    (same format as "source" dict - relationships that self is the destination of)
                 },
                 "peer": {
-                    (same format as source - symmetric relationships that self is involved in)
+                    (same format as "source" dict - symmetric relationships that self is involved in)
                 },
             }
         """
