@@ -325,11 +325,11 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
     )
-    ip_addresses = MultiValueCharFilter(method="filter_ip_address", label="IP addresses (address or ID)")
+    ip_addresses = MultiValueCharFilter(method="filter_ip_addresses", label="IP addresses (address or ID)")
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
     tag = TagFilter()
 
-    def filter_ip_address(self, queryset, name, value):
+    def filter_ip_addresses(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
         addresses = set(item for item in value if item not in pk_values)
 
