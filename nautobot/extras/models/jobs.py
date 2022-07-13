@@ -547,8 +547,7 @@ class JobResult(BaseModel, CustomFieldModel):
         """
         # Discard "request" parameter from the kwargs that we save in the job_result, as it's not relevant to re-runs,
         # and will likely go away in the future.
-        # Also discard "commit" parameter as it's redundant with data["_commit"]
-        job_result_kwargs = {key: value for key, value in kwargs.items() if key not in ["request", "commit"]}
+        job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
         job_result = cls.objects.create(
             name=name,
             job_kwargs=job_result_kwargs,
@@ -586,14 +585,6 @@ class JobResult(BaseModel, CustomFieldModel):
                         celery_kwargs["time_limit"] = job_class.Meta.time_limit
                 else:
                     logger.error("Neither a Job database record nor a Job source class were found for %s", name)
-
-        # If the job_kwargs contained Python objects such as a NautobotFakeRequest instance,
-        # they are correctly JSONified on write to the database, but the in-memory representation of the JobResult
-        # will still contain Python objects rather than a pure JSON-compatible dict.
-        # This could cause problems when other code consumes this JobResult object, for example in the REST API
-        # JobResult serializer which will try and fail to dump these objects to JSON.
-        # Workaround: force a reload of the JobResult from the database so that it contains proper JSON job_kwargs.
-        job_result.refresh_from_db()
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
 

@@ -976,6 +976,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                 explicit_initial = initial
                 initial = job_result.job_kwargs.get("data", {}).copy()
+                commit = job_result.job_kwargs.get("commit")
+                if commit is not None:
+                    initial.setdefault("_commit", commit)
                 initial.update(explicit_initial)
             except JobResult.DoesNotExist:
                 messages.warning(request, f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.")
