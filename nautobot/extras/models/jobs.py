@@ -103,6 +103,7 @@ class Job(PrimaryModel):
         populate_from=["class_path"],
         slugify_function=slugify_dots_to_dashes,
     )
+    is_job_hook = models.BooleanField(default=False)
 
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
