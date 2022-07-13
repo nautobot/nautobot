@@ -242,7 +242,7 @@ class BaseJob:
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
-        for name, attr in cls.__dict__.items():
+        for name, attr in inspect.getmembers(cls, predicate=lambda x: not inspect.isroutine(x)):
             if name not in vars and issubclass(attr.__class__, ScriptVariable):
                 vars[name] = attr
 
@@ -829,11 +829,13 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
-class JobHookReceiver(BaseJob):
-    object_change = ObjectVar(model=ObjectChange)
-
+class JobHookReceiver(Job):
     class Meta:
         hidden = True
+
+    def __init__(self):
+        self.object_change = ObjectVar(model=ObjectChange)
+        super().__init__()
 
 
 def is_job(obj):
