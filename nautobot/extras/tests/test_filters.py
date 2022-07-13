@@ -59,7 +59,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
