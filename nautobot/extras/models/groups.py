@@ -453,17 +453,30 @@ class DynamicGroup(OrganizationalModel):
         :param value:
             Value passed to the filter
         """
-        q = models.Q()
+        query = models.Q()
 
+        # In this case we want all values in a set union (boolean OR) because we want ANY of the
+        # filter values to match.
         if isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
-                q |= models.Q(**filter_field.get_filter_predicate(v))
-        # The method `get_filter_predicate()` is only available on subclasses of
-        # `MultipleChoiceFilter`, so we must construct a lookup if a filter is not multiple-choice.
+                query |= models.Q(**filter_field.get_filter_predicate(v))
+
+        # The method `get_filter_predicate()` is only available on instances or subclasses
+        # of `MultipleChoiceFilter`, so we must construct a lookup if a filter is not
+        # multiple-choice. This is safe for singular filters except `ModelChoiceFilter`, because they
+        # do not support `to_field_name`.
         else:
-            lookup = f"{filter_field.field_name}__{filter_field.lookup_expr}"
-            q |= models.Q(**{lookup: value})
-        return q
+            field_name = filter_field.field_name
+
+            # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
+            to_field_name = getattr(filter_field.field, "to_field_name", None)
+            if to_field_name is not None:
+                field_name = f"{field_name}__{to_field_name}"
+
+            lookup = f"{field_name}__{filter_field.lookup_expr}"
+            query |= models.Q(**{lookup: value})
+
+        return query
 
     def generate_query_for_group(self, group):
         """
@@ -473,13 +486,38 @@ class DynamicGroup(OrganizationalModel):
             DynamicGroup instance
         """
         fs = group.filterset_class(group.filter, group.get_queryset())
-        q = models.Q()
+        query = models.Q()
 
+        # In this case we want all filters for a group's filter dict in a set intersection (boolean
+        # AND) because ALL filter conditions must match for the filter parameters to be valid.
         for field_name, value in fs.data.items():
             filter_field = fs.filters[field_name]
-            q &= self.generate_query_for_filter(filter_field, value)
+            query &= self.generate_query_for_filter(filter_field, value)
 
-        return q
+        return query
+
+    def perform_membership_set_operation(self, group, operator, query, next_set):
+        """
+        Perform set operation for a group membership. The `operator` and `next_set` are used to
+        decide the appropriate action to take on the `query`. The updated `Q` object is returned.
+
+        :param group:
+            DynamicGroup instance
+        :param operator:
+            DynamicGroupOperatorChoices choice (str)
+        :param query:
+            Q instance
+        :param next_set:
+            Q instance
+        """
+        if operator == "union":
+            query |= next_set
+        elif operator == "difference":
+            query &= ~next_set
+        elif operator == "intersection":
+            query &= next_set
+
+        return query
 
     def generate_members_query(self):
         """
@@ -491,7 +529,9 @@ class DynamicGroup(OrganizationalModel):
         query = models.Q()
         for membership in self.dynamic_group_memberships.all():
             group = membership.group
-            query &= self.generate_query_for_group(group)
+            operator = membership.operator
+            next_set = self.generate_query_for_group(group)
+            query = self.perform_membership_set_operation(group, operator, query, next_set)
 
         return query
 
@@ -516,13 +556,7 @@ class DynamicGroup(OrganizationalModel):
                 logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
 
             next_set = group.generate_members_query()
-
-            if operator == "union":
-                query |= next_set
-            elif operator == "difference":
-                query &= ~next_set
-            elif operator == "intersection":
-                query &= next_set
+            query = self.perform_membership_set_operation(group, operator, query, next_set)
 
         return query
 
