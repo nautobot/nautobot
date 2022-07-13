@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
@@ -67,6 +67,13 @@ class ObjectChange(BaseModel):
     changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.PROTECT, related_name="+")
     changed_object_id = models.UUIDField(db_index=True)
     changed_object = GenericForeignKey(ct_field="changed_object_type", fk_field="changed_object_id")
+    change_context = models.CharField(
+        max_length=50,
+        choices=ObjectChangeEventContextChoices,
+        editable=False,
+        db_index=True,
+    )
+    change_context_detail = models.CharField(max_length=100, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.PROTECT,
@@ -93,6 +100,8 @@ class ObjectChange(BaseModel):
         "related_object_id",
         "object_repr",
         "object_data",
+        "change_context",
+        "change_context_detail",
     ]
 
     class Meta:
@@ -147,6 +156,8 @@ class ObjectChange(BaseModel):
             self.related_object_id,
             self.object_repr,
             self.object_data,
+            self.change_context,
+            self.change_context_detail,
         )
 
     def get_action_class(self):
