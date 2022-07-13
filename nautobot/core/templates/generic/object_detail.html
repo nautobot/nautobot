@@ -86,9 +86,9 @@
             </li>
         {% endif %}
         {% if perms.extras.view_objectchange %}
-            {% if active_tab != 'changelog' and changelog_url or active_tab == 'changelog' %}
+            {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
                 <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                    <a href="{{ changelog_url }}">Change Log</a>
+                    <a href="{{ object.get_changelog_url }}">Change Log</a>
                 </li>
             {% endif %}
         {% endif %}

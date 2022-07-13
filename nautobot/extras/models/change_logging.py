@@ -3,7 +3,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
@@ -43,6 +43,25 @@ class ChangeLoggedModel(models.Model):
             object_data_v2=serialize_object_v2(self),
             related_object=related_object,
         )
+
+    def get_changelog_url(self):
+        """Return the changelog URL for this object."""
+        meta = self._meta
+
+        route = f"{meta.app_label}:{meta.model_name}_changelog"
+        if meta.app_label in settings.PLUGINS:
+            route = f"plugins:{route}"
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
 
 
 @extras_features("graphql")
