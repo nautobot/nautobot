@@ -1206,20 +1206,10 @@ class InterfaceFilterSet(
         method="filter_kind",
         label="Kind of interface",
     )
-    parent_interface_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="parent_interface",
-        queryset=Interface.objects.all(),
-        label="Parent interface (ID)",
-    )
     parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Interface.objects.all(),
         label="Parent interface (name or ID)",
-    )
-    bridge_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="bridge",
-        queryset=Interface.objects.all(),
-        label="Bridge interface (ID)",
     )
     bridge = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",

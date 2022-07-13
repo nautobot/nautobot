@@ -3333,21 +3333,13 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_parent(self):
         parent_interfaces = Interface.objects.filter(name__startswith="Parent")[:2]
-        with self.subTest():
-            params = {"parent_interface_id": [parent_interfaces[0].pk, parent_interfaces[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"parent_interface": [parent_interfaces[0].pk, parent_interfaces[1].name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"parent_interface": [parent_interfaces[0].pk, parent_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_bridge(self):
         bridge_interfaces = Interface.objects.filter(type=InterfaceTypeChoices.TYPE_BRIDGE)[:2]
-        with self.subTest():
-            params = {"bridge_id": [bridge_interfaces[0].pk, bridge_interfaces[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"bridge": [bridge_interfaces[0].pk, bridge_interfaces[1].name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"bridge": [bridge_interfaces[0].pk, bridge_interfaces[1].name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_lag(self):
         lag_interfaces = Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG)[:2]
