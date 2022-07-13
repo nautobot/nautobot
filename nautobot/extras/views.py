@@ -344,14 +344,6 @@ class CustomFieldListView(generic.ObjectListView):
 class CustomFieldView(generic.ObjectView):
     queryset = CustomField.objects.all()
 
-    # TODO: Remove this method in 2.0. Can be retrieved from instance itself now
-    # instance.get_changelog_url()
-    # Only available on models that support changelogs
-    def get_changelog_url(self, instance):
-        """Return the changelog URL."""
-        route = "extras:customfield_changelog"
-        return reverse(route, kwargs={"name": getattr(instance, "name")})
-
 
 class CustomFieldEditView(generic.ObjectEditView):
     queryset = CustomField.objects.all()

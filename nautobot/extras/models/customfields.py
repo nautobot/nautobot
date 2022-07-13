@@ -379,7 +379,7 @@ class CustomField(BaseModel, ChangeLoggedModel):
     def get_changelog_url(self):
         """Overloaded from ChangeLoggedModel.get_changelog_url as custom fields route on name, not PK or slug."""
         route = "extras:customfield_changelog"
-        return reverse(route, kwargs={"name": getattr(self, "name")})
+        return reverse(route, kwargs={"name": self.name})
 
     def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
         """

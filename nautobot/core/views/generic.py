@@ -23,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -119,6 +120,11 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
 
+        changelog_url = None
+
+        if isinstance(instance, ChangeLoggedModel):
+            changelog_url = instance.get_changelog_url()
+
         return render(
             request,
             self.get_template_name(),
@@ -126,7 +132,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": instance.get_changelog_url(),  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
+                "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
                 **self.get_extra_context(request, instance),
             },
         )
