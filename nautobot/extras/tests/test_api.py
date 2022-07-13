@@ -1222,6 +1222,8 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         job_result = JobResult.objects.last()
+        self.assertIn("data", job_result.job_kwargs)
+        self.assertEqual(job_result.job_kwargs["data"], job_data)
 
         return (response, job_result)  # so subclasses can do additional testing
 
