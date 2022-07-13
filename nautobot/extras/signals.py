@@ -29,20 +29,20 @@ logger = logging.getLogger("nautobot.extras.signals")
 #
 
 
-def _get_user_if_authenticated(request, objectchange):
+def _get_user_if_authenticated(user, objectchange):
     """Return the user object associated with the request if the user is defined.
 
     If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
     This is a workaround to fix a recurring issue where the user shouldn't be present in the request object randomly.
     A similar issue was reported in NetBox https://github.com/netbox-community/netbox/issues/5142
     """
-    if request.user.is_authenticated:
-        return request.user
+    if user.is_authenticated:
+        return user
     else:
         logger.warning(f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}")
 
 
-def _handle_changed_object(request, sender, instance, **kwargs):
+def _handle_changed_object(change_context, sender, instance, **kwargs):
     """
     Fires when an object is created or updated.
     """
@@ -66,16 +66,18 @@ def _handle_changed_object(request, sender, instance, **kwargs):
             ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(instance),
                 changed_object_id=instance.pk,
-                request_id=request.id,
+                request_id=change_context.id,
             ).update(object_data=instance.to_objectchange(action).object_data)
         else:
             objectchange = instance.to_objectchange(action)
-            objectchange.user = _get_user_if_authenticated(request, objectchange)
-            objectchange.request_id = request.id
+            objectchange.user = _get_user_if_authenticated(change_context.user, objectchange)
+            objectchange.request_id = change_context.id
+            objectchange.change_context = change_context.context
+            objectchange.change_context_detail = change_context.context_detail
             objectchange.save()
 
     # Enqueue webhooks
-    enqueue_webhooks(instance, request.user, request.id, action)
+    enqueue_webhooks(instance, change_context.user, change_context.id, action)
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
@@ -90,19 +92,21 @@ def _handle_changed_object(request, sender, instance, **kwargs):
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 
-def _handle_deleted_object(request, sender, instance, **kwargs):
+def _handle_deleted_object(change_context, sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(request, objectchange)
-        objectchange.request_id = request.id
+        objectchange.user = _get_user_if_authenticated(change_context.user, objectchange)
+        objectchange.request_id = change_context.id
+        objectchange.change_context = change_context.context
+        objectchange.change_context_detail = change_context.context_detail
         objectchange.save()
 
     # Enqueue webhooks
-    enqueue_webhooks(instance, request.user, request.id, ObjectChangeActionChoices.ACTION_DELETE)
+    enqueue_webhooks(instance, change_context.user, change_context.id, ObjectChangeActionChoices.ACTION_DELETE)
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()

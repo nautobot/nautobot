@@ -36,6 +36,7 @@ from .registry import registry
 from .utils import get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
+from nautobot.extras.context_managers import JobChangeContext
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -1105,9 +1106,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
 
-    # Add the current request as a property of the job
-    job.request = request
-
     def _run_job():
         """
         Core job execution task.
@@ -1180,7 +1178,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
     if commit:
-        with change_logging(request):
+        change_context = JobChangeContext(request.user, id=request.id, context_detail=job_model.slug)
+        with change_logging(change_context):
             _run_job()
     else:
         _run_job()
