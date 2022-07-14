@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import yaml
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -109,12 +110,15 @@ class DeviceType(PrimaryModel):
     # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
+    # TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
+    # todoindex:
     is_full_depth = models.BooleanField(
         default=True,
         verbose_name="Is full depth",
         help_text="Device consumes both front and rear rack faces",
     )
+    # todoindex:
     subdevice_role = models.CharField(
         max_length=50,
         choices=SubdeviceRoleChoices,
@@ -341,6 +345,7 @@ class DeviceRole(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     color = ColorField(default=ColorChoices.COLOR_GREY)
+    # todoindex:
     vm_role = models.BooleanField(
         default=True,
         verbose_name="VM Role",
@@ -441,17 +446,19 @@ class Platform(OrganizationalModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
 )
 class Device(PrimaryModel, ConfigContextModel, StatusModel):
     """
-    A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
+    A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
-    Each Device must be assigned to a site, and optionally to a rack within that site. Associating a device with a
-    particular rack face or unit is optional (for example, vertically mounted PDUs do not consume rack units).
+    Each Device must be assigned to a Site and/or Location, and optionally to a Rack within that.
+    Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
+    do not consume rack units).
 
     When a new Device is created, console/power/interface/device bay components are created along with it as dictated
     by the component templates assigned to its DeviceType. Components can also be added, modified, or deleted after the
@@ -486,6 +493,13 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         help_text="A unique tag used to identify this device",
     )
     site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="devices",
+        blank=True,
+        null=True,
+    )
     rack = models.ForeignKey(
         to="dcim.Rack",
         on_delete=models.PROTECT,
@@ -493,6 +507,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
+    # TODO: Profile filtering on this field if it could benefit from an index
     position = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
@@ -500,6 +515,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         verbose_name="Position (U)",
         help_text="The lowest-numbered unit occupied by the device",
     )
+    # todoindex:
     face = models.CharField(max_length=50, blank=True, choices=DeviceFaceChoices, verbose_name="Rack face")
     primary_ip4 = models.OneToOneField(
         to="ipam.IPAddress",
@@ -531,6 +547,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
+    # TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     comments = models.TextField(blank=True)
@@ -557,6 +574,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "asset_tag",
         "status",
         "site",
+        "location",
         "rack_group",
         "rack_name",
         "position",
@@ -571,6 +589,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "tenant",
         "platform",
         "site",
+        "location",
         "rack",
         "status",
         "cluster",
@@ -612,6 +631,23 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                     "rack": f"Rack {self.rack} does not belong to site {self.site}.",
                 }
             )
+
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if self.rack is not None and self.rack.location is not None and self.rack.location != self.location:
+                raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
+
+            # self.cluster is validated somewhat later, see below
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
+                )
 
         if self.rack is None:
             if self.face:
@@ -724,6 +760,17 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                 {"cluster": "The assigned cluster belongs to a different site ({})".format(self.cluster.site)}
             )
 
+        # A Device can only be assigned to a Cluster in the same location or parent location, if any
+        if (
+            self.cluster is not None
+            and self.location is not None
+            and self.cluster.location is not None
+            and self.cluster.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {"cluster": f"The assigned cluster belongs to a location that does not include {self.location}."}
+            )
+
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
             raise ValidationError(
@@ -780,6 +827,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             self.asset_tag,
             self.get_status_display(),
             self.site.name,
+            self.location.name if self.location else None,
             self.rack.group.name if self.rack and self.rack.group else None,
             self.rack.name if self.rack else None,
             self.position,
@@ -836,6 +884,16 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         if self.virtual_chassis and self.virtual_chassis.master == self:
             filter |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
         return Interface.objects.filter(filter)
+
+    @property
+    def common_vc_interfaces(self):
+        """
+        Return a QuerySet matching all Interfaces assigned to this Device or,
+        if this Device belongs to a VirtualChassis, it returns all interfaces belonging Devices with same VirtualChassis
+        """
+        if self.virtual_chassis:
+            return self.virtual_chassis.member_interfaces
+        return self.interfaces
 
     def get_cables(self, pk_list=False):
         """
@@ -907,6 +965,11 @@ class VirtualChassis(PrimaryModel):
 
     def get_absolute_url(self):
         return reverse("dcim:virtualchassis", kwargs={"pk": self.pk})
+
+    @property
+    def member_interfaces(self):
+        """Return a list of Interfaces common to all member devices."""
+        return Interface.objects.filter(pk__in=self.members.values_list("interfaces", flat=True))
 
     def clean(self):
         super().clean()

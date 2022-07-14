@@ -108,6 +108,32 @@ nautobot:
 
 Then `invoke stop` (if you previously had the docker environment running with Postgres) and `invoke start` and you should now be running with MySQL.
 
+### Running an RQ worker
+
+By default the Docker development environment no longer includes an RQ worker container, as RQ support in Nautobot is deprecated and will be removed entirely in a future release. If you need to run an RQ worker, you can set up `invoke.yml` as described above with the following `docker-compose.override.yml`:
+
+```yaml
+---
+services:
+  rq_worker:
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "nautobot-server rqworker"
+    healthcheck:
+      interval: 60s
+      timeout: 30s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "health_check"]
+    depends_on:
+      - nautobot
+    env_file:
+      - ./dev.env
+    tty: true
+    volumes:
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source
+```
+
 ## Microsoft Visual Studio Code Integration
 
 For users of Microsoft Visual Studio Code, several files are included to ease development and integrate with the [VS Code Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). The following related files are found relative to the root of the project:

@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
@@ -54,21 +55,21 @@ class RelationshipModel(models.Model):
 
     def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
-        Return a dictionary of queryset for all custom relationships
+        Return a dictionary of RelationshipAssociation querysets for all custom relationships
 
         Returns:
             response {
                 "source": {
-                    <relationship #1>: <queryset #1>,
-                    <relationship #2>: <queryset #2>,
+                    <Relationship instance #1>: <RelationshipAssociation queryset #1>,
+                    <Relationship instance #2>: <RelationshipAssociation queryset #2>,
                 },
                 "destination": {
-                    <relationship #3>: <queryset #3>,
-                    <relationship #4>: <queryset #4>,
+                    <Relationship instance #3>: <RelationshipAssociation queryset #3>,
+                    <Relationship instance #4>: <RelationshipAssociation queryset #4>,
                 },
                 "peer": {
-                    <relationship #5>: <queryset #5>,
-                    <relationship #6>: <queryset #6>,
+                    <Relationship instance #5>: <RelationshipAssociation queryset #5>,
+                    <Relationship instance #6>: <RelationshipAssociation queryset #6>,
                 },
             }
         """
@@ -131,26 +132,26 @@ class RelationshipModel(models.Model):
         Returns:
             response {
                 "source": {
-                    <relationship #1>: {   # one-to-one relationship that self is the source of
+                    <Relationship instance #1>: {   # one-to-one relationship that self is the source of
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": False,
-                        "value": <model>,     # single destination for this relationship
+                        "value": <model instance>,     # single destination for this relationship
                         "url": "...",
                     },
-                    <relationship #2>: {   # one-to-many or many-to-many relationship that self is a source for
+                    <Relationship instance #2>: {   # one-to-many or many-to-many relationship that self is a source for
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": True,
                         "value": None,
-                        "queryset": <queryset #2>   # set of destinations for the relationship
+                        "queryset": <RelationshipAssociation queryset #2>   # set of destinations for the relationship
                     },
                 },
                 "destination": {
-                    (same format as source - relationships that self is the destination of)
+                    (same format as "source" dict - relationships that self is the destination of)
                 },
                 "peer": {
-                    (same format as source - symmetric relationships that self is involved in)
+                    (same format as "source" dict - symmetric relationships that self is involved in)
                 },
             }
         """
@@ -317,6 +318,9 @@ class Relationship(BaseModel, ChangeLoggedModel):
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
 
+    def get_absolute_url(self):
+        return reverse("extras:relationship", args=[self.slug])
+
     def get_label(self, side):
         """Return the label for a given side, source or destination.
 
@@ -448,7 +452,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
             error_messages = []
             if filterset.errors:
                 for key in filterset.errors:
-                    error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
+                    # When settings.STRICT_FILTERING is True, any extraneous filter parameters will result in
+                    # filterset.errors[key] = ["Unknown filter field"]
+                    # This is redundant with our custom (more specific) error message added below from filterset_params
+                    # So discard such a message if present.
+                    errors_list = [error for error in filterset.errors[key] if "Unknown filter field" not in str(error)]
+                    if errors_list:
+                        error_messages.append(f"'{key}': " + ", ".join(errors_list))
 
             filterset_params = set(filterset.filters.keys())
             for key in filter.keys():

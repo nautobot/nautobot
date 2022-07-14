@@ -80,7 +80,9 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Returns:
             dict
         """
-        return {}
+        return {
+            "active_tab": request.GET.get("tab", "main"),
+        }
 
     def get_changelog_url(self, instance):
         """Return the changelog URL for a given instance."""
@@ -137,6 +139,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     filter_form: The form used to render filter options
     table: The django-tables2 Table used to render the objects list
     template_name: The name of the template
+    non_filter_params: List of query parameters that are **not** used for queryset filtering
     """
 
     queryset = None
@@ -145,6 +148,19 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     table = None
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
+    non_filter_params = (
+        "export",  # trigger for CSV/export-template/YAML export
+        "page",  # used by django-tables2.RequestConfig
+        "per_page",  # used by get_paginate_count
+        "sort",  # table sorting
+    )
+
+    def get_filter_params(self, request):
+        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
+        filter_params = request.GET.copy()
+        for non_filter_param in self.non_filter_params:
+            filter_params.pop(non_filter_param, None)
+        return filter_params
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -207,8 +223,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
+        filter_params = self.get_filter_params(request)
         if self.filterset:
-            self.queryset = self.filterset(request.GET, self.queryset).qs
+            filterset = self.filterset(filter_params, self.queryset)
+            self.queryset = filterset.qs
+            if not filterset.is_valid():
+                messages.error(
+                    request,
+                    mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                )
+                self.queryset = self.queryset.none()
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -268,7 +292,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset_form:
             if request.GET:
                 # Bind form to the values specified in request.GET
-                filter_form = self.filterset_form(request.GET, label_suffix="")
+                filter_form = self.filterset_form(filter_params, label_suffix="")
             else:
                 # Use unbound form with default (initial) values
                 filter_form = self.filterset_form(label_suffix="")
@@ -928,8 +952,11 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
-                standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
+                custom_fields = getattr(form, "custom_fields", [])
+                relationships = getattr(form, "relationships", [])
+                standard_fields = [
+                    field for field in form.fields if field not in custom_fields + relationships + ["pk"]
+                ]
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
@@ -955,7 +982,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     if isinstance(model_field, ManyToManyField):
                                         getattr(obj, name).set([])
                                     else:
-                                        setattr(obj, name, None if model_field.null else "")
+                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
 
                                 # ManyToManyFields
                                 elif isinstance(model_field, ManyToManyField):
@@ -982,6 +1009,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                 obj.tags.add(*form.cleaned_data["add_tags"])
                             if form.cleaned_data.get("remove_tags", None):
                                 obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
+                                # Add/remove relationship associations
+                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(

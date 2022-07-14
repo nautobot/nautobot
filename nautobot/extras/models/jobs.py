@@ -251,7 +251,7 @@ class Job(PrimaryModel):
                     logger.warning("Job %s %s has no associated Git repository", self.module_name, self.job_class_name)
                     return None
                 try:
-                    # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
+                    # In the case where we have multiple Nautobot instances, or multiple worker instances,
                     # they are not required to share a common filesystem; therefore, we may need to refresh our local
                     # clone of the Git repository to ensure that it is in sync with the latest repository clone
                     # from any instance.
@@ -394,6 +394,7 @@ class JobResult(BaseModel, CustomFieldModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
+    # todoindex:
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
@@ -709,6 +710,7 @@ class ScheduledJob(BaseModel):
         verbose_name="Start Datetime",
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
+    # todoindex:
     enabled = models.BooleanField(
         default=True,
         verbose_name="Enabled",
@@ -754,6 +756,7 @@ class ScheduledJob(BaseModel):
         null=True,
         help_text="User that approved the schedule",
     )
+    # todoindex:
     approval_required = models.BooleanField(default=False)
     approved_at = models.DateTimeField(
         editable=False,

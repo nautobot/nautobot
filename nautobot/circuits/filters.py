@@ -1,8 +1,9 @@
 import django_filters
 from django.db.models import Q
 
+from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.filters import CableTerminationFilterSet, PathEndpointFilterSet
-from nautobot.dcim.models import Region, Site
+from nautobot.dcim.models import Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
@@ -31,13 +32,11 @@ class ProviderFilterSet(NautobotFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuits__terminations__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuits__terminations__site__region",
-        lookup_expr="in",
         to_field_name="slug",
         label="Region (slug)",
     )
@@ -51,6 +50,12 @@ class ProviderFilterSet(NautobotFilterSet):
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        field_name="circuits__terminations__location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug or ID)",
     )
     tag = TagFilter()
 
@@ -152,16 +157,20 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
         to_field_name="slug",
         label="Site (slug)",
     )
+    location = TreeNodeMultipleChoiceFilter(
+        field_name="terminations__location__slug",
+        queryset=Location.objects.all(),
+        to_field_name="slug",
+        label="Location (slug or ID)",
+    )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="terminations__site__region",
-        lookup_expr="in",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="terminations__site__region",
-        lookup_expr="in",
         to_field_name="slug",
         label="Region (slug)",
     )
@@ -172,7 +181,12 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
         fields = ["id", "cid", "install_date", "commit_rate"]
 
 
-class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, PathEndpointFilterSet):
+class CircuitTerminationFilterSet(
+    BaseFilterSet,
+    CableTerminationFilterSet,
+    LocatableModelFilterSetMixin,
+    PathEndpointFilterSet,
+):
     q = SearchFilter(
         filter_predicates={
             "circuit__cid": "icontains",
@@ -185,17 +199,6 @@ class CircuitTerminationFilterSet(BaseFilterSet, CableTerminationFilterSet, Path
         queryset=Circuit.objects.all(),
         label="Circuit",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
-    )
-
     provider_network_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID)",

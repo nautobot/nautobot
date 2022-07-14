@@ -30,6 +30,7 @@ INTERFACE_MTU_MAX = 32767  # Max value of a signed 16-bit integer
 
 VIRTUAL_IFACE_TYPES = [
     InterfaceTypeChoices.TYPE_VIRTUAL,
+    InterfaceTypeChoices.TYPE_BRIDGE,
     InterfaceTypeChoices.TYPE_LAG,
 ]
 

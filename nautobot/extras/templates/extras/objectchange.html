@@ -69,7 +69,7 @@
                         <td>Object</td>
                         <td>
                             {% if object.changed_object and object.changed_object.get_absolute_url %}
-                                <a href="{{ object.changed_object.get_absolute_url }}">{{ object.changed_object }}</a>
+                                {{ object.changed_object|hyperlinked_object }}
                             {% else %}
                                 {{ object.object_repr }}
                             {% endif %}
@@ -79,6 +79,18 @@
                         <td>Request ID</td>
                         <td>
                             {{ object.request_id }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Change Context</td>
+                        <td>
+                            {{ object.get_change_context_display }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Change Context Detail</td>
+                        <td>
+                            {{ object.change_context_detail | placeholder }}
                         </td>
                     </tr>
                 </table>

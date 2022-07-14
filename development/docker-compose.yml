@@ -28,20 +28,6 @@ services:
         - "curl"
         - "-f"
         - "http://localhost:8080/health/"
-  worker:
-    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
-    entrypoint: "nautobot-server rqworker"
-    healthcheck:
-      interval: 60s
-      timeout: 30s
-      start_period: 5s
-      retries: 3
-      test: ["CMD", "nautobot-server", "health_check"]
-    depends_on:
-      - nautobot
-    env_file:
-      - ./dev.env
-    tty: true
   celery_worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server celery worker -l INFO"

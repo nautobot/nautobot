@@ -636,7 +636,8 @@ class ObjectChangeTable(BaseTable):
 
 class RelationshipTable(BaseTable):
     pk = ToggleColumn()
-    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(Relationship, pk_field="slug", buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = Relationship
@@ -654,6 +655,7 @@ class RelationshipTable(BaseTable):
 class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
     actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
+    relationship = tables.Column(linkify=True)
 
     source_type = tables.Column()
     source = tables.Column(linkify=True, orderable=False, accessor="get_source")

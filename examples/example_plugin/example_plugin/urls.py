@@ -81,4 +81,20 @@ urlpatterns = [
         RedirectView.as_view(url=static("example_plugin/docs/index.html")),
         name="docs",
     ),
+    path(
+        "circuits/<uuid:pk>/example-plugin-tab/", views.CircuitDetailPluginTabView.as_view(), name="circuit_detail_tab"
+    ),
+    path(
+        "devices/<uuid:pk>/example-plugin-tab-1/",
+        views.DeviceDetailPluginTabOneView.as_view(),
+        name="device_detail_tab_1",
+    ),
+    path(
+        "devices/<uuid:pk>/example-plugin-tab-2/",
+        views.DeviceDetailPluginTabTwoView.as_view(),
+        name="device_detail_tab_2",
+    ),
+    # This URL definition is here in order to test the override_views functionality which is defined
+    # in examples.plugin_with_view_override.plugin_with_view_override.views
+    path("override-target/", views.ViewToBeOverridden.as_view(), name="view_to_be_overridden"),
 ]

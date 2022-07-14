@@ -32,14 +32,15 @@ __all__ = (
 class RackGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
-    site = tables.LinkColumn(viewname="dcim:site", args=[Accessor("site__slug")], verbose_name="Site")
+    site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack_count = tables.Column(verbose_name="Racks")
     actions = ButtonsColumn(model=RackGroup, prepend_template=RACKGROUP_ELEVATIONS)
 
     class Meta(BaseTable.Meta):
         model = RackGroup
-        fields = ("pk", "name", "site", "rack_count", "description", "slug", "actions")
-        default_columns = ("pk", "name", "site", "rack_count", "description", "actions")
+        fields = ("pk", "name", "site", "location", "rack_count", "description", "slug", "actions")
+        default_columns = ("pk", "name", "site", "location", "rack_count", "description", "actions")
 
 
 #
@@ -77,6 +78,7 @@ class RackTable(StatusTableMixin, BaseTable):
     name = tables.Column(order_by=("_name",), linkify=True)
     group = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     tenant = TenantColumn()
     role = ColoredLabelColumn()
     u_height = tables.TemplateColumn(template_code="{{ record.u_height }}U", verbose_name="Height")
@@ -87,6 +89,7 @@ class RackTable(StatusTableMixin, BaseTable):
             "pk",
             "name",
             "site",
+            "location",
             "group",
             "status",
             "facility_id",
@@ -102,6 +105,7 @@ class RackTable(StatusTableMixin, BaseTable):
             "pk",
             "name",
             "site",
+            "location",
             "group",
             "status",
             "facility_id",
@@ -128,6 +132,7 @@ class RackDetailTable(RackTable):
             "pk",
             "name",
             "site",
+            "location",
             "group",
             "status",
             "facility_id",
@@ -147,6 +152,7 @@ class RackDetailTable(RackTable):
             "pk",
             "name",
             "site",
+            "location",
             "group",
             "status",
             "facility_id",
@@ -168,6 +174,7 @@ class RackReservationTable(BaseTable):
     pk = ToggleColumn()
     reservation = tables.Column(accessor="pk", linkify=True)
     site = tables.Column(accessor=Accessor("rack__site"), linkify=True)
+    location = tables.Column(accessor=Accessor("rack__location"), linkify=True)
     tenant = TenantColumn()
     rack = tables.Column(linkify=True)
     unit_list = tables.Column(orderable=False, verbose_name="Units")
@@ -180,6 +187,7 @@ class RackReservationTable(BaseTable):
             "pk",
             "reservation",
             "site",
+            "location",
             "rack",
             "unit_list",
             "user",
@@ -193,6 +201,7 @@ class RackReservationTable(BaseTable):
             "pk",
             "reservation",
             "site",
+            "location",
             "rack",
             "unit_list",
             "user",
