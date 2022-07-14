@@ -173,6 +173,7 @@ class ExampleJobWithSoftTimeLimit(Job):
             # any clean up code
             cleanup_in_a_hurry()
 ```
+
 #### `template_name`
 
 _Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
