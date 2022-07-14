@@ -453,29 +453,36 @@ class CustomFieldDeleteView(generic.ObjectDeleteView):
     queryset = CustomField.objects.all()
 
 
+class CeleryTaskFailure(Exception):
+    """
+    Custom Exception for when a celery task failed to execute.
+    Attributes:
+        obj_name -- The obj name for which the celery task failed to delete
+        message -- explanation of the error
+    """
+
+    def __init__(self, obj_name, message="Celery task has failed for "):
+        self.obj_name = obj_name
+        self.message = message + f"{self.obj_name}"
+        super().__init__(self.message)
+
+
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
 
     def perform_pre_delete(self, request, queryset):
-        class TaskFailure(Exception):
-            """
-            Custom Exception for when a celery task / tasks failed to execute.
-            """
-
-            pass
 
         for obj in queryset:
             try:
-                result = delete_custom_field_data.delay(obj.name, set(obj.content_types.values_list("pk", flat=True)))
+                task = delete_custom_field_data.delay(obj.name, set(obj.content_types.values_list("pk", flat=True)))
                 # Wait until the custom_field_data is completely deleted
-                while result.ready() is False:
-                    continue
+                task.wait(timeout=None, interval=0.5)
 
-                if result.state == FAILURE:
+                if task.state == FAILURE:
                     # raise an exception if tasks failed.
-                    raise TaskFailure(f"Celery tasks failed. Status: {result.state}")
-            except TaskFailure:
+                    raise CeleryTaskFailure(obj_name=obj.name)
+            except CeleryTaskFailure:
                 messages.error(f"Celery task failed when deleting _custom_field_data for Custom Field {obj.name}")
                 return redirect(self.get_return_url(request))
 
