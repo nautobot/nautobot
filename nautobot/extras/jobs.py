@@ -829,10 +829,12 @@ class IPNetworkVar(ScriptVariable):
 
 class JobHookReceiver(Job):
     """
-    Base model for job hook receivers.
+    Base class for job hook receivers. Job hook receivers are jobs that are initiated
+    from object changes and are not intended to be run from the UI or API like standard jobs.
     """
 
     object_change = ObjectVar(model=ObjectChange)
+    is_job_hook_receiver = True
 
     @classproperty
     def hidden(cls):
