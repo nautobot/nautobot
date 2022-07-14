@@ -504,50 +504,40 @@ class DynamicGroupListView(generic.ObjectListView):
 class DynamicGroupView(generic.ObjectView):
     queryset = DynamicGroup.objects.all()
 
-    def get_memberships(self, objects):
-        return DynamicGroupMembership.objects.filter(group__in=objects)
+    def get_descendants_memberships(self, descendants):
+        """Return memberships objects for all descendants."""
+        return DynamicGroupMembership.objects.filter(group__in=descendants)
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         model = instance.content_type.model_class()
         table_class = get_table_for_model(model)
-        dgm_table_class = get_table_for_model(DynamicGroupMembership)
 
         if table_class is not None:
+            # Members table (for display on Members nav tab)
             members_table = table_class(instance.members, orderable=False)
-
-            children = self.get_memberships(instance.children.all())
-            children_table = dgm_table_class(children, orderable=False)
-
-            descendants = instance.get_descendants()
-            descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                descendants,
-                orderable=False,
-                sequence=["name", "members", "description"],
-                exclude=["content_type"],
-            )
-            descendants_tree = instance.flatten_tree(instance.descendants_tree())
-            descendants_map = {node.name: node.depth for node in descendants_tree}
-
-            ancestors = instance.get_ancestors()
-            ancestors_table = tables.NestedDynamicGroupAncestorsTable(
-                ancestors,
-                orderable=False,
-                sequence=["name", "members", "description"],
-                exclude=["content_type"],
-            )
-            ancestors_tree = instance.flatten_tree(instance.ancestors_tree(), descendants=False)
-            ancestors_map = {node.name: node.depth for node in ancestors_tree}
-
-            # Paginate the members table.
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(members_table)
 
+            # Descendants table
+            descendants = instance.get_descendants()
+            descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                self.get_descendants_memberships(descendants),
+                orderable=False,
+            )
+            descendants_tree = instance.flatten_tree(instance.descendants_tree())
+            descendants_map = {node.name: node.depth for node in descendants_tree}
+
+            # Ancestors table
+            ancestors = instance.get_ancestors()
+            ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
+            ancestors_tree = instance.flatten_tree(instance.ancestors_tree(), descendants=False)
+            ancestors_map = {node.name: node.depth for node in ancestors_tree}
+
             context["members_table"] = members_table
-            context["children_table"] = children_table
             context["ancestors_table"] = ancestors_table
             context["ancestors_map"] = ancestors_map
             context["descendants_table"] = descendants_table

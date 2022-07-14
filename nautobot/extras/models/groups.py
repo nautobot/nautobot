@@ -780,11 +780,7 @@ class DynamicGroup(OrganizationalModel):
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
-    group = models.ForeignKey(
-        "extras.DynamicGroup",
-        on_delete=models.CASCADE,
-        related_name="+",
-    )
+    group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE, related_name="+")
     parent_group = models.ForeignKey(
         "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
     )
@@ -809,6 +805,16 @@ class DynamicGroupMembership(BaseModel):
     def name(self):
         """Return the group name."""
         return self.group.name
+
+    @property
+    def slug(self):
+        """Return the group slug."""
+        return self.group.slug
+
+    @property
+    def filter(self):
+        """Return the group filter."""
+        return self.group.filter
 
     @property
     def members(self):

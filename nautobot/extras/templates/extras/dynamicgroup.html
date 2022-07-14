@@ -4,7 +4,7 @@
 {% block extra_nav_tabs %}
         <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href)" aria-controls="members" role="tab" data-toggle="tab">
-                Members
+                Members {% badge object.count %}
             </a>
         </li>
 {% endblock extra_nav_tabs %}
@@ -59,10 +59,9 @@
 {% block content_full_width_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
-            <strong>Child Groups</strong>
+            <strong>Related Groups</strong>
         </div>
         <div class="panel-body">
-            {% include 'utilities/obj_table.html' with table=children_table table_template='panel_table.html' heading='Children' disable_pagination=True %}
             {% include 'utilities/obj_table.html' with table=descendants_table table_template='panel_table.html' heading='Descendants' disable_pagination=True %}
            {% include 'utilities/obj_table.html' with table=ancestors_table table_template='panel_table.html' heading='Ancestors' disable_pagination=True %}
         </div>
