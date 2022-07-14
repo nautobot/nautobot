@@ -188,14 +188,14 @@ def serialize_object_v2(obj):
     return data
 
 
-def model_to_json(obj, cls=None):
+def model_to_dict(obj, dotted_path=None):
     """
-    Convenience method to convert object instance to json via a serializer.
+    Convert a Django model instance to a dictionary that is JSON serialiable, leveraging a Django serializer.
     """
-    if cls:
+    if dotted_path:
         # By default serialize_object_v2 will find a serializer, this is used to send in the serializer
         # you would prefer, via a `import_string` dotted path to the serializer
-        return json.loads(JSONRenderer().render(import_string(cls)(obj, context={"request": None}).data))
+        return json.loads(JSONRenderer().render(import_string(dotted_path)(obj, context={"request": None}).data))
     return json.loads(JSONRenderer().render(serialize_object_v2(obj)))
 
 
