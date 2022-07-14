@@ -514,11 +514,11 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         d_tree = self.parent.descendants_tree()
         self.assertIn(self.nested_child, d_tree[self.third_child])
 
-    def test_flatten_tree(self):
-        """Test `DynamicGroup.flatten_tree()`."""
+    def test_flatten_descendants_tree(self):
+        """Test `DynamicGroup.flatten_descendants_tree()`."""
         # Assert descendants are deterministic
         d_tree = self.parent.descendants_tree()
-        d_flat = self.parent.flatten_tree(d_tree)
+        d_flat = self.parent.flatten_descendants_tree(d_tree)
         expected = {"first-child": 1, "second-child": 1, "third-child": 1, "nested-child": 2}
         seen = {d.slug: d.depth for d in d_flat}
         self.assertEqual(seen, expected)
@@ -527,9 +527,11 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotIn(self.parent, d_flat)
         self.assertIn(self.nested_child, d_flat)
 
+    def test_flatten_ancestors_tree(self):
+        """Test `DynamicGroup.flatten_ancestors_tree()`."""
         # Assert ancestors are deterministic
         a_tree = self.nested_child.ancestors_tree()
-        a_flat = self.nested_child.flatten_tree(a_tree, descendants=False)
+        a_flat = self.nested_child.flatten_ancestors_tree(a_tree)
         expected = {"third-child": 1, "parent": 2}
         seen = {a.slug: a.depth for a in a_flat}
         self.assertEqual(seen, expected)

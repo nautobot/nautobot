@@ -672,7 +672,18 @@ class DynamicGroup(OrganizationalModel):
         tree = {}
         for f in self.parents.all():
             tree[f] = f.ancestors_tree()
+
         return tree
+
+    def flatten_ancestors_tree(self, tree):
+        """
+        Recursively flatten a tree mapping of ancestors to a list, adding a `depth attribute to each
+        instance in the list that can be used for visualizing tree depth.
+
+        :param tree:
+            Output from `ancestors_tree()`
+        """
+        return self._flatten_tree(tree, descending=False)
 
     def descendants_tree(self):
         """
@@ -695,22 +706,30 @@ class DynamicGroup(OrganizationalModel):
         tree = {}
         for f in self.children.all():
             tree[f] = f.descendants_tree()
+
         return tree
 
-    # FIXME(jathan): When flattening a tree of ancestors, and not setting `descendants=False` it's
-    # easy to get confusing results here. Perhaps wrap this in another method one each for
-    # ancestors/descendants and make this a private method?
-    def flatten_tree(self, tree, nodes=None, descendants=True, depth=1):
+    def flatten_descendants_tree(self, tree):
+        """
+        Recursively flatten a tree mapping of descendants to a list, adding a `depth attribute to each
+        instance in the list that can be used for visualizing tree depth.
+
+        :param tree:
+            Output from `descendats_tree()`
+        """
+        return self._flatten_tree(tree, descending=True)
+
+    def _flatten_tree(self, tree, descending=True, nodes=None, depth=1):
         """
         Recursively flatten a tree mapping to a list, adding a `depth` attribute to each instance in
         the list that can be used for visualizing tree depth.
 
         :param tree:
             A nested dictionary tree
+        :param descending:
+            Whether to traverse descendants or ancestors. If not set, defaults to descending.
         :param nodes:
             An ordered list used to hold the flattened nodes
-        :param descendants:
-            Whether to traverse descendants or ancestors. If not set, defaults to descendants.
         :param depth:
             The tree traversal depth
         """
@@ -718,7 +737,7 @@ class DynamicGroup(OrganizationalModel):
         if nodes is None:
             nodes = []
 
-        if descendants:
+        if descending:
             method = "get_descendants"
         else:
             method = "get_ancestors"
@@ -727,7 +746,7 @@ class DynamicGroup(OrganizationalModel):
             item.depth = depth
             nodes.append(item)
             branches = getattr(item, method)()
-            self.flatten_tree(branches, nodes=nodes, descendants=descendants, depth=depth + 1)
+            self._flatten_tree(branches, nodes=nodes, descending=descending, depth=depth + 1)
 
         return nodes
 

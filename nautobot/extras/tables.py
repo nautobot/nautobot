@@ -382,7 +382,6 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
     name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
 
     class Meta(DynamicGroupTable.Meta):
-        pass
         fields = ["name", "members", "description"]
         exclude = ["actions", "content_type"]
 

@@ -528,13 +528,13 @@ class DynamicGroupView(generic.ObjectView):
                 self.get_descendants_memberships(descendants),
                 orderable=False,
             )
-            descendants_tree = instance.flatten_tree(instance.descendants_tree())
+            descendants_tree = instance.flatten_descendants_tree(instance.descendants_tree())
             descendants_map = {node.name: node.depth for node in descendants_tree}
 
             # Ancestors table
             ancestors = instance.get_ancestors()
             ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
-            ancestors_tree = instance.flatten_tree(instance.ancestors_tree(), descendants=False)
+            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
             ancestors_map = {node.name: node.depth for node in ancestors_tree}
 
             context["members_table"] = members_table
