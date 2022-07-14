@@ -1679,8 +1679,8 @@ class RelationshipTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
-    # TODO? ViewTestCases.GetObjectViewTestCase,
-    # TODO? ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
