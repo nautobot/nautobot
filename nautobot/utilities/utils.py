@@ -190,7 +190,7 @@ def serialize_object_v2(obj):
 
 def model_to_dict(obj, dotted_path=None):
     """
-    Convert a Django model instance to a dictionary that is JSON serialiable, leveraging a Django serializer.
+    Convert a Django model instance to a dictionary that is JSON serializable, leveraging a Django serializer.
     """
     if dotted_path:
         # By default serialize_object_v2 will find a serializer, this is used to send in the serializer
