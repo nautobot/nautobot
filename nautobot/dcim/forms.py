@@ -22,7 +22,6 @@ from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
     CustomFieldModelCSVForm,
-    CustomFieldFilterForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
@@ -2131,7 +2130,6 @@ class DeviceFilterForm(
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusFilterFormMixin,
-    CustomFieldFilterForm,
 ):
     model = Device
     field_order = [

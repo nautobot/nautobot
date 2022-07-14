@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
-from django.http import QueryDict
+from itertools import chain
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
@@ -20,9 +20,9 @@ from .choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobResultStatusChoices,
+    RelationshipSideChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
-    RelationshipSideChoices,
 )
 from .models import (
     ComputedField,
@@ -100,43 +100,52 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
     last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
 
 
-class RelationshipFilter(django_filters.Filter):
+class RelationshipFilter(django_filters.MultipleChoiceFilter):
     """
     Filter objects by the presence of associations on a given Relationship.
     """
 
-    def __init__(self, side, relationship=None, value_list=[], queryset=None, *args, **kwargs):
+    def __init__(self, side, relationship=None, queryset=None, choices=None, *args, **kwargs):
         self.relationship = relationship
-        self.value_list = value_list
         self.qs = queryset
         self.side = side
-        super().__init__(*args, **kwargs)
+        super().__init__(choices=choices, *args, **kwargs)
 
     def filter(self, qs, value):
-        # We are not using value here because it only contains the latest/last uuid in value_list and we have no use for a single value.
-        # We need the complete list of uuids to filter
-
-        # When getting value_list from empty DynamicModelChoiceField self.value_list = ['']
-        # When getting value_list from empty DynamicMultipleModelChoiceField self.value_list = []
-        # The conditional here accounts for both situations
-        if not self.value_list or "" in self.value_list:
-            # value_list is here to check whether a dropdown value has been entered
-            return super().filter(qs, value)
+        # Check if value is empty or a DynamicChoiceField that is empty.
+        if not value or "" in value:
+            # if value is empty we return the entire unmodified queryset
+            return qs
         else:
             if self.side == "source":
                 values = RelationshipAssociation.objects.filter(
-                    destination_id__in=self.value_list,
+                    destination_id__in=value,
                     source_type=self.relationship.source_type,
                     relationship=self.relationship,
                 ).values_list("source_id", flat=True)
-            else:
+            elif self.side == "destination":
                 values = RelationshipAssociation.objects.filter(
-                    source_id__in=self.value_list,
+                    source_id__in=value,
+                    destination_type=self.relationship.destination_type,
+                    relationship=self.relationship,
+                ).values_list("destination_id", flat=True)
+            else:
+                destinations = RelationshipAssociation.objects.filter(
+                    source_id__in=value,
                     destination_type=self.relationship.destination_type,
                     relationship=self.relationship,
                 ).values_list("destination_id", flat=True)
 
-            if len(qs) == len(self.qs):
+                sources = RelationshipAssociation.objects.filter(
+                    destination_id__in=value,
+                    source_type=self.relationship.source_type,
+                    relationship=self.relationship,
+                ).values_list("source_id", flat=True)
+
+                values = list(chain(destinations, sources))
+
+            # qs._result_cache indicates if qs has been modified or not, None if not.
+            if not qs._result_cache:
                 # If qs has not been modified from the original queryset, we take the intersection of the original queryset and the filtered queryset.
                 # Essentially the filtered queryset.
                 qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
@@ -144,6 +153,9 @@ class RelationshipFilter(django_filters.Filter):
                 # If qs has been modified from the original queryset, we take the union of the modified qs and the filtered queryset.
                 # Essentially modified qs and the filtered queryset combined.
                 qs |= self.get_method(self.qs)(Q(**{"id__in": values}))
+            # len(qs) evaluates qs so qs._result_cache is updated to the length of the queryset instead of None
+            # calling len() at the end here makes sure that the next filter modifying qs already knows that qs has been modified.
+            len(qs)
             return qs
 
 
@@ -157,14 +169,6 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
         super().__init__(*args, **kwargs)
         self.relationships = []
         self._append_relationships(model=self._meta.model)
-        # When the filter form field is clicked on, this filterset is reinitiated with args=().
-        # So we need the conditional here to make sure value_list=args[0] later on does not throw an tuple index out of range error.
-        if args:
-            for relationship in self.relationships:
-                # args[0] is a QueryDict object contains all the filter form field names and their respective values.
-                # e.g. <QueryDict: {'q': ['']...'cr_device-to-vlan__destination': ['1bf86119-c88f-42de-9b14-da60cb9f3b32']>
-                if type(args[0]) == QueryDict:
-                    self.filters[relationship].value_list = args[0].getlist(relationship, [])
 
     def _append_relationships(self, model):
         """
@@ -197,10 +201,23 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".
                 # No need to process it a second time!
                 continue
+            if peer_side == "source":
+                choice_model = relationship.source_type.model_class()
+            elif peer_side == "destination":
+                choice_model = relationship.destination_type.model_class()
+            else:
+                choice_model = model
+
+            choices = [(entry.id, entry.name) for entry in choice_model.objects.all()]
+            choices.insert(0, ("", "---------"))
+            choices = tuple(choices)
             self.filters[field_name] = RelationshipFilter(
-                relationship=relationship, side=side, queryset=model.objects.all()
+                relationship=relationship,
+                side=side,
+                field_name=field_name,
+                queryset=model.objects.all(),
+                choices=choices,
             )
-            # Keeping a record of field_names to access it later on for value_list=
             self.relationships.append(field_name)
 
 
@@ -506,7 +523,7 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet, CustomFieldModelFilterSet):
     """
     This class exists to combine common functionality and is used as a base class throughout the
-    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet and CustomFieldModelFilterSet
+    codebase where all of BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet and CustomFieldModelFilterSet
     are needed.
     """
 
