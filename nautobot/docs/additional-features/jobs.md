@@ -31,6 +31,9 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
+!!! warning
+    Make sure you are _not_ inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
+
 ```python
 from nautobot.extras.jobs import Job
 
