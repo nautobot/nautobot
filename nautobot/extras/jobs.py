@@ -240,7 +240,7 @@ class BaseJob:
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
-        for name, attr in inspect.getmembers(cls, predicate=lambda x: not inspect.isroutine(x)):
+        for name, attr in inspect.getmembers(cls):
             if name not in vars and issubclass(attr.__class__, ScriptVariable):
                 vars[name] = attr
 
