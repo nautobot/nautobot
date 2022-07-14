@@ -304,13 +304,6 @@ class Job(PrimaryModel):
     def runnable(self):
         return self.enabled and self.installed and self.job_class is not None
 
-    @property
-    def is_job_hook(self):
-        """Return true if job is a subclass of JobHookReceiver"""
-        from nautobot.extras.jobs import JobHookReceiver  # needed here to avoid a circular import issue
-
-        return issubclass(self.job_class, JobHookReceiver)
-
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
         if self.job_class is not None:
