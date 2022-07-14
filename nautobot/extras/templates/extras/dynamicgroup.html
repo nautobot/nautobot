@@ -59,6 +59,18 @@
 {% block content_full_width_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
+            <strong>Filter Query Logic</strong>
+        </div>
+        <div class="panel-body">
+            <span class="help-block">
+                This is a raw representation of the underlying filter that is derived
+                by aggregating the filters from all descendant groups.
+            </span>
+            <pre>{{ raw_query }}</pre>
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Related Groups</strong>
         </div>
         <div class="panel-body">
