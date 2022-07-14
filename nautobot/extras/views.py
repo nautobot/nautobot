@@ -2,7 +2,6 @@ import inspect
 from datetime import datetime
 import logging
 
-from celery import chain
 from celery.states import FAILURE
 from django import template
 from django.contrib import messages
@@ -27,7 +26,6 @@ from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -459,108 +457,27 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
 
-    def construct_custom_field_delete_tasks(self, queryset):
-        """
-        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
-        """
-        # si (*args, **kwargs) creates immuatable signature.
-        # That makes the result of the task is independent of that of the previous task
-        tasks = [
-            delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
-            for obj in queryset
-        ]
-        return tasks
+    def perform_pre_delete(self, request, queryset):
+        class TaskFailure(Exception):
+            """
+            Custom Exception for when a celery task / tasks failed to execute.
+            """
 
-    # Overloading post() method for CustomFieldBulkDeleteView
-    def post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.BulkDeleteView")
-        model = self.queryset.model
+            pass
 
-        # Are we deleting *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all"):
-            if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
-            else:
-                pk_list = model.objects.values_list("pk", flat=True)
-        else:
-            pk_list = request.POST.getlist("pk")
+        for obj in queryset:
+            try:
+                result = delete_custom_field_data.delay(obj.name, set(obj.content_types.values_list("pk", flat=True)))
+                # Wait until the custom_field_data is completely deleted
+                while result.ready() is False:
+                    continue
 
-        form_cls = self.get_form()
-
-        if "_confirm" in request.POST:
-            form = form_cls(request.POST)
-            if form.is_valid():
-                logger.debug("Form validation was successful")
-
-                # Delete objects
-                queryset = self.queryset.filter(pk__in=pk_list)
-                # Clean up the models's _custom_field_data first by running celery tasks
-                try:
-
-                    class TaskFailure(Exception):
-                        """
-                        Custom Exception for when a celery task / tasks failed to execute.
-                        """
-
-                        pass
-
-                    # chain() from celery takes a list of task signatures as parameters.
-                    tasks = self.construct_custom_field_delete_tasks(queryset=queryset)
-                    # It returns a lazy signature that can be called to apply the first task in the chain.
-                    # When the task succeeds the next task in the chain is applied, and so on.
-                    # apply_async() apply tasks asynchronously by sending a message.
-                    result = chain(*tasks).apply_async()
-                    # Wait until the list of tasks fully executes and returns a result of either SUCCESS or FAILURE.
-                    while result.ready() is False:
-                        continue
-
-                    if result.state == FAILURE:
-                        # raise an exception if tasks failed.
-                        raise TaskFailure(f"Celery tasks failed. Status: {result.state}")
-                except TaskFailure:
-                    return redirect(self.get_return_url(request))
-
-                try:
-                    _, deleted_info = queryset.delete()
-                    deleted_count = deleted_info[model._meta.label]
-                except ProtectedError as e:
-                    logger.info("Caught ProtectedError while attempting to delete objects")
-                    handle_protectederror(queryset, request, e)
-                    return redirect(self.get_return_url(request))
-
-                msg = "Deleted {} {}".format(deleted_count, model._meta.verbose_name_plural)
-                logger.info(msg)
-                messages.success(request, msg)
+                if result.state == FAILURE:
+                    # raise an exception if tasks failed.
+                    raise TaskFailure(f"Celery tasks failed. Status: {result.state}")
+            except TaskFailure:
+                messages.error(f"Celery task failed when deleting _custom_field_data for Custom Field {obj.name}")
                 return redirect(self.get_return_url(request))
-
-            else:
-                logger.debug("Form validation failed")
-
-        else:
-            form = form_cls(
-                initial={
-                    "pk": pk_list,
-                    "return_url": self.get_return_url(request),
-                }
-            )
-
-        # Retrieve objects being deleted
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                "No {} were selected for deletion.".format(model._meta.verbose_name_plural),
-            )
-            return redirect(self.get_return_url(request))
-
-        context = {
-            "form": form,
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "table": table,
-            "return_url": self.get_return_url(request),
-        }
-        context.update(self.extra_context())
-        return render(request, self.template_name, context)
 
 
 #
