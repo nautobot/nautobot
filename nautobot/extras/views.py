@@ -1461,6 +1461,24 @@ class ObjectChangeLogView(View):
 #
 
 
+class NotesView(generic.ObjectView):
+    queryset = Notes.objects.all()
+
+
+class NotesEditView(generic.ObjectEditView):
+    queryset = Notes.objects.all()
+    model_form = forms.NotesForm
+
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        if not obj.present_in_database:
+            obj.user = request.user
+        return obj
+
+
+class NotesDeleteView(generic.ObjectDeleteView):
+    queryset = Notes.objects.all()
+
+
 class ObjectNotesView(View):
     """
     Present a history of changes made to a particular object.
@@ -1512,7 +1530,7 @@ class ObjectNotesView(View):
                 "table": notes_table,
                 "base_template": self.base_template,
                 "active_tab": "notes",
-                "notes_form": notes_form
+                "notes_form": notes_form,
             },
         )
 
@@ -1915,26 +1933,3 @@ class WebhookDeleteView(generic.ObjectDeleteView):
 class WebhookBulkDeleteView(generic.BulkDeleteView):
     queryset = Webhook.objects.all()
     table = tables.WebhookTable
-
-
-#
-# Notes
-#
-
-
-class NotesView(generic.ObjectView):
-    queryset = Notes.objects.all()
-
-
-class NotesEditView(generic.ObjectEditView):
-    queryset = Notes.objects.all()
-    model_form = forms.NotesForm
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        if not obj.present_in_database:
-            obj.user = request.user
-        return obj
-
-
-class NotesDeleteView(generic.ObjectDeleteView):
-    queryset = Notes.objects.all()
