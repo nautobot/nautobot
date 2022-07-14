@@ -17,6 +17,7 @@ from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
+from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
@@ -966,9 +967,16 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
-
+        template_name = "extras/job.html"
         try:
-            job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+            job_class = job_model.job_class()
+            job_form = job_class.as_form(initial=normalize_querydict(request.GET))
+            if hasattr(job_class, "template_name"):
+                try:
+                    get_template(job_class.template_name)
+                    template_name = job_class.template_name
+                except TemplateDoesNotExist as err:
+                    messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -977,7 +985,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
         return render(
             request,
-            "extras/job.html",  # 2.0 TODO: extras/job_submission.html
+            template_name,  # 2.0 TODO: extras/job_submission.html
             {
                 "job_model": job_model,
                 "job_form": job_form,
@@ -1066,9 +1074,17 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
                 return redirect("extras:job_jobresult", pk=job_result.pk)
 
+        template_name = "extras/job.html"
+        if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
+            try:
+                get_template(job_model.job_class.template_name)
+                template_name = job_model.job_class.template_name
+            except TemplateDoesNotExist as err:
+                messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
+
         return render(
             request,
-            "extras/job.html",
+            template_name,
             {
                 "job_model": job_model,
                 "job_form": job_form,
