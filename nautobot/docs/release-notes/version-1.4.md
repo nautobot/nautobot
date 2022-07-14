@@ -9,11 +9,24 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Custom Template (CSS, HTML, JavaScript) on Job Forms ([#1865](https://github.com/nautobot/nautobot/issues/1865))
+
+Jobs can now specify a `template_name` property and provide a custom template with additional JavaScript and CSS to help with user input on the Job submission form.
+
+You can refer to the [Job class metadata attribute documentation](../additional-features/jobs.html#template_name) on how to build and define this template.
+
 #### Dark Mode UI ([#729](https://github.com/nautobot/nautobot/issues/729))
 
 Nautobot's UI now supports dark mode, both explicitly and via browser preference selection.
 
 The "Theme" link in the footer provides a modal popup to select the preferred theme. This preference is saved per browser via `localStorage`.
+
+#### Improved Filter Coverage for DCIM, Virtualization Models
+
+* DCIM: [#1729](https://github.com/nautobot/nautobot/issues/1729)
+* Virtualization: [#1735](https://github.com/nautobot/nautobot/issues/1735)
+
+The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
 #### Location Data Model ([#1052](https://github.com/nautobot/nautobot/issues/1052))
 
@@ -21,6 +34,12 @@ To locate network information more precisely than a Site defines, you can now de
 
 !!! info
     At present, Locations fill the conceptual space between the more abstract Region and Site models and the more concrete Rack Group model. In a future Nautobot release, some or all of these other models may be collapsed into Locations. That is to say, in the future you might not deal with Regions and Sites as distinct models, but instead your Location Type hierarchy might include these higher-level categories, becoming something like Country ← City ← Site ← Building ← Floor ← Room.
+
+#### Object Detail Tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000))
+
+A plugin may now define extra tabs which will be appended to the object view's list of tabs.
+
+You can refer to the [plugin development guide](../plugins/development.md##adding-extra-tabs) on how to add tabs to existing object detail views.
 
 #### Parent Interfaces and Bridge Interfaces ([#1455](https://github.com/nautobot/nautobot/issues/1455))
 
@@ -42,16 +61,6 @@ A new version of the `/dcim/interfaces/*` REST API endpoints have been implement
 
 Visit the documentation on [REST API versioning](../rest-api/overview/#versioning) for more information on using the versioned APIs.
 
-#### Object Detail Tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000))
-
-A plugin may now define extra tabs which will be appended to the object view's list of tabs.
-
-You can refer to the [plugin development guide](../plugins/development.md##adding-extra-tabs) on how to add tabs to existing object detail views.
-
-#### Improved Filter Coverage for DCIM models ([#1729](https://github.com/nautobot/nautobot/issues/1729))
-
-The DCIM FilterSets have been updated with 137 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
-
 ### Changed
 
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
@@ -71,7 +80,10 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
-- [#2035](https://github.com/nautobot/nautobot/pull/2035) - Update object change context manager to be aware of the change source
+- [#1735](https://github.com/nautobot/nautobot/issues/1735) - Added missing filters to model FilterSets for Virtualization models.
+- [#1865](https://github.com/nautobot/nautobot/issues/1865) - Added support for a custom template on Job forms.
+- [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
+- [#2051](https://github.com/nautobot/nautobot/issues/2051) - Add changelog url for Relationships.
 
 ### Changed
 

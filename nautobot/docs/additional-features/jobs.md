@@ -173,6 +173,32 @@ class ExampleJobWithSoftTimeLimit(Job):
             # any clean up code
             cleanup_in_a_hurry()
 ```
+#### `template_name`
+
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
+A path relative to the job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing job template, `extras/job.html`, otherwise the base form and functionality may not be available.
+
+A template can provide additional JavaScript, CSS, or even display HTML. A good starting template would be:
+
+```html
+{% extends 'extras/job.html' %}
+
+{% block extra_styles %}
+    {{ block.super }}
+    <!-- Add additional CSS here. -->
+{% endblock %}
+{% block content %}
+    {{ block.super }}
+    <!-- Add additional HTML here. -->
+{% endblock content %}
+{% block javascript %}
+    {{ block.super }}
+    <!-- Add additional JavaScript here. -->
+{% endblock javascript %}
+```
+
+For another example checkout [the template used in example plugin](https://github.com/nautobot/nautobot/blob/next/examples/example_plugin/example_plugin/templates/example_plugin/example_with_custom_template.html) in the GitHub repo.
 
 #### `time_limit`
 
