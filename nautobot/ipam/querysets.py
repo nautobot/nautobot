@@ -382,3 +382,23 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             kwargs["host"] = address.ip
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
+
+    def filter_address_or_pk_in(self, addresses, pk_values=None):
+        """
+        Filters by a list of address and or pk
+
+        Similar to .filter(address__in=[<address>]`)
+        """
+        q = Q()
+        for _address in addresses:
+            _address = netaddr.IPNetwork(_address)
+            last_ip = self._get_last_ip(_address)
+            prefix_length = _address.prefixlen
+            host = _address.ip
+            broadcast = last_ip
+            q |= Q(prefix_length=prefix_length, host=host, broadcast=broadcast)
+
+        if pk_values is not None:
+            q |= Q(pk__in=pk_values)
+
+        return super().filter(q)
