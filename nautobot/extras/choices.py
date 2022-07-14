@@ -229,12 +229,14 @@ class ObjectChangeEventContextChoices(ChoiceSet):
 
     CONTEXT_WEB = "web"
     CONTEXT_JOB = "job"
+    CONTEXT_JOBHOOK = "jobhook"
     CONTEXT_ORM = "orm"
     CONTEXT_UNKNOWN = "unknown"
 
     CHOICES = (
         (CONTEXT_WEB, "Web"),
         (CONTEXT_JOB, "Job"),
+        (CONTEXT_JOBHOOK, "JobHook"),
         (CONTEXT_ORM, "ORM"),
         (CONTEXT_UNKNOWN, "Unknown"),
     )

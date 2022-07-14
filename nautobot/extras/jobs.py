@@ -28,15 +28,14 @@ import yaml
 
 
 from .choices import JobResultStatusChoices, LogLevelChoices
-from .context_managers import change_logging
+from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, ScheduledJob
+from .models import FileProxy, GitRepository, Job as JobModel, ObjectChange, ScheduledJob
 from .registry import registry
 from .utils import get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
-from nautobot.extras.context_managers import JobChangeContext
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -828,11 +827,22 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JobHookReceiver(Job):
+    """
+    Base model for job hook receivers.
+    """
+
+    object_change = ObjectVar(model=ObjectChange)
+
+    @classproperty
+    def hidden(cls):
+        return getattr(cls.Meta, "hidden", True)
+
+
 def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
     """
-    from .jobhooks import JobHookReceiver
     from .scripts import Script, BaseScript
     from .reports import Report
 
@@ -1179,7 +1189,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
     if commit:
-        change_context = JobChangeContext(request.user, id=request.id, context_detail=job_model.slug)
+        context_class = JobHookChangeContext if job_model.is_job_hook else JobChangeContext
+        change_context = context_class(request.user, id=request.id, context_detail=job_model.slug)
         with change_logging(change_context):
             _run_job()
     else:

@@ -306,7 +306,7 @@ class Job(PrimaryModel):
     @property
     def is_job_hook(self):
         """Return true if job is a subclass of JobHookReceiver"""
-        from nautobot.extras.jobhooks import JobHookReceiver
+        from nautobot.extras.jobs import JobHookReceiver  # needed here to avoid a circular import issue
 
         return issubclass(self.job_class, JobHookReceiver)
 
