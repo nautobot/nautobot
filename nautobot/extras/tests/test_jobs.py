@@ -13,9 +13,11 @@ from django.test import override_settings
 from django.test.client import RequestFactory
 
 from nautobot.dcim.models import DeviceRole, Site
-from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
+from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeEventContextChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, Job, Status, CustomField, JobResult
+from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
 
@@ -153,12 +155,11 @@ class JobTest(TransactionTestCase):
 
         self.assertHTMLEqual(
             form.as_table(),
-            """<tr><th><label for="id_var23">Var23:</label></th><td>
+            """<tr><th><label for="id_var2">Var2:</label></th><td>
+<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
+<br><span class="helptext">Hello</span></td></tr><tr><th><label for="id_var23">Var23:</label></th><td>
 <input class="form-control form-control" id="id_var23" name="var23" placeholder="None" required type="text">
 <br><span class="helptext">I want to be second</span></td></tr>
-<tr><th><label for="id_var2">Var2:</label></th><td>
-<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span></td></tr>
 <tr><th><label for="id__commit">Commit changes:</label></th><td>
 <input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
 <br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
@@ -572,3 +573,73 @@ class JobSiteCustomFieldTest(CeleryTestCase):
         site_2 = Site.objects.filter(slug="test-site-two")
         self.assertEqual(site_2.count(), 1)
         self.assertEqual(site_2[0].cf["cf1"], "-")
+
+
+class JobHookReceiverTest(TransactionTestCase):
+    """
+    Test job hook receiver.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        # Initialize fake request that will be required to execute Webhooks (in jobs.)
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        # generate an ObjectChange by creating a new site
+        with web_request_context(self.user):
+            site = Site(name="Test Site 1")
+            site.save()
+        site.refresh_from_db()
+        oc = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(Site),
+            changed_object_id=site.pk,
+        ).first()
+        self.data = {"object_change": oc.id}
+
+    def test_form_field(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        job_class, job_model = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertCountEqual(form.fields.keys(), ["object_change", "_commit"])
+
+    def test_hidden(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertTrue(job_model.hidden)
+
+    def test_is_job_hook(self):
+
+        with self.subTest(expected=False):
+            module = "test_pass"
+            name = "TestPass"
+            job_class, job_model = get_job_class_and_model(module, name)
+            self.assertFalse(job_model.is_job_hook_receiver)
+
+        with self.subTest(expected=True):
+            module = "test_job_hook_receiver"
+            name = "TestJobHookReceiverLog"
+            job_class, job_model = get_job_class_and_model(module, name)
+            self.assertTrue(job_model.is_job_hook_receiver)
+
+    def test_object_change_context(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverChange"
+        create_job_result_and_run_job(module, name, data=self.data, request=self.request)
+        test_site = Site.objects.get(name="test_jhr")
+        oc = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(Site),
+            changed_object_id=test_site.pk,
+        ).first()
+        self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOBHOOK)
+
+    def test_run_job(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        log_success = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_SUCCESS).first()
+        self.assertEqual(log_success.message, "Test Site 1")
