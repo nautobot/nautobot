@@ -140,6 +140,12 @@ urlpatterns = [
         name="configcontextschema_changelog",
         kwargs={"model": ConfigContextSchema},
     ),
+    path(
+        "config-context-schemas/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="configcontextschema_notes",
+        kwargs={"model": ConfigContextSchema},
+    ),
     # Custom fields
     path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
     path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
@@ -206,6 +212,12 @@ urlpatterns = [
         "dynamic-groups/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="dynamicgroup_changelog",
+        kwargs={"model": DynamicGroup},
+    ),
+    path(
+        "dynamic-groups/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="dynamicgroup_notes",
         kwargs={"model": DynamicGroup},
     ),
     # Export Templates
@@ -290,6 +302,12 @@ urlpatterns = [
         "git-repositories/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="gitrepository_changelog",
+        kwargs={"model": GitRepository},
+    ),
+    path(
+        "git-repositories/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="gitrepository_notes",
         kwargs={"model": GitRepository},
     ),
     path(
@@ -382,6 +400,12 @@ urlpatterns = [
         name="job_changelog",
         kwargs={"model": Job},
     ),
+    path(
+        "jobs/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="job_notes",
+        kwargs={"model": Job},
+    ),
     # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
     path("jobs/<slug:slug>/run/", views.JobView.as_view(), name="job_run"),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
@@ -460,6 +484,12 @@ urlpatterns = [
         name="secret_changelog",
         kwargs={"model": Secret},
     ),
+    path(
+        "secrets/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="secret_notes",
+        kwargs={"model": Secret},
+    ),
     path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
     path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),
     path("secrets-groups/delete/", views.SecretsGroupBulkDeleteView.as_view(), name="secretsgroup_bulk_delete"),
@@ -470,6 +500,12 @@ urlpatterns = [
         "secrets-groups/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="secretsgroup_changelog",
+        kwargs={"model": SecretsGroup},
+    ),
+    path(
+        "secrets-groups/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="secretsgroup_notes",
         kwargs={"model": SecretsGroup},
     ),
     # Custom statuses
