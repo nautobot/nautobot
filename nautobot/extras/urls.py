@@ -13,6 +13,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     Notes,
+    Relationship,
     Secret,
     SecretsGroup,
     Status,
@@ -449,6 +450,12 @@ urlpatterns = [
         "relationships/<slug:slug>/delete/",
         views.RelationshipDeleteView.as_view(),
         name="relationship_delete",
+    ),
+    path(
+        "relationships/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="relationship_notes",
+        kwargs={"model": Relationship}
     ),
     path(
         "relationship-associations/",
