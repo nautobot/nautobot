@@ -208,7 +208,7 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
             else:
                 choice_model = model
 
-            choices = [(entry.id, entry.name) for entry in choice_model.objects.all()]
+            choices = [(entry.id, entry.id) for entry in choice_model.objects.all()]
             choices.insert(0, ("", "---------"))
             choices = tuple(choices)
             self.filters[field_name] = RelationshipFilter(
