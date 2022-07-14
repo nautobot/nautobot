@@ -103,7 +103,6 @@ class Job(PrimaryModel):
         populate_from=["class_path"],
         slugify_function=slugify_dots_to_dashes,
     )
-    is_job_hook = models.BooleanField(default=False)
 
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
@@ -303,6 +302,13 @@ class Job(PrimaryModel):
     @property
     def runnable(self):
         return self.enabled and self.installed and self.job_class is not None
+
+    @property
+    def is_job_hook(self):
+        """Return true if job is a subclass of JobHookReceiver"""
+        from nautobot.extras.jobhooks import JobHookReceiver
+
+        return issubclass(self.job_class, JobHookReceiver)
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""

@@ -19,7 +19,3 @@ class JobHookReceiver(Job):
     @classproperty
     def hidden(cls):
         return getattr(cls.Meta, "hidden", True)
-
-    @classproperty
-    def is_job_hook(cls):
-        return True
