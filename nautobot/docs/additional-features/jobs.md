@@ -176,7 +176,8 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 #### `template_name`
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+<!-- markdownlint-disable-next-line MD036 MD049 -->
+_Added in version 1.4.0_
 
 A path relative to the job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing job template, `extras/job.html`, otherwise the base form and functionality may not be available.
 

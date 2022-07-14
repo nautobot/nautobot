@@ -23,8 +23,8 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 #### Improved Filter Coverage for DCIM, Virtualization Models
 
-* DCIM: [#1729](https://github.com/nautobot/nautobot/issues/1729)
-* Virtualization: [#1735](https://github.com/nautobot/nautobot/issues/1735)
+- DCIM: [#1729](https://github.com/nautobot/nautobot/issues/1729)
+- Virtualization: [#1735](https://github.com/nautobot/nautobot/issues/1735)
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
