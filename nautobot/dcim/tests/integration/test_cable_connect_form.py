@@ -87,4 +87,4 @@ class CableConnectFormTestCase(SeleniumTestCase):
             '"select#id_termination_b_region, select#id_termination_b_site, '
             'select#id_termination_b_rack, select#id_termination_b_device"'
         )
-        self.browser.is_text_present(js_query)
+        self.assertTrue(self.browser.is_text_present(js_query))
