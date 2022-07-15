@@ -207,7 +207,6 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
                 choice_model = relationship.destination_type.model_class()
             else:
                 choice_model = model
-            
             if choice_model:
                 choices = [(entry.id, entry.id) for entry in choice_model.objects.all()]
             else:
