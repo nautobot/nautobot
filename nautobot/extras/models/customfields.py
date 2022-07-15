@@ -376,6 +376,11 @@ class CustomField(BaseModel, ChangeLoggedModel):
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
+    def get_changelog_url(self):
+        """Overloaded from ChangeLoggedModel.get_changelog_url as custom fields route on name, not PK or slug."""
+        route = "extras:customfield_changelog"
+        return reverse(route, kwargs={"name": self.name})
+
     def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
         """
         Return a form field suitable for setting a CustomField's value for an object.
