@@ -273,6 +273,42 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         self.assertCountEqual(list(qs), [self.site1])
 
+    def test_get_filter_predicate(self):
+        """
+        Test that `get_filter_predicate()` has hybrid results depending on whether value is a UUID
+        or a slug.
+        """
+
+        # Test UUID (pk)
+        uuid_obj = self.power_panel1.pk
+        kwargs = {"power_panels": [uuid_obj]}
+        fs = self.SiteFilterSet(kwargs, self.queryset)
+        self.assertCountEqual(list(fs.qs), [self.site1])
+        self.assertEqual(
+            fs.filters["power_panels"].get_filter_predicate(uuid_obj),
+            {"powerpanel": str(uuid_obj)},
+        )
+
+        # Test model instance (pk)
+        instance = self.power_panel1
+        kwargs = {"power_panels": [instance]}
+        fs = self.SiteFilterSet(kwargs, self.queryset)
+        self.assertCountEqual(list(fs.qs), [self.site1])
+        self.assertEqual(
+            fs.filters["power_panels"].get_filter_predicate(instance),
+            {"powerpanel": str(instance.pk)},
+        )
+
+        # Test string (name in this case)
+        name = self.power_panel1.name
+        kwargs = {"power_panels": [name]}
+        fs = self.SiteFilterSet(kwargs, self.queryset)
+        self.assertCountEqual(list(fs.qs), [self.site1])
+        self.assertEqual(
+            fs.filters["power_panels"].get_filter_predicate(name),
+            {"powerpanel__name": name},
+        )
+
 
 class TestModel(models.Model):
     """
