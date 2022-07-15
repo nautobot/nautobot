@@ -62,7 +62,7 @@
                                 {% if forloop.first %}
                                     <thead>
                                         <tr>
-                                            <th>Sort</th>
+                                            <th>Weight</th>
                                             {% for field in child_form.visible_fields %}
                                                 <th>{{ field.label|capfirst }}</th>
                                             {% endfor %}
@@ -119,15 +119,28 @@
     function update_weights(children_form){
         let w = 10;
         $(children_form).find('.formset_row-{{ children.prefix }}').each((i, el) => {
-            let contains_value = $(el).find("select[name$='-group'], select[name$='-operator']").map((idx, sel) => {
-                return ($(sel).val().length > 0)
-            }).toArray().some(x => x === true)
+
+            // A child is considered "weight-able" if any of the settable values contains a value
+            // If a user is in the middle of setting a group we want to consider it for weight
+            // We also want to remove the weight if it's empty to not throw a field value error on a hidden field
+            //
+            // el = child row
+            // sel = a select element either specifying the child group or operator
+            //         we don't need to worry about which one we are looking at, just if it has a value
+            let contains_value = $(el).find("select[name$='-group'], select[name$='-operator']") // Get any select element in this row ending in -group or -operator
+                .toArray() // Convert to Array to access .some() method
+                .some((x) => { return ($(x).val().length > 0) === true }) // Evaluate if any element in this row has a value length over 0
+                // .some(fn(x)) will return a true/false if any item in the array return true when passed into the evaluator function
+
+
 
             let weight_input = $(el).find("*[name$='-weight']")
-            weight_input.val("")
+            weight_input.val("") // Reset the value to start clean always
             if(contains_value) {
-                weight_input.val(w);
-                w+=10;
+                weight_input.val(w); // Set a weight
+                w += 10; // Following current convention by allowing space between children to aid in API interface.
+                         //   If someone wants to add a child later via the API they can insert a child between children without
+                         //   having to re-weight all children following first.
             }
         })
     }
