@@ -159,6 +159,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1947](https://github.com/nautobot/nautobot/issues/1947) - Fixed unbound local error by initializing template variable before conditional logic statements.
 - [#2036](https://github.com/nautobot/nautobot/pull/2036) - Fixed outdated UI navigation references in documentation.
 - [#2039](https://github.com/nautobot/nautobot/issues/2039) - Fixed IntegerVar with default set to 0 on Job evaluating to False.
+- [#2057](https://github.com/nautobot/nautobot/issues/2057) - Fixed RIR changelog route being in VRF name prefix.
 
 ## v1.3.8 (2022-07-11)
 
