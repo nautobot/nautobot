@@ -75,6 +75,7 @@ services:
     image: selenium/standalone-firefox:4.1.2
     ports:
         - "4444:4444"
+        - "15900:5900"
     shm_size: 2g
   mkdocs:
     profiles:

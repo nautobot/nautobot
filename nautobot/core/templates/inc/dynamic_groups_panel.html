@@ -1,5 +1,5 @@
 {% load helpers %}
-{% with dynamic_groups=object.dynamic_groups %}
+{% with dynamic_groups=object.dynamic_groups.all %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Dynamic Groups</strong>

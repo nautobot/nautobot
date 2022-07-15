@@ -135,6 +135,7 @@
                 </div>
             </div>
         </div>
+	{% block extra_tab_content %}{% endblock extra_tab_content %}
         <div id="dynamic-groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic-groups' %}active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-md-6">

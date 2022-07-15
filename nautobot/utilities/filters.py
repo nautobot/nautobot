@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 import logging
+import uuid
 
 from django import forms
 from django.conf import settings
@@ -423,12 +424,43 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
         Override base filter behavior to force the filter to use the `pk` field instead of
         the natural key in the generated filter.
         """
+
         # Null value filtering
         if v is None:
             return {f"{self.field_name}__isnull": True}
-        name = self.field_name
+
+        # If value is a model instance, stringify it to a pk.
+        if isinstance(v, models.Model):
+            logger.debug("Model instance detected. Casting to a PK.")
+            v = str(v.pk)
+
+        # Try to cast the value to a UUID and set `is_pk` boolean.
+        try:
+            uuid.UUID(str(v))
+        except (AttributeError, TypeError, ValueError):
+            logger.debug("Non-UUID value detected: Filtering using natural key")
+            is_pk = False
+        else:
+            v = str(v)  # Cast possible UUID instance to a string
+            is_pk = True
+
+        # If it's not a pk and not a list/qs generate then it's a slug and the filter predicate
+        # needs to be nested (e.g. `{"site__slug": "ams01"}`) so that it can be useable in `Q`
+        # objects.
+        #
+        # FIXME(jathan): It feels weird to have a list/qs make its way to `get_filter_predicate()`
+        # which if you inspect the source for `django_filters.MultipleChoiceFilter.filter()` should
+        # be handling those to generate singular filter predicates and concatentating them.
+        if not is_pk and not isinstance(v, (list, models.QuerySet)):
+            name = f"{self.field_name}__{self.field.to_field_name}"
+        # Otherwise just trust the field_name
+        else:
+            logger.debug("UUID or list/qs detected: Filtering using field name")
+            name = self.field_name
+
         if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
             name = "__".join([name, self.lookup_expr])
+
         return {name: v}
 
 

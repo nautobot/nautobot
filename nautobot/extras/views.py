@@ -54,6 +54,7 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -499,23 +500,45 @@ class DynamicGroupListView(generic.ObjectListView):
 class DynamicGroupView(generic.ObjectView):
     queryset = DynamicGroup.objects.all()
 
+    def get_descendants_memberships(self, descendants):
+        """Return memberships objects for all descendants."""
+        return DynamicGroupMembership.objects.filter(group__in=descendants)
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         model = instance.content_type.model_class()
         table_class = get_table_for_model(model)
 
         if table_class is not None:
-            members = instance.get_queryset()
-            members_table = table_class(members, orderable=False)
-
-            # Paginate the members table.
+            # Members table (for display on Members nav tab)
+            members_table = table_class(instance.members, orderable=False)
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(members_table)
 
+            # Descendants table
+            descendants = instance.get_descendants()
+            descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                self.get_descendants_memberships(descendants),
+                orderable=False,
+            )
+            descendants_tree = instance.flatten_descendants_tree(instance.descendants_tree())
+            descendants_map = {node.name: node.depth for node in descendants_tree}
+
+            # Ancestors table
+            ancestors = instance.get_ancestors()
+            ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
+            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+            ancestors_map = {node.name: node.depth for node in ancestors_tree}
+
+            context["raw_query"] = str(instance.generate_query())
             context["members_table"] = members_table
+            context["ancestors_table"] = ancestors_table
+            context["ancestors_map"] = ancestors_map
+            context["descendants_table"] = descendants_table
+            context["descendants_map"] = descendants_map
 
         return context
 
@@ -542,6 +565,14 @@ class DynamicGroupEditView(generic.ObjectEditView):
             filter_form = filterform_class(initial=initial)
 
         ctx["filter_form"] = filter_form
+
+        # FIXME(jathan): Editing filter or groups are distinct. Both should not
+        # be possible. For now let's just get it working.
+        formset_kwargs = {"instance": instance}
+        if request.POST:
+            formset_kwargs["data"] = request.POST
+
+        ctx["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
 
         return ctx
 
@@ -571,6 +602,13 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     obj.save()
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
+
+                    # Process the formsets for children
+                    children = ctx["children"]
+                    if children.is_valid():
+                        children.save()
+                    else:
+                        raise RuntimeError(children.errors)
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",

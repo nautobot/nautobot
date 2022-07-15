@@ -25,6 +25,7 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -264,15 +265,14 @@ class CustomLinkTable(BaseTable):
 
 
 class DynamicGroupTable(BaseTable):
+    """Base table for displaying dynamic groups in list view."""
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug")
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
-        """Resource Manager Meta."""
-
         model = DynamicGroup
         fields = (
             "pk",
@@ -289,6 +289,101 @@ class DynamicGroupTable(BaseTable):
         if not value:
             return value
         return format_html('<a href="{}">{}</a>', record.get_group_members_url(), value)
+
+
+class DynamicGroupMembershipTable(DynamicGroupTable):
+    """Hybrid table for displaying info for both group and membership."""
+
+    description = tables.Column(accessor="group.description")
+
+    class Meta(BaseTable.Meta):
+        model = DynamicGroupMembership
+        fields = (
+            "pk",
+            "name",
+            "members",
+            "filter",
+            "operator",
+            "weight",
+            "description",
+            "actions",
+        )
+        exclude = ("content_type",)
+
+    def render_filter(self, value, record):
+        """Turns the filter dict into a prettified list of HTML links."""
+        # Display an empty filter as None
+        if not value:
+            return None
+
+        # Use the filterset for the record to construct links to the objects used in the filter.
+        fs = record.group.filterset_class(record.filter, record.group.get_queryset())
+        fs.is_valid()  # Required or we don't get the inner form's `cleaned_data`
+
+        # Iterate over each key in the filter and extract the value from the inner form's
+        # cleaned_data`, calling `get_absolute_url()` on each to create links.
+        # TODO(jathan): If an instance doesn't have `get_absolute_url()` we're gonna have a bad time.
+        items = []
+        for field_name in record.filter:
+            value = fs.form.cleaned_data[field_name]
+            links = [format_html('<a href="{}">{}</a>', item.get_absolute_url(), item) for item in value]
+            links_str = "[" + ", ".join(links) + "]"
+            items.append(f"{field_name.title()}: {links_str}")
+
+        return format_html("<br/>".join(items))
+
+
+DESCENDANTS_LINK = """
+{% load helpers %}
+{% for node, depth in descendants_map.items %}
+    {% if node == record.name %}
+        {% for i in depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+<a href="{{ record.get_absolute_url }}">{{ record.slug }}</a>
+"""
+
+
+class NestedDynamicGroupDescendantsTable(DynamicGroupMembershipTable):
+    """
+    Subclass of DynamicGroupMembershipTable used in detail views to show parenting hierarchy with dots.
+    """
+
+    name = tables.TemplateColumn(template_code=DESCENDANTS_LINK)
+
+    class Meta(DynamicGroupMembershipTable.Meta):
+        pass
+
+
+ANCESTORS_LINK = """
+{% load helpers %}
+{% for node, depth in ancestors_map.items %}
+    {% if node == record.name %}
+        {% for i in depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+<a href="{{ record.get_absolute_url }}">{{ record.slug }}</a>
+"""
+
+
+class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
+    """
+    Subclass of DynamicGroupTable used in detail views to show parenting hierarchy with dots.
+    """
+
+    name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
+
+    class Meta(DynamicGroupTable.Meta):
+        fields = ["name", "members", "description"]
+        exclude = ["actions", "content_type"]
 
 
 class ExportTemplateTable(BaseTable):

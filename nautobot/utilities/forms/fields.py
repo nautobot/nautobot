@@ -202,14 +202,22 @@ class CSVContentTypeField(CSVModelChoiceField):
         """
         if value is None:
             return ""
+
+        # Only pass through strings if they aren't numeric. Otherwise cast to `int`.
         if isinstance(value, str):
-            return value
+            if not value.isdigit():
+                return value
+            else:
+                value = int(value)
+
+        # Integers are PKs
         if isinstance(value, int):
             value = self.queryset.get(pk=value)
 
         return f"{value.app_label}.{value.model}"
 
     def to_python(self, value):
+        value = self.prepare_value(value)
         try:
             app_label, model = value.split(".")
         except ValueError:
