@@ -207,8 +207,11 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
                 choice_model = relationship.destination_type.model_class()
             else:
                 choice_model = model
-
-            choices = [(entry.id, entry.id) for entry in choice_model.objects.all()]
+            
+            if choice_model:
+                choices = [(entry.id, entry.id) for entry in choice_model.objects.all()]
+            else:
+                choices = []
             choices.insert(0, ("", "---------"))
             choices = tuple(choices)
             self.filters[field_name] = RelationshipFilter(
