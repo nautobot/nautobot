@@ -1340,6 +1340,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses.get(slug="decommissioning").pk,
             "site": sites[1].pk,
             "rack": racks[1].pk,
+            "position": None,
+            "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
         }
 

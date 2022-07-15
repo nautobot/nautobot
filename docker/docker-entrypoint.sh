@@ -84,6 +84,10 @@ if [ "$NAUTOBOT_UWSGI_LISTEN" ]; then
   sed -i "s@.*listen = .*\$@listen = $NAUTOBOT_UWSGI_LISTEN@" /opt/nautobot/uwsgi.ini
 fi
 
+if [ "$NAUTOBOT_UWSGI_BUFFER_SIZE" ]; then
+  sed -i "s@.*buffer-size = .*\$@buffer-size = $NAUTOBOT_UWSGI_BUFFER_SIZE@" /opt/nautobot/uwsgi.ini
+fi
+
 # Launch whatever is passed by docker
 # (i.e. the RUN instruction in the Dockerfile)
 #
