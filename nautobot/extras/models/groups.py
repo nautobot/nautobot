@@ -496,6 +496,29 @@ class DynamicGroup(OrganizationalModel):
 
         return query
 
+    def get_filter_q(self):
+        """
+        Return a `Q` object generated this groups's filters.
+        """
+        return self.generate_query_for_group(self)
+
+    def get_children_q(self, base_q=None):
+        """
+        Return a `Q` object generated recursively from all nested filters for this dynamic group, starting with optionally provided `Q` object.
+
+        :param base_q:
+            Q instance. If not set, defaults to `models.Q()`.
+        """
+        if base_q is None:
+            base_q = models.Q()
+        query = base_q
+        for membership in self.dynamic_group_memberships.all():
+            group = membership.group
+            operator = membership.operator
+            next_set = group.generate_query()
+            query = self.perform_membership_set_operation(group, operator, query, next_set)
+        return query
+
     def perform_membership_set_operation(self, group, operator, query, next_set):
         """
         Perform set operation for a group membership. The `operator` and `next_set` are used to
@@ -519,46 +542,12 @@ class DynamicGroup(OrganizationalModel):
 
         return query
 
-    def generate_members_query(self):
-        """
-        Return a `Q` object generated from all direct members or from self if `filter` is set.
-        """
-        if self.filter:
-            return self.generate_query_for_group(self)
-
-        query = models.Q()
-        for membership in self.dynamic_group_memberships.all():
-            group = membership.group
-            operator = membership.operator
-            next_set = self.generate_query_for_group(group)
-            query = self.perform_membership_set_operation(group, operator, query, next_set)
-
-        return query
-
     def generate_query(self):
         """
-        Return a `Q` object generated recursively from all nested filters for this dynamic group.
+        Return a `Q` object generated recursively from all nested filters for this dynamic group,
+        based from a `Q` object of this dynamic group's filter definition.
         """
-        query = models.Q()
-        memberships = self.dynamic_group_memberships.all()
-
-        # If this group has no children, just return a single query.
-        if not memberships.exists():
-            return self.generate_members_query()
-
-        # Enumerate the filters for each child group, trusting that they handle their own children.
-        for membership in memberships:
-            group = membership.group
-            operator = membership.operator
-            logger.debug("Processing group %s...", group)
-
-            if group.filter:
-                logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
-
-            next_set = group.generate_members_query()
-            query = self.perform_membership_set_operation(group, operator, query, next_set)
-
-        return query
+        return self.get_children_q(base_q=self.get_filter_q())
 
     def get_group_queryset(self):
         """Return a filtered queryset of all descendant groups."""
@@ -590,43 +579,37 @@ class DynamicGroup(OrganizationalModel):
         instance = self.children.through.objects.get(parent_group=self, group=child)
         return instance.delete()
 
-    def get_descendants(self, group=None):
+    def get_descendants(self):
         """
         Recursively return a list of the children of all child groups.
-
-        :param group:
-            DynamicGroup from which to traverse. If not set, this group is used.
         """
-        if group is None:
-            group = self
+        return self._get_relatives("children")
 
-        descendants = []
-        for child_group in group.children.all():
-            logger.debug("Processing group %s...", child_group)
-            descendants.append(child_group)
-            if child_group.children.exists():
-                descendants.extend(self.get_descendants(child_group))
-
-        return descendants
-
-    def get_ancestors(self, group=None):
+    def get_ancestors(self):
         """
         Recursively return a list of the parents of all parent groups.
-
-        :param group:
-            DynamicGroup from which to traverse. If not set, this group is used.
         """
-        if group is None:
-            group = self
+        return self._get_relatives("parents")
 
-        ancestors = []
-        for parent_group in group.parents.all():
-            logger.debug("Processing group %s...", parent_group)
-            ancestors.append(parent_group)
-            if parent_group.parents.exists():
-                ancestors.extend(self.get_ancestors(parent_group))
+    def _get_relatives(self, related_attr):
+        """
+        Recursively return a list of the related groups of the given relation.
 
-        return ancestors
+        :param related_attr:
+            Direction to traverse, either "parents" or "children".
+        """
+
+        if related_attr not in ["parents", "children"]:
+            return []
+
+        relatives = []
+        for related_group in getattr(self, related_attr).all():
+            logger.debug("Processing group %s...", related_group)
+            relatives.append(related_group)
+            if getattr(self, related_attr, None):
+                relatives.extend(related_group._get_relatives(related_attr))
+
+        return relatives
 
     def get_siblings(self):
         """Return groups that share the same parents."""
@@ -696,7 +679,7 @@ class DynamicGroup(OrganizationalModel):
             },
             child_2: {
                 grandchild_3: {
-                     great_grand_child_1: {},
+                    great_grand_child_1: {},
                 }
             }
         }
@@ -719,10 +702,13 @@ class DynamicGroup(OrganizationalModel):
         """
         return self._flatten_tree(tree, descending=True)
 
-    def _flatten_tree(self, tree, descending=True, nodes=None, depth=1):
+    def _flatten_tree(self, tree, descending=True, nodes=None, depth=1, idx=0):
         """
-        Recursively flatten a tree mapping to a list, adding a `depth` attribute to each instance in
-        the list that can be used for visualizing tree depth.
+        Recursively flatten a tree mapping to a list.
+
+        Adds attributes to each instance:
+        - `depth` - Can be used for visualizing tree depth.
+        - `my_idx` - Can be used for sorting. Each depth shifts the index order of magnitude down: 1, .1, .01, etc.
 
         :param tree:
             A nested dictionary tree
@@ -732,6 +718,8 @@ class DynamicGroup(OrganizationalModel):
             An ordered list used to hold the flattened nodes
         :param depth:
             The tree traversal depth
+        :param idx:
+            The current index of the tree
         """
 
         if nodes is None:
@@ -742,11 +730,14 @@ class DynamicGroup(OrganizationalModel):
         else:
             method = "get_ancestors"
 
-        for item in tree:
+        tree_as_enumeration = enumerate(tree)
+        for (i, item) in tree_as_enumeration:
+            my_idx = idx + ((i + 1) / pow(10, (depth - 1)))
             item.depth = depth
+            item.my_idx = my_idx
             nodes.append(item)
             branches = getattr(item, method)()
-            self._flatten_tree(branches, nodes=nodes, descending=descending, depth=depth + 1)
+            self._flatten_tree(branches, nodes=nodes, descending=descending, depth=depth + 1, idx=my_idx)
 
         return nodes
 
