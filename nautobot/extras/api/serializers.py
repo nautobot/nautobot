@@ -643,6 +643,7 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "description_override",
             "installed",
             "enabled",
+            "is_job_hook_receiver",
             "approval_required",
             "approval_required_override",
             "commit_default",
