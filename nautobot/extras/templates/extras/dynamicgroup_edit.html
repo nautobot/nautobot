@@ -119,12 +119,14 @@
     function update_weights(children_form){
         let w = 10;
         $(children_form).find('.formset_row-{{ children.prefix }}').each((i, el) => {
-            contains_value = $(el).find("select[name$='-group'], select[name$='-operator']").map((idx, sel) => {
+            let contains_value = $(el).find("select[name$='-group'], select[name$='-operator']").map((idx, sel) => {
                 return ($(sel).val().length > 0)
             }).toArray().some(x => x === true)
 
+            let weight_input = $(el).find("*[name$='-weight']")
+            weight_input.val("")
             if(contains_value) {
-                $(el).find("*[name$='-weight']").val(w);
+                weight_input.val(w);
                 w+=10;
             }
         })
