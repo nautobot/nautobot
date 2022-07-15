@@ -44,6 +44,11 @@
                 <td>Installed</td>
                 <td>{{ object.installed | render_boolean }}</td>
             </tr>
+            <tr>
+                <td>Is Job Hook Receiver</td>
+                <td>{{ object.is_job_hook_receiver | render_boolean }}</td>
+                <td></td>
+            </tr>
         </table>
     </div>
     <div class="panel panel-default">

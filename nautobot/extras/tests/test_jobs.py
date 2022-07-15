@@ -610,7 +610,7 @@ class JobHookReceiverTest(TransactionTestCase):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverLog"
         job_class, job_model = get_job_class_and_model(module, name)
-        self.assertTrue(job_model.hidden)
+        self.assertFalse(job_model.hidden)
 
     def test_is_job_hook(self):
 

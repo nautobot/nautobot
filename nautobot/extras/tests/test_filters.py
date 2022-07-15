@@ -655,13 +655,13 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_installed(self):
         params = {"installed": True}
-        # 33 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 36)
+        # 33 local jobs and 4 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 37)
 
     def test_enabled(self):
         params = {"enabled": False}
-        # 33 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 36)
+        # 33 local jobs and 4 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 37)
 
     def test_commit_default(self):
         params = {"commit_default": False}
@@ -669,7 +669,7 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_hidden(self):
         params = {"hidden": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_read_only(self):
         params = {"read_only": True}
@@ -685,6 +685,10 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_is_job_hook_receiver(self):
+        params = {"is_job_hook_receiver": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
 class JobLogEntryTestCase(FilterTestCases.FilterTestCase):

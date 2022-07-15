@@ -834,11 +834,6 @@ class JobHookReceiver(Job):
     """
 
     object_change = ObjectVar(model=ObjectChange)
-    is_job_hook_receiver = True
-
-    @classproperty
-    def hidden(cls):
-        return getattr(cls.Meta, "hidden", True)
 
 
 def is_job(obj):
