@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="job",
             name="is_job_hook_receiver",
-            field=models.BooleanField(default=False),
+            field=models.BooleanField(default=False, editable=False),
         ),
     ]
