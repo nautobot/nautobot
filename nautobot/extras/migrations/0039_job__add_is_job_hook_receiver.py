@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0037_objectchange__add_change_context"),
+        ("extras", "0038_dynamicgroup__dynamicgroupmembership"),
     ]
 
     operations = [

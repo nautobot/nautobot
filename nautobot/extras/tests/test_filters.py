@@ -655,13 +655,13 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_installed(self):
         params = {"installed": True}
-        # 31 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 34)
+        # 33 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 36)
 
     def test_enabled(self):
         params = {"enabled": False}
-        # 31 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 34)
+        # 33 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 36)
 
     def test_commit_default(self):
         params = {"commit_default": False}
@@ -669,7 +669,7 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_hidden(self):
         params = {"hidden": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_read_only(self):
         params = {"read_only": True}
