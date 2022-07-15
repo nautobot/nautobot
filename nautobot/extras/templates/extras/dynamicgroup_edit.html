@@ -62,6 +62,7 @@
                                 {% if forloop.first %}
                                     <thead>
                                         <tr>
+                                            <th>Sort</th>
                                             {% for field in child_form.visible_fields %}
                                                 <th>{{ field.label|capfirst }}</th>
                                             {% endfor %}
@@ -69,6 +70,7 @@
                                     </thead>
                                 {% endif %}
                                 <tr class="formset_row-{{ children.prefix }}">
+                                    <td><i class="mdi mdi-drag-horizontal drag-handler"></i></td>
                                     {% for field in child_form.visible_fields %}
                                         <td>
                                             {% if forloop.first %}
@@ -111,6 +113,35 @@
         prefix: '{{ children.prefix }}',
         formCssClass: 'dynamic-formset-{{ children.prefix }}',
         added: jsify_form
+    });
+
+    // Function that takes a Dynamic Group children form and recomputes the weights.
+    function update_weights(children_form){
+        let w = 10;
+        $(children_form).find('.formset_row-{{ children.prefix }}').each((i, el) => {
+            contains_value = $(el).find("select[name$='-group'], select[name$='-operator']").map((idx, sel) => {
+                return ($(sel).val().length > 0)
+            }).toArray().some(x => x === true)
+
+            if(contains_value) {
+                $(el).find("*[name$='-weight']").val(w);
+                w+=10;
+            }
+        })
+    }
+
+    // Make the children form formset rows draggable and hook to re-weight on drag complete.
+    $('#children-form').sortable({
+        handle: '.drag-handler',
+        items: '.formset_row-{{ children.prefix }}',
+        update: ( e, ui ) => {
+            update_weights(e.target)
+        }
+    });
+
+    // Instead of re-weight on every input change, just do it before we submit the form.
+    $('form.form').submit((e) => {
+        $(e.target).find('#children-form').each((i, cf) => { update_weights(cf) });
     });
 </script>
 {% endblock javascript %}
