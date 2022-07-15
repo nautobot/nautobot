@@ -345,11 +345,6 @@ class CustomFieldListView(generic.ObjectListView):
 class CustomFieldView(generic.ObjectView):
     queryset = CustomField.objects.all()
 
-    def get_changelog_url(self, instance):
-        """Return the changelog URL."""
-        route = "extras:customfield_changelog"
-        return reverse(route, kwargs={"name": getattr(instance, "name")})
-
 
 class CustomFieldEditView(generic.ObjectEditView):
     queryset = CustomField.objects.all()
