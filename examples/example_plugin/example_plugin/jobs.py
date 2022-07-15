@@ -1,6 +1,6 @@
 import time
 
-from nautobot.extras.jobs import IntegerVar, Job
+from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver
 
 
 name = "ExamplePlugin jobs"
@@ -44,4 +44,15 @@ class ExampleLoggingJob(Job):
         return f"Ran for {interval} seconds"
 
 
-jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob)
+class ExampleJobHookReceiver(JobHookReceiver):
+    class Meta:
+        name = "Example job hook receiver"
+        description = "This job is triggered by object change events"
+
+    def run(self, data, commit):
+        change_action = data["object_change"].action
+        changed_object = data["object_change"].changed_object
+        self.log_success(message=f"{change_action} detected for object {changed_object.name}")
+
+
+jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob, ExampleJobHookReceiver)
