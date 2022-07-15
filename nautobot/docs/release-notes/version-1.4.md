@@ -87,6 +87,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Changed
 
+- [#2049](https://github.com/nautobot/nautobot/pull/2049) - Moved get_changelog_url to a method on objects that support changelogs, updated template context.
+
 ### Fixed
 
 ## v1.4.0a2 (2022-07-11)
