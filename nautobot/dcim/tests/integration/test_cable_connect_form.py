@@ -82,9 +82,9 @@ class CableConnectFormTestCase(SeleniumTestCase):
         cable_connect_form_url = reverse(
             "dcim:interface_connect", kwargs={"termination_a_id": self.interface1.pk, "termination_b_type": "interface"}
         )
-        self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
+        response = self.client.get(cable_connect_form_url)
         js_query = (
             '"select#id_termination_b_region, select#id_termination_b_site, '
             'select#id_termination_b_rack, select#id_termination_b_device"'
         )
-        self.assertTrue(self.browser.is_text_present(js_query))
+        self.assertIn(js_query, str(response.content))
