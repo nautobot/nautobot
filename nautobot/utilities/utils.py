@@ -2,6 +2,7 @@ import copy
 import datetime
 import inspect
 import json
+import uuid
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from decimal import Decimal
@@ -566,3 +567,12 @@ def versioned_serializer_selector(obj, serializer_choices, default_serializer):
         if serializer is not None:
             return serializer
     return default_serializer
+
+
+def is_uuid(value):
+    try:
+        if isinstance(value, uuid.UUID) or uuid.UUID(value):
+            return True
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return False

@@ -148,6 +148,8 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 class DynamicGroupQuerySet(RestrictedQuerySet):
     """Queryset for `DynamicGroup` objects that provides a `get_for_object` method."""
 
+    # FIXME(jathan): Ideally replace this iteration with a reversible Q object
+    # of some sort.
     def get_for_object(self, obj):
         """Return all `DynamicGroup` assigned to the given object."""
         if not isinstance(obj, Model):
@@ -170,6 +172,21 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
 
         # TODO(jathan): 1 query
         return self.filter(pk__in=my_groups)
+
+    def get_by_natural_key(self, slug):
+        return self.get(slug=slug)
+
+
+class DynamicGroupMembershipQuerySet(RestrictedQuerySet):
+    """Queryset for `DynamicGroupMembership` objects."""
+
+    def get_by_natural_key(self, group_slug, parent_group_slug, operator, weight):
+        return self.get(
+            group__slug=group_slug,
+            parent_group__slug=parent_group_slug,
+            operator=operator,
+            weight=weight,
+        )
 
 
 class JobQuerySet(RestrictedQuerySet):
