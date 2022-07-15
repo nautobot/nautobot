@@ -156,7 +156,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#386](https://github.com/nautobot/nautobot/issues/386) - Clarified messaging in API for rack position occupied.
-- [#1356](https://github.com/nautobot/nautobot/issues/1356) - Virtual chassis master device interface list is less confusing. 
+- [#1356](https://github.com/nautobot/nautobot/issues/1356) - Virtual chassis master device interface list is less confusing.
 - [#2045](https://github.com/nautobot/nautobot/pull/2045) - Clarified Job authoring around proper class inheritance.
 
 ### Fixed
