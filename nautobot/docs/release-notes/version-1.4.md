@@ -13,7 +13,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 Jobs can now specify a `template_name` property and provide a custom template with additional JavaScript and CSS to help with user input on the Job submission form.
 
-You can refer to the [Job class metadata attribute documentation](../additional-features/jobs.html#template_name) on how to build and define this template.
+You can refer to the [Job class metadata attribute documentation](../additional-features/jobs.md#template_name) on how to build and define this template.
 
 #### Dark Mode UI ([#729](https://github.com/nautobot/nautobot/issues/729))
 
