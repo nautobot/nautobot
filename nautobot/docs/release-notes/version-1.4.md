@@ -61,14 +61,6 @@ A new version of the `/dcim/interfaces/*` REST API endpoints have been implement
 
 Visit the documentation on [REST API versioning](../rest-api/overview/#versioning) for more information on using the versioned APIs.
 
-#### Object Detail Tabs
-
-A plugin may now define extra tabs which will be appended to the object view's list of tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000)).
-
-#### Improved Filter Coverage for DCIM models ([#1729](https://github.com/nautobot/nautobot/issues/1729))
-
-The DCIM FilterSets have been updated with 103 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
-
 #### Notes ([#767](https://github.com/nautobot/nautobot/issues/767))
 
 Primary and Organizational models now support notes. A notes tab has been added to the Object Detail view for all models that inherit the Primary or Organizational base abstract models.
