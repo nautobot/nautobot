@@ -103,6 +103,12 @@ urlpatterns = [
         name="locationtype_changelog",
         kwargs={"model": LocationType},
     ),
+    path(
+        "location-types/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="locationtype_notes",
+        kwargs={"model": LocationType},
+    ),
     # Locations
     path("locations/", views.LocationListView.as_view(), name="location_list"),
     path("locations/add/", views.LocationEditView.as_view(), name="location_add"),
@@ -116,6 +122,12 @@ urlpatterns = [
         "locations/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="location_changelog",
+        kwargs={"model": Location},
+    ),
+    path(
+        "locations/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="location_notes",
         kwargs={"model": Location},
     ),
     path(
