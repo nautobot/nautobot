@@ -239,9 +239,10 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_notes(self):
-            url = self._get_url("notes", self._get_queryset().first())
-            response = self.client.get(url)
-            self.assertHttpStatus(response, 200)
+            if hasattr(self.model, "notes"):
+                url = self._get_url("notes", self._get_queryset().first())
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
 
     class CreateObjectViewTestCase(ModelViewTestCase):
         """
