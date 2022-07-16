@@ -14,6 +14,8 @@ from nautobot.dcim.models import (
     Device,
     DeviceRole,
     DeviceType,
+    Location,
+    LocationType,
     Manufacturer,
     Platform,
     Site,
@@ -114,6 +116,8 @@ class ConfigContextTest(TestCase):
         self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         self.region = Region.objects.create(name="Region")
         self.site = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
+        location_type = LocationType.objects.create(name="Location Type 1")
+        self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
@@ -125,6 +129,7 @@ class ConfigContextTest(TestCase):
             device_type=self.devicetype,
             device_role=self.devicerole,
             site=self.site,
+            location=self.location,
         )
 
     def test_higher_weight_wins(self):
@@ -166,7 +171,7 @@ class ConfigContextTest(TestCase):
 
     def test_annotation_same_as_get_for_object(self):
         """
-        This test incorperates features from all of the above tests cases to ensure
+        This test incorporates features from all of the above tests cases to ensure
         the annotate_config_context_data() and get_for_object() queryset methods are the same.
         """
         ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
@@ -179,6 +184,8 @@ class ConfigContextTest(TestCase):
 
     def test_annotation_same_as_get_for_object_device_relations(self):
 
+        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
+        location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
         site_context.sites.add(self.site)
         region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
@@ -195,6 +202,7 @@ class ConfigContextTest(TestCase):
         device = Device.objects.create(
             name="Device 2",
             site=self.site,
+            location=self.location,
             tenant=self.tenant,
             platform=self.platform,
             device_role=self.devicerole,
@@ -203,10 +211,15 @@ class ConfigContextTest(TestCase):
         device.tags.add(self.tag)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+        device_context = device.get_config_context()
+        self.assertEqual(device_context, annotated_queryset[0].get_config_context())
+        for key in ["location", "site", "region", "platform", "tenant_group", "tenant", "tag"]:
+            self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
 
+        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
+        location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
         site_context.sites.add(self.site)
         region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
@@ -225,7 +238,13 @@ class ConfigContextTest(TestCase):
         )
         cluster_group_context.cluster_groups.add(cluster_group)
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
-        cluster = Cluster.objects.create(name="Cluster", group=cluster_group, type=cluster_type)
+        cluster = Cluster.objects.create(
+            name="Cluster",
+            group=cluster_group,
+            type=cluster_type,
+            site=self.site,
+            location=self.location,
+        )
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
         cluster_context.clusters.add(cluster)
 
@@ -239,10 +258,20 @@ class ConfigContextTest(TestCase):
         virtual_machine.tags.add(self.tag)
 
         annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
-        self.assertEqual(
-            virtual_machine.get_config_context(),
-            annotated_queryset[0].get_config_context(),
-        )
+        vm_context = virtual_machine.get_config_context()
+        self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
+        for key in [
+            "location",
+            "site",
+            "region",
+            "platform",
+            "tenant_group",
+            "tenant",
+            "tag",
+            "cluster_group",
+            "cluster",
+        ]:
+            self.assertIn(key, vm_context)
 
     def test_multiple_tags_return_distinct_objects(self):
         """

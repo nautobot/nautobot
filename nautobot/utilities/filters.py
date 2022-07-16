@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 import logging
+import uuid
 
 from django import forms
 from django.conf import settings
@@ -11,6 +12,9 @@ from django.forms.utils import ErrorDict, ErrorList
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
+
+from mptt.models import MPTTModel
+from tree_queries.models import TreeNode
 
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
@@ -143,22 +147,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             exclude=exclude,
             **kwargs,
         )
-
-
-class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
-    """
-    Filters for a set of Models, including all descendant models within a Tree.  Example: [<Region: R1>,<Region: R2>]
-    """
-
-    def get_filter_predicate(self, v):
-        # Null value filtering
-        if v is None:
-            return {f"{self.field_name}__isnull": True}
-        return super().get_filter_predicate(v)
-
-    def filter(self, qs, value):
-        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
-        return super().filter(qs, value)
 
 
 class NullableCharFieldFilter(django_filters.CharFilter):
@@ -421,11 +409,59 @@ class MappedPredicatesFilterMixin:
 class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filter that supports filtering on values matching the `pk` field and another
-    field of a foreign-key related object. The desired field is set using the `natural_key`
+    field of a foreign-key related object. The desired field is set using the `to_field_name`
     keyword argument on filter initialization (defaults to `slug`).
     """
 
     field_class = MultiMatchModelMultipleChoiceField
+
+    def __init__(self, *args, **kwargs):
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        """
+        Override base filter behavior to force the filter to use the `pk` field instead of
+        the natural key in the generated filter.
+        """
+
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+
+        # If value is a model instance, stringify it to a pk.
+        if isinstance(v, models.Model):
+            logger.debug("Model instance detected. Casting to a PK.")
+            v = str(v.pk)
+
+        # Try to cast the value to a UUID and set `is_pk` boolean.
+        try:
+            uuid.UUID(str(v))
+        except (AttributeError, TypeError, ValueError):
+            logger.debug("Non-UUID value detected: Filtering using natural key")
+            is_pk = False
+        else:
+            v = str(v)  # Cast possible UUID instance to a string
+            is_pk = True
+
+        # If it's not a pk and not a list/qs generate then it's a slug and the filter predicate
+        # needs to be nested (e.g. `{"site__slug": "ams01"}`) so that it can be useable in `Q`
+        # objects.
+        #
+        # FIXME(jathan): It feels weird to have a list/qs make its way to `get_filter_predicate()`
+        # which if you inspect the source for `django_filters.MultipleChoiceFilter.filter()` should
+        # be handling those to generate singular filter predicates and concatentating them.
+        if not is_pk and not isinstance(v, (list, models.QuerySet)):
+            name = f"{self.field_name}__{self.field.to_field_name}"
+        # Otherwise just trust the field_name
+        else:
+            logger.debug("UUID or list/qs detected: Filtering using field name")
+            name = self.field_name
+
+        if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
+            name = "__".join([name, self.lookup_expr])
+
+        return {name: v}
 
 
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
@@ -436,6 +472,40 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
 
     label = "Search"
+
+
+class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """
+    Filter that matches on the given model(s) (identified by slug and/or pk) _as well as their tree descendants._
+
+    For example, if we have:
+
+        Region "Earth"
+          Region "USA"
+            Region "GA" <- Site "Athens"
+            Region "NC" <- Site "Durham"
+
+    a NaturalKeyOrPKMultipleChoiceFilter on Site for {"region": "USA"} would have no matches,
+    since there are no Sites whose immediate Region is "USA",
+    but a TreeNodeMultipleChoiceFilter on Site for {"region": "USA"} or {"region": "Earth"}
+    would match both "Athens" and "Durham".
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("lookup_expr", "in")
+        super().__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            if any(isinstance(node, TreeNode) for node in value):
+                # django-tree-queries
+                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            elif any(isinstance(node, MPTTModel) for node in value):
+                # django-mptt
+                value = [
+                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
+                ]
+        return super().filter(qs, value)
 
 
 #

@@ -452,6 +452,12 @@ urlpatterns = [
         name="relationship_delete",
     ),
     path(
+        "relationships/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="relationship_changelog",
+        kwargs={"model": Relationship},
+    ),
+    path(
         "relationships/<slug:slug>/notes/",
         views.ObjectNotesView.as_view(),
         name="relationship_notes",

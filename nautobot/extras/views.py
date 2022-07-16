@@ -17,6 +17,7 @@ from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
+from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
@@ -53,6 +54,7 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -345,11 +347,6 @@ class CustomFieldListView(generic.ObjectListView):
 class CustomFieldView(generic.ObjectView):
     queryset = CustomField.objects.all()
 
-    def get_changelog_url(self, instance):
-        """Return the changelog URL."""
-        route = "extras:customfield_changelog"
-        return reverse(route, kwargs={"name": getattr(instance, "name")})
-
 
 class CustomFieldEditView(generic.ObjectEditView):
     queryset = CustomField.objects.all()
@@ -504,23 +501,45 @@ class DynamicGroupListView(generic.ObjectListView):
 class DynamicGroupView(generic.ObjectView):
     queryset = DynamicGroup.objects.all()
 
+    def get_descendants_memberships(self, descendants):
+        """Return memberships objects for all descendants."""
+        return DynamicGroupMembership.objects.filter(group__in=descendants)
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         model = instance.content_type.model_class()
         table_class = get_table_for_model(model)
 
         if table_class is not None:
-            members = instance.get_queryset()
-            members_table = table_class(members, orderable=False)
-
-            # Paginate the members table.
+            # Members table (for display on Members nav tab)
+            members_table = table_class(instance.members, orderable=False)
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(members_table)
 
+            # Descendants table
+            descendants = instance.get_descendants()
+            descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                self.get_descendants_memberships(descendants),
+                orderable=False,
+            )
+            descendants_tree = instance.flatten_descendants_tree(instance.descendants_tree())
+            descendants_map = {node.name: node.depth for node in descendants_tree}
+
+            # Ancestors table
+            ancestors = instance.get_ancestors()
+            ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
+            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+            ancestors_map = {node.name: node.depth for node in ancestors_tree}
+
+            context["raw_query"] = str(instance.generate_query())
             context["members_table"] = members_table
+            context["ancestors_table"] = ancestors_table
+            context["ancestors_map"] = ancestors_map
+            context["descendants_table"] = descendants_table
+            context["descendants_map"] = descendants_map
 
         return context
 
@@ -547,6 +566,14 @@ class DynamicGroupEditView(generic.ObjectEditView):
             filter_form = filterform_class(initial=initial)
 
         ctx["filter_form"] = filter_form
+
+        # FIXME(jathan): Editing filter or groups are distinct. Both should not
+        # be possible. For now let's just get it working.
+        formset_kwargs = {"instance": instance}
+        if request.POST:
+            formset_kwargs["data"] = request.POST
+
+        ctx["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
 
         return ctx
 
@@ -576,6 +603,13 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     obj.save()
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
+
+                    # Process the formsets for children
+                    children = ctx["children"]
+                    if children.is_valid():
+                        children.save()
+                    else:
+                        raise RuntimeError(children.errors)
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",
@@ -871,14 +905,31 @@ class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
 
 
 class ImageAttachmentEditView(generic.ObjectEditView):
+    """
+    View for creating and editing ImageAttachments.
+
+    Note that a URL kwargs parameter of "pk" identifies an existing ImageAttachment to edit,
+    while kwargs of "object_id" or "slug" identify the parent model instance to attach an ImageAttachment to.
+    """
+
     queryset = ImageAttachment.objects.all()
     model_form = forms.ImageAttachmentForm
+
+    def get_object(self, kwargs):
+        if "pk" in kwargs:
+            return get_object_or_404(self.queryset, pk=kwargs["pk"])
+        return self.queryset.model()
 
     def alter_obj(self, imageattachment, request, args, kwargs):
         if not imageattachment.present_in_database:
             # Assign the parent object based on URL kwargs
             model = kwargs.get("model")
-            imageattachment.parent = get_object_or_404(model, pk=kwargs["object_id"])
+            if "object_id" in kwargs:
+                imageattachment.parent = get_object_or_404(model, pk=kwargs["object_id"])
+            elif "slug" in kwargs:
+                imageattachment.parent = get_object_or_404(model, slug=kwargs["slug"])
+            else:
+                raise RuntimeError("Neither object_id nor slug were provided?")
         return imageattachment
 
     def get_return_url(self, request, imageattachment):
@@ -950,9 +1001,16 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
-
+        template_name = "extras/job.html"
         try:
-            job_form = job_model.job_class().as_form(initial=normalize_querydict(request.GET))
+            job_class = job_model.job_class()
+            job_form = job_class.as_form(initial=normalize_querydict(request.GET))
+            if hasattr(job_class, "template_name"):
+                try:
+                    get_template(job_class.template_name)
+                    template_name = job_class.template_name
+                except TemplateDoesNotExist as err:
+                    messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -961,7 +1019,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
         return render(
             request,
-            "extras/job.html",  # 2.0 TODO: extras/job_submission.html
+            template_name,  # 2.0 TODO: extras/job_submission.html
             {
                 "job_model": job_model,
                 "job_form": job_form,
@@ -1050,9 +1108,17 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
                 return redirect("extras:job_jobresult", pk=job_result.pk)
 
+        template_name = "extras/job.html"
+        if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
+            try:
+                get_template(job_model.job_class.template_name)
+                template_name = job_model.job_class.template_name
+            except TemplateDoesNotExist as err:
+                messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
+
         return render(
             request,
-            "extras/job.html",
+            template_name,
             {
                 "job_model": job_model,
                 "job_form": job_form,

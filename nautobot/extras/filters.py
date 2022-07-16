@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
@@ -162,6 +162,16 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="locations",
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="locations__slug",
+        queryset=Location.objects.all(),
+        label="Location (slug)",
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
         field_name="roles",
@@ -847,7 +857,12 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         # e.g. `status__slug`
         to_field_name = self.field.to_field_name
         name = f"{self.field_name}__{to_field_name}"
-        return {name: getattr(value, to_field_name)}
+        # Sometimes the incoming value is an instance. This block of logic comes from the base
+        # `get_filter_predicate()` and was added here to support this.
+        try:
+            return {name: getattr(value, to_field_name)}
+        except (AttributeError, TypeError):
+            return {name: value}
 
 
 class StatusFilterSet(NautobotFilterSet):

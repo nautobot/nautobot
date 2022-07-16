@@ -221,8 +221,9 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Because Interface and VMInterface have the same set of default statuses, we get the error:
+        # Because Interface and VMInterface, and Site and Location, have the same default statuses, we get the error:
         #   enum naming encountered a non-optimally resolvable collision for fields named "status"
+        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
         "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
     },
 }
@@ -346,7 +347,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
-                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
         },
@@ -365,7 +366,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
-                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
         },

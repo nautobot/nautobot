@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings, tag
@@ -10,6 +9,7 @@ from rest_framework.test import APIClient, APITransactionTestCase as _APITransac
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ObjectChange
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_filterset_for_model
 from .utils import disable_warnings
 from .views import ModelTestCase
@@ -19,10 +19,6 @@ __all__ = (
     "APITestCase",
     "APIViewTestCases",
 )
-
-
-# Use the proper swappable User model
-User = get_user_model()
 
 
 #
@@ -45,11 +41,10 @@ class APITestCase(ModelTestCase):
 
     def setUp(self):
         """
-        Create a superuser and token for API calls.
+        Create a token for API calls.
         """
-        # Create the test user and assign permissions
-        self.user = User.objects.create_user(username="testuser")
-        self.add_permissions(*self.user_permissions)
+        # Do not initialize the client, it conflicts with the APIClient.
+        super().setUpNautobot(client=False)
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
         if self.api_version:
@@ -400,6 +395,26 @@ class APIViewTestCases:
                 response = self.client.post(url, self.create_data[0], format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
+        def check_expected_slug(self, obj):
+            slug_source = [self.slug_source] if isinstance(self.slug_source, str) else self.slug_source
+            expected_slug = ""
+            for source_item in slug_source:
+                # e.g. self.slug_source = ["parent__name", "name"]
+                source_keys = source_item.split("__")
+                try:
+                    val = getattr(obj, source_keys[0])
+                    for key in source_keys[1:]:
+                        val = getattr(val, key)
+                except AttributeError:
+                    val = ""
+                if val:
+                    if expected_slug != "":
+                        expected_slug += "-"
+                    expected_slug += slugify(val)
+
+            self.assertNotEqual(expected_slug, "")
+            self.assertEqual(obj.slug, expected_slug)
+
         def test_create_object(self):
             """
             POST a single object with permission.
@@ -422,11 +437,10 @@ class APIViewTestCases:
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
+
                 # Check if Slug field is automatically created
                 if self.slug_source is not None and "slug" not in create_data:
-                    object = self._get_queryset().get(pk=response.data["id"])
-                    expected_slug = slugify(getattr(object, self.slug_source))
-                    self.assertEqual(object.slug, expected_slug)
+                    self.check_expected_slug(self._get_queryset().get(pk=response.data["id"]))
 
                 # Verify ObjectChange creation
                 if hasattr(self.model, "to_objectchange"):
@@ -467,9 +481,7 @@ class APIViewTestCases:
                     api=True,
                 )
                 if self.slug_source is not None and "slug" not in self.create_data[i]:
-                    object = self._get_queryset().get(pk=obj["id"])
-                    expected_slug = slugify(getattr(object, self.slug_source))
-                    self.assertEqual(object.slug, expected_slug)
+                    self.check_expected_slug(self._get_queryset().get(pk=obj["id"]))
 
     class UpdateObjectViewTestCase(APITestCase):
         update_data = {}
@@ -614,12 +626,14 @@ class APIViewTestCases:
 
 
 @tag("unit")
-class APITransactionTestCase(_APITransactionTestCase):
+class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
     def setUp(self):
         """
         Create a superuser and token for API calls.
         """
-        self.user = User.objects.create(username="testuser", is_superuser=True)
+        super().setUpNautobot()
+        self.user.is_superuser = True
+        self.user.save()
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 

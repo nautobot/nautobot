@@ -61,6 +61,8 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelForm` and `nautobot.extras.forms.RelationshipModelForm` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these three classes.
 
+* Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.utilities.forms.BulkEditForm` with `nautobot.extras.forms.CustomFieldBulkEditForm` and `nautobot.extras.forms.RelationshipModelBulkEditFormMixin`, and should be used where appropriate.
+
 ## Branding
 
 * When referring to Nautobot in writing, use the proper form "Nautobot," with the letter N. The lowercase form "nautobot" should be used in code, filenames, etc.

@@ -23,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -84,6 +85,9 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "active_tab": request.GET.get("tab", "main"),
         }
 
+    # TODO: Remove this method in 2.0. Can be retrieved from instance itself now
+    # instance.get_changelog_url()
+    # Only available on models that support changelogs
     def get_changelog_url(self, instance):
         """Return the changelog URL for a given instance."""
         meta = self.queryset.model._meta
@@ -116,6 +120,11 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
 
+        changelog_url = None
+
+        if isinstance(instance, ChangeLoggedModel):
+            changelog_url = instance.get_changelog_url()
+
         return render(
             request,
             self.get_template_name(),
@@ -123,7 +132,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": self.get_changelog_url(instance),
+                "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
                 **self.get_extra_context(request, instance),
             },
         )
@@ -186,7 +195,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append(custom_field.name)
+                headers.append("cf_" + custom_field.name)
                 custom_fields.append(custom_field.name)
 
         csv_data.append(",".join(headers))
@@ -952,8 +961,11 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
-                standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
+                custom_fields = getattr(form, "custom_fields", [])
+                relationships = getattr(form, "relationships", [])
+                standard_fields = [
+                    field for field in form.fields if field not in custom_fields + relationships + ["pk"]
+                ]
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
@@ -979,7 +991,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     if isinstance(model_field, ManyToManyField):
                                         getattr(obj, name).set([])
                                     else:
-                                        setattr(obj, name, None if model_field.null else "")
+                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
 
                                 # ManyToManyFields
                                 elif isinstance(model_field, ManyToManyField):
@@ -1006,6 +1018,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                 obj.tags.add(*form.cleaned_data["add_tags"])
                             if form.cleaned_data.get("remove_tags", None):
                                 obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
+                                # Add/remove relationship associations
+                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(

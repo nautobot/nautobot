@@ -47,6 +47,8 @@ from .models import (
     Interface,
     InterfaceTemplate,
     InventoryItem,
+    Location,
+    LocationType,
     Manufacturer,
     PathEndpoint,
     Platform,
@@ -251,6 +253,133 @@ class SiteBulkDeleteView(generic.BulkDeleteView):
     queryset = Site.objects.prefetch_related("region", "tenant")
     filterset = filters.SiteFilterSet
     table = tables.SiteTable
+
+
+#
+# LocationTypes
+#
+
+
+class LocationTypeListView(generic.ObjectListView):
+    queryset = LocationType.objects.with_tree_fields()
+    filterset = filters.LocationTypeFilterSet
+    filterset_form = forms.LocationTypeFilterForm
+    table = tables.LocationTypeTable
+
+
+class LocationTypeView(generic.ObjectView):
+    queryset = LocationType.objects.all()
+
+    def get_extra_context(self, request, instance):
+        children = (
+            LocationType.objects.restrict(request.user, "view").filter(parent=instance).prefetch_related("parent")
+        )
+        locations = (
+            Location.objects.restrict(request.user, "view")
+            .filter(location_type=instance)
+            .prefetch_related("parent", "location_type")
+        )
+
+        children_table = tables.LocationTypeTable(children)
+        locations_table = tables.LocationTable(locations)
+        locations_table.columns.hide("location_type")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(children_table)
+        RequestConfig(request, paginate).configure(locations_table)
+
+        return {
+            "children_table": children_table,
+            "locations_table": locations_table,
+        }
+
+
+class LocationTypeEditView(generic.ObjectEditView):
+    queryset = LocationType.objects.all()
+    model_form = forms.LocationTypeForm
+
+
+class LocationTypeDeleteView(generic.ObjectDeleteView):
+    queryset = LocationType.objects.all()
+
+
+class LocationTypeBulkImportView(generic.BulkImportView):
+    queryset = LocationType.objects.all()
+    model_form = forms.LocationTypeCSVForm
+    table = tables.LocationTypeTable
+
+
+class LocationTypeBulkDeleteView(generic.BulkDeleteView):
+    queryset = LocationType.objects.all()
+    filterset = filters.LocationTypeFilterSet
+    table = tables.LocationTypeTable
+
+
+#
+# Locations
+#
+
+
+class LocationListView(generic.ObjectListView):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
+    filterset = filters.LocationFilterSet
+    filterset_form = forms.LocationFilterForm
+    table = tables.LocationTable
+
+
+class LocationView(generic.ObjectView):
+    queryset = Location.objects.all()
+
+    def get_extra_context(self, request, instance):
+        children = (
+            Location.objects.restrict(request.user, "view")
+            .filter(parent=instance)
+            .prefetch_related("parent", "location_type")
+        )
+
+        children_table = tables.LocationTable(children)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(children_table)
+
+        return {
+            "children_table": children_table,
+        }
+
+
+class LocationEditView(generic.ObjectEditView):
+    queryset = Location.objects.all()
+    model_form = forms.LocationForm
+    template_name = "dcim/location_edit.html"
+
+
+class LocationDeleteView(generic.ObjectDeleteView):
+    queryset = Location.objects.all()
+
+
+class LocationBulkEditView(generic.BulkEditView):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
+    filterset = filters.LocationFilterSet
+    table = tables.LocationTable
+    form = forms.LocationBulkEditForm
+
+
+class LocationBulkImportView(generic.BulkImportView):
+    queryset = Location.objects.all()
+    model_form = forms.LocationCSVForm
+    table = tables.LocationTable
+
+
+class LocationBulkDeleteView(generic.BulkDeleteView):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
+    filterset = filters.LocationFilterSet
+    table = tables.LocationTable
 
 
 #

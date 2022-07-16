@@ -172,6 +172,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
     site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_role = ColoredLabelColumn(verbose_name="Role")
     device_type = tables.LinkColumn(
@@ -203,6 +204,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "serial",
             "asset_tag",
             "site",
+            "location",
             "rack",
             "position",
             "face",
@@ -222,6 +224,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "status",
             "tenant",
             "site",
+            "location",
             "rack",
             "device_role",
             "device_type",
