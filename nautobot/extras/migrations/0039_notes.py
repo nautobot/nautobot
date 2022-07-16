@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("extras", "0035_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
+        ("extras", "0038_dynamicgroup__dynamicgroupmembership"),
     ]
 
     operations = [
