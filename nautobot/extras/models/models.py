@@ -652,7 +652,7 @@ class ImageAttachment(BaseModel):
 @extras_features("graphql", "webhooks")
 class Notes(BaseModel, ChangeLoggedModel):
     """
-    Notes allows anyone with proper permissions to add a note to an object.
+    Notes allow anyone with proper permissions to add a note to an object.
     """
 
     assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)

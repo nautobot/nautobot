@@ -30,6 +30,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobResult,
+    Notes,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -567,6 +568,52 @@ class GitRepositoryTestCase(
 
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
+
+
+class NotesTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+):
+    model = Notes
+
+    @classmethod
+    def setUpTestData(cls):
+
+        content_type = ContentType.objects.get_for_model(Site)
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        user = User.objects.first()
+
+        # Notes Objects to test
+        Notes.objects.create(
+            name="Site Maintenance",
+            note="Site has been placed on maintenance.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+        Notes.objects.create(
+            name="Site Maintenance End",
+            note="Site maintenance has ended.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+        Notes.objects.create(
+            name="Site Trouble",
+            note="Site is under duress.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+
+        cls.form_data = {
+            "name": "Site Note",
+            "note": "This is Site note.",
+            "assigned_object_type": content_type.pk,
+            "assigned_object_id": site.pk,
+        }
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets

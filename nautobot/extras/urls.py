@@ -455,7 +455,7 @@ urlpatterns = [
         "relationships/<slug:slug>/notes/",
         views.ObjectNotesView.as_view(),
         name="relationship_notes",
-        kwargs={"model": Relationship}
+        kwargs={"model": Relationship},
     ),
     path(
         "relationship-associations/",

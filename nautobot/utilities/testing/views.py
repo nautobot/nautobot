@@ -399,6 +399,17 @@ class ViewTestCases:
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
 
+    class GetObjectNotesViewTestCase(ModelViewTestCase):
+        """
+        View the notes for an instance.
+        """
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_get_object_notes(self):
+            url = self._get_url("notes", self._get_queryset().first())
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+
     class CreateObjectViewTestCase(ModelViewTestCase):
         """
         Create a single new instance.
@@ -1238,6 +1249,7 @@ class ViewTestCases:
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
+        GetObjectNotesViewTestCase,
         CreateObjectViewTestCase,
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
@@ -1255,6 +1267,7 @@ class ViewTestCases:
     class OrganizationalObjectViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
+        GetObjectNotesViewTestCase,
         CreateObjectViewTestCase,
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
@@ -1285,6 +1298,7 @@ class ViewTestCases:
     class DeviceComponentViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
+        GetObjectNotesViewTestCase,
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
