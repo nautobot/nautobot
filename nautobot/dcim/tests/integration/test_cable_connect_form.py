@@ -72,7 +72,6 @@ class CableConnectFormTestCase(SeleniumTestCase):
         self.assertIn("no elements could be found", str(context.exception))
 
         # check the correct css query is present in the HTML
-        self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
         js_query = (
             '"select#id_termination_b_region, select#id_termination_b_site, '
             'select#id_termination_b_rack, select#id_termination_b_device"'
