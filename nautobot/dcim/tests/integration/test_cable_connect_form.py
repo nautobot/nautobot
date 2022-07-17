@@ -78,10 +78,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
             selected = self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first
         self.assertIn("no elements could be found", str(context.exception))
 
-    def test_js_select_onchange_query_is_present(self):
-        cable_connect_form_url = reverse(
-            "dcim:interface_connect", kwargs={"termination_a_id": self.interface1.pk, "termination_b_type": "interface"}
-        )
+        # check the correct css query is present in the HTML
         self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
         js_query = (
             '"select#id_termination_b_region, select#id_termination_b_site, '
