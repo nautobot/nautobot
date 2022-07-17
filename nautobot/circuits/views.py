@@ -16,6 +16,44 @@ from . import filters, forms, tables
 from .choices import CircuitTerminationSideChoices
 from .models import Circuit, CircuitType, CircuitTermination, Provider, ProviderNetwork
 from nautobot.utilities.viewsets import NautobotViewSet, NautobotRouter
+from nautobot.utilities.drf_views import NautobotDRFViewSet
+
+
+class CircuitTypeDRFViewSet(NautobotDRFViewSet):
+    model = CircuitType
+    queryset = CircuitType.objects.all()
+    table = tables.CircuitTypeTable
+    form = forms.CircuitTypeForm
+    filterset = filters.CircuitTypeFilterSet
+    import_form = forms.CircuitTypeCSVForm
+    lookup_field = "slug"
+
+    def get_extra_context(self, request, view_type, instance):
+        # Circuits
+        if view_type == "detail":
+            circuits = (
+                Circuit.objects.restrict(request.user, "view")
+                .filter(type=instance)
+                .prefetch_related("type", "tenant", "terminations__site")
+            )
+
+            circuits_table = tables.CircuitTable(circuits)
+            circuits_table.columns.hide("type")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(circuits_table)
+            return {
+                "circuits_table": circuits_table,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
 
 
 #

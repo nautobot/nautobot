@@ -17,6 +17,31 @@ circuit_router = views.CircuitViewSetRouter(prefix="circuits", basename="circuit
 
 urlpatterns = [
     path(
+        "circuit-types/",
+        views.CircuitTypeDRFViewSet.as_view({"get": "list"}),
+        name="circuittype_list",
+    ),
+    path(
+        "circuit-types/add/",
+        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        name="circuittype_add",
+    ),
+    path(
+        "circuit-types/<slug:slug>/",
+        views.CircuitTypeDRFViewSet.as_view({"get": "retrieve"}),
+        name="circuittype",
+    ),
+    path(
+        "circuit-types/<slug:slug>/edit/",
+        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        name="circuittype_edit",
+    ),
+    path(
+        "circuit-types/<slug:slug>/delete/",
+        views.CircuitTypeDRFViewSet.as_view({"get": "destroy", "post": "perform_destroy"}),
+        name="circuittype_delete",
+    ),
+    path(
         "providers/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="provider_changelog",
@@ -63,7 +88,7 @@ urlpatterns = [
         views.CircuitSwapTerminations.as_view(),
         name="circuit_terminations_swap",
     ),
-    path("", include(circuit_type_router.urls)),
+    # path("", include(circuit_type_router.urls)),
     path("", include(provider_router.urls)),
     path("", include(provider_network_router.urls)),
     path("", include(circuit_termination_router.urls)),
