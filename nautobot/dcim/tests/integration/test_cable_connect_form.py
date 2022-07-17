@@ -23,7 +23,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
         self.login(self.user.username, self.password)
         device1 = create_test_device("Device 1")
         create_test_device("Device 2")
-        interface1 = Interface.objects.create(device=cls.device1, name="Interface 1")
+        interface1 = Interface.objects.create(device=device1, name="Interface 1")
         Interface.objects.create(device=device1, name="Interface 2")
         Interface.objects.create(device=device1, name="Interface 3")
         cable_connect_form_url = reverse(
