@@ -2,6 +2,7 @@ import inspect
 from datetime import datetime
 import logging
 
+from celery import chain
 from celery.states import FAILURE
 from django import template
 from django.contrib import messages
@@ -461,9 +462,8 @@ class CeleryTaskFailure(Exception):
         message -- explanation of the error
     """
 
-    def __init__(self, obj_name, message="Celery task has failed for "):
-        self.obj_name = obj_name
-        self.message = message + f"{self.obj_name}"
+    def __init__(self, message="Celery task has failed for "):
+        self.message = message
         super().__init__(self.message)
 
 
@@ -472,19 +472,17 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     table = tables.CustomFieldTable
 
     def perform_pre_delete(self, request, queryset):
-
-        for obj in queryset:
-            try:
-                task = delete_custom_field_data.delay(obj.name, set(obj.content_types.values_list("pk", flat=True)))
-                # Wait until the custom_field_data is completely deleted
-                task.wait(timeout=None, interval=0.01)
-
-                if task.state == FAILURE:
-                    # raise an exception if tasks failed.
-                    raise CeleryTaskFailure(obj_name=obj.name)
-            except CeleryTaskFailure:
-                messages.error(f"Celery task failed when deleting _custom_field_data for Custom Field {obj.name}")
-                return redirect(self.get_return_url(request))
+        try:
+            tasks = [delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True))) for obj in queryset]
+            # Wait until the custom_field_data is completely deleted
+            result = chain(*tasks).apply_async()
+            result.wait(timeout=None, interval=0.1)
+            if result.state == FAILURE:
+                # raise an exception if tasks failed.
+                raise CeleryTaskFailure()
+        except CeleryTaskFailure:
+            messages.error(f"Celery task failed when deleting _custom_field_data for Custom Field")
+            return redirect(self.get_return_url(request))
 
 
 #
