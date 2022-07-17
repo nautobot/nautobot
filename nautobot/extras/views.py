@@ -477,7 +477,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
             try:
                 task = delete_custom_field_data.delay(obj.name, set(obj.content_types.values_list("pk", flat=True)))
                 # Wait until the custom_field_data is completely deleted
-                task.wait(timeout=None, interval=0.5)
+                task.wait(timeout=None, interval=0.01)
 
                 if task.state == FAILURE:
                     # raise an exception if tasks failed.
