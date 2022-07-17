@@ -17,24 +17,17 @@ class CableConnectFormTestCase(SeleniumTestCase):
        (except the name dropdown)
     """
 
-    def setUp(self):
-        super().setUp()
+    def test_js_functionality(self):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.device1 = create_test_device("Device 1")
+        device1 = create_test_device("Device 1")
         create_test_device("Device 2")
-        cls.interface1 = Interface.objects.create(device=cls.device1, name="Interface 1")
-        Interface.objects.create(device=cls.device1, name="Interface 2")
-        Interface.objects.create(device=cls.device1, name="Interface 3")
-
-    def test_js_functionality(self):
+        interface1 = Interface.objects.create(device=cls.device1, name="Interface 1")
+        Interface.objects.create(device=device1, name="Interface 2")
+        Interface.objects.create(device=device1, name="Interface 3")
         cable_connect_form_url = reverse(
-            "dcim:interface_connect", kwargs={"termination_a_id": self.interface1.pk, "termination_b_type": "interface"}
+            "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
         )
         self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
         self.browser.find_by_xpath("(//label[contains(text(),'Device')])[2]").click()
