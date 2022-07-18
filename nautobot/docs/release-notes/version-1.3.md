@@ -134,6 +134,12 @@ Note that a Tag created programmatically via the ORM without assigning any `cont
 
 We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 
+#### Virtual Chassis Master Device Interfaces List
+
+The device column will now show on a device's interfaces list if this device is the master in a virtual chassis. And will conversely not appear if the device is not a master on a virtual chassis.
+
+It is no longer possible to connect an interface to itself in the cable connect form.
+
 ### Removed
 
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
@@ -150,6 +156,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#386](https://github.com/nautobot/nautobot/issues/386) - Clarified messaging in API for rack position occupied.
+- [#1356](https://github.com/nautobot/nautobot/issues/1356) - Virtual chassis master device interface list is less confusing.
 - [#2045](https://github.com/nautobot/nautobot/pull/2045) - Clarified Job authoring around proper class inheritance.
 
 ### Fixed
