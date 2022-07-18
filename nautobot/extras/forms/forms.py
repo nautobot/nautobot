@@ -83,6 +83,7 @@ from .mixins import (
 
 
 __all__ = (
+    "BaseDynamicGroupMembershipFormSet",
     "ComputedFieldForm",
     "ComputedFieldFilterForm",
     "ConfigContextForm",
@@ -94,10 +95,12 @@ __all__ = (
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
     "CustomFieldBulkCreateForm",
+    "CustomFieldChoiceFormSet",
     "CustomLinkForm",
     "CustomLinkFilterForm",
     "DynamicGroupForm",
     "DynamicGroupFilterForm",
+    "DynamicGroupMembershipFormSet",
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
     "GitRepositoryForm",
@@ -126,6 +129,7 @@ __all__ = (
     "SecretFilterForm",
     "SecretsGroupForm",
     "SecretsGroupFilterForm",
+    "SecretsGroupAssociationFormSet",
     "StatusForm",
     "StatusCSVForm",
     "StatusFilterForm",
