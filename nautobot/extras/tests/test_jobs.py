@@ -155,11 +155,12 @@ class JobTest(TransactionTestCase):
 
         self.assertHTMLEqual(
             form.as_table(),
-            """<tr><th><label for="id_var2">Var2:</label></th><td>
-<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span></td></tr><tr><th><label for="id_var23">Var23:</label></th><td>
+            """<tr><th><label for="id_var23">Var23:</label></th><td>
 <input class="form-control form-control" id="id_var23" name="var23" placeholder="None" required type="text">
 <br><span class="helptext">I want to be second</span></td></tr>
+<tr><th><label for="id_var2">Var2:</label></th><td>
+<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
+<br><span class="helptext">Hello</span></td></tr>
 <tr><th><label for="id__commit">Commit changes:</label></th><td>
 <input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
 <br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
