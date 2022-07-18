@@ -21,7 +21,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django_tables2 import RequestConfig
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.utils.decorators import classonlymethod
-from rest_framework import mixins
+from rest_framework import generics
+from rest_framework.renderers import TemplateHTMLRenderer
+from rest_framework.response import Response
 from rest_framework.viewsets import ViewSetMixin
 
 from nautobot.utilities.permissions import get_permission_for_model
@@ -150,7 +152,7 @@ class NautobotViewSetMixin(ViewSetMixin, ObjectPermissionRequiredMixin, View):
         return csrf_exempt(view)
 
 
-class ObjectDetailViewMixin(mixins.RetrieveModelMixin, NautobotViewSetMixin):
+class ObjectDetailViewMixin(NautobotViewSetMixin, generics.RetrieveAPIView):
     action = "view"
 
     def get_changelog_url(self, instance):
@@ -185,9 +187,7 @@ class ObjectDetailViewMixin(mixins.RetrieveModelMixin, NautobotViewSetMixin):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
         self.context = self.get_extra_context(request, "detail", instance)
-        return render(
-            request,
-            self.get_template_name("detail"),
+        return Response(
             {
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
@@ -195,10 +195,11 @@ class ObjectDetailViewMixin(mixins.RetrieveModelMixin, NautobotViewSetMixin):
                 **self.context,
                 "changelog_url": self.get_changelog_url(instance),
             },
+            template_name=self.get_template_name("detail"),
         )
 
 
-class ObjectListViewMixin(mixins.ListModelMixin, NautobotViewSetMixin):
+class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
     action_buttons = ("add", "import", "export")
     action = "view"
     filterset_form = None
@@ -287,14 +288,14 @@ class ObjectListViewMixin(mixins.ListModelMixin, NautobotViewSetMixin):
         }
         context.update(self.get_extra_context(request, "list", instance=None))
 
-        return render(request, self.get_template_name("list"), context)
+        return Response(context, template_name=self.get_template_name("list"))
 
     def alter_queryset_for_list(self, request):
         # .all() is necessary to avoid caching queries
         return self.queryset.all()
 
 
-class ObjectDeleteViewMixin(mixins.DestroyModelMixin, GetReturnURLMixin, NautobotViewSetMixin):
+class ObjectDeleteViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.DestroyAPIView):
     action = "delete"
 
     def get_object(self, kwargs):
@@ -320,13 +321,12 @@ class ObjectDeleteViewMixin(mixins.DestroyModelMixin, GetReturnURLMixin, Nautobo
         )
 
     def perform_destroy(self, request, **kwargs):
+        form = ConfirmationForm(request.POST)
         logger = logging.getLogger("nautobot.views.ObjectDeleteView")
         obj = self.get_object(kwargs)
-        form = ConfirmationForm(request.POST)
 
         if form.is_valid():
             logger.debug("Form validation was successful")
-
             try:
                 obj.delete()
             except ProtectedError as e:
@@ -343,23 +343,21 @@ class ObjectDeleteViewMixin(mixins.DestroyModelMixin, GetReturnURLMixin, Nautobo
                 return redirect(return_url)
             else:
                 return redirect(self.get_return_url(request, obj))
-
         else:
             logger.debug("Form validation failed")
 
-        return render(
-            request,
-            self.get_template_name("delete"),
+        return Response(
             {
                 "obj": obj,
                 "form": form,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request, obj),
             },
+            template_name=self.get_template_name("delete"),
         )
 
 
-class ObjectEditViewMixin(mixins.CreateModelMixin, mixins.UpdateModelMixin, GetReturnURLMixin, NautobotViewSetMixin):
+class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.CreateAPIView, generics.UpdateAPIView):
     def get_object_for_edit(self, request, *args, **kwargs):
         # Look up an existing object by slug or PK, if provided.
         if "slug" in kwargs:
@@ -381,9 +379,7 @@ class ObjectEditViewMixin(mixins.CreateModelMixin, mixins.UpdateModelMixin, GetR
         form = self.form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 
-        return render(
-            request,
-            self.get_template_name("edit"),
+        return Response(
             {
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
@@ -391,6 +387,7 @@ class ObjectEditViewMixin(mixins.CreateModelMixin, mixins.UpdateModelMixin, GetR
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
             },
+            template_name=self.get_template_name("edit"),
         )
 
     def perform_create_or_update(self, request, *args, **kwargs):
@@ -401,7 +398,6 @@ class ObjectEditViewMixin(mixins.CreateModelMixin, mixins.UpdateModelMixin, GetR
 
         if form.is_valid():
             logger.debug("Form validation was successful")
-
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
@@ -441,9 +437,7 @@ class ObjectEditViewMixin(mixins.CreateModelMixin, mixins.UpdateModelMixin, GetR
         else:
             logger.debug("Form validation failed")
 
-        return render(
-            request,
-            self.get_template_name("edit"),
+        return Response(
             {
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
@@ -451,9 +445,12 @@ class ObjectEditViewMixin(mixins.CreateModelMixin, mixins.UpdateModelMixin, GetR
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
             },
+            template_name=self.get_template_name("edit"),
         )
 
 
 class NautobotDRFViewSet(ObjectDetailViewMixin, ObjectListViewMixin, ObjectDeleteViewMixin, ObjectEditViewMixin):
+    renderer_classes = [TemplateHTMLRenderer]
+
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, self.action)
