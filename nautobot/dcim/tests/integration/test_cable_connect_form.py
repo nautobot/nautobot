@@ -18,6 +18,18 @@ class CableConnectFormTestCase(SeleniumTestCase):
     """
 
     def test_js_functionality(self):
+        """
+        This test:
+         1 creates some test data (two devices and three interfaces): L35-L39
+         2 goes to the cable connect form for interface1: L40-L43
+         3 selects the first device in the device drop-down on the termination_b form: L44-L52
+         4 selects the first available interface in the "Name" drop-down: L56-L60
+           checks the results of the select2 API call (which should have excluded interface1): L63-L66
+           this should not be interface1 (this should be excluded) -- it should be interface2: L72-L73
+         5 selects a different device: L77-L81
+         6 checks to see the "Name" (in this case interface) drop-down is cleared: L82-L84
+         7 checks to see if the correct CSS query is loaded for the interface connection form: L87-L91
+        """
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)

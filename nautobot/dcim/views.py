@@ -2387,12 +2387,20 @@ class CableCreateView(generic.ObjectEditView):
             initial_data["termination_b_rack"] = getattr(obj.termination_a.parent, "rack", None)
 
         form = self.model_form(exclude_id=kwargs.get("termination_a_id"), instance=obj, initial=initial_data)
+
+        # the following builds up a CSS query selector to match all drop-downs
+        # in the termination_b form except the termination_b_id. this is necessary to reset the termination_b_id
+        # drop-down whenever any of these drop-downs' values changes. this cannot be hardcoded because the form is
+        # selected dynamically and therefore the fields change depending on the value of termination_b_type (L2358)
         js_select_onchange_query = ", ".join(
             [
                 f"select#id_{field_name}"
                 for field_name, field in form.fields.items()
+                # include all termination_b_* fields:
                 if field_name.startswith("termination_b")
+                # exclude termination_b_id:
                 and field_name != "termination_b_id"
+                # include only HTML select fields:
                 and field.widget.input_type == "select"
             ]
         )
