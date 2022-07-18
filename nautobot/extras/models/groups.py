@@ -496,13 +496,11 @@ class DynamicGroup(OrganizationalModel):
 
         return query
 
-    def perform_membership_set_operation(self, group, operator, query, next_set):
+    def perform_membership_set_operation(self, operator, query, next_set):
         """
         Perform set operation for a group membership. The `operator` and `next_set` are used to
         decide the appropriate action to take on the `query`. The updated `Q` object is returned.
 
-        :param group:
-            DynamicGroup instance
         :param operator:
             DynamicGroupOperatorChoices choice (str)
         :param query:
@@ -531,7 +529,7 @@ class DynamicGroup(OrganizationalModel):
             group = membership.group
             operator = membership.operator
             next_set = self.generate_query_for_group(group)
-            query = self.perform_membership_set_operation(group, operator, query, next_set)
+            query = self.perform_membership_set_operation(operator, query, next_set)
 
         return query
 
@@ -556,7 +554,7 @@ class DynamicGroup(OrganizationalModel):
                 logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
 
             next_set = group.generate_members_query()
-            query = self.perform_membership_set_operation(group, operator, query, next_set)
+            query = self.perform_membership_set_operation(operator, query, next_set)
 
         return query
 
@@ -628,9 +626,13 @@ class DynamicGroup(OrganizationalModel):
 
         return ancestors
 
-    def get_siblings(self):
+    def get_siblings(self, include_self=False):
         """Return groups that share the same parents."""
-        return DynamicGroup.objects.filter(parents__in=self.parents.all()).exclude(slug=self.slug)
+        siblings = DynamicGroup.objects.filter(parents__in=self.parents.all())
+
+        if include_self:
+            return siblings
+        return siblings.exclude(slug=self.slug)
 
     def is_root(self):
         """Return whether this is a root node (has children, but no parents)."""
@@ -852,6 +854,53 @@ class DynamicGroupMembership(BaseModel):
     def get_group_members_url(self):
         """Return the group members URL."""
         return self.group.get_group_members_url()
+
+    def get_siblings(self, include_self=False):
+        """Return group memberships that share the same parent group."""
+        siblings = DynamicGroupMembership.objects.filter(parent_group=self.parent_group)
+        if include_self:
+            return siblings
+        return siblings.exclude(pk=self.pk)
+
+    # FIXME(jathan):
+    def _get_next_or_previous_by_weight(self, is_next):
+        """Get siblings and return the next/previous based on `is_next`."""
+        siblings = self.get_siblings(include_self=True)
+        if not is_next:
+            siblings = reversed(siblings)
+
+        siblings = list(siblings)
+        self_idx = siblings.index(self)
+
+        try:
+            return siblings[self_idx + 1]
+        except IndexError:
+            raise self.DoesNotExist(f"{self.__class__._meta.object_name} matching query does not exist.")
+    def get_next_by_weight(self):
+        """Get the next membership by weight."""
+        return self._get_next_or_previous_by_weight(is_next=True)
+
+    def get_previous_by_weight(self):
+        """Get the previous membership by weight."""
+        return self._get_next_or_previous_by_weight(is_next=False)
+
+    def generate_query(self):
+        return self.group.generate_query()
+
+    def calculate_next_query(self):
+        try:
+            prev_sib = self.get_previous_by_weight()
+        except self.DoesNotExist:
+            prev_sib = None
+
+        query = prev_sib.generate_query() if prev_sib is not None else models.Q()
+        next_set = self.generate_query()
+        return self.group.perform_membership_set_operation(self.operator, query, next_set)
+
+    def compute_member_count(self):
+        # query = self.group.generate_query()
+        next_query = self.calculate_next_query()
+        return self.group.model.objects.filter(next_query).count()
 
     def clean(self):
         super().clean()
