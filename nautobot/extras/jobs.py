@@ -240,10 +240,12 @@ class BaseJob:
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
-        for base in reversed(inspect.getmro(cls)):
-            for name, attr in base.__dict__.items():
-                if issubclass(attr.__class__, ScriptVariable):
-                    vars[name] = attr
+        base_classes = reversed(inspect.getmro(cls))
+        attr_names = [name for base in base_classes for name in base.__dict__.keys()]
+        for name in attr_names:
+            attr_class = getattr(cls, name, None).__class__
+            if name not in vars and issubclass(attr_class, ScriptVariable):
+                vars[name] = getattr(cls, name)
 
         return vars
 
