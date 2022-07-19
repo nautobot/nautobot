@@ -888,6 +888,7 @@ BaseDynamicGroupMembershipFormSet = inlineformset_factory(
     fk_name="parent_group",
     widgets={
         "operator": StaticSelect2,
+        "weight": forms.HiddenInput(),
     },
 )
 

@@ -62,6 +62,7 @@
                                 {% if forloop.first %}
                                     <thead>
                                         <tr>
+                                            <th>Weight</th>
                                             {% for field in child_form.visible_fields %}
                                                 <th>{{ field.label|capfirst }}</th>
                                             {% endfor %}
@@ -69,6 +70,7 @@
                                     </thead>
                                 {% endif %}
                                 <tr class="formset_row-{{ children.prefix }}">
+                                    <td><i class="mdi mdi-drag-horizontal drag-handler"></i></td>
                                     {% for field in child_form.visible_fields %}
                                         <td>
                                             {% if forloop.first %}
@@ -111,6 +113,50 @@
         prefix: '{{ children.prefix }}',
         formCssClass: 'dynamic-formset-{{ children.prefix }}',
         added: jsify_form
+    });
+
+    // Function that takes a Dynamic Group children form and recomputes the weights.
+    function update_weights(children_form){
+        let w = 10;
+        $(children_form).find('.formset_row-{{ children.prefix }}').each((i, el) => {
+
+            // A child is considered "weight-able" if any of the settable values contains a value
+            // If a user is in the middle of setting a group we want to consider it for weight
+            // We also want to remove the weight if it's empty to not throw a field value error on a hidden field
+            //
+            // el = child row
+            // sel = a select element either specifying the child group or operator
+            //         we don't need to worry about which one we are looking at, just if it has a value
+            let contains_value = $(el).find("select[name$='-group'], select[name$='-operator']") // Get any select element in this row ending in -group or -operator
+                .toArray() // Convert to Array to access .some() method
+                .some((x) => { return ($(x).val().length > 0) === true }) // Evaluate if any element in this row has a value length over 0
+                // .some(fn(x)) will return a true/false if any item in the array return true when passed into the evaluator function
+
+
+
+            let weight_input = $(el).find("*[name$='-weight']")
+            weight_input.val("") // Reset the value to start clean always
+            if(contains_value) {
+                weight_input.val(w); // Set a weight
+                w += 10; // Following current convention by allowing space between children to aid in API interface.
+                         //   If someone wants to add a child later via the API they can insert a child between children without
+                         //   having to re-weight all children following first.
+            }
+        })
+    }
+
+    // Make the children form formset rows draggable and hook to re-weight on drag complete.
+    $('#children-form').sortable({
+        handle: '.drag-handler',
+        items: '.formset_row-{{ children.prefix }}',
+        update: ( e, ui ) => {
+            update_weights(e.target)
+        }
+    });
+
+    // Instead of re-weight on every input change, just do it before we submit the form.
+    $('form.form').submit((e) => {
+        $(e.target).find('#children-form').each((i, cf) => { update_weights(cf) });
     });
 </script>
 {% endblock javascript %}
