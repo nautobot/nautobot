@@ -52,6 +52,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.models.jobs import JobHook
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
@@ -1343,6 +1344,116 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
+        )
+
+
+class JobHookTest(APIViewTestCases.APIViewTestCase):
+
+    model = JobHook
+    brief_fields = ["display", "id", "name", "url"]
+    choices_fields = []
+    update_data = {
+        "name": "Overridden name",
+        "enabled": False,
+        "type_create": True,
+        "type_update": True,
+        "type_delete": False,
+    }
+    bulk_update_data = {
+        "enabled": False,
+        "type_create": True,
+        "type_update": True,
+        "type_delete": False,
+    }
+    validation_excluded_fields = []
+    api_version = "1.3"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "JobHook4",
+                "content_types": ["dcim.consoleport"],
+                "type_delete": True,
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+                "enabled": False,
+            },
+            {
+                "name": "JobHook5",
+                "content_types": ["dcim.consoleport"],
+                "type_delete": True,
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverChange").pk,
+                "enabled": False,
+            },
+            {
+                "name": "JobHook6",
+                "content_types": ["dcim.consoleport"],
+                "type_delete": True,
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverFail").pk,
+                "enabled": False,
+            },
+        ]
+        cls.job_hooks = (
+            JobHook(
+                name="JobHook1",
+                type_create=True,
+                job=Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                type_delete=True,
+            ),
+            JobHook(
+                name="JobHook2",
+                type_create=True,
+                job=Job.objects.get(job_class_name="TestJobHookReceiverChange"),
+                type_delete=True,
+            ),
+            JobHook(
+                name="JobHook3",
+                type_create=True,
+                job=Job.objects.get(job_class_name="TestJobHookReceiverFail"),
+                type_delete=True,
+            ),
+        )
+
+        obj_type = ContentType.objects.get_for_model(DeviceType)
+
+        for job_hook in cls.job_hooks:
+            job_hook.save()
+            job_hook.content_types.set([obj_type])
+
+    def test_validate_post(self):
+        """POST a job hook with values that duplicate another job hook"""
+
+        data = {
+            "name": "JobHook4",
+            "content_types": ["dcim.devicetype"],
+            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+            "type_create": False,
+            "type_delete": True,
+        }
+
+        self.add_permissions("extras.add_jobhook")
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertContains(
+            response,
+            "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
+            status_code=400,
+        )
+
+    def test_validate_patch(self):
+        """PATCH an existing job hook with values that duplicate another job hook"""
+
+        data = {
+            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+            "type_delete": True,
+        }
+
+        self.add_permissions("extras.change_jobhook")
+        job_hook2 = JobHook.objects.get(name="JobHook2")
+        response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
+        self.assertContains(
+            response,
+            "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
+            status_code=400,
         )
 
 

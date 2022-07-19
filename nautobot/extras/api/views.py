@@ -39,6 +39,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -977,3 +978,18 @@ class WebhooksViewSet(ModelViewSet):
     queryset = Webhook.objects.all()
     serializer_class = serializers.WebhookSerializer
     filterset_class = filters.WebhookFilterSet
+
+
+#
+# Job hooks
+#
+
+
+class JobHooksViewSet(ModelViewSet):
+    """
+    Manage job hooks through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobHook.objects.all()
+    serializer_class = serializers.JobHookSerializer
+    filterset_class = filters.JobHookFilterSet

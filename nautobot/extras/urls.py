@@ -13,6 +13,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     Note,
+    JobHook,
     Relationship,
     Secret,
     SecretsGroup,

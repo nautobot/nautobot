@@ -57,6 +57,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobResult,
     Note,
     ObjectChange,
@@ -115,6 +116,8 @@ __all__ = (
     "JobForm",
     "JobEditForm",
     "JobFilterForm",
+    "JobHookForm",
+    "JobHookFilterForm",
     "JobScheduleForm",
     "JobResultFilterForm",
     "LocalContextFilterForm",
@@ -1324,3 +1327,60 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+
+
+#
+# Job hooks
+#
+
+
+class JobHookForm(BootstrapMixin, forms.ModelForm):
+    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
+
+    class Meta:
+        model = JobHook
+        fields = (
+            "name",
+            "content_types",
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+        )
+
+    def clean(self):
+        data = super().clean()
+
+        conflicts = JobHook.check_for_conflicts(
+            instance=self.instance,
+            content_types=self.cleaned_data.get("content_types"),
+            job=self.cleaned_data.get("job"),
+            type_create=self.cleaned_data.get("type_create"),
+            type_update=self.cleaned_data.get("type_update"),
+            type_delete=self.cleaned_data.get("type_delete"),
+        )
+
+        if conflicts:
+            raise ValidationError(conflicts)
+
+        return data
+
+
+class JobHookFilterForm(BootstrapMixin, forms.Form):
+    model = JobHook
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
+    )
+    enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    job = DynamicModelMultipleChoiceField(
+        label="Job",
+        queryset=Job.objects.all(),
+        required=False,
+        to_field_name="slug",
+        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+    )
+    type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))

@@ -2,6 +2,7 @@ import json
 import re
 import uuid
 from io import StringIO
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -13,9 +14,9 @@ from django.test import override_settings
 from django.test.client import RequestFactory
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeEventContextChoices
-from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import CustomField, FileProxy, Job, JobResult, Status
+from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, Status
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import (
     CeleryTestCase,
@@ -610,7 +611,7 @@ class JobHookReceiverTest(TransactionTestCase):
     def setUp(self):
         super().setUp()
 
-        # Initialize fake request that will be required to execute Webhooks (in jobs.)
+        # Initialize fake request that will be required to run jobs
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
         self.request.user = self.user
@@ -662,6 +663,9 @@ class JobHookReceiverTest(TransactionTestCase):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverLog"
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        log_info = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_INFO)[:2]
+        self.assertEqual(log_info[0].message, "change: dcim | site Test Site 1 created by testuser")
+        self.assertEqual(log_info[1].message, "action: create")
         log_success = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_SUCCESS).first()
         self.assertEqual(log_success.message, "Test Site 1")
 
@@ -670,3 +674,55 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverFail"
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+
+    def test_inherited_field_order(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverChange"
+        job_class, job_model = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertHTMLEqual(
+            form.as_table(),
+            """<tr><th><label for="id_object_change">Object change:</label></th><td>
+            <select name="object_change" class="nautobot-select2-api form-control form-control" display-field="display" required placeholder="None" data-url="/api/extras/object-changes/" id="id_object_change">
+            <option value="" selected>---------</option></select></td></tr>
+            <tr><th><label for="id_a_testvar_b_first">A testvar b first:</label></th><td>
+            <input type="text" name="a_testvar_b_first" class="form-control form-control" required placeholder="None" id="id_a_testvar_b_first"></td></tr>
+            <tr><th><label for="id_a_testvar_a_second">A testvar a second:</label></th><td>
+            <input type="text" name="a_testvar_a_second" class="form-control form-control" required placeholder="None" id="id_a_testvar_a_second"></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th><td>
+            <input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+        )
+
+
+class JobHookTest(TransactionTestCase):
+    """
+    Test job hooks.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        job = Job.objects.get(job_class_name="TestJobHookReceiverLog")
+        job_hook = JobHook(
+            name="JobHookTest",
+            type_create=True,
+            job=job,
+        )
+        obj_type = ContentType.objects.get_for_model(Site)
+        job_hook.save()
+        job_hook.content_types.set([obj_type])
+
+    @mock.patch.object(JobResult, "enqueue_job")
+    def test_enqueue_job_hook(self, mock):
+        with web_request_context(self.user):
+            Site.objects.create(name="Test Job Hook Site 1")
+
+        mock.assert_called_once()
+
+    @mock.patch.object(JobResult, "enqueue_job")
+    def test_enqueue_job_hook_skipped(self, mock):
+        change_context = JobHookChangeContext(self.user)
+        with change_logging(change_context):
+            Site.objects.create(name="Test Job Hook Site 2")
+
+        self.assertFalse(mock.called)

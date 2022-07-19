@@ -30,6 +30,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     Job as JobModel,
+    JobHook,
     JobResult,
     JobLogEntry,
     Note,
@@ -933,5 +934,36 @@ class WebhookTable(BaseTable):
             "content_types",
             "payload_url",
             "http_content_type",
+            "enabled",
+        )
+
+
+class JobHookTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
+    job = tables.Column(linkify=True)
+    enabled = BooleanColumn()
+    type_create = BooleanColumn()
+    type_update = BooleanColumn()
+    type_delete = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = JobHook
+        fields = (
+            "pk",
+            "name",
+            "content_types",
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "job",
             "enabled",
         )

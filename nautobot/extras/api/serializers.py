@@ -44,6 +44,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -98,6 +99,7 @@ from .nested_serializers import (  # noqa: F401
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
+    NestedJobHookSerializer,
 )
 
 #
@@ -834,6 +836,50 @@ class JobLogEntrySerializer(BaseModelSerializer):
     @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
         return obj.created.isoformat()
+
+
+#
+# Job Hooks
+#
+
+
+class JobHookSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
+        many=True,
+    )
+
+    class Meta:
+        model = JobHook
+        fields = [
+            "id",
+            "url",
+            "name",
+            "content_types",
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+        ]
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        conflicts = JobHook.check_for_conflicts(
+            instance=self.instance,
+            content_types=data.get("content_types"),
+            job=data.get("job"),
+            type_create=data.get("type_create"),
+            type_update=data.get("type_update"),
+            type_delete=data.get("type_delete"),
+        )
+
+        if conflicts:
+            raise serializers.ValidationError(conflicts)
+
+        return validated_data
 
 
 #
