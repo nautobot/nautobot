@@ -1,25 +1,10 @@
 from django import template
 from django.urls import reverse, NoReverseMatch
-from django.conf import settings
 
 from nautobot.extras.models import ExportTemplate
-from nautobot.utilities.utils import prepare_cloned_fields
+from nautobot.utilities.utils import prepare_cloned_fields, get_route_for_model
 
 register = template.Library()
-
-
-def _get_viewname(instance, action):
-    """
-    Return the appropriate viewname for adding, editing, or deleting an instance.
-    """
-
-    # Validate action
-    assert action in ("add", "edit", "delete")
-    viewname = "{}:{}_{}".format(instance._meta.app_label, instance._meta.model_name, action)
-    if instance._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
-
-    return viewname
 
 
 #
@@ -30,7 +15,7 @@ def _get_viewname(instance, action):
 @register.inclusion_tag("buttons/clone.html")
 def clone_button(instance):
     try:
-        url = reverse(_get_viewname(instance, "add"))
+        url = reverse(get_route_for_model(instance, "add"))
     except NoReverseMatch:
         return {"url": None}
 
@@ -54,7 +39,7 @@ def edit_button(instance, use_pk=False, key="slug"):
         use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
         key: The attribute on the model to use for reverse URL lookup.
     """
-    viewname = _get_viewname(instance, "edit")
+    viewname = get_route_for_model(instance, "edit")
 
     # Assign kwargs
     if hasattr(instance, key) and not use_pk:
@@ -82,7 +67,7 @@ def delete_button(instance, use_pk=False, key="slug"):
         use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
         key: The attribute on the model to use for reverse URL lookup.
     """
-    viewname = _get_viewname(instance, "delete")
+    viewname = get_route_for_model(instance, "delete")
 
     # Assign kwargs
     if hasattr(instance, key) and not use_pk:
