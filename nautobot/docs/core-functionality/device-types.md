@@ -31,7 +31,9 @@ Whenever a new device is created, its components are automatically created per t
 * 48 templates for 1GE interfaces ("ge-0/0/0" through "ge-0/0/47")
 * Four templates for 10GE interfaces ("xe-0/2/0" through "xe-0/2/3")
 
-Once component templates have been created, every new device that you create as an instance of this type will automatically be assigned each of the components listed above.
+Once component templates have been created, every new device that you create as an instance of this type will automatically be assigned each of the components listed above. However, this automation occurs only when a device is first created: Adding or removing components on a device type does not automatically remove or add them to device instances.
+
+This is because automatically removing components requires Nautobot to make very dangerous assumptions. For example, suppose you had a device type which included some interfaces on an optional module. After creating some devices, you decided these interfaces shouldn't be created automatically anymore, because new devices were no longer being deployed with that module installed. If Nautobot were to automatically delete these interfaces from all devices of this type, it would result in many interfaces being deleted erroneously.
 
 !!! note
     Assignment of components from templates occurs only at the time of device creation. If you modify the templates of a device type, it will not affect devices which have already been created. However, you always have the option of adding, modifying, or deleting components on existing devices.
