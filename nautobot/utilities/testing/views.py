@@ -12,9 +12,10 @@ from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from netaddr import IPNetwork
 from taggit.managers import TaggableManager
+from unittest.mock import patch
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
-from nautobot.extras.models import ChangeLoggedModel, ObjectChange, Tag
+from nautobot.extras.models import ChangeLoggedModel, ObjectChange, Tag, CustomField
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
@@ -1021,7 +1022,10 @@ class ViewTestCases:
         """
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_bulk_delete_objects_without_permission(self):
+        @patch("nautobot.core.views.generic.BulkDeleteView.perform_pre_delete")
+        def test_bulk_delete_objects_without_permission(self, mock_perform_pre_delete):
+            if self.model == CustomField:
+                mock_perform_pre_delete.return_value = None
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
                 "pk": pk_list,
@@ -1038,7 +1042,10 @@ class ViewTestCases:
                 self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 403)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_bulk_delete_objects_with_permission(self):
+        @patch("nautobot.core.views.generic.BulkDeleteView.perform_pre_delete")
+        def test_bulk_delete_objects_with_permission(self, mock_perform_pre_delete):
+            if self.model == CustomField:
+                mock_perform_pre_delete.return_value = None
             pk_list = self._get_queryset().values_list("pk", flat=True)
             data = {
                 "pk": pk_list,
@@ -1057,7 +1064,10 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), 0)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_bulk_delete_objects_with_constrained_permission(self):
+        @patch("nautobot.core.views.generic.BulkDeleteView.perform_pre_delete")
+        def test_bulk_delete_objects_with_constrained_permission(self, mock_perform_pre_delete):
+            if self.model == CustomField:
+                mock_perform_pre_delete.return_value = None
             initial_count = self._get_queryset().count()
             pk_list = self._get_queryset().values_list("pk", flat=True)
             data = {

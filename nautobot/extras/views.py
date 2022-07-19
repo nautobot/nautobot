@@ -461,9 +461,9 @@ class CeleryTaskFailure(Exception):
         message -- explanation of the error
     """
 
-    def __init__(self, obj_name=None, message="Celery task has failed"):
-        self.obj_name = obj_name
-        self.message = message + f"{self.obj_name}"
+    def __init__(self, obj_name=None, message="Celery task has failed for custom field "):
+        self.message = message
+        self.message += f"{obj_name} "
         super().__init__(self.message)
 
 
@@ -472,6 +472,9 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     table = tables.CustomFieldTable
 
     def perform_pre_delete(self, request, queryset):
+        if not get_worker_count(request):
+            messages.error(request, "Unable to run job: Celery worker process not running.")
+            return redirect(self.get_return_url(request))
         for obj in queryset:
             try:
                 task = delete_custom_field_data.delay(obj.name, set(obj.content_types.values_list("pk", flat=True)))
