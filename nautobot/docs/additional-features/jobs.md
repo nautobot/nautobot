@@ -304,7 +304,7 @@ device = ObjectVar(
 )
 ```
 
-Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. You can even traverse the model relationships this way (note the single underscore in the example - `tenant_region_id`).
+Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Site` `ObjectVar` for its `tenant_group_id`.
 
 ```python
 region = ObjectVar(
@@ -317,7 +317,7 @@ site = ObjectVar(
     model=Site,
     query_params={
         'region_id': '$region',
-        'tenant_region_id': '$tenant_group'
+        'tenant_group_id': '$tenant_group'
     }
 )
 ```
