@@ -760,8 +760,8 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
 | [Custom fields](../additional-features/custom-fields.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
-| [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
 | [Notes](../models/extras/notes.md) | ❌ | ❌ | ✅ | ✅ |
+| [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
 
 !!! note
     When using `OrganizationalModel` or `PrimaryModel`, you also must use the `@extras_features` decorator to specify support for (at a minimum) the `"custom_fields"` and `"relationships"` features.
