@@ -72,6 +72,7 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .customfields import CustomFieldModelSerializer
 from .fields import MultipleChoiceJSONField
+from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.

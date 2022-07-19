@@ -53,6 +53,7 @@ class CustomFieldsDataField(Field):
         return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
+        """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
         # If updating an existing instance, start with existing _custom_field_data
         if self.parent.instance:
             data = {**self.parent.instance._custom_field_data, **data}

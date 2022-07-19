@@ -72,6 +72,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.customfields import CustomFieldModelSerializer
 from nautobot.extras.api.serializers import (
+    RelationshipModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
@@ -210,7 +211,12 @@ class RegionSerializer(CustomFieldModelSerializer):
         opt_in_fields = ["computed_fields"]
 
 
-class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
+class SiteSerializer(
+    TaggedObjectSerializer,
+    RelationshipModelSerializerMixin,
+    StatusModelSerializerMixin,
+    CustomFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
     region = NestedRegionSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -255,8 +261,9 @@ class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "virtualmachine_count",
             "vlan_count",
             "computed_fields",
+            "relationships",
         ]
-        opt_in_fields = ["computed_fields"]
+        opt_in_fields = ["computed_fields"]  # TODO: relationships
 
 
 #

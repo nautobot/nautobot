@@ -53,6 +53,10 @@ class RelationshipModel(models.Model):
         related_query_name="destination_%(app_label)s_%(class)s",  # e.g. 'destination_dcim_rack'
     )
 
+    @property
+    def associations(self):
+        return list(self.source_for_associations.all()) + list(self.destination_for_associations.all())
+
     def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
         Return a dictionary of RelationshipAssociation querysets for all custom relationships
@@ -125,7 +129,7 @@ class RelationshipModel(models.Model):
 
         return resp
 
-    def get_relationships_data(self, advanced_ui=None):
+    def get_relationships_data(self, **kwargs):
         """
         Return a dictionary of relationships with the label and the value or the queryset for each.
 
@@ -156,7 +160,7 @@ class RelationshipModel(models.Model):
             }
         """
 
-        relationships_by_side = self.get_relationships(advanced_ui=advanced_ui)
+        relationships_by_side = self.get_relationships(**kwargs)
 
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: {},
@@ -317,6 +321,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
             RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
+
+    @property
+    def peer_type(self):
+        """Virtual attribute for symmetric relationships only."""
+        if self.symmetric:
+            return self.source_type
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:relationship", args=[self.slug])

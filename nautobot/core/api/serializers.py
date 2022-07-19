@@ -115,6 +115,7 @@ class ValidatedModelSerializer(BaseModelSerializer):
         # Remove custom fields data and tags (if any) prior to model validation
         attrs = data.copy()
         attrs.pop("custom_fields", None)
+        attrs.pop("relationships", None)
         attrs.pop("tags", None)
 
         # Skip ManyToManyFields

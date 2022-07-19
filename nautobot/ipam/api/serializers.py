@@ -17,6 +17,7 @@ from nautobot.dcim.api.nested_serializers import (
 )
 from nautobot.extras.api.customfields import CustomFieldModelSerializer
 from nautobot.extras.api.serializers import (
+    RelationshipModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
@@ -61,7 +62,7 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
-class VRFSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class VRFSerializer(TaggedObjectSerializer, RelationshipModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vrf-detail")
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     import_targets = SerializedPKRelatedField(
@@ -98,8 +99,9 @@ class VRFSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "ipaddress_count",
             "prefix_count",
             "computed_fields",
+            "relationships",
         ]
-        opt_in_fields = ["computed_fields"]
+        opt_in_fields = ["computed_fields"]  # TODO relationships
 
 
 #
