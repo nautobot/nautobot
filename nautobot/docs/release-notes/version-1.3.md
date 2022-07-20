@@ -161,6 +161,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Fixed
 
+- [#1035](https://github.com/nautobot/nautobot/issues/1035) - Fix assertion raised if SLAAC Status is missing when creating `IPAddress` objects
 - [#1795](https://github.com/nautobot/nautobot/issues/1795) - Corrected relationship source/destination filter help text from queryset Filter to filterset Filter and updated documentations.
 - [#1839](https://github.com/nautobot/nautobot/issues/1795) - Fixed staff users with auth > group permissions unable to view groups in admin UI.
 - [#1947](https://github.com/nautobot/nautobot/issues/1947) - Fixed unbound local error by initializing template variable before conditional logic statements.
