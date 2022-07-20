@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
-from itertools import chain
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
@@ -100,18 +99,19 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
     last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
 
 
-class RelationshipFilter(django_filters.MultipleChoiceFilter):
+class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filter objects by the presence of associations on a given Relationship.
     """
 
-    def __init__(self, side, relationship=None, queryset=None, choices=None, *args, **kwargs):
+    def __init__(self, side, relationship=None, queryset=None, qs=None, *args, **kwargs):
         self.relationship = relationship
-        self.qs = queryset
+        self.qs = qs
         self.side = side
-        super().__init__(choices=choices, *args, **kwargs)
+        super().__init__(queryset=queryset, *args, **kwargs)
 
     def filter(self, qs, value):
+        value = [entry.id for entry in value]
         # Check if value is empty or a DynamicChoiceField that is empty.
         if not value or "" in value:
             # if value is empty we return the entire unmodified queryset
@@ -142,7 +142,7 @@ class RelationshipFilter(django_filters.MultipleChoiceFilter):
                     relationship=self.relationship,
                 ).values_list("source_id", flat=True)
 
-                values = list(chain(destinations, sources))
+                values = list(destinations) + list(sources)
 
             # qs._result_cache indicates if qs has been modified or not, None if not.
             if not qs._result_cache:
@@ -207,19 +207,15 @@ class RelationshipModelFilterSet(django_filters.FilterSet):
                 choice_model = relationship.destination_type.model_class()
             else:
                 choice_model = model
+            # Check for invalid_relationship unit test
             if choice_model:
-                choices = [(entry.id, entry.id) for entry in choice_model.objects.all()]
-            else:
-                choices = []
-            choices.insert(0, ("", "---------"))
-            choices = tuple(choices)
-            self.filters[field_name] = RelationshipFilter(
-                relationship=relationship,
-                side=side,
-                field_name=field_name,
-                queryset=model.objects.all(),
-                choices=choices,
-            )
+                self.filters[field_name] = RelationshipFilter(
+                    relationship=relationship,
+                    side=side,
+                    field_name=field_name,
+                    queryset=choice_model.objects.all(),
+                    qs=model.objects.all(),
+                )
             self.relationships.append(field_name)
 
 

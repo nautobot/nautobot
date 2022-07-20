@@ -537,14 +537,7 @@ class RelationshipModelFilterFormMixin(forms.Form):
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".
                 # No need to process it a second time!
                 continue
-
             self.fields[field_name] = relationship.to_form_field(side=side)
-            if relationship.source_label and relationship.destination_label:
-                self.fields[
-                    field_name
-                ].label = f"{relationship.source_label} to {relationship.destination_label}__{peer_side}"
-            else:
-                self.fields[field_name].label = field_name
             self.relationships.append(field_name)
 
 

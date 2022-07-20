@@ -1070,7 +1070,8 @@ class RelationshipModelFilterSetTestCase(TestCase):
         self.queryset = Device.objects.all()
         self.filterset = DeviceFilterSet
         self.assertEqual(
-            self.filterset({f"cr_{self.relationships[1].slug}__source": self.vlans[0].pk}, self.queryset).qs.count(), 3
+            self.filterset({f"cr_{self.relationships[1].slug}__source": [self.vlans[0].pk]}, self.queryset).qs.count(),
+            3,
         )
 
     def test_one_to_many_destination(self):
