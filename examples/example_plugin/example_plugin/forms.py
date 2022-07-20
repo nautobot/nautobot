@@ -1,5 +1,6 @@
 from django import forms
 
+from nautobot.extras.forms import NautobotModelForm
 from nautobot.utilities.forms import (
     BootstrapMixin,
     BulkEditForm,
@@ -16,7 +17,7 @@ class ExamplePluginConfigForm(BootstrapMixin, forms.Form):
     maximum_velocity = forms.IntegerField(help_text="Meters per second")
 
 
-class ExampleModelForm(BootstrapMixin, forms.ModelForm):
+class ExampleModelForm(NautobotModelForm):
     """Generic create/update form for `ExampleModel` objects."""
 
     class Meta:
@@ -52,7 +53,7 @@ class ExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
         nullable_fields = []
 
 
-class AnotherExampleModelForm(BootstrapMixin, forms.ModelForm):
+class AnotherExampleModelForm(NautobotModelForm):
     """Generic create/update form for `AnotherExampleModel` objects."""
 
     class Meta:
