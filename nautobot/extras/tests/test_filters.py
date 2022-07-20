@@ -3,8 +3,18 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
 from nautobot.dcim.filters import DeviceFilterSet
+from nautobot.dcim.models import (
+    Device,
+    DeviceRole,
+    DeviceType,
+    Interface,
+    Manufacturer,
+    Platform,
+    Rack,
+    Region,
+    Site,
+)
 from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
@@ -25,8 +35,8 @@ from nautobot.extras.filters import (
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
     SecretFilterSet,
-    SecretsGroupFilterSet,
     SecretsGroupAssociationFilterSet,
+    SecretsGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
     WebhookFilterSet,
@@ -58,7 +68,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import FilterTestCases, TestCase
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -657,13 +666,13 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_installed(self):
         params = {"installed": True}
-        # 31 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 34)
+        # 32 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 35)
 
     def test_enabled(self):
         params = {"enabled": False}
-        # 31 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 34)
+        # 32 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 35)
 
     def test_commit_default(self):
         params = {"commit_default": False}
