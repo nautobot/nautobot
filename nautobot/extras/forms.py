@@ -1357,7 +1357,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     )
     source_filter = JSONField(
         required=False,
-        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
+        help_text="Filterset filter matching the applicable source objects of the selected type.<br>"
         'Enter in <a href="https://json.org/">JSON</a> format.',
     )
     destination_type = forms.ModelChoiceField(
@@ -1366,7 +1366,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     )
     destination_filter = JSONField(
         required=False,
-        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
+        help_text="Filterset filter matching the applicable destination objects of the selected type.<br>"
         'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 

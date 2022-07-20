@@ -1432,6 +1432,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses.get(slug="decommissioning").pk,
             "site": sites[1].pk,
             "rack": racks[1].pk,
+            "position": None,
+            "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
         }
 
@@ -2475,7 +2477,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = DeviceRole.objects.create(name="Device Role", slug="device-role-1")
 
-        devices = (
+        cls.devices = (
             Device.objects.create(
                 device_type=device_type,
                 device_role=device_role,
@@ -2551,18 +2553,18 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         # Create three VirtualChassis with three members each
-        vc1 = VirtualChassis.objects.create(name="VC1", master=devices[0], domain="domain-1")
-        Device.objects.filter(pk=devices[0].pk).update(virtual_chassis=vc1, vc_position=1)
-        Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=vc1, vc_position=2)
-        Device.objects.filter(pk=devices[2].pk).update(virtual_chassis=vc1, vc_position=3)
-        vc2 = VirtualChassis.objects.create(name="VC2", master=devices[3], domain="domain-2")
-        Device.objects.filter(pk=devices[3].pk).update(virtual_chassis=vc2, vc_position=1)
-        Device.objects.filter(pk=devices[4].pk).update(virtual_chassis=vc2, vc_position=2)
-        Device.objects.filter(pk=devices[5].pk).update(virtual_chassis=vc2, vc_position=3)
-        vc3 = VirtualChassis.objects.create(name="VC3", master=devices[6], domain="domain-3")
-        Device.objects.filter(pk=devices[6].pk).update(virtual_chassis=vc3, vc_position=1)
-        Device.objects.filter(pk=devices[7].pk).update(virtual_chassis=vc3, vc_position=2)
-        Device.objects.filter(pk=devices[8].pk).update(virtual_chassis=vc3, vc_position=3)
+        vc1 = VirtualChassis.objects.create(name="VC1", master=cls.devices[0], domain="domain-1")
+        Device.objects.filter(pk=cls.devices[0].pk).update(virtual_chassis=vc1, vc_position=1)
+        Device.objects.filter(pk=cls.devices[1].pk).update(virtual_chassis=vc1, vc_position=2)
+        Device.objects.filter(pk=cls.devices[2].pk).update(virtual_chassis=vc1, vc_position=3)
+        vc2 = VirtualChassis.objects.create(name="VC2", master=cls.devices[3], domain="domain-2")
+        Device.objects.filter(pk=cls.devices[3].pk).update(virtual_chassis=vc2, vc_position=1)
+        Device.objects.filter(pk=cls.devices[4].pk).update(virtual_chassis=vc2, vc_position=2)
+        Device.objects.filter(pk=cls.devices[5].pk).update(virtual_chassis=vc2, vc_position=3)
+        vc3 = VirtualChassis.objects.create(name="VC3", master=cls.devices[6], domain="domain-3")
+        Device.objects.filter(pk=cls.devices[6].pk).update(virtual_chassis=vc3, vc_position=1)
+        Device.objects.filter(pk=cls.devices[7].pk).update(virtual_chassis=vc3, vc_position=2)
+        Device.objects.filter(pk=cls.devices[8].pk).update(virtual_chassis=vc3, vc_position=3)
 
         cls.form_data = {
             "name": "VC4",
@@ -2584,6 +2586,32 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "domain": "domain-x",
         }
+
+    def test_device_column_visible(self):
+        """
+        This checks whether the device column on a device's interfaces
+        list is visible if the device is the master in a virtual chassis
+        """
+        self.user.is_superuser = True
+        self.user.save()
+        Interface.objects.create(device=self.devices[0], name="eth0")
+        Interface.objects.create(device=self.devices[0], name="eth1")
+        response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
+        self.assertIn("<th >Device</th>", str(response.content))
+
+    def test_device_column_not_visible(self):
+        """
+        This checks whether the device column on a device's interfaces
+        list isn't visible if the device is not the master in a virtual chassis
+        """
+        self.user.is_superuser = True
+        self.user.save()
+        Interface.objects.create(device=self.devices[1], name="eth2")
+        Interface.objects.create(device=self.devices[1], name="eth3")
+        response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
+        self.assertNotIn("<th >Device</th>", str(response.content))
+        # Sanity check:
+        self.assertIn("<th >Name</th>", str(response.content))
 
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
