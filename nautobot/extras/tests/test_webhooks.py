@@ -14,11 +14,10 @@ from nautobot.dcim.models import Site
 from nautobot.dcim.models.sites import Region
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.context_managers import ORMChangeContext, change_logging
-from nautobot.extras.models import Webhook
+from nautobot.extras.models import ObjectChange, Webhook
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
-from nautobot.extras.webhooks import get_snapshots
 from nautobot.utilities.testing import APITestCase
 
 
@@ -113,7 +112,11 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+                oc = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(site),
+                    changed_object_id=site.pk,
+                ).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -155,7 +158,11 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
+                oc = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(site),
+                    changed_object_id=site.pk,
+                ).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -201,7 +208,11 @@ class WebhookTest(APITestCase):
                 site.delete()
 
                 serializer = SiteSerializer(temp_site, context={"request": None})
-                snapshots = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+                oc = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(temp_site),
+                    changed_object_id=temp_site.pk,
+                ).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -258,7 +269,11 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+                oc = ObjectChange.objects.filter(
+                    changed_object_type=ContentType.objects.get_for_model(site),
+                    changed_object_id=site.pk,
+                ).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,

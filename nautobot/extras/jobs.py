@@ -239,7 +239,7 @@ class BaseJob:
 
     @classmethod
     def _get_vars(cls):
-        vars = OrderedDict()
+        vars = dict()
         base_classes = reversed(inspect.getmro(cls))
         attr_names = [name for base in base_classes for name in base.__dict__.keys()]
         for name in attr_names:
@@ -837,6 +837,26 @@ class JobHookReceiver(Job):
     """
 
     object_change = ObjectVar(model=ObjectChange)
+
+    def run(self, data, commit):
+        """JobHookReceiver subclasses generally shouldn't need to override this method."""
+        object_change = data["object_change"]
+        # perhaps also calculate the diffs that this object_change represents, as mentioned in my earlier comments on this PR?
+        self.receive_jobhook(
+            change=object_change,
+            action=object_change.action,
+            changed_object=object_change.changed_object,
+        )
+
+    def receive_jobhook(self, change, action, changed_object):
+        """
+        Method to be implemented by concrete JobHookReceiver subclasses.
+
+        :param change: an instance of `nautobot.extras.models.ObjectChange`
+        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
+        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        """
+        raise NotImplementedError
 
 
 def is_job(obj):

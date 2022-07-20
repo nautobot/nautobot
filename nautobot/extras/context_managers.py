@@ -46,7 +46,7 @@ class JobChangeContext(ChangeContext):
 class JobHookChangeContext(ChangeContext):
     """ChangeContext for changes made by job hooks"""
 
-    context = ObjectChangeEventContextChoices.CONTEXT_JOBHOOK
+    context = ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK
 
 
 class ORMChangeContext(ChangeContext):

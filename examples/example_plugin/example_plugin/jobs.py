@@ -52,7 +52,7 @@ class ExampleJobHookReceiver(JobHookReceiver):
     def run(self, data, commit):
         change_action = data["object_change"].action
         changed_object = data["object_change"].changed_object
-        self.log_success(message=f"{change_action} detected for object {changed_object.name}")
+        self.log_success(message=f"{change_action} detected for object {changed_object}")
 
 
 jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob, ExampleJobHookReceiver)

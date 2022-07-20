@@ -636,7 +636,7 @@ class JobHookReceiverTest(TransactionTestCase):
             changed_object_type=ContentType.objects.get_for_model(Site),
             changed_object_id=test_site.pk,
         ).first()
-        self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOBHOOK)
+        self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
 
     def test_run_job(self):
         module = "test_job_hook_receiver"
