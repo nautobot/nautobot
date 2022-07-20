@@ -1,5 +1,6 @@
 import logging
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Q
 from django.urls import reverse
@@ -18,8 +19,95 @@ from nautobot.utilities.api import get_serializer_for_model
 logger = logging.getLogger(__name__)
 
 
-@extend_schema_field(OpenApiTypes.OBJECT)
-class RelationshipAssociationsDataField(JSONField):
+nested_abstract_serializer = {
+    "type": "object",
+    "required": False,
+    "properties": {
+        "id": {"type": "string", "format": "uuid"},
+        "url": {"type": "string", "format": "uri", "readOnly": True},
+        "display": {"type": "string", "readOnly": True},
+    },
+    "additionalProperties": True,
+}
+
+
+common_serializer_properties = {
+    "id": {"type": "string", "format": "uuid", "readOnly": True},
+    "url": {"type": "string", "format": "uri", "readOnly": True},
+    "name": {"type": "string", "readOnly": True},
+    "type": {"type": "string", "readOnly": True, "example": "one-to-many"},
+}
+
+
+@extend_schema_field(
+    {
+        "type": "object",
+        "additionalProperties": {
+            "allOf": [
+                {
+                    "type": "object",
+                    "properties": common_serializer_properties,
+                },
+                {
+                    "anyOf": [
+                        {
+                            "allOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "source_type": {"type": "string", "readOnly": True, "example": "dcim.site"},
+                                        "source_label": {"type": "string", "readOnly": True},
+                                    }
+                                },
+                                {
+                                    "oneOf": [
+                                        {"type": "object", "properties": {"source": nested_abstract_serializer}},
+                                        {"type": "object", "properties": {"sources": {"type": "array", "items": nested_abstract_serializer}}},
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "allOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "destination_type": {"type": "string", "readOnly": True, "example": "dcim.site"},
+                                        "destination_label": {"type": "string", "readOnly": True},
+                                    },
+                                },
+                                {
+                                    "oneOf": [
+                                        {"type": "object", "properties": {"destination": nested_abstract_serializer}},
+                                        {"type": "object", "properties": {"destinations": {"type": "array", "items": nested_abstract_serializer}}},
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "allOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "peer_type": {"type": "string", "readOnly": True, "example": "dcim.site"},
+                                        "peer_label": {"type": "string", "readOnly": True},
+                                    },
+                                },
+                                {
+                                    "oneOf": [
+                                        {"type": "object", "properties": {"peer": nested_abstract_serializer}},
+                                        {"type": "object", "properties": {"peers": {"type": "array", "items": nested_abstract_serializer}}},
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+)
+class RelationshipsDataField(JSONField):
     """
     Represent the set of all Relationships defined for a given model,
     and all RelationshipAssociations per Relationship that apply to a specific instance of that model.
@@ -42,14 +130,17 @@ class RelationshipAssociationsDataField(JSONField):
                     "type": "one-to-one|one-to-many|many-to-many|...",
                     # if this model can be the destination of the relationship:
                     "source_type": "dcim.device|ipam.ipaddress|...",
+                    "source_label": ...,
                     "sources": [{...}, {...}, {...}],  # if the source is a "many" side
                     "source": {...},  # if the source is a "one" side
                     # if this model can be the source of the relationship:
                     "destination_type": "dcim.device|ipam.ipaddress|...",
+                    "destination_label": ...,
                     "destinations": [{...}, {...}, {...}],  # if the destination is a "many" side
                     "destination": {...},  # if the destination is a "one" side
                     # if this relationship is symmetric, instead of source/destination above:
                     "peer_type": "dcim.device|ipam.ipaddress|...",
+                    "peer_label": ...,
                     "peers": [{...}, {...}, {...}],  # if the peer is a "many" side
                     "peer": {...},  # if the peer is a "one" side
                 },
@@ -73,36 +164,43 @@ class RelationshipAssociationsDataField(JSONField):
                     },
                 )
                 other_side = RelationshipSideChoices.OPPOSITE[this_side]
-                other_side_type = getattr(relationship, f"{other_side}_type")
-                other_side_model = other_side_type.model_class()
-                try:
-                    other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
-                except SerializerNotFound:
-                    try:
-                        other_side_serializer = get_serializer_for_model(other_side_model)
-                    except SerializerNotFound:
-                        other_side_serializer = None
+                data[relationship.slug][f"{other_side}_label"] = relationship.get_label(this_side)
 
-                if other_side == RelationshipSideChoices.SIDE_PEER:
-                    continue  # TODO FIXME
+                other_side_type = getattr(relationship, f"{other_side}_type")
+                other_side_serializer = None
+                other_side_model = other_side_type.model_class()
+                if other_side_model is not None:
+                    try:
+                        other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
+                    except SerializerNotFound:
+                        try:
+                            other_side_serializer = get_serializer_for_model(other_side_model)
+                        except SerializerNotFound:
+                            pass
 
                 data[relationship.slug][f"{other_side}_type"] = f"{other_side_type.app_label}.{other_side_type.model}"
+
+
                 if relationship.has_many(other_side):
+                    other_objects = [assoc.get_peer(obj) for assoc in associations if assoc.get_peer(obj) is not None]
+
                     if other_side_serializer:
                         data[relationship.slug][f"{other_side}s"] = [
-                            other_side_serializer(getattr(assoc, other_side), context=self.context).data for assoc in associations
+                            other_side_serializer(other_obj, context=self.context).data for other_obj in other_objects
                         ]
                     else:
-                        data[relationship.slug][f"{other_side}s"] = [{"id": getattr(assoc, f"{other_side}_id")} for assoc in associations]
+                        data[relationship.slug][f"{other_side}s"] = [{"id": other_obj.id} for other_obj in other_objects]
                 else:
                     if not associations.exists():
                         data[relationship.slug][other_side] = None
-                    elif other_side_serializer:
-                        data[relationship.slug][other_side] = other_side_serializer(
-                            getattr(associations.first(), other_side), context=self.context
-                        ).data 
                     else:
-                        data[relationship.slug][other_side] = {"id": getattr(associations.first(), f"{other_side}_id")}
+                        other_obj = associations.first().get_peer(obj)
+                        if other_obj is None:
+                            data[relationship.slug][other_side] = None
+                        if other_side_serializer:
+                            data[relationship.slug][other_side] = other_side_serializer(other_obj, context=self.context).data
+                        else:
+                            data[relationship.slug][other_side] = {"id": other_obj.id}
 
         logger.info("to_representation(%s) -> %s", obj, data)
         return data
@@ -222,7 +320,7 @@ class RelationshipAssociationsDataField(JSONField):
 
 class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     """Extend ValidatedModelSerializer with a `relationships` field."""
-    relationships = RelationshipAssociationsDataField(required=False, source="*")
+    relationships = RelationshipsDataField(required=False, source="*")
 
     def save(self):
         """Create/update RelationshipAssociations corresponding to a model instance."""
