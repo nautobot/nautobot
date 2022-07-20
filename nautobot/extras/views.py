@@ -3,7 +3,6 @@ from datetime import datetime
 import logging
 
 from celery import chain
-from celery.states import FAILURE
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -452,20 +451,6 @@ class CustomFieldEditView(generic.ObjectEditView):
 
 class CustomFieldDeleteView(generic.ObjectDeleteView):
     queryset = CustomField.objects.all()
-
-
-class CeleryTaskFailure(Exception):
-    """
-    Custom Exception for when a celery task failed to execute.
-    Attributes:
-        obj_name -- The obj name for which the celery task failed to delete
-        message -- explanation of the error
-    """
-
-    def __init__(self, obj_name=None, message="Celery task has failed for custom field "):
-        self.message = message
-        self.message += f"{obj_name} "
-        super().__init__(self.message)
 
 
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
