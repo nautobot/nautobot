@@ -18,6 +18,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic.edit import FormView
 from django_tables2 import RequestConfig
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.utils.decorators import classonlymethod
@@ -357,7 +358,9 @@ class ObjectDeleteViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.De
         )
 
 
-class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.CreateAPIView, generics.UpdateAPIView):
+class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.CreateAPIView, generics.UpdateAPIView, FormView):
+    logger = logging.getLogger("nautobot.views.ObjectEditView")
+
     def get_object_for_edit(self, request, *args, **kwargs):
         # Look up an existing object by slug or PK, if provided.
         if "slug" in kwargs:
@@ -390,53 +393,55 @@ class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.Crea
             template_name=self.get_template_name("edit"),
         )
 
+    def form_valid(self, request, form, obj, *args, **kwargs):
+        restrict_form_fields(form, request.user)
+        self.logger.debug("Form validation was successful")
+        try:
+            with transaction.atomic():
+                object_created = not form.instance.present_in_database
+                obj = form.save()
+
+                # Check that the new object conforms with any assigned object-level permissions
+                self.queryset.get(pk=obj.pk)
+
+            msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
+            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
+            if hasattr(obj, "get_absolute_url"):
+                msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+            else:
+                msg = f"{msg} { escape(obj)}"
+            messages.success(request, mark_safe(msg))
+
+            if "_addanother" in request.POST:
+
+                # If the object has clone_fields, pre-populate a new instance of the form
+                if hasattr(obj, "clone_fields"):
+                    url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                    return redirect(url)
+
+                return redirect(request.get_full_path())
+
+            return_url = form.cleaned_data.get("return_url")
+            if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                return redirect(return_url)
+            else:
+                return redirect(self.get_return_url(request, obj))
+
+        except ObjectDoesNotExist:
+            msg = "Object save failed due to object-level permissions violation"
+            self.logger.debug(msg)
+            form.add_error(None, msg)
+
+    def form_invalid(self, form):
+         self.logger.debug("Form validation failed")
+    
     def perform_create_or_update(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectEditView")
         obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
         form = self.form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
         if form.is_valid():
-            logger.debug("Form validation was successful")
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} { escape(obj)}"
-                messages.success(request, mark_safe(msg))
-
-                if "_addanother" in request.POST:
-
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
-
+            self.form_valid(request, form, obj)
         else:
-            logger.debug("Form validation failed")
-
+            self.form_invalid(form)
         return Response(
             {
                 "obj": obj,
