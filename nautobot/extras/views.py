@@ -2,6 +2,7 @@ import inspect
 from datetime import datetime
 import logging
 
+from celery import chain
 from celery.states import FAILURE
 from django import template
 from django.contrib import messages
@@ -471,21 +472,22 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
 
+    def construct_custom_field_delete_tasks(self, queryset):
+        """
+        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
+        """
+        tasks = [
+            delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
+            for obj in queryset
+        ]
+        return tasks
+
     def perform_pre_delete(self, request, queryset):
         if not get_worker_count(request):
             messages.error(request, "Unable to run job: Celery worker process not running.")
             return redirect(self.get_return_url(request))
-        for obj in queryset:
-            try:
-                task = delete_custom_field_data.delay(obj.name, set(obj.content_types.values_list("pk", flat=True)))
-                # Wait until the custom_field_data is completely deleted
-                task.wait(timeout=None, interval=0.1)
-                if task.state == FAILURE:
-                    # raise an exception if tasks failed.
-                    raise CeleryTaskFailure(obj_name=obj.name)
-            except CeleryTaskFailure:
-                messages.error(f"Celery task failed when deleting _custom_field_data for Custom Field {obj.name}")
-                return redirect(self.get_return_url(request))
+        tasks = self.construct_custom_field_delete_tasks(queryset)
+        chain(*tasks).apply_async()
 
 
 #
