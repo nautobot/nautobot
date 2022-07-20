@@ -32,6 +32,7 @@ from nautobot.utilities.utils import (
     count_related,
     get_table_for_model,
     prepare_cloned_fields,
+    pretty_print_query,
     shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
@@ -533,7 +534,7 @@ class DynamicGroupView(generic.ObjectView):
             ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
             ancestors_map = {node.name: node.depth for node in ancestors_tree}
 
-            context["raw_query"] = str(instance.generate_query())
+            context["raw_query"] = pretty_print_query(instance.generate_query())
             context["members_table"] = members_table
             context["ancestors_table"] = ancestors_table
             context["ancestors_map"] = ancestors_map

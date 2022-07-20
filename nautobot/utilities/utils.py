@@ -12,6 +12,8 @@ from django.contrib.auth import get_user_model
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+from django.utils.tree import Node
+
 from django.template import engines
 from django.utils.module_loading import import_string
 
@@ -576,3 +578,37 @@ def is_uuid(value):
     except (ValueError, TypeError, AttributeError):
         pass
     return False
+
+
+def pretty_print_query(query):
+    """
+    Given an `Q` object, display it in a more human-readable format.
+
+    :param query:
+        Q instance
+    """
+
+    def __our_str__(self):
+        """Improvement to default `Node.__str__` with a more human-readable style."""
+        template = "(NOT %s)" if self.negated else "(%s)"
+        children = []
+
+        # Iterate over children. They will be either a Q object (a Node subclass) or a 2-tuple.
+        for child in self.children:
+            # Trust that we can stringify the child if it is a Node instance.
+            if isinstance(child, Node):
+                children.append(str(child))
+            # If a 2-tuple, stringify to key=value
+            else:
+                key, value = child
+                children.append(f"{key}={value!r}")
+
+        return template % (f" {self.connector} ".join(str(c) for c in children))
+
+    # Swap `Node.__str__` for our version and replace it when we're done.
+    try:
+        orig_str = query.__class__.__str__
+        query.__class__.__str__ = __our_str__
+        return str(query)
+    finally:
+        query.__class__.__str__ = orig_str

@@ -876,6 +876,7 @@ class DynamicGroupMembership(BaseModel):
             return siblings[self_idx + 1]
         except IndexError:
             raise self.DoesNotExist(f"{self.__class__._meta.object_name} matching query does not exist.")
+
     def get_next_by_weight(self):
         """Get the next membership by weight."""
         return self._get_next_or_previous_by_weight(is_next=True)

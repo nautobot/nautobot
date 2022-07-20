@@ -270,7 +270,7 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit", "delete"))
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
@@ -304,6 +304,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "members",
             "filter",
             "operator",
+            "weight",
             "description",
             "actions",
         )
