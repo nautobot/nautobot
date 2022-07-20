@@ -80,16 +80,20 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
+- [#1614](https://github.com/nautobot/nautobot/issues/1614) - Added support for nesting of Dynamic Groupsallowing inclusion/exclusion rules of sub-group members
 - [#1735](https://github.com/nautobot/nautobot/issues/1735) - Added missing filters to model FilterSets for Virtualization models.
 - [#1865](https://github.com/nautobot/nautobot/issues/1865) - Added support for a custom template on Job forms.
 - [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
 - [#2051](https://github.com/nautobot/nautobot/issues/2051) - Add changelog url for Relationships.
+- [#2061](https://github.com/nautobot/nautobot/pulls/2061) - Add draggable child groups to Dynamic Groups edit view in UI, recompute and hide weights.
 
 ### Changed
 
 - [#2049](https://github.com/nautobot/nautobot/pull/2049) - Moved get_changelog_url to a method on objects that support changelogs, updated template context.
 
 ### Fixed
+
+- [#1710](https://github.com/nautobot/nautobot/issues/1710) - Fixed invalid CSS when clicking "Add another" row buttons for formsets on Secrets Groups, Dynamic Groups edit view in the UI.
 
 ## v1.4.0a2 (2022-07-11)
 
