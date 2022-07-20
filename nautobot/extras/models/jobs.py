@@ -827,7 +827,7 @@ class ScheduledJob(BaseModel):
     @staticmethod
     def crontra(self):
         """
-        Wrapper function translates crontab syntax to celery crontab.
+        Wrapper method translates crontab syntax to celery crontab.
 
         Supports following symbols:
 
