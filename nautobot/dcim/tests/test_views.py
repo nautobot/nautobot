@@ -2155,6 +2155,44 @@ class CableTestCase(
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
 
+    def test_delete_a_cable_which_has_a_peer_connection(self):
+        self.add_permissions("dcim.delete_cable")
+
+        site = Site.objects.first()
+        device = Device.objects.first()
+
+        interfaces = [
+            Interface.objects.create(device=device, name="eth0"),
+            Interface.objects.create(device=device, name="eth1"),
+        ]
+
+        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
+        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuittype)
+
+        circuit_terminations = [
+            CircuitTermination.objects.create(
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
+            ),
+            CircuitTermination.objects.create(
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z, site=site
+            ),
+        ]
+
+        connected = Status.objects.get(slug="connected")
+        cables = [
+            Cable.objects.create(termination_a=circuit_terminations[0], termination_b=interfaces[0], status=connected),
+            Cable.objects.create(termination_a=circuit_terminations[1], termination_b=interfaces[1], status=connected),
+        ]
+
+        request = {
+            "path": self._get_url("delete", cables[0]),
+            "data": post_data({"confirm": True}),
+        }
+
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertFalse(Cable.objects.filter(pk=cables[0].pk).exists())
+
 
 class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
