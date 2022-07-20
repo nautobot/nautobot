@@ -2156,6 +2156,7 @@ class CableTestCase(
         }
 
     def test_delete_a_cable_which_has_a_peer_connection(self):
+        """Test for https://github.com/nautobot/nautobot/issues/1694."""
         self.add_permissions("dcim.delete_cable")
 
         site = Site.objects.first()
