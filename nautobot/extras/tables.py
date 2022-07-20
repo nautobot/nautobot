@@ -304,7 +304,6 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "members",
             "filter",
             "operator",
-            "weight",
             "description",
             "actions",
         )
