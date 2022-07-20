@@ -603,7 +603,7 @@ def pretty_print_query(query):
                 key, value = child
                 children.append(f"{key}={value!r}")
 
-        return template % (f" {self.connector} ".join(str(c) for c in children))
+        return template % (f" {self.connector} ".join(children))
 
     # Swap `Node.__str__` for our version and replace it when we're done.
     try:
