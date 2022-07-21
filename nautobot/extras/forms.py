@@ -1,3 +1,5 @@
+from celery import schedules
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -1026,6 +1028,11 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         label="Starting date and time",
         widget=DateTimePicker(),
     )
+    _recurrence_custom_time = forms.CharField(
+        required=False,
+        label="Crontab",
+        help_text="Custom crontab syntax (* * * * *)",
+    )
 
     def clean(self):
         """
@@ -1046,6 +1053,17 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
                         "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
                     }
                 )
+
+            if cleaned_data.get("_schedule_type") == JobExecutionType.TYPE_CUSTOM:
+                if not cleaned_data.get("_recurrence_custom_time"):
+                    raise ValidationError({"_recurrence_custom_time": "Please provide a crontab schedule."})
+
+                try:
+                    minute, hour, day_of_month, month_of_year, day_of_week = cleaned_data.get("_schedule_type").split(' ')
+                    schedules.crontab(minute=minute, hour=hour, day_of_month=day_of_month, month_of_year=month_of_year,
+                                      day_of_week=day_of_week)
+                except Exception as e:
+                    raise ValidationError({"_recurrence_custom_time": e})
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
