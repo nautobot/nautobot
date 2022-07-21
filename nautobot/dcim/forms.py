@@ -3500,7 +3500,7 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
-class ConnectCableToDeviceForm(NautobotModelForm, ConnectCableExcludeIDMixin):
+class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     """
     Base form for connecting a Cable to a Device component
     """
@@ -3624,7 +3624,7 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
     )
 
 
-class ConnectCableToCircuitTerminationForm(NautobotModelForm, ConnectCableExcludeIDMixin):
+class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     termination_b_provider = DynamicModelChoiceField(queryset=Provider.objects.all(), label="Provider", required=False)
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
@@ -3670,7 +3670,7 @@ class ConnectCableToCircuitTerminationForm(NautobotModelForm, ConnectCableExclud
         return getattr(self.cleaned_data["termination_b_id"], "pk", None)
 
 
-class ConnectCableToPowerFeedForm(NautobotModelForm, ConnectCableExcludeIDMixin):
+class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
