@@ -1,19 +1,21 @@
-# Job hooks
+# Job Hooks
 
-A job hook is a mechanism for automatically starting a [job](./jobs.md) when an object is changed. Job hooks are similar to [webhooks](../models/extras/webhook.md) except change events initiate a `JobHookReceiver` job instead of a web request. Job hooks are configured in the web UI under Jobs > Job Hooks.
+A Job Hook is a mechanism for automatically starting a [job](./jobs.md) when an object is changed. Job Hooks are similar to [webhooks](../models/extras/webhook.md) except that an object change event initiates a `JobHookReceiver` job instead of a web request. Job hooks are configured in the web UI under **Jobs > Job Hooks**.
 
-## Job hook receivers
+## Job Hook Receivers
 
-Job hooks are only able to initiate a specific type of job called a job hook receiver. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](jobs.md#variables). Job hook receivers are hidden from the jobs listing UI by default but function similarly to other jobs. The job hook receiver class only implements one method called `receive_jobhook`.
+Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](jobs.md#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_jobhook`.
 
 !!! important
-    To prevent negatively impacting system performance through an infinite loop, a change that was made by a job hook receiver job will not trigger another job hook receiver job to run.
+    To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` job will not trigger another `JobHookReceiver` job to run.
 
 ### Example job hook receiver
 
 ```py
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import JobHookReceiver
+
+
 class ExampleJobHookReceiver(JobHookReceiver):
     def receive_jobhook(self, change, action, changed_object):
         # return on delete action
@@ -45,7 +47,7 @@ class ExampleJobHookReceiver(JobHookReceiver):
 
 ### The `receive_jobhook()` Method
 
-All job hook receivers must implement a `receive_jobhook()` method. This method accepts three arguments:
+All `JobHookReceiver` subclasses must implement a `receive_jobhook()` method. This method accepts three arguments:
 
 1. `change` - An instance of `nautobot.extras.models.ObjectChange`
 2. `action` - A string with the action performed on the changed object ("create", "update" or "delete")
