@@ -62,7 +62,7 @@ def get_route_for_model(model, action):
     Returns:
         str: return the name of the view for the model/action provided.
     Examples:
-        >>> viewname(Device, "list")
+        >>> get_route_for_model(Device, "list")
         "dcim:device_list"
     """
 
