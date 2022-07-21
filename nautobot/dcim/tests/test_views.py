@@ -2191,8 +2191,27 @@ class CableTestCase(
             "data": post_data({"confirm": True}),
         }
 
+        from nautobot.dcim.models import CablePath
+        from django.db.models import Q
+
+        termination_ct = ContentType.objects.get_for_model(CircuitTermination)
+        interface_ct = ContentType.objects.get_for_model(Interface)
+
         self.assertHttpStatus(self.client.post(**request), 302)
         self.assertFalse(Cable.objects.filter(pk=cables[0].pk).exists())
+
+        # Assert the wrong CablePath did not get deleted
+        cable_path_1 = CablePath.objects.filter(
+            Q(origin_type=termination_ct, origin_id=circuit_terminations[0].pk)
+            | Q(origin_type=interface_ct, origin_id=interfaces[0].pk)
+        )
+        self.assertFalse(cable_path_1.exists())
+
+        cable_path_2 = CablePath.objects.filter(
+            Q(origin_type=termination_ct, origin_id=circuit_terminations[1].pk)
+            | Q(origin_type=interface_ct, origin_id=interfaces[1].pk)
+        )
+        self.assertTrue(cable_path_2.exists())
 
 
 class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
