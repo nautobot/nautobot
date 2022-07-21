@@ -826,7 +826,7 @@ class ScheduledJob(BaseModel):
 
     def get_crontab(self):
         """
-        Wrapper method translates crontab syntax to celery crontab.
+        Wrapper method translates crontab syntax to Celery crontab.
 
         Supports following symbols:
 
