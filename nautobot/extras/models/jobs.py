@@ -824,7 +824,6 @@ class ScheduledJob(BaseModel):
     def earliest_possible_time():
         return timezone.now() + timedelta(seconds=15)
 
-    @staticmethod
     def crontra(self):
         """
         Wrapper method translates crontab syntax to celery crontab.
@@ -859,7 +858,7 @@ class ScheduledJob(BaseModel):
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
             return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
-            return self.crontra(self)
+            return self.crontra()
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 
