@@ -989,11 +989,15 @@ class JobView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                custom = None
 
                 if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                     # Schedule the job instead of running it now
                     schedule_name = schedule_form.cleaned_data["_schedule_name"]
                     schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
+
+                    if schedule_type == JobExecutionType.TYPE_CUSTOM:
+                        custom = schedule_form.cleaned_data["_recurrence_custom_time"]
 
                 else:
                     # The job must be approved.
@@ -1024,6 +1028,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     user=request.user,
                     approval_required=job_model.approval_required,
+                    custom=custom,  # TODO: nautobot/extras/models/jobs.py#765
                 )
                 scheduled_job.save()
 
