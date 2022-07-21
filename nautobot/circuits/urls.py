@@ -28,8 +28,13 @@ urlpatterns = [
     ),
     path(
         "circuit-types/delete/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_delete", "post": "perform_bulk_delete"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_destroy", "post": "perform_bulk_destroy"}),
         name="circuittype_bulk_delete",
+    ),
+    path(
+        "circuit-types/import/",
+        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_create", "post": "perform_bulk_create"}),
+        name="circuittype_import",
     ),
     path(
         "circuit-types/<slug:slug>/",
@@ -45,6 +50,46 @@ urlpatterns = [
         "circuit-types/<slug:slug>/delete/",
         views.CircuitTypeDRFViewSet.as_view({"get": "destroy", "post": "perform_destroy"}),
         name="circuittype_delete",
+    ),
+    path(
+        "providers/",
+        views.ProviderDRFViewSet.as_view({"get": "list"}),
+        name="provider_list",
+    ),
+    path(
+        "providers/add/",
+        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        name="provider_add",
+    ),
+    path(
+        "providers/edit/",
+        views.ProviderDRFViewSet.as_view({"get": "bulk_edit", "post": "perform_bulk_edit"}),
+        name="provider_bulk_edit",
+    ),
+    path(
+        "providers/delete/",
+        views.ProviderDRFViewSet.as_view({"get": "bulk_destroy", "post": "perform_bulk_destroy"}),
+        name="provider_bulk_delete",
+    ),
+    path(
+        "providers/import/",
+        views.ProviderDRFViewSet.as_view({"get": "bulk_create", "post": "perform_bulk_create"}),
+        name="provider_import",
+    ),
+    path(
+        "providers/<slug:slug>/",
+        views.ProviderDRFViewSet.as_view({"get": "retrieve"}),
+        name="provider",
+    ),
+    path(
+        "providers/<slug:slug>/edit/",
+        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        name="provider_edit",
+    ),
+    path(
+        "providers/<slug:slug>/delete/",
+        views.ProviderDRFViewSet.as_view({"get": "destroy", "post": "perform_destroy"}),
+        name="provider_delete",
     ),
     path(
         "providers/<slug:slug>/changelog/",
@@ -94,7 +139,7 @@ urlpatterns = [
         name="circuit_terminations_swap",
     ),
     # path("", include(circuit_type_router.urls)),
-    path("", include(provider_router.urls)),
+    # path("", include(provider_router.urls)),
     path("", include(provider_network_router.urls)),
     path("", include(circuit_termination_router.urls)),
     path("", include(circuit_router.urls)),

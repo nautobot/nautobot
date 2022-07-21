@@ -58,6 +58,46 @@ class CircuitTypeDRFViewSet(NautobotDRFViewSet):
             return {}
 
 
+class ProviderDRFViewSet(NautobotDRFViewSet):
+    model = Provider
+    serializer_class = nested_serializers.NestedProviderSerializer
+    queryset = Provider.objects.all()
+    table = tables.ProviderTable
+    form = forms.ProviderForm
+    filterset_form = forms.ProviderFilterForm
+    filterset = filters.ProviderFilterSet
+    import_form = forms.ProviderCSVForm
+    bulk_edit_form = forms.ProviderBulkEditForm
+    lookup_field = "slug"
+
+    def get_extra_context(self, request, view_type, instance):
+        if view_type == "detail":
+            circuits = (
+                Circuit.objects.restrict(request.user, "view")
+                .filter(provider=instance)
+                .prefetch_related("type", "tenant", "terminations__site")
+            )
+
+            circuits_table = tables.CircuitTable(circuits)
+            circuits_table.columns.hide("provider")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(circuits_table)
+
+            return {
+                "circuits_table": circuits_table,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
+
+
 #
 # Providers
 #

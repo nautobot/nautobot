@@ -8,11 +8,13 @@ from django.utils.http import is_safe_url
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
+    FieldDoesNotExist,
     ObjectDoesNotExist,
+    ValidationError,
 )
 from django.db import transaction
-from django.db.models import ProtectedError
-from django.forms import ModelMultipleChoiceField, MultipleHiddenInput
+from django.db.models import ManyToManyField, ProtectedError
+from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
@@ -27,12 +29,16 @@ from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSetMixin
+from rest_framework_bulk import mixins
 
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.extras.models import ExportTemplate, ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
+    BootstrapMixin,
     ConfirmationForm,
+    CSVDataField,
+    CSVFileField,
     TableConfigForm,
     restrict_form_fields,
 )
@@ -387,7 +393,7 @@ class ObjectDeleteViewMixin(NautobotViewSetMixin, generics.DestroyAPIView):
         )
 
 
-class ObjectEditViewMixin(NautobotViewSetMixin, generics.CreateAPIView, generics.UpdateAPIView):
+class ObjectEditViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin, mixins.BulkUpdateModelMixin):
     logger = logging.getLogger("nautobot.views.ObjectEditView")
 
     def get_object_for_edit(self, request, *args, **kwargs):
@@ -475,15 +481,15 @@ class ObjectEditViewMixin(NautobotViewSetMixin, generics.CreateAPIView, generics
         )
 
 
-class BulkDeleteViewMixin(NautobotViewSetMixin):
+class BulkDeleteViewMixin(NautobotViewSetMixin, mixins.BulkDestroyModelMixin):
     action = "delete"
     bulk_delete_form = None
     logger = logging.getLogger("nautobot.views.BulkDeleteView")
 
-    def bulk_delete(self, request):
+    def bulk_destroy(self, request):
         return redirect(self.get_return_url(request))
 
-    def perform_bulk_delete(self, request, **kwargs):
+    def perform_bulk_destroy(self, request, **kwargs):
         model = self.queryset.model
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
@@ -559,8 +565,248 @@ class BulkDeleteViewMixin(NautobotViewSetMixin):
         return BulkDeleteForm
 
 
+class BulkImportViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin):
+    bulk_import_widget_attrs = {}
+
+    def _import_form_for_bulk_import(self, *args, **kwargs):
+        class ImportForm(BootstrapMixin, Form):
+            csv_data = CSVDataField(from_form=self.import_form, widget=Textarea(attrs=self.bulk_import_widget_attrs))
+            csv_file = CSVFileField(from_form=self.import_form)
+
+        return ImportForm(*args, **kwargs)
+
+    def _save_obj_for_bulk_import(self, obj_form, request):
+        """
+        Provide a hook to modify the object immediately before saving it (e.g. to encrypt secret data).
+        """
+        return obj_form.save()
+
+    def bulk_create(self, request):
+        return Response(
+            {
+                "form": self._import_form_for_bulk_import(),
+                "fields": self.import_form().fields,
+                "obj_type": self.import_form._meta.model._meta.verbose_name,
+                "return_url": self.get_return_url(request),
+                "active_tab": "csv-data",
+            },
+            template_name=self.get_template_name("bulk_import"),
+        )
+
+    def perform_bulk_create(self, request):
+        logger = logging.getLogger("nautobot.views.BulkImportView")
+        new_objs = []
+        form = self._import_form_for_bulk_import(request.POST)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                # Iterate through CSV data and bind each row to a new model form instance.
+                with transaction.atomic():
+                    headers, records = form.cleaned_data["csv_data"]
+                    for row, data in enumerate(records, start=1):
+                        obj_form = self.import_form(data, headers=headers)
+                        restrict_form_fields(obj_form, request.user)
+
+                        if obj_form.is_valid():
+                            obj = self._save_obj_for_bulk_import(obj_form, request)
+                            new_objs.append(obj)
+                        else:
+                            for field, err in obj_form.errors.items():
+                                form.add_error("csv", f"Row {row} {field}: {err[0]}")
+                            raise ValidationError("")
+
+                    # Enforce object-level permissions
+                    if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                        raise ObjectDoesNotExist
+
+                # Compile a table containing the imported objects
+                obj_table = self.table(new_objs)
+
+                if new_objs:
+                    msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
+                    logger.info(msg)
+                    messages.success(request, msg)
+
+                    return render(
+                        request,
+                        "import_success.html",
+                        {
+                            "table": obj_table,
+                            "return_url": self.get_return_url(request),
+                        },
+                    )
+
+            except ValidationError:
+                pass
+
+            except ObjectDoesNotExist:
+                msg = "Object import failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "fields": self.import_form().fields,
+                "obj_type": self.import_form._meta.model._meta.verbose_name,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+
+class BulkUpdateViewMixin(NautobotViewSetMixin, mixins.BulkUpdateModelMixin):
+    bulk_edit_filterset = None
+    bulk_edit_form = None
+
+    def alter_obj_for_bulk_edit(self, obj, request, url_args, url_kwargs):
+        # Allow views to add extra info to an object before it is processed.
+        # For example, a parent object can be defined given some parameter from the request URL.
+        return obj
+
+    def bulk_edit(self, request):
+        return redirect(self.get_return_url(request))
+
+    def perform_bulk_edit(self, request, **kwargs):
+        logger = logging.getLogger("nautobot.views.BulkEditView")
+        model = self.queryset.model
+
+        # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
+        if request.POST.get("_all") and self.bulk_edit_filterset is not None:
+            pk_list = [obj.pk for obj in self.bulk_edit_filterset(request.GET, self.queryset.only("pk")).qs]
+        else:
+            pk_list = request.POST.getlist("pk")
+
+        if "_apply" in request.POST:
+            form = self.bulk_edit_form(model, request.POST)
+            restrict_form_fields(form, request.user)
+
+            if form.is_valid():
+                logger.debug("Form validation was successful")
+                custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
+                standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
+                nullified_fields = request.POST.getlist("_nullify")
+
+                try:
+
+                    with transaction.atomic():
+
+                        updated_objects = []
+                        for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
+
+                            obj = self.alter_obj_for_bulk_edit(obj, request, [], kwargs)
+
+                            # Update standard fields. If a field is listed in _nullify, delete its value.
+                            for name in standard_fields:
+
+                                try:
+                                    model_field = model._meta.get_field(name)
+                                except FieldDoesNotExist:
+                                    # This form field is used to modify a field rather than set its value directly
+                                    model_field = None
+
+                                # Handle nullification
+                                if name in form.nullable_fields and name in nullified_fields:
+                                    if isinstance(model_field, ManyToManyField):
+                                        getattr(obj, name).set([])
+                                    else:
+                                        setattr(obj, name, None if model_field.null else "")
+
+                                # ManyToManyFields
+                                elif isinstance(model_field, ManyToManyField):
+                                    if form.cleaned_data[name]:
+                                        getattr(obj, name).set(form.cleaned_data[name])
+                                # Normal fields
+                                elif form.cleaned_data[name] not in (None, ""):
+                                    setattr(obj, name, form.cleaned_data[name])
+
+                            # Update custom fields
+                            for name in custom_fields:
+                                if name in form.nullable_fields and name in nullified_fields:
+                                    obj.cf[name] = None
+                                elif form.cleaned_data.get(name) not in (None, ""):
+                                    obj.cf[name] = form.cleaned_data[name]
+
+                            obj.full_clean()
+                            obj.save()
+                            updated_objects.append(obj)
+                            logger.debug(f"Saved {obj} (PK: {obj.pk})")
+
+                            # Add/remove tags
+                            if form.cleaned_data.get("add_tags", None):
+                                obj.tags.add(*form.cleaned_data["add_tags"])
+                            if form.cleaned_data.get("remove_tags", None):
+                                obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                        # Enforce object-level permissions
+                        if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
+                            updated_objects
+                        ):
+                            raise ObjectDoesNotExist
+
+                    if updated_objects:
+                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+
+                    return redirect(self.get_return_url(request))
+
+                except ValidationError as e:
+                    messages.error(self.request, f"{obj} failed validation: {e}")
+
+                except ObjectDoesNotExist:
+                    msg = "Object update failed due to object-level permissions violation"
+                    logger.debug(msg)
+                    form.add_error(None, msg)
+
+            else:
+                logger.debug("Form validation failed")
+
+        else:
+            # Include the PK list as initial data for the form
+            initial_data = {"pk": pk_list}
+
+            # Check for other contextual data needed for the form. We avoid passing all of request.GET because the
+            # filter values will conflict with the bulk edit form fields.
+            # TODO: Find a better way to accomplish this
+            if "device" in request.GET:
+                initial_data["device"] = request.GET.get("device")
+            elif "device_type" in request.GET:
+                initial_data["device_type"] = request.GET.get("device_type")
+
+            form = self.bulk_edit_form(model, initial=initial_data)
+            restrict_form_fields(form, request.user)
+
+        # Retrieve objects being edited
+        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
+        if not table.rows:
+            messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
+        context = {
+            "form": form,
+            "table": table,
+            "obj_type_plural": model._meta.verbose_name_plural,
+            "return_url": self.get_return_url(request),
+        }
+        context.update(self.get_extra_context(request, "bulk_edit", instance=None))
+        return Response(context, template_name=self.get_template_name("bulk_edit"))
+
+
 class NautobotDRFViewSet(
-    ObjectDetailViewMixin, ObjectListViewMixin, ObjectEditViewMixin, ObjectDeleteViewMixin, BulkDeleteViewMixin
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDeleteViewMixin,
+    BulkDeleteViewMixin,
+    BulkImportViewMixin,
+    BulkUpdateViewMixin,
 ):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, self.action)
