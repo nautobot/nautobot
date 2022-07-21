@@ -762,10 +762,9 @@ class ScheduledJob(BaseModel):
         verbose_name="Approval date/time",
         help_text="Datetime that the schedule was approved",
     )
-    custom = models.CharField(
+    crontab = models.CharField(
         max_length=255,
         blank=True,
-        null=True,
         verbose_name="Custom cronjob",
         help_text="Cronjob syntax string for custom scheduling"
     )
@@ -839,7 +838,7 @@ class ScheduledJob(BaseModel):
         """
 
         try:
-            minute, hour, day_of_month, month_of_year, day_of_week = self.custom.split(' ')
+            minute, hour, day_of_month, month_of_year, day_of_week = self.crontab.split(' ')
             return schedules.crontab(minute=minute, hour=hour, day_of_month=day_of_month, month_of_year=month_of_year,
                                      day_of_week=day_of_week)
         except Exception as e:

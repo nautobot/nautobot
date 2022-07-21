@@ -344,7 +344,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
     else:
         time = serializer["start_time"]
         name = serializer["name"]
-    custom = serializer.get("custom")
+    crontab = serializer.get("crontab")
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
@@ -365,7 +365,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
         approval_required=job_model.approval_required,
-        custom=custom,
+        crontab=crontab,
     )
     scheduled_job.save()
     return scheduled_job
