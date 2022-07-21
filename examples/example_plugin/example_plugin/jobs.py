@@ -49,10 +49,8 @@ class ExampleJobHookReceiver(JobHookReceiver):
         name = "Example job hook receiver"
         description = "This job is triggered by object change events"
 
-    def run(self, data, commit):
-        change_action = data["object_change"].action
-        changed_object = data["object_change"].changed_object
-        self.log_success(message=f"{change_action} detected for object {changed_object}")
+    def receive_jobhook(self, change, action, changed_object):
+        self.log_success(message=f"{action} detected for object {changed_object}")
 
 
 jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob, ExampleJobHookReceiver)
