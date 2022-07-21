@@ -970,6 +970,9 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
 
 
 class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = RelationshipAssociation.objects.all()
+    filterset = RelationshipAssociationFilterSet
+
     @classmethod
     def setUpTestData(cls):
         cls.device_type = ContentType.objects.get_for_model(Device)
