@@ -669,7 +669,15 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     filterset_class = filters.JobLogEntryFilterSet
 
 
-class JobResultViewSet(ModelViewSet):
+class JobResultViewSet(
+    # DRF mixins:
+    # note no CreateModelMixin or UpdateModelMixin
+    mixins.DestroyModelMixin,
+    # Nautobot mixins:
+    BulkDestroyModelMixin,
+    # Base class
+    ReadOnlyModelViewSet,
+):
     """
     Retrieve a list of job results
     """

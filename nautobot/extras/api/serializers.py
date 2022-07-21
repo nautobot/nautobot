@@ -717,6 +717,7 @@ class JobResultSerializer(serializers.ModelSerializer):
             "user",
             "data",
             "job_id",
+            "job_kwargs",
             "schedule",
         ]
 
