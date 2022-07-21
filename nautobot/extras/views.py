@@ -32,7 +32,6 @@ from nautobot.utilities.utils import (
     count_related,
     get_table_for_model,
     prepare_cloned_fields,
-    shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
@@ -1429,36 +1428,16 @@ class ObjectChangeView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         related_changes = (
-            ObjectChange.objects.restrict(request.user, "view")
-            .filter(request_id=instance.request_id)
-            .exclude(pk=instance.pk)
+            instance.get_related_changes().restrict(request.user, "view").filter(request_id=instance.request_id)
         )
         related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
 
-        objectchanges = ObjectChange.objects.restrict(request.user, "view").filter(
-            changed_object_type=instance.changed_object_type,
-            changed_object_id=instance.changed_object_id,
-        )
-
-        next_change = objectchanges.filter(time__gt=instance.time).order_by("time").first()
-        prev_change = objectchanges.filter(time__lt=instance.time).order_by("-time").first()
-
-        if prev_change:
-            diff_added = shallow_compare_dict(
-                prev_change.object_data,
-                instance.object_data,
-                exclude=["last_updated"],
-            )
-            diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
-        else:
-            # No previous change; this is the initial change that added the object
-            diff_added = diff_removed = instance.object_data
-
+        snapshots = instance.get_snapshots()
         return {
-            "diff_added": diff_added,
-            "diff_removed": diff_removed,
-            "next_change": next_change,
-            "prev_change": prev_change,
+            "diff_added": snapshots["differences"]["added"],
+            "diff_removed": snapshots["differences"]["removed"],
+            "next_change": instance.get_next_change(request.user),
+            "prev_change": instance.get_prev_change(request.user),
             "related_changes_table": related_changes_table,
             "related_changes_count": related_changes.count(),
         }

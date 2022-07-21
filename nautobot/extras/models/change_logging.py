@@ -182,6 +182,27 @@ class ObjectChange(BaseModel):
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
 
+    def get_next_change(self, user=None):
+        """Return next change for this changed object, optionally restricting by user view permission"""
+        related_changes = self.get_related_changes().restrict(user, "view")
+        if user is not None:
+            related_changes = related_changes.restrict(user, "view")
+        return related_changes.filter(time__gt=self.time).order_by("time").first()
+
+    def get_prev_change(self, user=None):
+        """Return previous change for this changed object, optionally restricting by user view permission"""
+        related_changes = self.get_related_changes()
+        if user is not None:
+            related_changes = related_changes.restrict(user, "view")
+        return related_changes.filter(time__lt=self.time).order_by("-time").first()
+
+    def get_related_changes(self):
+        """Return queryset of all ObjectChanges for this changed object, excluding this ObjectChange"""
+        return ObjectChange.objects.filter(
+            changed_object_type=self.changed_object_type,
+            changed_object_id=self.changed_object_id,
+        ).exclude(pk=self.pk)
+
     def get_snapshots(self):
         """
         Return a dictionary with the changed object's serialized data before and after this change
