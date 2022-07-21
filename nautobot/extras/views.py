@@ -472,6 +472,8 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
             messages.error(request, "Unable to run job: Celery worker process not running.")
             return redirect(self.get_return_url(request))
         tasks = self.construct_custom_field_delete_tasks(queryset)
+        # Executing the tasks in the background sequentially using chain() aligns with how a single CustomField object is deleted.
+        # We decided to not check the result because it needs at least one worker to be active and comes with extra performance penalty.
         chain(*tasks).apply_async()
 
 
