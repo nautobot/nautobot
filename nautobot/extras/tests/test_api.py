@@ -22,6 +22,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer, NestedScheduledJobSerializer
 from nautobot.extras.choices import (
     JobExecutionType,
+    JobResultStatusChoices,
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -1221,6 +1222,8 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         job_result = JobResult.objects.last()
+        self.assertIn("data", job_result.job_kwargs)
+        self.assertEqual(job_result.job_kwargs["data"], job_data)
 
         return (response, job_result)  # so subclasses can do additional testing
 
@@ -1550,31 +1553,56 @@ class JobTestVersionDefault(JobTestVersion12):
     api_version = None
 
 
-class JobResultTest(APITestCase):
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_delete_job_result_anonymous(self):
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": 1})
-        response = self.client.delete(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+class JobResultTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+    APIViewTestCases.DeleteObjectViewTestCase,
+):
+    model = JobResult
+    brief_fields = ["completed", "created", "id", "name", "status", "url", "user"]
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_delete_job_result_without_permission(self):
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": 1})
-        with disable_warnings("django.request"):
-            response = self.client.delete(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+    @classmethod
+    def setUpTestData(cls):
+        jobs = Job.objects.all()[:2]
+        job_ct = ContentType.objects.get_for_model(Job)
+        git_ct = ContentType.objects.get_for_model(GitRepository)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_delete_job_result_with_permission(self):
-        self.add_permissions("extras.delete_jobresult")
-        job_result = JobResult.objects.create(
-            name="test",
+        JobResult.objects.create(
+            job_model=jobs[0],
+            name=jobs[0].class_path,
+            obj_type=job_ct,
+            completed=datetime.now(),
+            user=None,
+            status=JobResultStatusChoices.STATUS_COMPLETED,
+            data={"output": "\nRan for 3 seconds"},
+            job_kwargs=None,
+            schedule=None,
             job_id=uuid.uuid4(),
-            obj_type=ContentType.objects.get_for_model(GitRepository),
         )
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": job_result.pk})
-        response = self.client.delete(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        JobResult.objects.create(
+            job_model=None,
+            name="Git Repository",
+            obj_type=git_ct,
+            completed=datetime.now(),
+            user=None,
+            status=JobResultStatusChoices.STATUS_COMPLETED,
+            data=None,
+            job_kwargs={"repository_pk": uuid.uuid4()},
+            schedule=None,
+            job_id=uuid.uuid4(),
+        )
+        JobResult.objects.create(
+            job_model=jobs[1],
+            name=jobs[1].class_path,
+            obj_type=job_ct,
+            completed=None,
+            user=None,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            data=None,
+            job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
+            schedule=None,
+            job_id=uuid.uuid4(),
+        )
 
 
 class JobLogEntryTest(
@@ -1617,12 +1645,6 @@ class JobLogEntryTest(
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.json()), JobLogEntry.objects.count())
-
-    def test_options_objects_returns_display_and_value(self):
-        """Overridden because this test case is not applicable to this viewset."""
-
-    def test_options_returns_expected_choices(self):
-        """Overridden because this test case is not applicable to this viewset."""
 
 
 class ScheduledJobTest(
@@ -1667,12 +1689,6 @@ class ScheduledJobTest(
             approval_required=True,
             start_time=now(),
         )
-
-    def test_options_objects_returns_display_and_value(self):
-        """Overriden because this test case is not applicable to this viewset"""
-
-    def test_options_returns_expected_choices(self):
-        """Overriden because this test case is not applicable to this viewset"""
 
 
 class JobApprovalTest(APITestCase):
@@ -2332,6 +2348,7 @@ class TagTestVersion13(
         {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
     ]
     bulk_update_data = {"content_types": [Site._meta.label_lower]}
+    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):

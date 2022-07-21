@@ -1,3 +1,5 @@
-<a href="{{ url }}" class="btn btn-danger" id="delete-button">
-    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
-</a>
+{% if url %}
+    <a href="{{ url }}" class="btn btn-danger" id="delete-button">
+        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+    </a>
+{% endif %}
