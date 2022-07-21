@@ -28,6 +28,10 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
+#### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
+
+JobResult records now save the arguments with which the Job was called, allowing for easy re-execution of the Job with the same arguments as before. A "re-run" button has been added to the JobResult list view and detail view.
+
 #### Location Data Model ([#1052](https://github.com/nautobot/nautobot/issues/1052))
 
 To locate network information more precisely than a Site defines, you can now define a hierarchy of Location Types (for example, `Building` ← `Floor` ← `Room`) and then create Locations corresponding to these types within each Site. Data objects such as devices, prefixes, VLAN groups, etc. can thus be mapped or assigned to Location representing a specific building, wing, floor, room, etc. as appropriate to your needs.

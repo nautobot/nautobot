@@ -401,6 +401,7 @@ class JobResult(BaseModel, CustomFieldModel):
         default=JobResultStatusChoices.STATUS_PENDING,
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
+    job_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
     schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
     """
     Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
@@ -544,7 +545,17 @@ class JobResult(BaseModel, CustomFieldModel):
         schedule: Optional ScheduledJob instance to link to the JobResult
         kwargs: additional kwargs passed to the callable
         """
-        job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
+        # Discard "request" parameter from the kwargs that we save in the job_result, as it's not relevant to re-runs,
+        # and will likely go away in the future.
+        job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
+        job_result = cls.objects.create(
+            name=name,
+            job_kwargs=job_result_kwargs,
+            obj_type=obj_type,
+            user=user,
+            job_id=uuid.uuid4(),
+            schedule=schedule,
+        )
 
         kwargs["job_result_pk"] = job_result.pk
 
