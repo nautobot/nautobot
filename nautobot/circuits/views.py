@@ -13,6 +13,7 @@ from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 # from nautobot.utilities.utils import count_related
 
 from . import filters, forms, tables
+from .api import nested_serializers
 from .choices import CircuitTerminationSideChoices
 from .models import Circuit, CircuitType, CircuitTermination, Provider, ProviderNetwork
 from nautobot.utilities.viewsets import NautobotViewSet, NautobotRouter
@@ -21,6 +22,7 @@ from nautobot.utilities.drf_views import NautobotDRFViewSet
 
 class CircuitTypeDRFViewSet(NautobotDRFViewSet):
     model = CircuitType
+    serializer_class = nested_serializers.NestedCircuitTypeSerializer
     queryset = CircuitType.objects.all()
     table = tables.CircuitTypeTable
     form = forms.CircuitTypeForm

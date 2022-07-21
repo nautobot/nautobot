@@ -12,11 +12,11 @@ from django.core.exceptions import (
 )
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.forms import ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
-from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
 from django_tables2 import RequestConfig
@@ -25,6 +25,7 @@ from django.utils.decorators import classonlymethod
 from rest_framework import generics
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSetMixin
 
 from nautobot.utilities.permissions import get_permission_for_model
@@ -44,7 +45,35 @@ from nautobot.utilities.views import ObjectPermissionRequiredMixin, GetReturnURL
 from nautobot.utilities.templatetags.helpers import validated_viewname
 
 
-class NautobotViewSetMixin(ViewSetMixin, ObjectPermissionRequiredMixin, View):
+class NautobotViewSetMixin(ViewSetMixin, ObjectPermissionRequiredMixin, GetReturnURLMixin, FormView, APIView):
+    serializer_class = None
+    renderer_classes = [TemplateHTMLRenderer]
+
+    def form_valid(self, form):
+        self.logger.debug("Form validation was successful")
+
+    def form_invalid(self, form):
+        self.logger.debug("Form validation failed")
+
+    def initial(self, request, *args, **kwargs):
+        """
+        Runs anything that needs to occur prior to calling the method handler.
+        """
+        self.format_kwarg = self.get_format_suffix(**kwargs)
+
+        # Perform content negotiation and store the accepted info on the request
+        neg = self.perform_content_negotiation(request)
+        request.accepted_renderer, request.accepted_media_type = neg
+
+        # Determine the API version, if versioning is in use.
+        version, scheme = self.determine_version(request, *args, **kwargs)
+        request.version, request.versioning_scheme = version, scheme
+
+        # Ensure that the incoming request is permitted
+        self.perform_authentication(request)
+        self.check_permissions(request)
+        self.check_throttles(request)
+
     def get_extra_context(self, request, view_type, instance=None):
         """
         Return any additional context data for the template.
@@ -296,7 +325,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
         return self.queryset.all()
 
 
-class ObjectDeleteViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.DestroyAPIView):
+class ObjectDeleteViewMixin(NautobotViewSetMixin, generics.DestroyAPIView):
     action = "delete"
 
     def get_object(self, kwargs):
@@ -358,7 +387,7 @@ class ObjectDeleteViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.De
         )
 
 
-class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.CreateAPIView, generics.UpdateAPIView, FormView):
+class ObjectEditViewMixin(NautobotViewSetMixin, generics.CreateAPIView, generics.UpdateAPIView):
     logger = logging.getLogger("nautobot.views.ObjectEditView")
 
     def get_object_for_edit(self, request, *args, **kwargs):
@@ -376,12 +405,10 @@ class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.Crea
         return obj
 
     def create_or_update(self, request, *args, **kwargs):
-        obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
-
+        obj = self.alter_obj_for_edit(self.get_object_for_edit(request, *args, **kwargs), request, args, kwargs)
         initial_data = normalize_querydict(request.GET)
         form = self.form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
-
         return Response(
             {
                 "obj": obj,
@@ -393,55 +420,49 @@ class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.Crea
             template_name=self.get_template_name("edit"),
         )
 
-    def form_valid(self, request, form, obj, *args, **kwargs):
-        restrict_form_fields(form, request.user)
-        self.logger.debug("Form validation was successful")
-        try:
-            with transaction.atomic():
-                object_created = not form.instance.present_in_database
-                obj = form.save()
-
-                # Check that the new object conforms with any assigned object-level permissions
-                self.queryset.get(pk=obj.pk)
-
-            msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
-            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
-            if hasattr(obj, "get_absolute_url"):
-                msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-            else:
-                msg = f"{msg} { escape(obj)}"
-            messages.success(request, mark_safe(msg))
-
-            if "_addanother" in request.POST:
-
-                # If the object has clone_fields, pre-populate a new instance of the form
-                if hasattr(obj, "clone_fields"):
-                    url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                    return redirect(url)
-
-                return redirect(request.get_full_path())
-
-            return_url = form.cleaned_data.get("return_url")
-            if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                return redirect(return_url)
-            else:
-                return redirect(self.get_return_url(request, obj))
-
-        except ObjectDoesNotExist:
-            msg = "Object save failed due to object-level permissions violation"
-            self.logger.debug(msg)
-            form.add_error(None, msg)
-
-    def form_invalid(self, form):
-         self.logger.debug("Form validation failed")
-    
     def perform_create_or_update(self, request, *args, **kwargs):
-        obj = self.alter_obj_for_edit(self.get_object_for_edit(kwargs), request, args, kwargs)
+        obj = self.alter_obj_for_edit(self.get_object_for_edit(request, *args, **kwargs), request, args, kwargs)
         form = self.form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
         if form.is_valid():
-            self.form_valid(request, form, obj)
+            self.form_valid(form)
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
+                self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
+                if hasattr(obj, "get_absolute_url"):
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                else:
+                    msg = f"{msg} { escape(obj)}"
+                messages.success(request, mark_safe(msg))
+
+                if "_addanother" in request.POST:
+
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+                return_url = form.cleaned_data.get("return_url")
+                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(return_url)
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                self.logger.debug(msg)
+                form.add_error(None, msg)
         else:
-            self.form_invalid(form)
+            self.form_invalid(obj)
         return Response(
             {
                 "obj": obj,
@@ -454,8 +475,92 @@ class ObjectEditViewMixin(NautobotViewSetMixin, GetReturnURLMixin, generics.Crea
         )
 
 
-class NautobotDRFViewSet(ObjectDetailViewMixin, ObjectListViewMixin, ObjectDeleteViewMixin, ObjectEditViewMixin):
-    renderer_classes = [TemplateHTMLRenderer]
+class BulkDeleteViewMixin(NautobotViewSetMixin):
+    action = "delete"
+    bulk_delete_form = None
+    logger = logging.getLogger("nautobot.views.BulkDeleteView")
 
+    def bulk_delete(self, request):
+        return redirect(self.get_return_url(request))
+
+    def perform_bulk_delete(self, request, **kwargs):
+        model = self.queryset.model
+
+        # Are we deleting *all* objects in the queryset or just a selected subset?
+        if request.POST.get("_all"):
+            if self.bulk_delete_filterset is not None:
+                pk_list = [obj.pk for obj in self.bulk_delete_filterset(request.GET, model.objects.only("pk")).qs]
+            else:
+                pk_list = model.objects.values_list("pk", flat=True)
+        else:
+            pk_list = request.POST.getlist("pk")
+
+        form_cls = self.get_form()
+
+        if "_confirm" in request.POST:
+            form = form_cls(request.POST)
+            if form.is_valid():
+                self.logger.debug("Form validation was successful")
+
+                # Delete objects
+                queryset = self.queryset.filter(pk__in=pk_list)
+                try:
+                    deleted_count = queryset.delete()[1][model._meta.label]
+                except ProtectedError as e:
+                    self.logger.info("Caught ProtectedError while attempting to delete objects")
+                    handle_protectederror(queryset, request, e)
+                    return redirect(self.get_return_url(request))
+
+                msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
+                self.logger.info(msg)
+                messages.success(request, msg)
+                return redirect(self.get_return_url(request))
+
+            else:
+                self.logger.debug("Form validation failed")
+
+        else:
+            form = form_cls(
+                initial={
+                    "pk": pk_list,
+                    "return_url": self.get_return_url(request),
+                }
+            )
+
+        # Retrieve objects being deleted
+        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
+        if not table.rows:
+            messages.warning(
+                request,
+                f"No {model._meta.verbose_name_plural} were selected for deletion.",
+            )
+            return redirect(self.get_return_url(request))
+
+        context = {
+            "form": form,
+            "obj_type_plural": model._meta.verbose_name_plural,
+            "table": table,
+            "return_url": self.get_return_url(request),
+        }
+        context.update(self.get_extra_context(request, "bulk_delete", instance=None))
+        return Response(context, template_name=self.get_template_name("bulk_delete"))
+
+    def get_form(self):
+        """
+        Provide a standard bulk delete form if none has been specified for the view
+        """
+
+        class BulkDeleteForm(ConfirmationForm):
+            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
+
+        if self.bulk_delete_form:
+            return self.bulk_delete_form
+
+        return BulkDeleteForm
+
+
+class NautobotDRFViewSet(
+    ObjectDetailViewMixin, ObjectListViewMixin, ObjectEditViewMixin, ObjectDeleteViewMixin, BulkDeleteViewMixin
+):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, self.action)

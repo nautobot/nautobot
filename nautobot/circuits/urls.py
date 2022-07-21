@@ -27,6 +27,11 @@ urlpatterns = [
         name="circuittype_add",
     ),
     path(
+        "circuit-types/delete/",
+        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_delete", "post": "perform_bulk_delete"}),
+        name="circuittype_bulk_delete",
+    ),
+    path(
         "circuit-types/<slug:slug>/",
         views.CircuitTypeDRFViewSet.as_view({"get": "retrieve"}),
         name="circuittype",
