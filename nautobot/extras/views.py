@@ -989,7 +989,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                crontab = None
+                crontab = ""
 
                 if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                     # Schedule the job instead of running it now
