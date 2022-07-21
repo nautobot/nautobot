@@ -533,7 +533,7 @@ When providing input data, it is possible to specify complex values contained in
 
 ### Via the CLI
 
-Jobs that do not require user input can be run from the CLI by invoking the management command:
+Jobs can be run from the CLI by invoking the management command:
 
 ```no-highlight
 nautobot-server runjob [--username <username>] [--commit] [--data <data>] <class_path>
