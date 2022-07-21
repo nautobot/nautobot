@@ -70,7 +70,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
-from .base_classes import (
+from .base import (
     NautobotBulkEditForm,
     NautobotModelForm,
 )

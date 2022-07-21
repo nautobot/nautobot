@@ -66,7 +66,7 @@ from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import FilterTestCases, TestCase
+from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 # Use the proper swappable User model
@@ -969,7 +969,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class RelationshipModelFilterSetTestCase(TestCase):
+class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.device_type = ContentType.objects.get_for_model(Device)

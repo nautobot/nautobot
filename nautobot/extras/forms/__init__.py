@@ -1,4 +1,4 @@
 # flake8: noqa
-from .base_classes import *
+from .base import *
 from .forms import *
 from .mixins import *
