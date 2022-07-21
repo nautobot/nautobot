@@ -12,10 +12,35 @@ Job hooks are only able to initiate a specific type of job called a job hook rec
 ### Example job hook receiver
 
 ```py
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import JobHookReceiver
-class TestJobHooksJob(JobHookReceiver):
+class ExampleJobHookReceiver(JobHookReceiver):
     def receive_jobhook(self, change, action, changed_object):
-        self.log_success(message=f"{action} detected for object {changed_object}")
+        # return on delete action
+        if action == ObjectChangeActionChoices.ACTION_DELETE:
+            return
+
+        # log diff output
+        snapshots = change.get_snapshots()
+        self.log_info(f"DIFF: {snapshots['differences']}")
+
+        # validate changes to serial field
+        if "serial" in snapshots["differences"]["added"]:
+            old_serial = snapshots["differences"]["removed"]["serial"]
+            new_serial = snapshots["differences"]["added"]["serial"]
+            self.log_info(f"{changed_object} serial has been changed from {old_serial} to {new_serial}")
+
+            # Check the new serial is valid and revert if necessary
+            if not self.validate_serial(new_serial):
+                changed_object.serial = old_serial
+                changed_object.save()
+                self.log_info(f"{changed_object} serial {new_serial} was not valid. Reverted to {old_serial}")
+
+            self.log_success(message=f"Serial validation completed for {changed_object}")
+
+    def validate_serial(self, serial):
+        # add business logic to validate serial
+        return False
 ```
 
 ### The `receive_jobhook()` Method
