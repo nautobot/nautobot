@@ -3,11 +3,14 @@ from nautobot.dcim.models import Site
 
 
 class TestJobHookReceiverLog(JobHookReceiver):
-    def run(self, data, commit):
-        object_change = data["object_change"]
-        self.log_success(object_change.changed_object.name)
+    def receive_jobhook(self, change, action, changed_object):
+        self.log_success(changed_object.name)
 
 
 class TestJobHookReceiverChange(JobHookReceiver):
-    def run(self, data, commit):
+    def receive_jobhook(self, change, action, changed_object):
         Site.objects.create(name="test_jhr")
+
+
+class TestJobHookReceiverFail(JobHookReceiver):
+    pass

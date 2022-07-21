@@ -239,7 +239,12 @@ class BaseJob:
 
     @classmethod
     def _get_vars(cls):
+        """
+        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
+        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        """
         vars = dict()
+        # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
         base_classes = reversed(inspect.getmro(cls))
         attr_names = [name for base in base_classes for name in base.__dict__.keys()]
         for name in attr_names:

@@ -669,3 +669,9 @@ class JobHookReceiverTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
         log_success = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_SUCCESS).first()
         self.assertEqual(log_success.message, "Test Site 1")
+
+    def test_missing_receive_jobhook_method(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverFail"
+        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
