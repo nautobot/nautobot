@@ -230,7 +230,8 @@ class PrettyPrintQueryTest(TestCase):
             Q(site__slug="ams01") | Q(site__slug="ang01"),
             Q(site__slug="ang01") & ~Q(status__slug="active"),
             Q(site__slug="ang01"),
-            Q(status__slug="active"),
+            Q(status__id=12345),
+            Q(site__slug__in=["ams01", "ang01"]),
         ]
         results = [
             "(((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active')) OR status_slug='planned')",
@@ -238,7 +239,8 @@ class PrettyPrintQueryTest(TestCase):
             "(site__slug='ams01' OR site__slug='ang01')",
             "(site__slug='ang01' AND (NOT status__slug='active'))",
             "(site__slug='ang01')",
-            "(status__slug='active')",
+            "(status__id=12345)",
+            "(site__slug__in=['ams01', 'ang01'])",
         ]
 
         tests = zip(queries, results)

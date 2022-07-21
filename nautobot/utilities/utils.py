@@ -582,7 +582,7 @@ def is_uuid(value):
 
 def pretty_print_query(query):
     """
-    Given an `Q` object, display it in a more human-readable format.
+    Given a `Q` object, display it in a more human-readable format.
 
     :param query:
         Q instance
