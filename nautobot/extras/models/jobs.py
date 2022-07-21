@@ -835,6 +835,7 @@ class ScheduledJob(BaseModel):
         • Slash (/) - divide a value ({*/15 * * * *} runs every 15 minutes)
 
         No support for Last (L), Weekday (W), Number symbol (#), Question mark (?), and special @ strings.
+        test
         """
 
         try:
