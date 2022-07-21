@@ -824,7 +824,7 @@ class ScheduledJob(BaseModel):
     def earliest_possible_time():
         return timezone.now() + timedelta(seconds=15)
 
-    def crontra(self):
+    def get_crontab(self):
         """
         Wrapper method translates crontab syntax to celery crontab.
 
@@ -836,10 +836,6 @@ class ScheduledJob(BaseModel):
         • Slash (/) - divide a value ({*/15 * * * *} runs every 15 minutes)
 
         No support for Last (L), Weekday (W), Number symbol (#), Question mark (?), and special @ strings.
-
-        ↑↑↓↓←→←→ba+
-
-        :return: crontab
         """
 
         try:
@@ -858,7 +854,7 @@ class ScheduledJob(BaseModel):
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
             return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
-            return self.crontra()
+            return self.get_crontab()
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 
