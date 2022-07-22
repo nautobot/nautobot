@@ -344,8 +344,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
     else:
         time = serializer["start_time"]
         name = serializer["name"]
-    crontab = serializer.get("crontab")
-    crontab = "" if crontab is None else crontab
+    crontab = serializer.get("crontab", "")
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
