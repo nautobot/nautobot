@@ -137,10 +137,10 @@ class Cable(PrimaryModel, StatusModel):
         if getattr(cls, "__status_connected", None) is None:
             try:
                 cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
-            except Status.DoesNotExist:
+            except Status.DoesNotExist as initial_exception:
                 raise Status.DoesNotExist(
                     "Status 'connected' is a required status for cable.\nPlease create status 'connected' for dcim.cable"
-                )
+                ) from initial_exception
 
         return cls.__status_connected
 
