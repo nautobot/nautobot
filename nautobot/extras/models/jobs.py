@@ -782,6 +782,9 @@ class ScheduledJob(BaseModel):
         self.queue = self.queue or None
         # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
         self.kwargs["scheduled_job_pk"] = self.pk
+        # disable job if job execution type is custom but crontab is invalid
+        if self.schedule == JobExecutionType.TYPE_CUSTOM and self.get_crontab() is str:
+            self.enabled = False
         if not self.enabled:
             self.last_run_at = None
         elif not self.last_run_at:
