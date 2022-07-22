@@ -4,6 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.choices import (
+    CableStatusChoices,
+    CableTypeChoices,
     DeviceFaceChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -731,3 +733,33 @@ class CableTestCase(TestCase):
         cable = Cable(termination_a=self.interface2, termination_b=wireless_interface)
         with self.assertRaises(ValidationError):
             cable.clean()
+
+    def test_create_cable_with_missing_status_connected(self):
+        # Delete all cables because some cables has connected status.
+        Cable.objects.all().delete()
+        Status.objects.get(slug=CableStatusChoices.STATUS_CONNECTED).delete()
+        device = Device.objects.first()
+
+        interfaces = (
+            Interface.objects.create(
+                device=device,
+                name="eth-0",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+            Interface.objects.create(
+                device=device,
+                name="eth-1",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+        )
+
+        with self.assertRaises(Status.DoesNotExist) as err:
+            Cable.objects.create(
+                termination_a=interfaces[0],
+                termination_b=interfaces[1],
+                type=CableTypeChoices.TYPE_CAT6,
+            )
+        self.assertEqual(
+            "Status 'connected' is a required status for cable.\nPlease create status 'connected' for dcim.cable",
+            str(err.exception),
+        )
