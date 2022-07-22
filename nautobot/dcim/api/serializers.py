@@ -215,7 +215,7 @@ class SiteSerializer(
     TaggedObjectSerializer,
     RelationshipModelSerializerMixin,
     StatusModelSerializerMixin,
-    CustomFieldModelSerializer
+    CustomFieldModelSerializer,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
     region = NestedRegionSerializer(required=False, allow_null=True)
