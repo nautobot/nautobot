@@ -32,7 +32,7 @@ from rest_framework.viewsets import ViewSetMixin
 from rest_framework_bulk import mixins
 
 from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.extras.models import ExportTemplate, ChangeLoggedModel
+from nautobot.extras.models import CustomField, ExportTemplate, ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
     BootstrapMixin,
@@ -44,6 +44,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import (
+    csv_format,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -54,6 +55,10 @@ from nautobot.utilities.templatetags.helpers import validated_viewname
 class NautobotViewSetMixin(ViewSetMixin, ObjectPermissionRequiredMixin, GetReturnURLMixin, FormView, APIView):
     serializer_class = None
     renderer_classes = [TemplateHTMLRenderer]
+
+    def alter_queryset(self, request):
+        # .all() is necessary to avoid caching queries
+        return self.queryset.all()
 
     def form_valid(self, form):
         self.logger.debug("Form validation was successful")
@@ -221,24 +226,64 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, generics.RetrieveAPIView):
         """
         Generic GET handler for accessing an object by PK or slug
         """
-        instance = get_object_or_404(self.queryset, **kwargs)
+        data = {}
+        instance = self.get_object(kwargs)
+        serializer = self.get_serializer(instance)
         self.context = self.get_extra_context(request, "detail", instance)
-        return Response(
+        data.update(serializer.data)
+        data.update(
             {
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 **self.context,
                 "changelog_url": self.get_changelog_url(instance),
-            },
-            template_name=self.get_template_name("detail"),
+            }
         )
+        return Response(data, template_name=self.get_template_name("detail"))
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
     action_buttons = ("add", "import", "export")
     action = "view"
     filterset_form = None
+
+    def queryset_to_yaml(self):
+        """
+        Export the queryset of objects as concatenated YAML documents.
+        """
+        yaml_data = [obj.to_yaml() for obj in self.queryset]
+
+        return "---\n".join(yaml_data)
+
+    def queryset_to_csv(self):
+        """
+        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
+        """
+        csv_data = []
+        custom_fields = []
+
+        # Start with the column headers
+        headers = self.queryset.model.csv_headers.copy()
+
+        # Add custom field headers, if any
+        if hasattr(self.queryset.model, "_custom_field_data"):
+            for custom_field in CustomField.objects.get_for_model(self.queryset.model):
+                headers.append(custom_field.name)
+                custom_fields.append(custom_field.name)
+
+        csv_data.append(",".join(headers))
+
+        # Iterate through the queryset appending each object
+        for obj in self.queryset:
+            data = obj.to_csv()
+
+            for custom_field in custom_fields:
+                data += (obj.cf.get(custom_field, ""),)
+
+            csv_data.append(csv_format(data))
+
+        return "\n".join(csv_data)
 
     def validate_action_buttons(self, request):
         """Verify actions in self.action_buttons are valid view actions."""
@@ -256,12 +301,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
             messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
         return valid_actions
 
-    def list(self, request, *args, **kwargs):
-        model = self.queryset.model
-        content_type = ContentType.objects.get_for_model(model)
-
-        self.queryset = self.filterset(request.GET, self.queryset).qs
-
+    def check_for_export(self, request, model, content_type):
         # Check for export template rendering
         if request.GET.get("export"):
             et = get_object_or_404(
@@ -291,16 +331,14 @@ class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
-        # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
-        self.queryset = self.alter_queryset_for_list(request)
-
-        # Compile a dictionary indicating which permissions are available to the current user for this model
+    def construct_user_permissions(self, request, model):
         permissions = {}
         for action in ("add", "change", "delete", "view"):
             perm_name = get_permission_for_model(model, action)
             permissions[action] = request.user.has_perm(perm_name)
-
-        # Construct the objects table
+        return permissions
+    
+    def construct_table(self, request, permissions):
         table = self.table(self.queryset, user=request.user)
         if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
             table.columns.show("pk")
@@ -310,11 +348,23 @@ class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(table)
+        return RequestConfig(request, paginate).configure(table)
 
+    def list(self, request, *args, **kwargs):
+        model = self.queryset.model
+        content_type = ContentType.objects.get_for_model(model)
+        self.queryset = self.filterset(request.GET, self.queryset).qs
+        if "export" in request.GET:
+            return self.check_for_export(request, model, content_type)
+        # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
+        self.queryset = self.alter_queryset(request)
+        # Compile a dictionary indicating which permissions are available to the current user for this model
+        permissions = self.construct_user_permissions(request, model)
+        # Construct the objects table
+        table = self.construct_table(request, permissions)
         valid_actions = self.validate_action_buttons(request)
 
-        context = {
+        data = {
             "content_type": content_type,
             "table": table,
             "permissions": permissions,
@@ -322,38 +372,25 @@ class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
             "table_config_form": TableConfigForm(table=table),
             "filter_form": self.filterset_form(request.GET, label_suffix="") if self.filterset_form else None,
         }
-        context.update(self.get_extra_context(request, "list", instance=None))
-
-        return Response(context, template_name=self.get_template_name("list"))
-
-    def alter_queryset_for_list(self, request):
-        # .all() is necessary to avoid caching queries
-        return self.queryset.all()
+        data.update(self.get_extra_context(request, "list", instance=None))
+        return Response(data, template_name=self.get_template_name("list"))
 
 
 class ObjectDeleteViewMixin(NautobotViewSetMixin, generics.DestroyAPIView):
     action = "delete"
 
-    def get_object(self, kwargs):
-        # Look up object by slug if one has been provided. Otherwise, use PK.
-        if "slug" in kwargs:
-            return get_object_or_404(self.queryset, slug=kwargs["slug"])
-        else:
-            return get_object_or_404(self.queryset, pk=kwargs["pk"])
-
     def destroy(self, request, *args, **kwargs):
-        obj = self.get_object(kwargs)
+        instance = self.get_object(kwargs)
         form = ConfirmationForm(initial=request.GET)
 
-        return render(
-            request,
-            self.get_template_name("delete"),
+        return Response(
             {
-                "obj": obj,
+                "obj": instance,
                 "form": form,
                 "obj_type": self.queryset.model._meta.verbose_name,
-                "return_url": self.get_return_url(request, obj),
+                "return_url": self.get_return_url(request, instance),
             },
+            template_name=self.get_template_name("delete"),
         )
 
     def perform_destroy(self, request, **kwargs):
