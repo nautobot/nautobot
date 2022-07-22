@@ -24,13 +24,11 @@ from django.views.generic.edit import FormView
 from django_tables2 import RequestConfig
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.utils.decorators import classonlymethod
-from rest_framework import generics
-from rest_framework import status
+from rest_framework import generics, mixins
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSetMixin
-from rest_framework_bulk import mixins
+from rest_framework_bulk import mixins as bulk_mixins
 
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.extras.models import CustomField, ExportTemplate, ChangeLoggedModel
@@ -53,7 +51,9 @@ from nautobot.utilities.views import ObjectPermissionRequiredMixin, GetReturnURL
 from nautobot.utilities.templatetags.helpers import validated_viewname
 
 
-class NautobotViewSetMixin(ViewSetMixin, ObjectPermissionRequiredMixin, GetReturnURLMixin, FormView, APIView):
+class NautobotViewSetMixin(
+    ViewSetMixin, ObjectPermissionRequiredMixin, GetReturnURLMixin, FormView, generics.GenericAPIView
+):
     serializer_class = None
     renderer_classes = [TemplateHTMLRenderer]
 
@@ -69,24 +69,39 @@ class NautobotViewSetMixin(ViewSetMixin, ObjectPermissionRequiredMixin, GetRetur
             return redirect(self.get_return_url(request, obj))
 
     def form_invalid(self, request, form, obj, view_type, context={}):
-        context.update({
-                        "obj": obj,
-                        "form": form,
-                        "obj_type": self.queryset.model._meta.verbose_name,
-                        "return_url": self.get_return_url(request, obj),
-                        })
-        self.logger.debug("Form Validation Failed")
-        return Response(
-            context,
-            template_name=self.get_template_name(view_type),
+        context.update(
+            {
+                "obj": obj,
+                "form": form,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "return_url": self.get_return_url(request, obj),
+            }
         )
-    
-    def get_object(self, kwargs):
-        # Look up object by slug if one has been provided. Otherwise, use PK.
-        if "slug" in kwargs:
-            return get_object_or_404(self.queryset, slug=kwargs["slug"])
-        else:
-            return get_object_or_404(self.queryset, pk=kwargs["pk"])
+        self.logger.debug("Form Validation Failed")
+        return Response(context, template_name=self.get_template_name(view_type))
+
+    def get_object(self):
+        """
+        Returns the object the view is displaying.
+        You may want to override this if you need to provide non-standard
+        queryset lookups.  Eg if objects are referenced using multiple
+        keyword arguments in the url conf.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Perform the lookup filtering.
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+
+        if lookup_url_kwarg not in self.kwargs:
+            return self.queryset.model()
+
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        obj = get_object_or_404(queryset, **filter_kwargs)
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
     def initial(self, request, *args, **kwargs):
         """
@@ -215,7 +230,7 @@ class NautobotViewSetMixin(ViewSetMixin, ObjectPermissionRequiredMixin, GetRetur
         return csrf_exempt(view)
 
 
-class ObjectDetailViewMixin(NautobotViewSetMixin, generics.RetrieveAPIView):
+class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     action = "view"
 
     def get_changelog_url(self, instance):
@@ -249,8 +264,8 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, generics.RetrieveAPIView):
         Generic GET handler for accessing an object by PK or slug
         """
         data = {}
-        instance = self.get_object(kwargs)
-        serializer = self.get_serializer(instance)
+        instance = self.get_object()
+        serializer = super().get_serializer(instance)
         self.context = self.get_extra_context(request, "detail", instance)
         data.update(serializer.data)
         data.update(
@@ -265,7 +280,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, generics.RetrieveAPIView):
         return Response(data, template_name=self.get_template_name("detail"))
 
 
-class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
+class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     action_buttons = ("add", "import", "export")
     action = "view"
     filterset_form = None
@@ -359,7 +374,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
             perm_name = get_permission_for_model(model, action)
             permissions[action] = request.user.has_perm(perm_name)
         return permissions
-    
+
     def construct_table(self, request, permissions):
         table = self.table(self.queryset, user=request.user)
         if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
@@ -398,7 +413,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, generics.ListAPIView):
         return Response(data, template_name=self.get_template_name("list"))
 
 
-class ObjectDeleteViewMixin(NautobotViewSetMixin, generics.DestroyAPIView):
+class ObjectDeleteViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
     action = "delete"
     logger = logging.getLogger("nautobot.views.ObjectDeleteView")
 
@@ -415,12 +430,12 @@ class ObjectDeleteViewMixin(NautobotViewSetMixin, generics.DestroyAPIView):
         messages.success(request, msg)
 
         return super().form_valid(request, form, obj)
-    
+
     def delete_form_invalid(self, request, form, obj, view_type):
         return super().form_invalid(request, form, obj, view_type)
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object(kwargs)
+        instance = self.get_object()
         form = ConfirmationForm(initial=request.GET)
         return Response(
             {
@@ -433,21 +448,22 @@ class ObjectDeleteViewMixin(NautobotViewSetMixin, generics.DestroyAPIView):
         )
 
     def perform_destroy(self, request, **kwargs):
-        obj = self.get_object(kwargs)
+        obj = self.get_object()
         form = ConfirmationForm(request.POST)
         if form.is_valid():
             return self.delete_form_valid(request, form, obj)
         else:
             return self.delete_form_invalid(request, form, obj, view_type="delete")
 
-class ObjectEditViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin, mixins.BulkUpdateModelMixin):
+
+class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin):
     logger = logging.getLogger("nautobot.views.ObjectEditView")
 
     def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
         # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
         # given some parameter from the request URL.
         return obj
-    
+
     def edit_form_valid(self, request, form, obj):
         try:
             with transaction.atomic():
@@ -483,7 +499,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin, mix
         return super().form_invalid(request, form, obj, view_type, context)
 
     def create_or_update(self, request, *args, **kwargs):
-        obj = self.alter_obj_for_edit(self.get_object(kwargs), request, args, kwargs)
+        obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
         initial_data = normalize_querydict(request.GET)
         form = self.form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
@@ -499,7 +515,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin, mix
         )
 
     def perform_create_or_update(self, request, *args, **kwargs):
-        obj = self.alter_obj_for_edit(self.get_object(kwargs), request, args, kwargs)
+        obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
         form = self.form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
 
@@ -509,17 +525,26 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin, mix
             return self.edit_form_invalid(request, form, obj, "edit")
 
 
-class BulkDeleteViewMixin(NautobotViewSetMixin, mixins.BulkDestroyModelMixin):
+class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixin):
     action = "delete"
     bulk_delete_form = None
     logger = logging.getLogger("nautobot.views.BulkDeleteView")
 
-    def bulk_destroy(self, request):
-        return redirect(self.get_return_url(request))
+    def get_form(self):
+        """
+        Provide a standard bulk delete form if none has been specified for the view
+        """
 
-    def perform_bulk_destroy(self, request, **kwargs):
+        class BulkDeleteForm(ConfirmationForm):
+            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
+
+        if self.bulk_delete_form:
+            return self.bulk_delete_form
+
+        return BulkDeleteForm
+
+    def bulk_destroy(self, request, **kwargs):
         model = self.queryset.model
-
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.bulk_delete_filterset is not None:
@@ -544,7 +569,6 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, mixins.BulkDestroyModelMixin):
                     self.logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
                     return redirect(self.get_return_url(request))
-
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 self.logger.info(msg)
                 messages.success(request, msg)
@@ -579,21 +603,8 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, mixins.BulkDestroyModelMixin):
         context.update(self.get_extra_context(request, "bulk_delete", instance=None))
         return Response(context, template_name=self.get_template_name("bulk_delete"))
 
-    def get_form(self):
-        """
-        Provide a standard bulk delete form if none has been specified for the view
-        """
 
-        class BulkDeleteForm(ConfirmationForm):
-            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
-
-        if self.bulk_delete_form:
-            return self.bulk_delete_form
-
-        return BulkDeleteForm
-
-
-class BulkImportViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin):
+class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin):
     bulk_import_widget_attrs = {}
 
     def _import_form_for_bulk_import(self, *args, **kwargs):
@@ -689,7 +700,7 @@ class BulkImportViewMixin(NautobotViewSetMixin, mixins.BulkCreateModelMixin):
         )
 
 
-class BulkUpdateViewMixin(NautobotViewSetMixin, mixins.BulkUpdateModelMixin):
+class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin):
     bulk_edit_filterset = None
     bulk_edit_form = None
 

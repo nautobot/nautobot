@@ -68,7 +68,7 @@ urlpatterns = [
     ),
     path(
         "providers/delete/",
-        views.ProviderDRFViewSet.as_view({"get": "bulk_destroy", "post": "perform_bulk_destroy"}),
+        views.ProviderDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="provider_bulk_delete",
     ),
     path(
