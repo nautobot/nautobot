@@ -782,10 +782,6 @@ class ScheduledJob(BaseModel):
         self.queue = self.queue or None
         # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
         self.kwargs["scheduled_job_pk"] = self.pk
-        # disable job if job execution type is custom but crontab is invalid
-        if self.interval == JobExecutionType.TYPE_CUSTOM:
-            if self.get_crontab() is str:
-                self.enabled = False
         if not self.enabled:
             self.last_run_at = None
         elif not self.last_run_at:
@@ -814,6 +810,9 @@ class ScheduledJob(BaseModel):
         # bitwise xor also works on booleans, but not on complex values
         if bool(self.approved_by_user) ^ bool(self.approved_at):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
+        if self.interval == JobExecutionType.TYPE_CUSTOM:
+            if self.get_crontab() is str:
+                raise ValidationError(self.get_crontab())
 
     @property
     def schedule(self):
