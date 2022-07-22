@@ -468,8 +468,13 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         return tasks
 
     def perform_pre_delete(self, request, queryset):
+        """
+        Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
+        """
         if not get_worker_count(request):
-            messages.error(request, "Unable to run job: Celery worker process not running.")
+            messages.error(
+                request, "Celery worker process not running. Object custom fields may fail to reflect this deletion."
+            )
             return redirect(self.get_return_url(request))
         tasks = self.construct_custom_field_delete_tasks(queryset)
         # Executing the tasks in the background sequentially using chain() aligns with how a single CustomField object is deleted.
