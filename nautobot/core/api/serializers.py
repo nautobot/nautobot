@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from django.core.exceptions import (
@@ -11,6 +12,9 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from nautobot.utilities.utils import dict_to_filter_params
+
+
+logger = logging.getLogger(__name__)
 
 
 class OptInFieldsMixin:
@@ -152,6 +156,17 @@ class WritableNestedSerializer(BaseModelSerializer):
         # Dictionary of related object attributes
         if isinstance(data, dict):
             params = dict_to_filter_params(data)
+
+            # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
+            # data any fields that are read-only on the serializer
+            for field_name, field_instance in self.fields.items():
+                if field_name in params and field_instance.read_only:
+                    logger.debug("Discarding read-only field %s", field_name)
+                    del params[field_name]
+            if "display" in params:  # Yay, special cases! "display" is not a serializer field at all
+                logger.debug("Discarding display field")
+                del params["display"]
+
             queryset = self.get_queryset()
             try:
                 return queryset.get(**params)

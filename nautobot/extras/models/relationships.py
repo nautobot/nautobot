@@ -9,11 +9,11 @@ from django.db import models
 from django.db.models import Q
 from django.urls import reverse
 
+from nautobot.core.fields import AutoSlugField
+from nautobot.core.models import BaseModel
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
 from nautobot.utilities.utils import get_filterset_for_model
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
@@ -132,6 +132,8 @@ class RelationshipModel(models.Model):
     def get_relationships_data(self, **kwargs):
         """
         Return a dictionary of relationships with the label and the value or the queryset for each.
+
+        Used for rendering relationships in the UI; see nautobot/core/templates/inc/relationships_table_rows.html
 
         Returns:
             response {

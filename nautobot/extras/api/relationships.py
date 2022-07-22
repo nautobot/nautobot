@@ -1,12 +1,8 @@
 import logging
 
-from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import MultipleObjectsReturned
-from django.db.models import Q
 from django.urls import reverse
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
-from rest_framework.fields import CreateOnlyDefault, JSONField
+from rest_framework.fields import JSONField
 from rest_framework.serializers import ValidationError
 
 from nautobot.core.api import ValidatedModelSerializer
@@ -66,9 +62,9 @@ class RelationshipsDataField(JSONField):
     to provide the entire dict of all relationships and associations.
     """
 
-    def to_representation(self, obj):
+    def to_representation(self, value):
         """
-        Get a dict representation of applicable Relationships and the objects associated by each such Relationship.
+        Get a JSON representation of all relationships and associations applicable to this model.
 
         Returns:
             {
@@ -103,7 +99,7 @@ class RelationshipsDataField(JSONField):
             }
         """
         data = {}
-        relationships_data = obj.get_relationships(include_hidden=True)
+        relationships_data = value.get_relationships(include_hidden=True)
         for this_side, relationships in relationships_data.items():
             for relationship, associations in relationships.items():
                 data.setdefault(
@@ -130,12 +126,9 @@ class RelationshipsDataField(JSONField):
                     try:
                         other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
                     except SerializerNotFound:
-                        try:
-                            other_side_serializer = get_serializer_for_model(other_side_model)
-                        except SerializerNotFound:
-                            pass
+                        pass
 
-                other_objects = [assoc.get_peer(obj) for assoc in associations if assoc.get_peer(obj) is not None]
+                other_objects = [assoc.get_peer(value) for assoc in associations if assoc.get_peer(value) is not None]
 
                 if other_side_serializer is not None:
                     data[relationship.slug][other_side]["objects"] = [
@@ -147,89 +140,66 @@ class RelationshipsDataField(JSONField):
                         {"id": other_obj.id} for other_obj in other_objects
                     ]
 
-        logger.info("to_representation(%s) -> %s", obj, data)
+        logger.info("to_representation(%s) -> %s", value, data)
         return data
 
     def to_internal_value(self, data):
         """
-        Convert specified data dictionary to a dict of Relationships with dicts of Nautobot data model instances.
-
-        Returns:
-            {
-                <Relationship instance>: {
-                    "source": [<model instance>],
-                },
-                <Relationship instance>: {
-                    "source": [<model instance>, <model instance>, ...],
-                    "destination": [<model instance>, <model instance>, ...],
-                },
-                <Relationship instance>: {
-                    "peer": [<model instance>, <model instance>, ...],
-                },
-                ...
-            }
+        Allow for updates to some relationships without overriding others.
         """
-        output_data = {}
-        for relationship_slug, relationship_data in data:
-            try:
-                relationship = Relationship.objects.get(slug=relationship_slug)
-            except Relationship.DoesNotExist:
-                raise ValidationError(f"No such relationship {relationship_slug}")
+        output_data = self.to_representation(self.parent.instance) if self.parent.instance is not None else {}
+        for relationship_slug, relationship_data in data.items():
+            if relationship_slug not in output_data:
+                raise ValidationError(f'"{relationship_slug}" is not a relationship on {self.parent.Meta.model}')
 
-            output_data[relationship] = {}
+            # no need for ObjectDoesNotExist check here since the output_data check above guarantees its existence
+            relationship = Relationship.objects.get(slug=relationship_slug)
 
             for other_side in ["source", "destination", "peer"]:
                 if other_side not in relationship_data:
                     continue
-                this_side = RelationshipSideChoices.OPPOSITE[other_side]
 
-                # TODO cache content-type for efficiency
-                if getattr(relationship, f"{this_side}_type") != ContentType.objects.get_for_model(
-                    self.parent.Meta.model
-                ):
+                if other_side not in output_data[relationship_slug]:
                     raise ValidationError(
-                        f"{self.parent.Meta.model} cannot be a {this_side} for Relationship {relationship}"
+                        f'"{other_side}" is not a valid side for "{relationship_slug}" on {self.parent.Meta.model}'
                     )
-                # TODO validate relationship filters too?
 
-                if this_side == RelationshipSideChoices.SIDE_PEER and not relationship.symmetric:
-                    raise ValidationError(f"For {relationship}, must specify source(s)/destination(s), not peer(s)")
-                elif this_side != RelationshipSideChoices.SIDE_PEER and relationship.symmetric:
-                    raise ValidationError(f"For {relationship}, must specify peer(s), not source(s)/destination(s)")
+                objects_data = relationship_data[other_side].get("objects", [])
+                if not isinstance(objects_data, (list, tuple)):
+                    raise ValidationError('"objects" must be a list, not a single value')
+                output_data[relationship_slug][other_side]["objects"] = []
+                if not objects_data:
+                    continue
 
-                object_data = relationship_data[other_side].get("objects", [])
-                if not isinstance(object_data, (list, tuple)):
-                    raise ValidationError(f"{other_side} must be a list, not a single value")
-                if len(object_data) > 1 and not relationship.has_many(other_side):
-                    raise ValidationError(f"For {relationship}, {other_side} must include at most a single object")
+                # Object validation time!
 
-                # As in to_representation() above, model_class() may fail if other_type is from a non-enabled plugin
-                # and get_serializer_for_model() may fail if a plugin doesn't implement serializers.
+                if len(objects_data) > 1 and not relationship.has_many(other_side):
+                    raise ValidationError(
+                        f'For "{relationship_slug}", "{other_side}" objects must include at most a single object'
+                    )
+
                 other_type = getattr(relationship, f"{other_side}_type")
-                other_side_serializer = None
                 other_side_model = other_type.model_class()
+                other_side_serializer = None
+                if other_side_model is None:
+                    raise ValidationError(f"Model {other_type} is not currently installed, cannot look it up")
+                try:
+                    other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
+                except SerializerNotFound as exc:
+                    raise ValidationError(
+                        f"No {other_side_model}NestedSerializer found, cannot deserialize it"
+                    ) from exc
 
-                related_objects = []
-                for obj_data in object_data:
-                    if other_side_model is None:
-                        raise ValidationError(f"Model {other_type} is not available in the database, cannot look it up")
-                    try:
-                        if isinstance(obj_data, dict):
-                            related_object = other_side_model.objects.get(**obj_data)
-                        else:
-                            related_object = other_side_model.objects.get(pk=obj_data)
-                    except other_side_model.DoesNotExist:
-                        raise ValidationError(f"Related object not found for {relationship} {other_type} {obj_data}")
-                    except MultipleObjectsReturned:
-                        raise ValidationError(f"Multiple objects found for {relationship} {other_type} {obj_data}")
-                    except Exception as exc:  # TODO be more specific, what else can we likely encounter here?
-                        raise ValidationError(str(exc))
-                    related_objects.append(related_object)
+                for object_data in objects_data:
+                    serializer_instance = other_side_serializer(data=object_data, context=self.context)
+                    # may raise ValidationError, let it bubble up if so
+                    serializer_instance.is_valid()
 
-                output_data[relationship][other_side] = related_objects
+                    # TODO: check relationship filter? It'll be caught by RelationshipAssociation.clean() later if not
+                    output_data[relationship_slug][other_side]["objects"].append(serializer_instance.data)
 
         logger.info("to_internal_value(%s) -> %s", data, output_data)
-        return output_data
+        return {self.field_name: output_data}
 
 
 class RelationshipModelSerializerMixin(ValidatedModelSerializer):
@@ -237,15 +207,41 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
     relationships = RelationshipsDataField(required=False, source="*")
 
-    def save(self):
-        """Create/update RelationshipAssociations corresponding to a model instance."""
-        instance = super().save()
-        for relationship, relationship_data in self.validated_data["relationships"].items():
-            for other_side, expected_objects in relationship_data.items():
-                this_side = RelationshipSideChoices.OPPOSITE[other_side]
+    def create(self, validated_data):
+        relationships = validated_data.pop("relationships", {})
+        instance = super().create(validated_data)
+        if relationships:
+            self._save_relationships(instance, relationships)
+        return instance
 
-                add_objects = []
-                remove_assocs = []
+    def update(self, instance, validated_data):
+        relationships = validated_data.pop("relationships", {})
+        instance = super().update(instance, validated_data)
+        if relationships:
+            self._save_relationships(instance, relationships)
+        return instance
+
+    def _save_relationships(self, instance, relationships):
+        """Create/update RelationshipAssociations corresponding to a model instance."""
+        # relationships has already passed RelationshipsDataField.to_internal_value(), so we can skip some try/excepts
+        for relationship_slug, relationship_data in relationships.items():
+            relationship = Relationship.objects.get(slug=relationship_slug)
+
+            for other_side in ["source", "destination", "peer"]:
+                if other_side not in relationship_data:
+                    continue
+
+                other_type = getattr(relationship, f"{other_side}_type")
+                other_side_model = other_type.model_class()
+                other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
+                serializer_instance = other_side_serializer(context={"request": None})
+
+                expected_objects_data = relationship_data[other_side].get("objects", [])
+                expected_objects = [
+                    serializer_instance.to_internal_value(object_data) for object_data in expected_objects_data
+                ]
+
+                this_side = RelationshipSideChoices.OPPOSITE[other_side]
 
                 if this_side != RelationshipSideChoices.SIDE_PEER:
                     existing_associations = relationship.associations.filter(**{f"{this_side}_id": instance.pk})
@@ -255,8 +251,11 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
                     existing_objects_1 = [assoc.get_peer(instance) for assoc in existing_associations_1]
                     existing_associations_2 = relationship.associations.filter(destination_id=instance.pk)
                     existing_objects_2 = [assoc.get_peer(instance) for assoc in existing_associations_2]
-                    existing_associations = existing_associations_1 + existing_associations_2
+                    existing_associations = list(existing_associations_1) + list(existing_associations_2)
                     existing_objects = existing_objects_1 + existing_objects_2
+
+                add_objects = []
+                remove_assocs = []
 
                 for obj, assoc in zip(existing_objects, existing_associations):
                     if obj not in expected_objects:
@@ -267,21 +266,22 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
                 for add_object in add_objects:
                     if other_side != RelationshipSideChoices.SIDE_SOURCE:
-                        assoc = RelationshipAssociation.objects.create(
+                        assoc = RelationshipAssociation(
                             relationship=relationship,
                             source_type=relationship.source_type,
                             source_id=instance.id,
                             destination_type=relationship.destination_type,
-                            destination_id=related_object.id,
+                            destination_id=add_object.id,
                         )
                     else:
-                        assoc = RelationshipAssociation.objects.create(
+                        assoc = RelationshipAssociation(
                             relationship=relationship,
                             source_type=relationship.source_type,
-                            source_id=related_object.id,
+                            source_id=add_object.id,
                             destination_type=relationship.destination_type,
                             destination_id=instance.id,
                         )
+                    assoc.validated_save()  # enforce relationship filter logic, etc.
                     logger.info("Created %s", assoc)
 
                 for remove_assoc in remove_assocs:
