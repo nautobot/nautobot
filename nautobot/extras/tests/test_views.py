@@ -418,26 +418,6 @@ class CustomFieldTestCase(
             cf.delete()
         super().test_create_object_with_constrained_permission()
 
-    # There is no celery worker running during unittests.
-    # The mock decorators are to make the assertion that perform_pre_delete() is successful and to ensure that unittests do not get stuck.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.views.CustomFieldBulkDeleteView.perform_pre_delete")
-    def test_bulk_delete_objects_without_permission(self, mock_perform_pre_delete):
-        mock_perform_pre_delete.return_value = None
-        return super().test_bulk_delete_objects_without_permission()
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.views.CustomFieldBulkDeleteView.perform_pre_delete")
-    def test_bulk_delete_objects_with_permission(self, mock_perform_pre_delete):
-        mock_perform_pre_delete.return_value = None
-        return super().test_bulk_delete_objects_with_permission()
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.views.CustomFieldBulkDeleteView.perform_pre_delete")
-    def test_bulk_delete_objects_with_constrained_permission(self, mock_perform_pre_delete):
-        mock_perform_pre_delete.return_value = None
-        return super().test_bulk_delete_objects_with_constrained_permission()
-
 
 class CustomLinkTest(TestCase):
     user_permissions = ["dcim.view_site"]
