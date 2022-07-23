@@ -164,6 +164,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1035](https://github.com/nautobot/nautobot/issues/1035) - Fix assertion raised if SLAAC Status is missing when creating `IPAddress` objects
 - [#1795](https://github.com/nautobot/nautobot/issues/1795) - Corrected relationship source/destination filter help text from queryset Filter to filterset Filter and updated documentations.
 - [#1839](https://github.com/nautobot/nautobot/issues/1795) - Fixed staff users with auth > group permissions unable to view groups in admin UI.
+- [#1937](https://github.com/nautobot/nautobot/issues/1937) - Solved _custom_field_data do not fully delete when using CustomFieldBulkDeleteView.
 - [#1947](https://github.com/nautobot/nautobot/issues/1947) - Fixed unbound local error by initializing template variable before conditional logic statements.
 - [#2036](https://github.com/nautobot/nautobot/pull/2036) - Fixed outdated UI navigation references in documentation.
 - [#2039](https://github.com/nautobot/nautobot/issues/2039) - Fixed IntegerVar with default set to 0 on Job evaluating to False.
