@@ -6,8 +6,8 @@ from nautobot.dcim.form_mixins import (
 )
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldFilterForm,
     CustomFieldModelCSVForm,
+    NautobotFilterForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     StatusBulkEditFormMixin,
@@ -17,7 +17,6 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
-    BootstrapMixin,
     CommentField,
     CSVModelChoiceField,
     DatePicker,
@@ -91,7 +90,7 @@ class ProviderBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
         ]
 
 
-class ProviderFilterForm(BootstrapMixin, LocatableModelFilterFormMixin, CustomFieldFilterForm):
+class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = Provider
     q = forms.CharField(required=False, label="Search")
     asn = forms.IntegerField(required=False, label="ASN")
@@ -148,7 +147,7 @@ class ProviderNetworkBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
         ]
 
 
-class ProviderNetworkFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class ProviderNetworkFilterForm(NautobotFilterForm):
     model = ProviderNetwork
     field_order = ["q", "provider_id"]
     q = forms.CharField(required=False, label="Search")
@@ -267,13 +266,7 @@ class CircuitBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBu
         ]
 
 
-class CircuitFilterForm(
-    BootstrapMixin,
-    LocatableModelFilterFormMixin,
-    TenancyFilterForm,
-    StatusFilterFormMixin,
-    CustomFieldFilterForm,
-):
+class CircuitFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin):
     model = Circuit
     field_order = [
         "q",

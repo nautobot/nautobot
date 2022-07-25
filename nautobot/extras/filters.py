@@ -19,6 +19,7 @@ from .choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobResultStatusChoices,
+    RelationshipSideChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -96,6 +97,126 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
     last_updated = django_filters.DateTimeFilter()
     last_updated__gte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="gte")
     last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
+
+
+class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter objects by the presence of associations on a given Relationship.
+    """
+
+    def __init__(self, side, relationship=None, queryset=None, qs=None, *args, **kwargs):
+        self.relationship = relationship
+        self.qs = qs
+        self.side = side
+        super().__init__(queryset=queryset, *args, **kwargs)
+
+    def filter(self, qs, value):
+        value = [entry.id for entry in value]
+        # Check if value is empty or a DynamicChoiceField that is empty.
+        if not value or "" in value:
+            # if value is empty we return the entire unmodified queryset
+            return qs
+        else:
+            if self.side == "source":
+                values = RelationshipAssociation.objects.filter(
+                    destination_id__in=value,
+                    source_type=self.relationship.source_type,
+                    relationship=self.relationship,
+                ).values_list("source_id", flat=True)
+            elif self.side == "destination":
+                values = RelationshipAssociation.objects.filter(
+                    source_id__in=value,
+                    destination_type=self.relationship.destination_type,
+                    relationship=self.relationship,
+                ).values_list("destination_id", flat=True)
+            else:
+                destinations = RelationshipAssociation.objects.filter(
+                    source_id__in=value,
+                    destination_type=self.relationship.destination_type,
+                    relationship=self.relationship,
+                ).values_list("destination_id", flat=True)
+
+                sources = RelationshipAssociation.objects.filter(
+                    destination_id__in=value,
+                    source_type=self.relationship.source_type,
+                    relationship=self.relationship,
+                ).values_list("source_id", flat=True)
+
+                values = list(destinations) + list(sources)
+
+            # qs._result_cache indicates if qs has been modified or not, None if not.
+            if not qs._result_cache:
+                # If qs has not been modified from the original queryset, we take the intersection of the original queryset and the filtered queryset.
+                # Essentially the filtered queryset.
+                qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
+            else:
+                # If qs has been modified from the original queryset, we take the union of the modified qs and the filtered queryset.
+                # Essentially modified qs and the filtered queryset combined.
+                qs |= self.get_method(self.qs)(Q(**{"id__in": values}))
+            # len(qs) evaluates qs so qs._result_cache is updated to the length of the queryset instead of None
+            # calling len() at the end here makes sure that the next filter modifying qs already knows that qs has been modified.
+            len(qs)
+            return qs
+
+
+class RelationshipModelFilterSet(django_filters.FilterSet):
+    """
+    Filterset for  applicable to the parent model.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        super().__init__(*args, **kwargs)
+        self.relationships = []
+        self._append_relationships(model=self._meta.model)
+
+    def _append_relationships(self, model):
+        """
+        Append form fields for all Relationships assigned to this model.
+        """
+        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
+        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE, model)
+
+        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
+        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION, model)
+
+    def _append_relationships_side(self, relationships, initial_side, model):
+        """
+        Helper method to _append_relationships, for processing one "side" of the relationships for this model.
+        """
+        for relationship in relationships:
+            if relationship.symmetric:
+                side = RelationshipSideChoices.SIDE_PEER
+            else:
+                side = initial_side
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+
+            # If this model is on the "source" side of the relationship, then the field will be named
+            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
+            field_name = f"cr_{relationship.slug}__{peer_side}"
+
+            if field_name in self.relationships:
+                # This is a symmetric relationship that we already processed from the opposing "initial_side".
+                # No need to process it a second time!
+                continue
+            if peer_side == "source":
+                choice_model = relationship.source_type.model_class()
+            elif peer_side == "destination":
+                choice_model = relationship.destination_type.model_class()
+            else:
+                choice_model = model
+            # Check for invalid_relationship unit test
+            if choice_model:
+                self.filters[field_name] = RelationshipFilter(
+                    relationship=relationship,
+                    side=side,
+                    field_name=field_name,
+                    queryset=choice_model.objects.all(),
+                    qs=model.objects.all(),
+                )
+            self.relationships.append(field_name)
 
 
 #
@@ -397,10 +518,10 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 #
 
 
-class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet, CustomFieldModelFilterSet):
     """
     This class exists to combine common functionality and is used as a base class throughout the
-    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet
+    codebase where all of BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet and CustomFieldModelFilterSet
     are needed.
     """
 
