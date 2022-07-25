@@ -810,9 +810,6 @@ class ScheduledJob(BaseModel):
         # bitwise xor also works on booleans, but not on complex values
         if bool(self.approved_by_user) ^ bool(self.approved_at):
             raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
-        if self.interval == JobExecutionType.TYPE_CUSTOM:
-            if self.get_crontab() is str:
-                raise ValidationError(self.get_crontab())
 
     @property
     def schedule(self):
@@ -826,7 +823,8 @@ class ScheduledJob(BaseModel):
     def earliest_possible_time():
         return timezone.now() + timedelta(seconds=15)
 
-    def get_crontab(self):
+    @classmethod
+    def get_crontab(cls, crontab):
         """
         Wrapper method translates crontab syntax to Celery crontab.
 
@@ -839,18 +837,14 @@ class ScheduledJob(BaseModel):
 
         No support for Last (L), Weekday (W), Number symbol (#), Question mark (?), and special @ strings.
         """
-
-        try:
-            minute, hour, day_of_month, month_of_year, day_of_week = self.crontab.split(" ")
-            return schedules.crontab(
-                minute=minute,
-                hour=hour,
-                day_of_month=day_of_month,
-                month_of_year=month_of_year,
-                day_of_week=day_of_week,
-            )
-        except Exception as e:
-            return e
+        minute, hour, day_of_month, month_of_year, day_of_week = crontab.split(" ")
+        return schedules.crontab(
+            minute=minute,
+            hour=hour,
+            day_of_month=day_of_month,
+            month_of_year=month_of_year,
+            day_of_week=day_of_week,
+        )
 
     def to_cron(self):
         t = self.start_time
@@ -861,7 +855,7 @@ class ScheduledJob(BaseModel):
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
             return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
-            return self.get_crontab()
+            return self.get_crontab(self.crontab)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 
