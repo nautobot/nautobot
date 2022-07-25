@@ -59,9 +59,9 @@ Current preferred toggle state is preserved across tabs (requires refresh) and p
 
 #### REST API Enhancements ([#1463](https://github.com/nautobot/nautobot/issues/1463))
 
-* For all models that support Relationships, their corresponding list and detail REST API endpoints now include the option to include data on their associated Relationships and related objects by specifying `include=relationships` as a query parameter.
-* Relationship associations on a model can be edited by a PATCH to the appropriate nested value, such as `"relationships" -> <relationship-slug> -> "source"` or `"relationships" -> <relationship-slug> -> "destination"`.
-* For implementers of REST API serializers (core and/or plugins), a new `nautobot.extras.api.serializers.NautobotModelSerializer` base class has been added. Using this class guarantees support for relationships, custom fields, and computed fields on the serializer, and provides for a streamlined developer experience.
+- For all models that support Relationships, their corresponding list and detail REST API endpoints now include the option to include data on their associated Relationships and related objects by specifying `include=relationships` as a query parameter.
+- Relationship associations on a model can be edited by a PATCH to the appropriate nested value, such as `"relationships" -> <relationship-slug> -> "source"` or `"relationships" -> <relationship-slug> -> "destination"`.
+- For implementers of REST API serializers (core and/or plugins), a new `nautobot.extras.api.serializers.NautobotModelSerializer` base class has been added. Using this class guarantees support for relationships, custom fields, and computed fields on the serializer, and provides for a streamlined developer experience.
 
 #### Status Field on Interface, VMInterface Models ([#984](https://github.com/nautobot/nautobot/issues/984))
 
