@@ -1,5 +1,3 @@
-from celery import schedules
-
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
