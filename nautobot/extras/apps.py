@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.db.utils import ProgrammingError
 
 import graphene
@@ -45,10 +46,12 @@ class ExtrasConfig(NautobotConfig):
             )
 
         # Register the DatabaseBackend health check
-        from nautobot.extras.health_checks import DatabaseBackend, RedisBackend
+        from nautobot.extras.health_checks import CacheopsRedisBackend, DatabaseBackend, RedisBackend
 
         plugin_dir.register(DatabaseBackend)
         plugin_dir.register(RedisBackend)
+        if getattr(settings, "CACHEOPS_HEALTH_CHECK_ENABLED", False):
+            plugin_dir.register(CacheopsRedisBackend)
 
         # Register built-in SecretsProvider classes
         from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider

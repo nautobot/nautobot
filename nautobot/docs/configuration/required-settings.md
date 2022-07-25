@@ -149,6 +149,25 @@ setup](https://github.com/Suor/django-cacheops#setup).
 !!! warning
     [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
+#### TLS With Cacheops
+
+To enable TLS with cacheops, the `CACHEOPS_REDIS` must be defined as a dictionary as follows:
+
+```python
+import ssl
+
+CACHEOPS_REDIS = {
+    "host": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+    "port": int(os.getenv("NAUTOBOT_REDIS_PORT", 6379)),
+    "password": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
+    "ssl": True,
+    "ssl_cert_reqs": ssl.CERT_REQUIRED,
+    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+}
+```
+
 ### Task Queuing
 
 #### CACHES
@@ -170,6 +189,21 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
+}
+```
+
+#### TLS with Task Queuing
+
+To enable TLS with `django-redis` task queuing, some additional options are required:
+
+```python
+import ssl
+
+CACHES["default"]["OPTIONS"]["CONNECTION_POOL_KWARGS"] = {
+    "ssl_cert_reqs": ssl.CERT_REQUIRED,
+    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
 }
 ```
 
@@ -285,6 +319,22 @@ This setting tells Celery and its workers how and where to communicate with the 
 #### CELERY_RESULT_BACKEND
 
 This setting tells Celery and its workers how and where to store message results. This defaults to the same value as `CELERY_BROKER_URL`. In some more advanced setups it may be required for these to be separate locations, however in our configuration guides these are always the same. Please see the [optional settings documentation for `CELERY_RESULT_BACKEND`](../optional-settings#celery_result_backend) for more information on customizing this setting.
+
+#### TLS for Celery
+
+To enable TLS for celery the following additional options are required:
+
+```python
+import ssl
+
+CELERY_REDIS_BACKEND_USE_SSL = {
+    "ssl_cert_reqs": ssl.CERT_REQUIRED,
+    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+}
+CELERY_BROKER_USE_SSL = CELERY_REDIS_BACKEND_USE_SSL
+```
 
 #### Configuring Celery for High Availability
 
