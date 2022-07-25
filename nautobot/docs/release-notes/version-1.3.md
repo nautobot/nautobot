@@ -169,6 +169,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#2036](https://github.com/nautobot/nautobot/pull/2036) - Fixed outdated UI navigation references in documentation.
 - [#2039](https://github.com/nautobot/nautobot/issues/2039) - Fixed IntegerVar with default set to 0 on Job evaluating to False.
 - [#2057](https://github.com/nautobot/nautobot/issues/2057) - Fixed RIR changelog route being in VRF name prefix.
+- [#2077](https://github.com/nautobot/nautobot/issues/2077) - Fixed an error when viewing object detail pages after uninstalling a plugin but still having RelationshipAssociations involving the plugin's models.
 
 ## v1.3.8 (2022-07-11)
 
