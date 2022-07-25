@@ -665,14 +665,12 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_installed(self):
-        params = {"installed": True}
-        # 35 local jobs and 4 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 39)
+        params = {"job_class_name": "TestPass", "installed": True}
+        self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
     def test_enabled(self):
-        params = {"enabled": False}
-        # 35 local jobs and 4 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 39)
+        params = {"job_class_name": "TestPass", "enabled": False}
+        self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
     def test_commit_default(self):
         params = {"commit_default": False}
