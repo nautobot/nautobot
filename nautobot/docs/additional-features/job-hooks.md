@@ -9,7 +9,7 @@ Job Hooks are only able to initiate a specific type of job called a **Job Hook R
 !!! important
     To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` job will not trigger another `JobHookReceiver` job to run.
 
-### Example job hook receiver
+### Example Job Hook Receiver
 
 ```py
 from nautobot.extras.choices import ObjectChangeActionChoices
