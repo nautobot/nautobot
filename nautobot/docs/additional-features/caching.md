@@ -110,7 +110,7 @@ CACHES = {
 }
 ```
 
-##### TLS
+##### `django-redis` Sentinel TLS Configuration
 
 To enable TLS with Sentinel the following options are required:
 
@@ -193,7 +193,7 @@ CACHEOPS_SENTINEL = {
 }
 ```
 
-##### TLS
+##### `django-cacheops` Sentinel TLS Configuration
 
 To enable TLS with Sentinel the following options are required:
 
@@ -263,7 +263,7 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 ```
 
-##### TLS
+##### `celery` Sentinel TLS Configuration
 
 To enable TLS with Sentinel the following options are required:
 
