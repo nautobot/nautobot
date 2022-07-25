@@ -100,8 +100,47 @@ from .nested_serializers import (  # noqa: F401
 )
 
 #
-# Mixins
+# Mixins and Base Classes
 #
+
+
+class NautobotModelSerializer(RelationshipModelSerializerMixin, CustomFieldModelSerializer, ValidatedModelSerializer):
+    """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
+
+    Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
+    """
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that fields always includes "id", "created", and "last_updated" fields."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "id", at_start=True)
+        if hasattr(self.Meta.model, "created"):
+            self.extend_field_names(fields, "created")
+        if hasattr(self.Meta.model, "last_updated"):
+            self.extend_field_names(fields, "last_updated")
+        return fields
+
+
+class StatusModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `status` choice field to model serializers."""
+
+    status = StatusSerializerField(queryset=Status.objects.all())
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "status" field is always present."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "status")
+        return fields
+
+    @classproperty
+    def status_choices(cls):
+        """
+        Get the list of valid status values for this serializer.
+
+        May be necessary to use with settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] at some point if
+        we ever end up with multiple serializers whose default set of status choices are identical.
+        """
+        return list(cls().fields["status"].get_choices().keys())
 
 
 class TagSerializerField(NestedTagSerializer):
@@ -115,8 +154,15 @@ class TagSerializerField(NestedTagSerializer):
         return queryset.get_for_model(model)
 
 
-class TaggedObjectSerializer(serializers.Serializer):
+# TODO should be TaggedModelSerializerMixin
+class TaggedObjectSerializer(BaseModelSerializer):
     tags = TagSerializerField(many=True, required=False)
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that 'tags' field is always present."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "tags")
+        return fields
 
     def create(self, validated_data):
         tags = validated_data.pop("tags", None)
@@ -489,7 +535,7 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
 #
 
 
-class GitRepositorySerializer(CustomFieldModelSerializer):
+class GitRepositorySerializer(NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
@@ -506,7 +552,6 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     class Meta:
         model = GitRepository
         fields = [
-            "id",
             "url",
             "name",
             "slug",
@@ -517,12 +562,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
             "secrets_group",
             "current_head",
             "provided_contents",
-            "created",
-            "last_updated",
-            "custom_fields",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
         """
@@ -624,13 +664,12 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 #
 
 
-class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
         model = Job
         fields = [
-            "id",
             "url",
             "source",
             "module_name",
@@ -657,12 +696,7 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "time_limit",
             "time_limit_override",
             "tags",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
 
 class JobVariableSerializer(serializers.Serializer):
@@ -930,7 +964,7 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
 #
 
 
-class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class SecretSerializer(NautobotModelSerializer, TaggedObjectSerializer):
     """Serializer for `Secret` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
@@ -938,23 +972,16 @@ class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     class Meta:
         model = Secret
         fields = [
-            "id",
             "url",
             "name",
             "slug",
             "description",
             "provider",
             "parameters",
-            "tags",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
 
-class SecretsGroupSerializer(CustomFieldModelSerializer):
+class SecretsGroupSerializer(NautobotModelSerializer):
     """Serializer for `SecretsGroup` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
@@ -969,18 +996,12 @@ class SecretsGroupSerializer(CustomFieldModelSerializer):
     class Meta:
         model = SecretsGroup
         fields = [
-            "id",
             "url",
             "name",
             "slug",
             "description",
             "secrets",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
 
 class SecretsGroupAssociationSerializer(BaseModelSerializer):
@@ -1007,7 +1028,7 @@ class SecretsGroupAssociationSerializer(BaseModelSerializer):
 #
 
 
-class StatusSerializer(CustomFieldModelSerializer):
+class StatusSerializer(NautobotModelSerializer):
     """Serializer for `Status` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:status-detail")
@@ -1019,32 +1040,12 @@ class StatusSerializer(CustomFieldModelSerializer):
     class Meta:
         model = Status
         fields = [
-            "id",
             "url",
             "content_types",
             "name",
             "slug",
             "color",
-            "custom_fields",
-            "created",
-            "last_updated",
         ]
-
-
-class StatusModelSerializerMixin(serializers.Serializer):
-    """Mixin to add `status` choice field to model serializers."""
-
-    status = StatusSerializerField(queryset=Status.objects.all())
-
-    @classproperty
-    def status_choices(cls):
-        """
-        Get the list of valid status values for this serializer.
-
-        May be necessary to use with settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] at some point if
-        we ever end up with multiple serializers whose default set of status choices are identical.
-        """
-        return list(cls().fields["status"].get_choices().keys())
 
 
 #
@@ -1052,23 +1053,19 @@ class StatusModelSerializerMixin(serializers.Serializer):
 #
 
 
-class TagSerializer(CustomFieldModelSerializer):
+class TagSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Tag
         fields = [
-            "id",
             "url",
             "name",
             "slug",
             "color",
             "description",
             "tagged_items",
-            "custom_fields",
-            "created",
-            "last_updated",
         ]
 
     def validate(self, data):
@@ -1099,7 +1096,6 @@ class TagSerializerVersion13(TagSerializer):
     class Meta:
         model = Tag
         fields = [
-            "id",
             "url",
             "name",
             "slug",
@@ -1107,9 +1103,6 @@ class TagSerializerVersion13(TagSerializer):
             "description",
             "tagged_items",
             "content_types",
-            "custom_fields",
-            "created",
-            "last_updated",
         ]
 
 

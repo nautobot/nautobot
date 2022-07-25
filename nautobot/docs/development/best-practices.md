@@ -5,7 +5,7 @@ While there are many different development interfaces in Nautobot that each expo
 ## Base Classes
 
 - All FilterSet classes should inherit from either `nautobot.utilities.filters.BaseFilterSet` (for bare-bones models) or `nautobot.extras.filters.NautobotFilterSet` (for models that support both change-logging and custom fields).
-- All Serializer classes should inherit from `ValidatedModelSerializer`.
+- All Serializer classes should inherit from either `NautobotModelSerializer` (for models that support custom fields and relationships, _added in version 1.4.0_) or `ValidatedModelSerializer` (for nested serializers and more bare-bones models).
 
 ## Model Existence in the Database
 

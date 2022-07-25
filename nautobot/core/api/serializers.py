@@ -91,6 +91,20 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         return getattr(instance, "display", str(instance))
 
+    def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
+        """Helper method to get_field_names."""
+        if field_name not in fields:
+            if at_start:
+                fields.insert(0, field_name)
+            else:
+                fields.append(field_name)
+        if opt_in_only:
+            if not getattr(self.Meta, "opt_in_fields", None):
+                self.Meta.opt_in_fields = [field_name]
+            elif field_name not in self.Meta.opt_in_fields:
+                self.Meta.opt_in_fields.append(field_name)
+        return fields
+
     def get_field_names(self, declared_fields, info):
         """
         Override get_field_names() to append the `display` field so it is always included in the
@@ -103,8 +117,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         which would surely lead to errors of omission; therefore we have chosen the former approach.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
-        fields.append("display")
-
+        self.extend_field_names(fields, "display", at_start=True)
         return fields
 
 

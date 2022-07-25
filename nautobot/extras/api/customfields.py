@@ -61,6 +61,7 @@ class CustomFieldsDataField(Field):
         return data
 
 
+# TODO: should be CustomFieldModelSerializerMixin
 class CustomFieldModelSerializer(ValidatedModelSerializer):
     """
     Extends ModelSerializer to render any CustomFields and their values associated with an object.
@@ -96,3 +97,10 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_computed_fields(self, obj):
         return obj.get_computed_fields()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "custom_fields" and "computed_fields" are always included appropriately."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "custom_fields")
+        self.extend_field_names(fields, "computed_fields", opt_in_only=True)
+        return fields

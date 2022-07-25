@@ -287,3 +287,9 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
                 for remove_assoc in remove_assocs:
                     logger.info("Deleting %s", remove_assoc)
                     remove_assoc.delete()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "relationships" is always included as an opt-in field."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "relationships", opt_in_only=True)
+        return fields
