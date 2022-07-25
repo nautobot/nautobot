@@ -70,6 +70,7 @@ class NautobotViewSetMixin(
             return redirect(self.get_return_url(request, obj))
 
     def form_invalid(self, request, form, obj, view_type, context={}):
+        self.logger.debug("Form Validation Failed")
         context.update(
             {
                 "obj": obj,
@@ -78,7 +79,6 @@ class NautobotViewSetMixin(
                 "return_url": self.get_return_url(request, obj),
             }
         )
-        self.logger.debug("Form Validation Failed")
         return Response(context, template_name=self.get_template_name(view_type))
 
     def get_object(self):
@@ -103,6 +103,24 @@ class NautobotViewSetMixin(
         self.check_object_permissions(self.request, obj)
 
         return obj
+
+    def retrieve_object_bulk(self, request, pk_list, model, form, view_type):
+        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
+        if not table.rows:
+            messages.warning(
+                request,
+                f"No {model._meta.verbose_name_plural} were selected for deletion.",
+            )
+            return redirect(self.get_return_url(request))
+
+        context = {
+            "form": form,
+            "table": table,
+            "obj_type_plural": model._meta.verbose_name_plural,
+            "return_url": self.get_return_url(request),
+        }
+        context.update(self.get_extra_context(request, view_type, instance=None))
+        return Response(context, template_name=self.get_template_name(view_type))
 
     def initial(self, request, *args, **kwargs):
         """
@@ -587,22 +605,7 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixi
             )
 
         # Retrieve objects being deleted
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                f"No {model._meta.verbose_name_plural} were selected for deletion.",
-            )
-            return redirect(self.get_return_url(request))
-
-        context = {
-            "form": form,
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "table": table,
-            "return_url": self.get_return_url(request),
-        }
-        context.update(self.get_extra_context(request, "bulk_delete", instance=None))
-        return Response(context, template_name=self.get_template_name("bulk_delete"))
+        return self.retrieve_object_bulk(self, request, pk_list, model, form, "bulk_delete")
 
 
 class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin):
@@ -715,9 +718,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         nullified_fields = request.POST.getlist("_nullify")
 
         try:
-
             with transaction.atomic():
-
                 updated_objects = []
                 for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
 
@@ -816,19 +817,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
             restrict_form_fields(form, request.user)
 
         # Retrieve objects being edited
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
-            return redirect(self.get_return_url(request))
-
-        context = {
-            "form": form,
-            "table": table,
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "return_url": self.get_return_url(request),
-        }
-        context.update(self.get_extra_context(request, "bulk_edit", instance=None))
-        return Response(context, template_name=self.get_template_name("bulk_edit"))
+        return self.retrieve_object_bulk(self, request, pk_list, model, form, "bulk_edit")
 
 
 class NautobotDRFViewSet(
