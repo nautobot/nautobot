@@ -735,6 +735,7 @@ class CableTestCase(TestCase):
             cable.clean()
 
     def test_create_cable_with_missing_status_connected(self):
+        """Test for https://github.com/nautobot/nautobot/issues/2081"""
         # Delete all cables because some cables has connected status.
         Cable.objects.all().delete()
         Status.objects.get(slug=CableStatusChoices.STATUS_CONNECTED).delete()
@@ -753,13 +754,10 @@ class CableTestCase(TestCase):
             ),
         )
 
-        with self.assertRaises(Status.DoesNotExist) as err:
-            Cable.objects.create(
-                termination_a=interfaces[0],
-                termination_b=interfaces[1],
-                type=CableTypeChoices.TYPE_CAT6,
-            )
-        self.assertEqual(
-            "Status 'connected' is a required status for cable.\nPlease create status 'connected' for dcim.cable",
-            str(err.exception),
+        cable = Cable.objects.create(
+            termination_a=interfaces[0],
+            termination_b=interfaces[1],
+            type=CableTypeChoices.TYPE_CAT6,
         )
+
+        self.assertTrue(Cable.objects.filter(id=cable.pk).exists())
