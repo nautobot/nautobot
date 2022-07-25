@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import timedelta
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -339,8 +339,13 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
-        time = datetime.now()
+        time = timezone.now()
         name = serializer.get("name") or f"{job.name} - {time}"
+    elif type_ == JobExecutionType.TYPE_CUSTOM:
+        time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
+        if time is None:
+            time = timezone.now()
+        name = serializer["name"]
     else:
         time = serializer["start_time"]
         name = serializer["name"]
