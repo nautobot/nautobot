@@ -1,3 +1,5 @@
-<a href="{{ url }}" class="btn btn-warning" id="edit-button">
-    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
-</a>
+{% if url %}
+    <a href="{{ url }}" class="btn btn-warning" id="edit-button">
+        <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+    </a>
+{% endif %}

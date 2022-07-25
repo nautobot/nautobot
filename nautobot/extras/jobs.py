@@ -311,7 +311,7 @@ class BaseJob:
             # Hide the commit field for read only jobs
             form.fields["_commit"].widget = forms.HiddenInput()
             form.fields["_commit"].initial = False
-        else:
+        elif not initial or "_commit" not in initial:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
 

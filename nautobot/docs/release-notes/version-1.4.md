@@ -28,6 +28,10 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
+#### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
+
+JobResult records now save the arguments with which the Job was called, allowing for easy re-execution of the Job with the same arguments as before. A "re-run" button has been added to the JobResult list view and detail view.
+
 #### Location Data Model ([#1052](https://github.com/nautobot/nautobot/issues/1052))
 
 To locate network information more precisely than a Site defines, you can now define a hierarchy of Location Types (for example, `Building` ← `Floor` ← `Room`) and then create Locations corresponding to these types within each Site. Data objects such as devices, prefixes, VLAN groups, etc. can thus be mapped or assigned to Location representing a specific building, wing, floor, room, etc. as appropriate to your needs.
@@ -90,6 +94,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#1614](https://github.com/nautobot/nautobot/issues/1614) - Added support for nesting of Dynamic Groupsallowing inclusion/exclusion rules of sub-group members
 - [#1735](https://github.com/nautobot/nautobot/issues/1735) - Added missing filters to model FilterSets for Virtualization models.
 - [#1865](https://github.com/nautobot/nautobot/issues/1865) - Added support for a custom template on Job forms.
+- [#1883](https://github.com/nautobot/nautobot/issues/1883) - Add ability to filter objects by their relationships into the existing FilterSet.
+- [#1884](https://github.com/nautobot/nautobot/issues/1884) - Add ability to set the relationship filter via the filter form.
 - [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
 - [#2051](https://github.com/nautobot/nautobot/issues/2051) - Add changelog url for Relationships.
 - [#2061](https://github.com/nautobot/nautobot/pulls/2061) - Add draggable child groups to Dynamic Groups edit view in UI, recompute and hide weights.
@@ -122,6 +128,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add new filter class `NaturalKeyOrPKMultipleChoiceFilter` to `nautobot.utilities.filters`.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 137 new filters to `nautobot.dcim.filters` FilterSets.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add `cable_terminations` to the `model_features` registry.
+- [#1875](https://github.com/nautobot/nautobot/issues/1875) - Add ability to quickly re-submit a previously run `Job` with the same parameters.
 - [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.
 - [#1949](https://github.com/nautobot/nautobot/issues/1949) - Added TestCaseMixin for Helper Functions across all test case bases.
 
@@ -141,7 +148,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#1928](https://github.com/nautobot/nautobot/pull/1928) - Update dependency napalm to ~3.4.1
 - [#1929](https://github.com/nautobot/nautobot/pull/1929) - Update dependency selenium to ~4.2.0
 - [#1945](https://github.com/nautobot/nautobot/issues/1945) - Change the `settings_and_registry` default context processor to purely `settings`, moving registry dictionary to be accessible via `registry` template tag.
-- [#2072](https://github.com/nautobot/nautobot/pull/2072) - Expand on `query_params` for `ObjectVar` in Jobs documentation
+- [#2072](https://github.com/nautobot/nautobot/pull/2072) - Expand on `query_params` for `ObjectVar` in Jobs documentation.
 
 ### Fixed
 
