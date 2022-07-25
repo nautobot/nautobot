@@ -2,6 +2,7 @@ import random
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.urls import reverse
 
 from nautobot.dcim.filters import DeviceFilterSet
@@ -592,7 +593,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_delete(self):
         """Test `DynamicGroup(instance).delete()`."""
         # Has parents
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ProtectedError):
             self.nested_child.delete()
 
         # Clear the deeply nested child's parents then delete it!
