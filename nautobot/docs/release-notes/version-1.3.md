@@ -146,10 +146,11 @@ It is no longer possible to connect an interface to itself in the cable connect 
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.9 (2022-MM-DD)
+## v1.3.9 (2022-07-25)
 
 ### Added
 
+- [#860](https://github.com/nautobot/nautobot/issues/860) - Added documentation that adding device component to device type does not modify existing device instances
 - [#1595](https://github.com/nautobot/nautobot/issues/1595) - Add ability to specify uWSGI buffer size via environment variable.
 - [#1757](https://github.com/nautobot/nautobot/issues/1757) - Added nullable face, position to Device bulk edit form to provided desired behavior to bulk assigning to a new rack.
 
@@ -162,6 +163,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Fixed
 
 - [#1035](https://github.com/nautobot/nautobot/issues/1035) - Fix assertion raised if SLAAC Status is missing when creating `IPAddress` objects
+- [#1694](https://github.com/nautobot/nautobot/issues/1694) - Fixed CablePath not found error when disconnects/delete action performed on a cable
 - [#1795](https://github.com/nautobot/nautobot/issues/1795) - Corrected relationship source/destination filter help text from queryset Filter to filterset Filter and updated documentations.
 - [#1839](https://github.com/nautobot/nautobot/issues/1795) - Fixed staff users with auth > group permissions unable to view groups in admin UI.
 - [#1937](https://github.com/nautobot/nautobot/issues/1937) - Solved _custom_field_data do not fully delete when using CustomFieldBulkDeleteView.
@@ -170,6 +172,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#2039](https://github.com/nautobot/nautobot/issues/2039) - Fixed IntegerVar with default set to 0 on Job evaluating to False.
 - [#2057](https://github.com/nautobot/nautobot/issues/2057) - Fixed RIR changelog route being in VRF name prefix.
 - [#2077](https://github.com/nautobot/nautobot/issues/2077) - Fixed an error when viewing object detail pages after uninstalling a plugin but still having RelationshipAssociations involving the plugin's models.
+- [#2081](https://github.com/nautobot/nautobot/issues/2081) - Fixed error raised if status connected not found when creating a cable
 
 ## v1.3.8 (2022-07-11)
 
