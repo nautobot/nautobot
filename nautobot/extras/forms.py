@@ -1055,20 +1055,8 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
                 )
 
             if cleaned_data.get("_schedule_type") == JobExecutionType.TYPE_CUSTOM:
-                if not cleaned_data.get("_recurrence_custom_time"):
-                    raise ValidationError({"_recurrence_custom_time": "Please provide a crontab schedule."})
-
                 try:
-                    minute, hour, day_of_month, month_of_year, day_of_week = cleaned_data.get(
-                        "_recurrence_custom_time"
-                    ).split(" ")
-                    schedules.crontab(
-                        minute=minute,
-                        hour=hour,
-                        day_of_month=day_of_month,
-                        month_of_year=month_of_year,
-                        day_of_week=day_of_week,
-                    )
+                    ScheduledJob.get_crontab(cleaned_data.get("_recurrence_custom_time"))
                 except Exception as e:
                     raise ValidationError({"_recurrence_custom_time": e})
 
