@@ -184,24 +184,23 @@ class ObjectChange(BaseModel):
 
     def get_next_change(self, user=None):
         """Return next change for this changed object, optionally restricting by user view permission"""
-        related_changes = self.get_related_changes().restrict(user, "view")
-        if user is not None:
-            related_changes = related_changes.restrict(user, "view")
+        related_changes = self.get_related_changes(user=user)
         return related_changes.filter(time__gt=self.time).order_by("time").first()
 
     def get_prev_change(self, user=None):
         """Return previous change for this changed object, optionally restricting by user view permission"""
-        related_changes = self.get_related_changes()
-        if user is not None:
-            related_changes = related_changes.restrict(user, "view")
+        related_changes = self.get_related_changes(user=user)
         return related_changes.filter(time__lt=self.time).order_by("-time").first()
 
-    def get_related_changes(self):
+    def get_related_changes(self, user=None, permission="view"):
         """Return queryset of all ObjectChanges for this changed object, excluding this ObjectChange"""
-        return ObjectChange.objects.filter(
+        related_changes = ObjectChange.objects.filter(
             changed_object_type=self.changed_object_type,
             changed_object_id=self.changed_object_id,
         ).exclude(pk=self.pk)
+        if user is not None:
+            return related_changes.restrict(user, permission)
+        return related_changes
 
     def get_snapshots(self):
         """

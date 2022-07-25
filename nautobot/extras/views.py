@@ -1444,9 +1444,7 @@ class ObjectChangeView(generic.ObjectView):
     queryset = ObjectChange.objects.all()
 
     def get_extra_context(self, request, instance):
-        related_changes = (
-            instance.get_related_changes().restrict(request.user, "view").filter(request_id=instance.request_id)
-        )
+        related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
         related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
 
         snapshots = instance.get_snapshots()
