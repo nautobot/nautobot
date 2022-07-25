@@ -846,14 +846,13 @@ class JobHookReceiver(Job):
     def run(self, data, commit):
         """JobHookReceiver subclasses generally shouldn't need to override this method."""
         object_change = data["object_change"]
-        # perhaps also calculate the diffs that this object_change represents, as mentioned in my earlier comments on this PR?
-        self.receive_jobhook(
+        self.receive_job_hook(
             change=object_change,
             action=object_change.action,
             changed_object=object_change.changed_object,
         )
 
-    def receive_jobhook(self, change, action, changed_object):
+    def receive_job_hook(self, change, action, changed_object):
         """
         Method to be implemented by concrete JobHookReceiver subclasses.
 

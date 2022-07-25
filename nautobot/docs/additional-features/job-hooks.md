@@ -4,7 +4,7 @@ A Job Hook is a mechanism for automatically starting a [job](./jobs.md) when an 
 
 ## Job Hook Receivers
 
-Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](jobs.md#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_jobhook`.
+Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](jobs.md#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_job_hook`.
 
 !!! important
     To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` job will not trigger another `JobHookReceiver` job to run.
@@ -17,7 +17,7 @@ from nautobot.extras.jobs import JobHookReceiver
 
 
 class ExampleJobHookReceiver(JobHookReceiver):
-    def receive_jobhook(self, change, action, changed_object):
+    def receive_job_hook(self, change, action, changed_object):
         # return on delete action
         if action == ObjectChangeActionChoices.ACTION_DELETE:
             return
@@ -45,9 +45,9 @@ class ExampleJobHookReceiver(JobHookReceiver):
         return False
 ```
 
-### The `receive_jobhook()` Method
+### The `receive_job_hook()` Method
 
-All `JobHookReceiver` subclasses must implement a `receive_jobhook()` method. This method accepts three arguments:
+All `JobHookReceiver` subclasses must implement a `receive_job_hook()` method. This method accepts three arguments:
 
 1. `change` - An instance of `nautobot.extras.models.ObjectChange`
 2. `action` - A string with the action performed on the changed object ("create", "update" or "delete")
