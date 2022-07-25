@@ -28,7 +28,7 @@ urlpatterns = [
     ),
     path(
         "circuit-types/delete/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_destroy", "post": "perform_bulk_destroy"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="circuittype_bulk_delete",
     ),
     path(
@@ -63,7 +63,7 @@ urlpatterns = [
     ),
     path(
         "providers/edit/",
-        views.ProviderDRFViewSet.as_view({"get": "bulk_edit", "post": "perform_bulk_edit"}),
+        views.ProviderDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_edit"}),
         name="provider_bulk_edit",
     ),
     path(
