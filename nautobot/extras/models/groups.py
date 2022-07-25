@@ -433,10 +433,11 @@ class DynamicGroup(OrganizationalModel):
 
     def delete(self):
         """Check if we're a parent or child and attempt to block delete if we are."""
-        if self.children.exists():
-            raise ValidationError({"children": "Cannot delete DynamicGroup while parent of other DynamicGroups."})
         if self.parents.exists():
-            raise ValidationError({"parents": "Cannot delete DynamicGroup while child of other DynamicGroups."})
+            raise models.ProtectedError(
+                msg="Cannot delete DynamicGroup while child of other DynamicGroups.",
+                protected_objects=set(self.parents.all()),
+            )
         return super().delete()
 
     def clean(self):
@@ -870,7 +871,6 @@ class DynamicGroupMembership(BaseModel):
             return siblings
         return siblings.exclude(pk=self.pk)
 
-    # FIXME(jathan):
     def _get_next_or_previous_by_weight(self, is_next):
         """Get siblings and return the next/previous based on `is_next`."""
         siblings = self.get_siblings(include_self=True)

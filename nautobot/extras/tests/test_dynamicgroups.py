@@ -591,17 +591,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     def test_delete(self):
         """Test `DynamicGroup(instance).delete()`."""
-        # Has children
-        with self.assertRaises(ValidationError):
-            self.parent.delete()
-
         # Has parents
         with self.assertRaises(ValidationError):
             self.nested_child.delete()
-
-        # Clear the children and then delete me!
-        self.parent.children.clear()
-        self.parent.delete()
 
         # Clear the deeply nested child's parents then delete it!
         self.nested_child.parents.clear()
