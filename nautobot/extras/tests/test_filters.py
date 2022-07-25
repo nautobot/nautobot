@@ -3,6 +3,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
     Device,
     DeviceRole,
@@ -61,6 +62,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
@@ -965,6 +967,193 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
     def test_destination_id(self):
         params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = RelationshipAssociation.objects.all()
+    filterset = RelationshipAssociationFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_type = ContentType.objects.get_for_model(Device)
+        cls.vlan_type = ContentType.objects.get_for_model(VLAN)
+        cls.relationships = (
+            Relationship(
+                name="Device VLANs",
+                slug="device-vlans",
+                type="many-to-many",
+                source_type=cls.device_type,
+                destination_type=cls.vlan_type,
+            ),
+            Relationship(
+                name="Primary VLAN",
+                slug="primary-vlan",
+                type="one-to-many",
+                source_type=cls.vlan_type,
+                destination_type=cls.device_type,
+            ),
+            Relationship(
+                name="Device Peers",
+                slug="device-peers",
+                type="symmetric-many-to-many",
+                source_type=cls.device_type,
+                destination_type=cls.device_type,
+            ),
+        )
+        for relationship in cls.relationships:
+            relationship.validated_save()
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.devices = (
+            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+        )
+        cls.vlans = (
+            VLAN.objects.create(vid=1, name="VLAN 1"),
+            VLAN.objects.create(vid=2, name="VLAN 2"),
+            VLAN.objects.create(vid=3, name="VLAN 3"),
+        )
+        cls.relationship_associations = (
+            RelationshipAssociation(
+                relationship=cls.relationships[0],
+                source_type=cls.device_type,
+                source_id=cls.devices[0].pk,
+                destination_type=cls.vlan_type,
+                destination_id=cls.vlans[0].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[0],
+                source_type=cls.device_type,
+                source_id=cls.devices[1].pk,
+                destination_type=cls.vlan_type,
+                destination_id=cls.vlans[1].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[1],
+                source_type=cls.vlan_type,
+                source_id=cls.vlans[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[0].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[1],
+                source_type=cls.vlan_type,
+                source_id=cls.vlans[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[1].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[1],
+                source_type=cls.vlan_type,
+                source_id=cls.vlans[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[2].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[2],
+                source_type=cls.device_type,
+                source_id=cls.devices[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[1].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[2],
+                source_type=cls.device_type,
+                source_id=cls.devices[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[2].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[2],
+                source_type=cls.device_type,
+                source_id=cls.devices[1].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[2].pk,
+            ),
+        )
+        for relationship_association in cls.relationship_associations:
+            relationship_association.validated_save()
+
+    def test_one_to_many_source(self):
+        self.queryset = Device.objects.all()
+        self.filterset = DeviceFilterSet
+        self.assertEqual(
+            self.filterset({f"cr_{self.relationships[1].slug}__source": [self.vlans[0].pk]}, self.queryset).qs.count(),
+            3,
+        )
+
+    def test_one_to_many_destination(self):
+        self.queryset = VLAN.objects.all()
+        self.filterset = VLANFilterSet
+        self.assertEqual(
+            self.filterset(
+                {f"cr_{self.relationships[1].slug}__destination": [self.devices[0].pk, self.devices[1].pk]},
+                self.queryset,
+            ).qs.count(),
+            1,
+        )
+
+    def test_many_to_many_source(self):
+        self.queryset = VLAN.objects.all()
+        self.filterset = VLANFilterSet
+        self.assertEqual(
+            self.filterset(
+                {f"cr_{self.relationships[0].slug}__source": [self.devices[0].pk, self.devices[1].pk]}, self.queryset
+            ).qs.count(),
+            2,
+        )
+
+    def test_many_to_many_destination(self):
+        self.queryset = Device.objects.all()
+        self.filterset = DeviceFilterSet
+        self.assertEqual(
+            self.filterset(
+                {f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk]}, self.queryset
+            ).qs.count(),
+            2,
+        )
+
+    def test_many_to_many_peer(self):
+        self.queryset = Device.objects.all()
+        self.filterset = DeviceFilterSet
+        self.assertEqual(
+            self.filterset(
+                {f"cr_{self.relationships[2].slug}__peer": [self.devices[0].pk, self.devices[1].pk]}, self.queryset
+            ).qs.count(),
+            3,
+        )
+        self.assertEqual(
+            self.filterset({f"cr_{self.relationships[2].slug}__peer": [self.devices[2].pk]}, self.queryset).qs.count(),
+            2,
+        )
+
+    def test_combination(self):
+        self.queryset = Device.objects.all()
+        self.filterset = DeviceFilterSet
+        self.assertEqual(
+            self.filterset(
+                {
+                    f"cr_{self.relationships[2].slug}__peer": [self.devices[0].pk, self.devices[1].pk],
+                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                },
+                self.queryset,
+            ).qs.count(),
+            3,
+        )
+        self.assertEqual(
+            self.filterset(
+                {
+                    f"cr_{self.relationships[2].slug}__peer": [self.devices[2].pk],
+                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                },
+                self.queryset,
+            ).qs.count(),
+            2,
+        )
 
 
 class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
