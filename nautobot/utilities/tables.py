@@ -365,13 +365,14 @@ class CustomFieldColumn(tables.Column):
         if value is None:
             return self.default
 
+        template = ""
         if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-            if value:
-                template = ""
-                for v in value:
-                    template += format_html('<span class="label label-default">{}</span> ', v)
+            if not value:
+                return self.default
+            for v in value:
+                template += format_html('<span class="label label-default">{}</span> ', v)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
             template = format_html('<span class="label label-default">{}</span>', value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:

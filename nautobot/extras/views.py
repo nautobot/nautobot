@@ -2,6 +2,7 @@ import inspect
 from datetime import datetime
 import logging
 
+from celery import chain
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -23,6 +24,7 @@ from jsonschema.validators import Draft7Validator
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
@@ -454,6 +456,30 @@ class CustomFieldDeleteView(generic.ObjectDeleteView):
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
+
+    def construct_custom_field_delete_tasks(self, queryset):
+        """
+        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
+        """
+        tasks = [
+            delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
+            for obj in queryset
+        ]
+        return tasks
+
+    def perform_pre_delete(self, request, queryset):
+        """
+        Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
+        """
+        if not get_worker_count(request):
+            messages.error(
+                request, "Celery worker process not running. Object custom fields may fail to reflect this deletion."
+            )
+            return
+        tasks = self.construct_custom_field_delete_tasks(queryset)
+        # Executing the tasks in the background sequentially using chain() aligns with how a single CustomField object is deleted.
+        # We decided to not check the result because it needs at least one worker to be active and comes with extra performance penalty.
+        chain(*tasks).apply_async()
 
 
 #
