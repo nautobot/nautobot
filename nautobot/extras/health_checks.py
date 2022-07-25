@@ -34,8 +34,8 @@ class DatabaseBackend(BaseHealthCheckBackend):
             raise ServiceUnavailable("Database error")
 
 
-# Cacheops and django_redis have 2 different data structures for configuring redis, however, the checks are the same for both
 class RedisHealthCheck(BaseHealthCheckBackend):
+    """Cacheops and django_redis have 2 different data structures for configuring redis, however, the checks are the same for both."""
     def check_sentinel(self, sentinel_servers, service_name, db, **kwargs):
         try:
             sentinel = Sentinel(

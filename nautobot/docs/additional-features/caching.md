@@ -110,12 +110,7 @@ CACHES = {
 }
 ```
 
-!!! note
-    It is permissible to use Sentinel for only one database and not the other, see [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) for details.
-
-For more details on configuring django-redis with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
-
-#### `django-redis` with TLS Sentinel Configuration
+##### TLS
 
 To enable TLS with Sentinel the following options are required:
 
@@ -157,6 +152,11 @@ CACHES = {
 }
 ```
 
+!!! note
+    It is permissible to use Sentinel for only one database and not the other, see [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) for details.
+
+For more details on configuring django-redis with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
+
 #### `django-cacheops` Sentinel Configuration
 
 Notable settings:
@@ -193,9 +193,7 @@ CACHEOPS_SENTINEL = {
 }
 ```
 
-For more details on how to configure Cacheops to use Redis Sentinel see the documentation for [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
-
-#### `django-cacheops` with TLS Sentinel Configuration
+##### TLS
 
 To enable TLS with Sentinel the following options are required:
 
@@ -230,6 +228,8 @@ CACHEOPS_SENTINEL = {
 }
 ```
 
+For more details on how to configure Cacheops to use Redis Sentinel see the documentation for [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
+
 #### `celery` Sentinel Configuration
 
 !!! note
@@ -263,11 +263,7 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 ```
 
-Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
-
-Please also see the [Nautobot documentation on required settings for Celery](../../configuration/required-settings#task-queuing-with-celery) for additional information.
-
-#### `celery` with TLS Sentinel Configuration
+##### TLS
 
 To enable TLS with Sentinel the following options are required:
 
@@ -305,3 +301,7 @@ CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 CELERY_REDIS_BACKEND_USE_SSL = REDIS_SSL_SETTINGS
 CELERY_BROKER_USE_SSL = REDIS_SSL_SETTINGS
 ```
+
+Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
+
+Please also see the [Nautobot documentation on required settings for Celery](../../configuration/required-settings#task-queuing-with-celery) for additional information.
