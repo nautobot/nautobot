@@ -33,6 +33,8 @@ http://nautobot/api/extras/jobs/$JOB_ID/run/ \
 
 For custom interval, a `crontab` parameter must be added.
 
+`start_time` becomes optional when `interval` is set to `custom`.
+
 `--data '{"schedule": {"name": "test", "interval": "custom", "start_time": "2030-01-01T01:00:00.000Z", "crontab": "*/15 * * * *"}}'`
 
 ## Job Approvals
