@@ -1043,29 +1043,17 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
                 raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 
             if (
-                (
-                    not cleaned_data.get("_schedule_start_time")
-                    and cleaned_data.get("_schedule_type") != JobExecutionType.TYPE_CUSTOM
-                ) or (
-                    cleaned_data.get("_schedule_start_time")
-                    and cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
-                )
+                not cleaned_data.get("_schedule_start_time")
+                and cleaned_data.get("_schedule_type") != JobExecutionType.TYPE_CUSTOM
+            ) or (
+                cleaned_data.get("_schedule_start_time")
+                and cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
             ):
                 raise ValidationError(
                     {
                         "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
                     }
                 )
-
-            # if (
-            #     not cleaned_data.get("_schedule_start_time")
-            #     or cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
-            # ):
-            #     raise ValidationError(
-            #         {
-            #             "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
-            #         }
-            #     )
 
             if cleaned_data.get("_schedule_type") == JobExecutionType.TYPE_CUSTOM:
                 try:
