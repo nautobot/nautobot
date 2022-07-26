@@ -109,7 +109,6 @@ class NautobotViewSetMixin(
                 else:
                     msg = f"{msg} { escape(obj)}"
                 messages.success(request, mark_safe(msg))
-
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -184,7 +183,6 @@ class NautobotViewSetMixin(
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
                         raise ObjectDoesNotExist
-
                 if updated_objects:
                     msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
                     self.logger.info(msg)
@@ -199,7 +197,8 @@ class NautobotViewSetMixin(
                 msg = "Object update failed due to object-level permissions violation"
                 self.logger.debug(msg)
                 form.add_error(None, msg)
-        elif view_type == "bulk_create":
+                return self.retrieve_object_bulk(request, pk_list, model, form, "bulk_edit")
+        elif view_type == "bulk_import":
             self.logger.debug("Form validation was successful")
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
@@ -223,7 +222,6 @@ class NautobotViewSetMixin(
 
                 # Compile a table containing the imported objects
                 obj_table = self.table(new_objs)
-
                 if new_objs:
                     msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
                     self.logger.info(msg)
@@ -236,7 +234,6 @@ class NautobotViewSetMixin(
                         },
                         template_name="import_success.html",
                     )
-
             except ValidationError:
                 pass
 
@@ -244,6 +241,7 @@ class NautobotViewSetMixin(
                 msg = "Object import failed due to object-level permissions violation"
                 self.logger.debug(msg)
                 form.add_error(None, msg)
+        return self.form_invalid(request, obj, form, view_type=view_type)
 
     def form_invalid(self, request, obj, form, view_type, context={}):
         self.logger.debug("Form Validation Failed")
@@ -265,6 +263,17 @@ class NautobotViewSetMixin(
                     "obj_type": self.queryset.model._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                     "editing": obj.present_in_database,
+                }
+            )
+            return Response(context, template_name=self.get_template_name(view_type))
+        elif view_type == "bulk_import":
+            context.update(
+                {
+                    "form": form,
+                    "fields": self.import_form().fields,
+                    "obj_type": self.import_form._meta.model._meta.verbose_name,
+                    "return_url": self.get_return_url(request),
+                    "active_tab": "csv-data",
                 }
             )
             return Response(context, template_name=self.get_template_name(view_type))
@@ -766,17 +775,7 @@ class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
         if form.is_valid():
             return self.form_valid(request, obj=None, form=form, view_type="bulk_import")
         else:
-            self.form_invalid(request, obj=None, form=form, view_type="bulk_import")
-        return Response(
-            {
-                "form": form,
-                "fields": self.import_form().fields,
-                "obj_type": self.import_form._meta.model._meta.verbose_name,
-                "return_url": self.get_return_url(request),
-                "active_tab": "csv-data",
-            },
-            template_name=self.get_template_name("bulk_import"),
-        )
+            return self.form_invalid(request, obj=None, form=form, view_type="bulk_import")
 
 
 class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin):
@@ -802,7 +801,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
             form = self.bulk_edit_form(model, request.POST)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.form_valid(request, obj=None, form=form, view_type="bulk_edit", **kwargs)
+                return self.form_valid(request, obj=None, form=form, view_type="bulk_edit", pk_list=pk_list, **kwargs)
             else:
                 self.form_invalid(request, obj=None, form=form, view_type="bulk_edit")
         else:
