@@ -87,6 +87,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#1614](https://github.com/nautobot/nautobot/issues/1614) - Added support for nesting of Dynamic Groupsallowing inclusion/exclusion rules of sub-group members
 - [#1735](https://github.com/nautobot/nautobot/issues/1735) - Added missing filters to model FilterSets for Virtualization models.
 - [#1865](https://github.com/nautobot/nautobot/issues/1865) - Added support for a custom template on Job forms.
+- [#1877](https://github.com/nautobot/nautobot/issues/1877) - Add new job base class JobHookReceiver to support triggering job execution from change events.
 - [#1883](https://github.com/nautobot/nautobot/issues/1883) - Add ability to filter objects by their relationships into the existing FilterSet.
 - [#1884](https://github.com/nautobot/nautobot/issues/1884) - Add ability to set the relationship filter via the filter form.
 - [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
