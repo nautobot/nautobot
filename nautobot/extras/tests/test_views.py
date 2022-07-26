@@ -30,7 +30,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobResult,
-    Notes,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -575,13 +575,13 @@ class GitRepositoryTestCase(
         cls.slug_test_object = "Repo 4"
 
 
-class NotesTestCase(
+class NoteTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
 ):
-    model = Notes
+    model = Note
 
     @classmethod
     def setUpTestData(cls):
@@ -591,21 +591,21 @@ class NotesTestCase(
         user = User.objects.first()
 
         # Notes Objects to test
-        Notes.objects.create(
+        Note.objects.create(
             name="Site Maintenance",
             note="Site has been placed on maintenance.",
             user=user,
             assigned_object_type=content_type,
             assigned_object_id=site.pk,
         ),
-        Notes.objects.create(
+        Note.objects.create(
             name="Site Maintenance End",
             note="Site maintenance has ended.",
             user=user,
             assigned_object_type=content_type,
             assigned_object_id=site.pk,
         ),
-        Notes.objects.create(
+        Note.objects.create(
             name="Site Trouble",
             note="Site is under duress.",
             user=user,

@@ -32,7 +32,7 @@ from .models import (
     Job as JobModel,
     JobResult,
     JobLogEntry,
-    Notes,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -679,12 +679,12 @@ class JobResultTable(BaseTable):
 #
 
 
-class NotesTable(BaseTable):
-    actions = ButtonsColumn(Notes, pk_field="slug")
+class NoteTable(BaseTable):
+    actions = ButtonsColumn(Note, pk_field="slug")
 
     class Meta(BaseTable.Meta):
-        model = Notes
-        fields = ("name", "created", "note", "user_name")
+        model = Note
+        fields = ("created", "note", "user_name")
 
     def render_note(self, value):
         return render_markdown(value)

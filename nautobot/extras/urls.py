@@ -12,7 +12,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    Notes,
+    Note,
     Relationship,
     Secret,
     SecretsGroup,
@@ -50,6 +50,12 @@ urlpatterns = [
         "computed-fields/<slug:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="computedfield_changelog",
+        kwargs={"model": ComputedField},
+    ),
+    path(
+        "computed-fields/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="computedfield_notes",
         kwargs={"model": ComputedField},
     ),
     # Config contexts
@@ -92,6 +98,12 @@ urlpatterns = [
         "config-contexts/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="configcontext_changelog",
+        kwargs={"model": ConfigContext},
+    ),
+    path(
+        "config-contexts/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="configcontext_notes",
         kwargs={"model": ConfigContext},
     ),
     # Config context schema
@@ -173,6 +185,12 @@ urlpatterns = [
         name="customfield_changelog",
         kwargs={"model": CustomField},
     ),
+    path(
+        "custom-fields/<str:name>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="customfield_notes",
+        kwargs={"model": CustomField},
+    ),
     # Custom links
     path("custom-links/", views.CustomLinkListView.as_view(), name="customlink_list"),
     path("custom-links/add/", views.CustomLinkEditView.as_view(), name="customlink_add"),
@@ -196,6 +214,12 @@ urlpatterns = [
         "custom-links/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="customlink_changelog",
+        kwargs={"model": CustomLink},
+    ),
+    path(
+        "custom-links/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="customlink_notes",
         kwargs={"model": CustomLink},
     ),
     # Dynamic Groups
@@ -256,6 +280,12 @@ urlpatterns = [
         "export-templates/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="exporttemplate_changelog",
+        kwargs={"model": ExportTemplate},
+    ),
+    path(
+        "export-templates/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="exporttemplate_notes",
         kwargs={"model": ExportTemplate},
     ),
     # Git repositories
@@ -351,6 +381,12 @@ urlpatterns = [
         name="graphqlquery_changelog",
         kwargs={"model": GraphQLQuery},
     ),
+    path(
+        "graphql-queries/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="graphqlquery_notes",
+        kwargs={"model": GraphQLQuery},
+    ),
     # Image attachments
     path(
         "image-attachments/<uuid:pk>/edit/",
@@ -424,6 +460,17 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
+    # Notes
+    path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
+    path("notes/<slug:slug>/", views.NoteView.as_view(), name="note"),
+    path(
+        "notes/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="note_changelog",
+        kwargs={"model": Note},
+    ),
+    path("notes/<slug:slug>/edit/", views.NoteEditView.as_view(), name="note_edit"),
+    path("notes/<slug:slug>/delete/", views.NoteDeleteView.as_view(), name="note_delete"),
     # Custom relationships
     path("relationships/", views.RelationshipListView.as_view(), name="relationship_list"),
     path(
@@ -544,6 +591,12 @@ urlpatterns = [
         name="status_changelog",
         kwargs={"model": Status},
     ),
+    path(
+        "statuses/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="status_notes",
+        kwargs={"model": Status},
+    ),
     # Tags
     path("tags/", views.TagListView.as_view(), name="tag_list"),
     path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
@@ -580,15 +633,10 @@ urlpatterns = [
         name="webhook_changelog",
         kwargs={"model": Webhook},
     ),
-    # Notes
-    path("notes/add/", views.NotesEditView.as_view(), name="notes_add"),
-    path("notes/<slug:slug>/", views.NotesView.as_view(), name="notes"),
     path(
-        "notes/<slug:slug>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="notes_changelog",
-        kwargs={"model": Notes},
+        "webhooks/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="webhook_notes",
+        kwargs={"model": Webhook},
     ),
-    path("notes/<slug:slug>/edit/", views.NotesEditView.as_view(), name="notes_edit"),
-    path("notes/<slug:slug>/delete/", views.NotesDeleteView.as_view(), name="notes_delete"),
 ]

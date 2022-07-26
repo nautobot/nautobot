@@ -4,7 +4,7 @@ from nautobot.dcim.models import Site
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
-class NotesTestCase(SeleniumTestCase):
+class NoteTestCase(SeleniumTestCase):
     """
     Integration test to check nautobot.extras.models.notes view, add and markdown functionality.
     """
@@ -33,12 +33,10 @@ class NotesTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_href("/dcim/sites/site-1/notes/").click()
 
         # Fill out the form.
-        name = "Site Maintenance"
-        self.browser.fill("name", name)
         self.browser.fill("note", "This is a maintenance notice.")
 
         # Click that "Create" button
         self.browser.find_by_text("Create").click()
 
         # Verify form redirect and presence of content.
-        self.assertTrue(self.browser.is_text_present(f"Created Note {name}"))
+        self.assertTrue(self.browser.is_text_present("Created Note"))

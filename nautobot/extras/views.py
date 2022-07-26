@@ -72,7 +72,7 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
-    Notes,
+    Note,
 )
 from .registry import registry
 
@@ -1527,13 +1527,13 @@ class ObjectChangeLogView(View):
 #
 
 
-class NotesView(generic.ObjectView):
-    queryset = Notes.objects.all()
+class NoteView(generic.ObjectView):
+    queryset = Note.objects.all()
 
 
-class NotesEditView(generic.ObjectEditView):
-    queryset = Notes.objects.all()
-    model_form = forms.NotesForm
+class NoteEditView(generic.ObjectEditView):
+    queryset = Note.objects.all()
+    model_form = forms.NoteForm
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         if not obj.present_in_database:
@@ -1541,8 +1541,8 @@ class NotesEditView(generic.ObjectEditView):
         return obj
 
 
-class NotesDeleteView(generic.ObjectDeleteView):
-    queryset = Notes.objects.all()
+class NoteDeleteView(generic.ObjectDeleteView):
+    queryset = Note.objects.all()
 
 
 class ObjectNotesView(View):
@@ -1561,13 +1561,13 @@ class ObjectNotesView(View):
         else:
             obj = get_object_or_404(model, **kwargs)
 
-        notes_form = forms.NotesForm(
+        notes_form = forms.NoteForm(
             initial={
                 "assigned_object_type": ContentType.objects.get_for_model(obj),
                 "assigned_object_id": obj.pk,
             }
         )
-        notes_table = tables.NotesTable(obj.notes)
+        notes_table = tables.NoteTable(obj.notes)
 
         # Apply the request context
         paginate = {

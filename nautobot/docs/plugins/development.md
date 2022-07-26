@@ -760,8 +760,8 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
 | [Custom fields](../additional-features/custom-fields.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
+| [Note](../models/extras/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
-| [Notes](../models/extras/notes.md) | ❌ | ❌ | ✅ | ✅ |
 
 !!! note
     When using `OrganizationalModel` or `PrimaryModel`, you also must use the `@extras_features` decorator to specify support for (at a minimum) the `"custom_fields"` and `"relationships"` features.
@@ -1121,4 +1121,27 @@ class DeviceViewOverride(generic.View):
 override_views = {
     "dcim:device": DeviceViewOverride.as_view(),
 }
+```
+
+## Note URL Endpoint
+
+New in Nautobot 1.4 is support for models that inherit from `PrimaryModel` and `OrganizationalModel` to have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support 1.4 and older versions of Nautobot:
+
+```python
+
+urlpatterns = [
+    path('random/', views.RandomAnimalView.as_view(), name='random_animal'),
+]
+
+try:
+    from nautobot.extras.views import ObjectNotesView
+    urlpatterns.append(
+        path(
+            'random/<slug:slug>/notes/),
+            ObjectNotesView.as_view(),
+            name="random_notes",
+            kwargs={"model": Random},
+        )
+    )
+except ImportError:
 ```

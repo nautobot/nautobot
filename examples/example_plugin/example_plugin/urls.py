@@ -48,7 +48,7 @@ urlpatterns = [
         kwargs={"model": ExampleModel},
     ),
     path(
-        "models/<uuid:pk>/Notes/",
+        "models/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="examplemodel_notes",
         kwargs={"model": ExampleModel},

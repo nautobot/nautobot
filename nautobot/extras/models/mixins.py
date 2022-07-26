@@ -37,10 +37,10 @@ class NotesMixin:
     @property
     def notes(self):
         """Return a `Notes` queryset for this instance."""
-        from nautobot.extras.models.models import Notes
+        from nautobot.extras.models.models import Note
 
         if not hasattr(self, "_notes_queryset"):
-            queryset = Notes.objects.get_for_object(self)
+            queryset = Note.objects.get_for_object(self)
             self._notes_queryset = queryset
 
         return self._notes_queryset

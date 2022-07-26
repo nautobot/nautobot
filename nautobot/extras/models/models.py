@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from collections import OrderedDict
 
@@ -10,6 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
+from django.utils.text import slugify
 from django.urls import reverse
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
@@ -29,6 +31,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -61,7 +64,7 @@ class ConfigContextSchemaValidationMixin:
 
 
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin):
+class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
@@ -298,7 +301,7 @@ class ConfigContextSchema(OrganizationalModel):
 
 
 @extras_features("graphql")
-class CustomLink(BaseModel, ChangeLoggedModel):
+class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     """
     A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
     code to be rendered with an object as context.
@@ -352,7 +355,7 @@ class CustomLink(BaseModel, ChangeLoggedModel):
     "graphql",
     "relationships",
 )
-class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
+class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -524,7 +527,7 @@ class FileProxy(BaseModel):
 
 
 @extras_features("graphql")
-class GraphQLQuery(BaseModel, ChangeLoggedModel):
+class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     query = models.TextField()
@@ -651,7 +654,7 @@ class ImageAttachment(BaseModel):
 
 
 @extras_features("graphql", "webhooks")
-class Notes(BaseModel, ChangeLoggedModel):
+class Note(BaseModel, ChangeLoggedModel):
     """
     Notes allow anyone with proper permissions to add a note to an object.
     """
@@ -667,18 +670,19 @@ class Notes(BaseModel, ChangeLoggedModel):
         null=True,
     )
     user_name = models.CharField(max_length=150, editable=False)
-    name = models.CharField(max_length=150)
-    slug = AutoSlugField(populate_from="name", max_length=150)
+
+    slug = AutoSlugField(populate_from="assigned_object", max_length=150)
     note = models.TextField()
     objects = NotesQuerySet.as_manager()
 
     class Meta:
         ordering = ["created"]
-        verbose_name = "Note"
-        verbose_name_plural = "Notes"
+
+    def slugify_function(self, content):
+        return slugify(f"{content}-{datetime.now().isoformat()}")
 
     def __str__(self):
-        return self.name
+        return self.slug
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings
@@ -693,7 +697,7 @@ class Notes(BaseModel, ChangeLoggedModel):
 
 
 @extras_features("graphql")
-class Webhook(BaseModel, ChangeLoggedModel):
+class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.

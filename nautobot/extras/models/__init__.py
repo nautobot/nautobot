@@ -21,7 +21,7 @@ from .models import (
     GraphQLQuery,
     HealthCheckTestModel,
     ImageAttachment,
-    Notes,
+    Note,
     Webhook,
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
@@ -51,7 +51,7 @@ __all__ = (
     "Job",
     "JobLogEntry",
     "JobResult",
-    "Notes",
+    "Note",
     "ObjectChange",
     "Relationship",
     "RelationshipModel",

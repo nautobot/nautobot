@@ -63,7 +63,7 @@ from .models import (
     ImageAttachment,
     Job,
     JobResult,
-    Notes,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -1316,12 +1316,12 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class NotesForm(BootstrapMixin, forms.ModelForm):
+class NoteForm(BootstrapMixin, forms.ModelForm):
     note = CommentField
 
     class Meta:
-        model = Notes
-        fields = ["name", "assigned_object_type", "assigned_object_id", "note"]
+        model = Note
+        fields = ["assigned_object_type", "assigned_object_id", "note"]
         widgets = {
             "assigned_object_type": forms.HiddenInput,
             "assigned_object_id": forms.HiddenInput,
