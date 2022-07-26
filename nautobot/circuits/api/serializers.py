@@ -143,7 +143,7 @@ class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, Tag
         ]
 
 
-class CircuitTerminationSerializer(CableTerminationSerializer, ConnectedEndpointSerializer):
+class CircuitTerminationSerializer(NautobotModelSerializer, CableTerminationSerializer, ConnectedEndpointSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
     circuit = NestedCircuitSerializer()
     site = NestedSiteSerializer(required=False, allow_null=True)
@@ -154,7 +154,6 @@ class CircuitTerminationSerializer(CableTerminationSerializer, ConnectedEndpoint
     class Meta:
         model = CircuitTermination
         fields = [
-            "id",
             "url",
             "circuit",
             "term_side",
