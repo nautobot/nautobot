@@ -11,7 +11,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from nautobot.utilities.utils import dict_to_filter_params
+from nautobot.utilities.utils import dict_to_filter_params, normalize_querydict
 
 
 logger = logging.getLogger(__name__)
@@ -58,10 +58,10 @@ class OptInFieldsMixin:
 
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
-            params = getattr(request, "query_params", getattr(request, "GET", None))
+            params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
 
             try:
-                user_opt_in_fields = params.get("include", None).split(",")
+                user_opt_in_fields = params.get("include", [])
             except AttributeError:
                 # include parameter was not specified
                 user_opt_in_fields = []
@@ -107,7 +107,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     def get_field_names(self, declared_fields, info):
         """
-        Override get_field_names() to append the `display` field so it is always included in the
+        Override get_field_names() to prepend the `id` and `display` fields so they are always included in the
         serializer's `Meta.fields`.
 
         DRF does not automatically add declared fields to `Meta.fields`, nor does it require that declared fields
@@ -118,6 +118,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
         self.extend_field_names(fields, "display", at_start=True)
+        self.extend_field_names(fields, "id", at_start=True)
         return fields
 
 
@@ -171,14 +172,11 @@ class WritableNestedSerializer(BaseModelSerializer):
             params = dict_to_filter_params(data)
 
             # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
-            # data any fields that are read-only on the serializer
+            # data any serializer fields that do not correspond to a specific model field
             for field_name, field_instance in self.fields.items():
-                if field_name in params and field_instance.read_only:
-                    logger.debug("Discarding read-only field %s", field_name)
+                if field_name in params and field_instance.source == "*":
+                    logger.debug("Discarding non-database field %s", field_name)
                     del params[field_name]
-            if "display" in params:  # Yay, special cases! "display" is not a serializer field at all
-                logger.debug("Discarding display field")
-                del params["display"]
 
             queryset = self.get_queryset()
             try:

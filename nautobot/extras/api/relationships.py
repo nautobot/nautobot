@@ -105,7 +105,7 @@ class RelationshipsDataField(JSONField):
                 data.setdefault(
                     relationship.slug,
                     {
-                        "id": relationship.id,
+                        "id": str(relationship.id),
                         "url": reverse("extras-api:relationship-detail", kwargs={"pk": relationship.id}),
                         "name": relationship.name,
                         "type": relationship.type,

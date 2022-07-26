@@ -8,7 +8,7 @@ While there are many different development interfaces in Nautobot that each expo
 - All BulkEditForm classes should inherit from `nautobot.extras.forms.NautobotBulkEditForm` (for models that support change-logging, custom fields and relationships).
 - All FilterForm classes should inherit from `nautobot.extras.forms.NautobotFilterForm` (for models that support change-logging, custom fields and relationships).
 - All FilterSet classes should inherit from either `nautobot.utilities.filters.BaseFilterSet` (for bare-bones models) or `nautobot.extras.filters.NautobotFilterSet` (for models that support change-logging, custom fields and relationships).
-- All Serializer classes should inherit from either `NautobotModelSerializer` (for models that support custom fields and relationships, _added in version 1.4.0_) or `ValidatedModelSerializer` (for nested serializers and more bare-bones models).
+- All Serializer classes should inherit from either `NautobotModelSerializer` (for models that support custom fields and relationships, _added in version 1.4.0_), `ValidatedModelSerializer` (for writable nested serializers and more bare-bones models), or `BaseModelSerializer` (for read-only serializers and extremely minimal models).
 
 ## Model Existence in the Database
 
