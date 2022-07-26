@@ -963,7 +963,7 @@ class ScheduledJobTestCase(
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=datetime.now(),
-            crontab='*/15 9,17 3 * 1-5',
+            crontab="*/15 9,17 3 * 1-5",
         )
 
         response = self.client.get(self._get_url("list"))

@@ -173,12 +173,8 @@ class NestedScheduledJobSerializer(serializers.ModelSerializer):
             if "name" not in data:
                 raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
 
-            if (
-                "start_time" not in data
-                and data["interval"] != choices.JobExecutionType.TYPE_CUSTOM
-            ) or (
-                "start_time" in data
-                and data["start_time"] < models.ScheduledJob.earliest_possible_time()
+            if ("start_time" not in data and data["interval"] != choices.JobExecutionType.TYPE_CUSTOM) or (
+                "start_time" in data and data["start_time"] < models.ScheduledJob.earliest_possible_time()
             ):
                 raise serializers.ValidationError(
                     {
