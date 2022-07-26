@@ -15,13 +15,14 @@ from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import CustomField, FileProxy, Job, JobResult, ObjectChange, Status
+from nautobot.extras.models import CustomField, FileProxy, Job, JobResult, Status
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import (
     CeleryTestCase,
     TransactionTestCase,
     run_job_for_testing,
 )
+from nautobot.utilities.utils import get_changes_for_model
 
 
 def get_job_class_and_model(module, name):
@@ -619,10 +620,7 @@ class JobHookReceiverTest(TransactionTestCase):
             site = Site(name="Test Site 1")
             site.save()
         site.refresh_from_db()
-        oc = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        ).first()
+        oc = get_changes_for_model(site).first()
         self.data = {"object_change": oc.id}
 
     def test_form_field(self):
@@ -657,10 +655,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverChange"
         create_job_result_and_run_job(module, name, data=self.data, request=self.request)
         test_site = Site.objects.get(name="test_jhr")
-        oc = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=test_site.pk,
-        ).first()
+        oc = get_changes_for_model(test_site).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
 
     def test_run_job(self):
