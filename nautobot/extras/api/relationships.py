@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 nested_abstract_serializer = {
     "type": "object",
-    "required": False,
     "properties": {
         "id": {"type": "string", "format": "uuid"},
         "url": {"type": "string", "format": "uri", "readOnly": True},
@@ -40,14 +39,15 @@ side_data_schema = {
         "type": "object",
         "additionalProperties": {
             "type": "object",
+            "required": ["id", "url", "name", "type"],
             "properties": {
                 "id": {"type": "string", "format": "uuid", "readOnly": True},
                 "url": {"type": "string", "format": "uri", "readOnly": True},
                 "name": {"type": "string", "readOnly": True},
                 "type": {"type": "string", "readOnly": True, "example": "one-to-many"},
-                "source": {"type": "object", "required": False, "properties": side_data_schema},
-                "destination": {"type": "object", "required": False, "properties": side_data_schema},
-                "peer": {"type": "object", "required": False, "properties": side_data_schema},
+                "source": {"type": "object", "properties": side_data_schema},
+                "destination": {"type": "object", "properties": side_data_schema},
+                "peer": {"type": "object", "properties": side_data_schema},
             },
         },
     }
