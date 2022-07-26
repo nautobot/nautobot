@@ -98,6 +98,103 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
             return {}
 
 
+class CircuitDRFViewSet(NautobotDRFViewSet):
+    model = Circuit
+    prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
+    serializer_class = nested_serializers.NestedCircuitSerializer
+    queryset = Circuit.objects.all()
+    table = tables.CircuitTable
+    form = forms.CircuitForm
+    filterset = filters.CircuitFilterSet
+    filterset_form = forms.CircuitFilterForm
+    import_form = forms.CircuitCSVForm
+    bulk_edit_form = forms.CircuitBulkEditForm
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, view_type, instance):
+        if view_type == "detail":
+            # A-side termination
+            termination_a = (
+                CircuitTermination.objects.restrict(request.user, "view")
+                .prefetch_related("site__region")
+                .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_A)
+                .first()
+            )
+            if (
+                termination_a
+                and termination_a.connected_endpoint
+                and hasattr(termination_a.connected_endpoint, "ip_addresses")
+            ):
+                termination_a.ip_addresses = termination_a.connected_endpoint.ip_addresses.restrict(
+                    request.user, "view"
+                )
+
+            # Z-side termination
+            termination_z = (
+                CircuitTermination.objects.restrict(request.user, "view")
+                .prefetch_related("site__region")
+                .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_Z)
+                .first()
+            )
+            if (
+                termination_z
+                and termination_z.connected_endpoint
+                and hasattr(termination_z.connected_endpoint, "ip_addresses")
+            ):
+                termination_z.ip_addresses = termination_z.connected_endpoint.ip_addresses.restrict(
+                    request.user, "view"
+                )
+
+            return {
+                "termination_a": termination_a,
+                "termination_z": termination_z,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
+
+
+class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
+    model = ProviderNetwork
+    queryset = ProviderNetwork.objects.all()
+    serializer_class = nested_serializers.NestedProviderNetworkSerializer
+    table = tables.ProviderNetworkTable
+    form = forms.ProviderNetworkForm
+    filterset_form = forms.ProviderNetworkFilterForm
+    filterset = filters.ProviderNetworkFilterSet
+    import_form = forms.ProviderNetworkCSVForm
+    bulk_edit_form = forms.ProviderNetworkBulkEditForm
+    lookup_field = "slug"
+
+    def get_extra_context(self, request, view_type, instance):
+        if view_type == "detail":
+            circuits = (
+                Circuit.objects.restrict(request.user, "view")
+                .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
+                .prefetch_related("type", "tenant", "terminations__site")
+            )
+
+            circuits_table = tables.CircuitTable(circuits)
+            circuits_table.columns.hide("termination_a")
+            circuits_table.columns.hide("termination_z")
+
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(circuits_table)
+
+            return {
+                "circuits_table": circuits_table,
+            }
+        elif view_type == "list":
+            return {}
+        elif view_type == "bulk_edit":
+            return {}
+        else:
+            return {}
+
+
 #
 # Providers
 #

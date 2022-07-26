@@ -294,6 +294,27 @@ class NautobotViewSetMixin(
 
         return obj
 
+    def get_extra_context(self, request, view_type, instance=None):
+        """
+        Return any additional context data for the template.
+        request: The current request
+        instance: The object being viewed
+        """
+        return {}
+
+    def get_template_name(self, view_type):
+        # Use "<app>/<model>_<view_type> if available, else fall back to generic templates
+        model_opts = self.model._meta
+        app_label = model_opts.app_label
+        if view_type == "detail":
+            return f"{app_label}/{model_opts.model_name}.html"
+
+        try:
+            select_template([f"{app_label}/{model_opts.model_name}_{view_type}.html"])
+            return f"{app_label}/{model_opts.model_name}_{view_type}.html"
+        except TemplateDoesNotExist:
+            return f"generic/object_{view_type}.html"
+
     def retrieve_object_bulk(self, request, pk_list, model, form, view_type):
         table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
         if not table.rows:
@@ -330,27 +351,6 @@ class NautobotViewSetMixin(
         self.perform_authentication(request)
         self.check_permissions(request)
         self.check_throttles(request)
-
-    def get_extra_context(self, request, view_type, instance=None):
-        """
-        Return any additional context data for the template.
-        request: The current request
-        instance: The object being viewed
-        """
-        return {}
-
-    def get_template_name(self, view_type):
-        # Use "<app>/<model>_<view_type> if available, else fall back to generic templates
-        model_opts = self.model._meta
-        app_label = model_opts.app_label
-        if view_type == "detail":
-            return f"{app_label}/{model_opts.model_name}.html"
-
-        try:
-            select_template([f"{app_label}/{model_opts.model_name}_{view_type}.html"])
-            return f"{app_label}/{model_opts.model_name}_{view_type}.html"
-        except TemplateDoesNotExist:
-            return f"generic/object_{view_type}.html"
 
     @classonlymethod
     def as_view(cls, actions=None, **initkwargs):
@@ -719,7 +719,7 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixi
             if form.is_valid():
                 return self.form_valid(request, obj=None, form=form, view_type="bulk_delete", pk_list=pk_list)
             else:
-                return self.form_invalid(request, obj=None, form=form, view_type="bulk_delete")
+                self.form_invalid(request, obj=None, form=form, view_type="bulk_delete")
         else:
             form = form_cls(
                 initial={
@@ -804,7 +804,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
             if form.is_valid():
                 return self.form_valid(request, obj=None, form=form, view_type="bulk_edit", **kwargs)
             else:
-                return self.form_invalid(request, obj=None, form=form, view_type="bulk_edit")
+                self.form_invalid(request, obj=None, form=form, view_type="bulk_edit")
         else:
             # Include the PK list as initial data for the form
             initial_data = {"pk": pk_list}
