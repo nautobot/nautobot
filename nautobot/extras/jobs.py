@@ -28,15 +28,14 @@ import yaml
 
 
 from .choices import JobResultStatusChoices, LogLevelChoices
-from .context_managers import change_logging
+from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, ScheduledJob
+from .models import FileProxy, GitRepository, Job as JobModel, ObjectChange, ScheduledJob
 from .registry import registry
 from .utils import get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
-from nautobot.extras.context_managers import JobChangeContext
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -240,10 +239,18 @@ class BaseJob:
 
     @classmethod
     def _get_vars(cls):
-        vars = OrderedDict()
-        for name, attr in cls.__dict__.items():
-            if name not in vars and issubclass(attr.__class__, ScriptVariable):
-                vars[name] = attr
+        """
+        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
+        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        """
+        vars = dict()
+        # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
+        base_classes = reversed(inspect.getmro(cls))
+        attr_names = [name for base in base_classes for name in base.__dict__.keys()]
+        for name in attr_names:
+            attr_class = getattr(cls, name, None).__class__
+            if name not in vars and issubclass(attr_class, ScriptVariable):
+                vars[name] = getattr(cls, name)
 
         return vars
 
@@ -828,6 +835,34 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JobHookReceiver(Job):
+    """
+    Base class for job hook receivers. Job hook receivers are jobs that are initiated
+    from object changes and are not intended to be run from the UI or API like standard jobs.
+    """
+
+    object_change = ObjectVar(model=ObjectChange)
+
+    def run(self, data, commit):
+        """JobHookReceiver subclasses generally shouldn't need to override this method."""
+        object_change = data["object_change"]
+        self.receive_job_hook(
+            change=object_change,
+            action=object_change.action,
+            changed_object=object_change.changed_object,
+        )
+
+    def receive_job_hook(self, change, action, changed_object):
+        """
+        Method to be implemented by concrete JobHookReceiver subclasses.
+
+        :param change: an instance of `nautobot.extras.models.ObjectChange`
+        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
+        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        """
+        raise NotImplementedError
+
+
 def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
@@ -836,7 +871,7 @@ def is_job(obj):
     from .reports import Report
 
     try:
-        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report]
+        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver]
     except TypeError:
         return False
 
@@ -1178,7 +1213,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
     if commit:
-        change_context = JobChangeContext(request.user, id=request.id, context_detail=job_model.slug)
+        context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
+        change_context = context_class(request.user, id=request.id, context_detail=job_model.slug)
         with change_logging(change_context):
             _run_job()
     else:

@@ -8,10 +8,10 @@ from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
-from nautobot.extras.models import ChangeLoggedModel, ObjectChange
+from nautobot.extras.models import ChangeLoggedModel
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_filterset_for_model
+from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
 from .utils import disable_warnings, extract_page_body, post_data
 
 
@@ -287,10 +287,7 @@ class ViewTestCases:
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance),
-                    changed_object_id=instance.pk,
-                )
+                objectchanges = get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
@@ -404,10 +401,7 @@ class ViewTestCases:
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance),
-                    changed_object_id=instance.pk,
-                )
+                objectchanges = get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -490,10 +484,7 @@ class ViewTestCases:
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance),
-                    changed_object_id=instance.pk,
-                )
+                objectchanges = get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
 

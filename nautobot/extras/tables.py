@@ -523,6 +523,7 @@ class JobTable(BaseTable):
     hidden = BooleanColumn()
     read_only = BooleanColumn()
     approval_required = BooleanColumn()
+    is_job_hook_receiver = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
@@ -557,6 +558,7 @@ class JobTable(BaseTable):
             "commit_default",
             "hidden",
             "read_only",
+            "is_job_hook_receiver",
             "approval_required",
             "soft_time_limit",
             "time_limit",

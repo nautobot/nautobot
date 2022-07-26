@@ -214,6 +214,8 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
+    from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
+
     if git_repository is not None:
         default_slug = slugify_dots_to_dashes(
             f"{job_source}-{git_repository.slug}-{job_class.__module__}-{job_class.__name__}"
@@ -269,6 +271,7 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
             "name": job_class.name[:JOB_MAX_NAME_LENGTH],
+            "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
             "installed": True,
             "enabled": False,
         },

@@ -10,6 +10,7 @@ from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange,
 from nautobot.utilities.testing import APITestCase
 from nautobot.utilities.testing.utils import post_data
 from nautobot.utilities.testing.views import ModelViewTestCase
+from nautobot.utilities.utils import get_changes_for_model
 
 
 class ChangeLogViewTest(ModelViewTestCase):
@@ -97,10 +98,7 @@ class ChangeLogViewTest(ModelViewTestCase):
 
         # Verify the creation of a new ObjectChange record
         site.refresh_from_db()
-        oc = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        ).first()
+        oc = get_changes_for_model(site).first()
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], form_data["cf_my_field"])
@@ -288,10 +286,7 @@ class ChangeLogAPITest(APITestCase):
         site = Site.objects.get(pk=response.data["id"])
 
         # Get only the most recent OC
-        oc = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        ).first()
+        oc = get_changes_for_model(site).first()
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.object_data["description"], data["description"])
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)

@@ -6,7 +6,8 @@ from nautobot.core.celery import app
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.models import ObjectChange, Webhook
+from nautobot.extras.models import Webhook
+from nautobot.utilities.utils import get_changes_for_model
 
 
 # Use the proper swappable User model
@@ -49,10 +50,7 @@ class WebRequestContextTestCase(TestCase):
             site.save()
 
         site = Site.objects.get(name="Test Site 1")
-        oc_list = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        ).order_by("pk")
+        oc_list = get_changes_for_model(site).order_by("pk")
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, site)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
@@ -64,10 +62,7 @@ class WebRequestContextTestCase(TestCase):
             site.save()
 
         site = Site.objects.get(name="Test Site 1")
-        oc_list = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        )
+        oc_list = get_changes_for_model(site)
         with self.subTest():
             self.assertEqual(oc_list[0].change_context, ObjectChangeEventContextChoices.CONTEXT_ORM)
         with self.subTest():

@@ -126,6 +126,9 @@ class Job(PrimaryModel):
         help_text="Whether the Python module and class providing this job are presently installed and loadable",
     )
     enabled = models.BooleanField(default=False, help_text="Whether this job can be executed by users")
+    is_job_hook_receiver = models.BooleanField(
+        default=False, editable=False, help_text="Whether this job is a job hook receiver"
+    )
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.

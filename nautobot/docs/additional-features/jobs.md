@@ -97,7 +97,7 @@ class ExampleJob(Job):
     class Meta:
         description = """
             This job does a number of interesting things.
-            
+
              1. It hacks the Gibson
              2. It immanentizes the eschaton
              3. It's a floor wax *and* a dessert topping
@@ -128,7 +128,7 @@ class MyJob(Job):
 
 Default: `[]`
 
-A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code.
+A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code. If variables are defined on a parent class and no field order is defined, the parent class variables will appear before the subclass variables.
 
 #### `hidden`
 

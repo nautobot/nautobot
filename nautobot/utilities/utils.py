@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
@@ -443,6 +444,23 @@ def get_model_from_name(model_name):
         return apps.get_model(model_name)
     except (ValueError, LookupError) as exc:
         raise TypeError(exc) from exc
+
+
+def get_changes_for_model(model):
+    """
+    Return a queryset of ObjectChanges for a model or instance. The queryset will be filtered
+    by the model class. If an instance is provided, the queryset will also be filtered by the instance id.
+    """
+    from nautobot.extras.models import ObjectChange  # prevent circular import
+
+    if isinstance(model, Model):
+        return ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(model._meta.model),
+            changed_object_id=model.pk,
+        )
+    if issubclass(model, Model):
+        return ObjectChange.objects.filter(changed_object_type=ContentType.objects.get_for_model(model._meta.model))
+    raise TypeError(f"{model!r} is not a Django Model class or instance")
 
 
 def get_related_class_for_model(model, module_name, object_suffix):
