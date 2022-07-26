@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -326,7 +327,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 def _create_schedule(serializer, data, commit, job, job_model, request):
     """
     This is an internal function to create a scheduled job from API data.
-    It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
+    It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
     jobs.
     """
     job_kwargs = {
@@ -343,7 +344,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
     elif type_ == JobExecutionType.TYPE_CUSTOM:
         time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
         if time is None:
-            time = timezone.now()
+            time = timezone.now() + timedelta(seconds=20)
         name = serializer["name"]
     else:
         time = serializer["start_time"]
