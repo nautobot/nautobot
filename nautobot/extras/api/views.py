@@ -76,6 +76,21 @@ class ExtrasRootView(APIRootView):
         return "Extras"
 
 
+class NotesMixin(object):
+    @action(detail=True, url_path="notes")
+    def notes(self, request, pk=None):
+        """
+        A convenience method for returning notes within an object.
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+        serializer = serializers.NoteSerializer(
+            obj.notes,
+            many=True,
+        )
+
+        return Response(serializer.data)
+
+
 #
 #  Computed Fields
 #

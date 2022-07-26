@@ -46,6 +46,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -815,6 +816,35 @@ class JobLogEntrySerializer(serializers.ModelSerializer):
             "log_level",
             "log_object",
             "message",
+        ]
+
+
+#
+# Notes
+#
+
+
+class NoteSerializer(serializers.ModelSerializer):
+    #url = serializers.HyperlinkedIdentityField(view_name="extras-api:objectchange-detail")
+    user = NestedUserSerializer(read_only=True)
+    #action = ChoiceField(choices=ObjectChangeActionChoices, read_only=True)
+    assigned_object_type = ContentTypeField(read_only=True)
+    assigned_object = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Note
+        fields = [
+            "id",
+            #"url",
+            #"time",
+            "user",
+            "user_name",
+            #"request_id",
+            #"action",
+            "assigned_object_type",
+            "assigned_object_id",
+            "assigned_object",
+            "note",
         ]
 
 

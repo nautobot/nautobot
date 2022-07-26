@@ -60,6 +60,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     CustomFieldModelViewSet,
+    NotesMixin,
     StatusViewSetMixin,
 )
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
@@ -147,7 +148,7 @@ class RegionViewSet(CustomFieldModelViewSet):
 #
 
 
-class SiteViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
+class SiteViewSet(NotesMixin, StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = Site.objects.prefetch_related("region", "status", "tenant", "tags").annotate(
         device_count=count_related(Device, "site"),
         rack_count=count_related(Rack, "site"),
