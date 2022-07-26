@@ -12,6 +12,12 @@
         <strong>Summary of Results</strong>
     </div>
     <table class="table table-hover panel-body">
+        {% if result.job_model is not None %}
+            <tr>
+                <td>Job Description</td>
+                <td>{{ result.job_model.description | render_markdown }}</td>
+            </tr>
+        {% endif %}
         <tr>
             <td>Status</td>
             <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
@@ -35,11 +41,6 @@
             </td>
         </tr>
     </table>
-</div>
-{% plugin_left_page result %}
-<div class="col-md-6">
-{% include 'inc/custom_fields_panel.html' with custom_fields=object.get_custom_fields %}
-{% plugin_right_page result %}
 </div>
 
 <form method="post">

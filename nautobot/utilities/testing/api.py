@@ -8,9 +8,8 @@ from rest_framework.test import APIClient, APITransactionTestCase as _APITransac
 
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.models import ObjectChange
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_filterset_for_model
+from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
 from .utils import disable_warnings
 from .views import ModelTestCase
 
@@ -289,65 +288,6 @@ class APIViewTestCases:
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_options_objects_returns_display_and_value(self):
-            """
-            Make an OPTIONS request for a list endpoint and validate choices use the display and value keys.
-            """
-            # Save self.user as superuser to be able to view available choices on list views.
-            self.user.is_superuser = True
-            self.user.save()
-
-            response = self.client.options(self._get_list_url(), **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            data = response.json()
-
-            self.assertIn("actions", data)
-
-            # Grab any field that has choices defined (fields with enums)
-            if "POST" in data["actions"]:
-                field_choices = {k: v["choices"] for k, v in data["actions"]["POST"].items() if "choices" in v}
-            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
-                field_choices = {k: v["choices"] for k, v in data["actions"]["PUT"].items() if "choices" in v}
-            else:
-                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
-
-            # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
-            # Broken down to provide better failure messages
-            for field, choices in field_choices.items():
-                for choice in choices:
-                    self.assertIn("display", choice, f"A choice in {field} is missing the display key")
-                    self.assertIn("value", choice, f"A choice in {field} is missing the value key")
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_options_returns_expected_choices(self):
-            """
-            Make an OPTIONS request for a list endpoint and validate choice fields match expected choice fields for serializer.
-            """
-            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
-            if not self.choices_fields:
-                self.choices_fields = set()
-
-            # Save self.user as superuser to be able to view available choices on list views.
-            self.user.is_superuser = True
-            self.user.save()
-
-            response = self.client.options(self._get_list_url(), **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            data = response.json()
-
-            self.assertIn("actions", data)
-
-            # Grab any field name that has choices defined (fields with enums)
-            if "POST" in data["actions"]:
-                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
-            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
-                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
-            else:
-                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
-
-            self.assertEqual(set(self.choices_fields), field_choices)
-
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_status_options_returns_expected_choices(self):
             # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
@@ -444,9 +384,7 @@ class APIViewTestCases:
 
                 # Verify ObjectChange creation
                 if hasattr(self.model, "to_objectchange"):
-                    objectchanges = ObjectChange.objects.filter(
-                        changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
-                    )
+                    objectchanges = get_changes_for_model(instance)
                     self.assertEqual(len(objectchanges), 1)
                     self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
@@ -521,9 +459,7 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
-                )
+                objectchanges = get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -561,6 +497,65 @@ class APIViewTestCases:
                     api=True,
                 )
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_objects_returns_display_and_value(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choices use the display and value keys.
+            """
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            data = response.json()
+
+            self.assertIn("actions", data)
+
+            # Grab any field that has choices defined (fields with enums)
+            if "POST" in data["actions"]:
+                field_choices = {k: v["choices"] for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
+                field_choices = {k: v["choices"] for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            else:
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
+
+            # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
+            # Broken down to provide better failure messages
+            for field, choices in field_choices.items():
+                for choice in choices:
+                    self.assertIn("display", choice, f"A choice in {field} is missing the display key")
+                    self.assertIn("value", choice, f"A choice in {field} is missing the value key")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_returns_expected_choices(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choices match expected choices for serializer.
+            """
+            # Set self.choices_fields as empty set to compare classes that shouldn't have any choices on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            data = response.json()
+
+            self.assertIn("actions", data)
+
+            # Grab any field name that has choices defined (fields with enums)
+            if "POST" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
+                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            else:
+                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
+
+            self.assertEqual(set(self.choices_fields), field_choices)
+
     class DeleteObjectViewTestCase(APITestCase):
         def test_delete_object_without_permission(self):
             """
@@ -592,9 +587,7 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
-                )
+                objectchanges = get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
 

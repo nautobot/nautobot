@@ -18,8 +18,8 @@ from nautobot.extras.models import Webhook
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
-from nautobot.extras.webhooks import get_snapshots
 from nautobot.utilities.testing import APITestCase
+from nautobot.utilities.utils import get_changes_for_model
 
 
 User = get_user_model()
@@ -113,7 +113,8 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+                oc = get_changes_for_model(site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -155,7 +156,8 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
+                oc = get_changes_for_model(site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -201,7 +203,8 @@ class WebhookTest(APITestCase):
                 site.delete()
 
                 serializer = SiteSerializer(temp_site, context={"request": None})
-                snapshots = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+                oc = get_changes_for_model(temp_site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -258,7 +261,8 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+                oc = get_changes_for_model(site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,

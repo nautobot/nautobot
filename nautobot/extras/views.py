@@ -32,7 +32,6 @@ from nautobot.utilities.utils import (
     count_related,
     get_table_for_model,
     prepare_cloned_fields,
-    shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
@@ -962,11 +961,13 @@ class JobListView(generic.ObjectListView):
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        # Default to hiding "hidden" and non-installed jobs
+        # Default to hiding "hidden", non-installed jobs and job hook receivers
         if "hidden" not in request.GET:
             queryset = queryset.filter(hidden=False)
         if "installed" not in request.GET:
             queryset = queryset.filter(installed=True)
+        if "is_job_hook_receiver" not in request.GET:
+            queryset = queryset.filter(is_job_hook_receiver=False)
         queryset = queryset.prefetch_related("results")
         return queryset
 
@@ -1001,10 +1002,27 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
+
+        initial = normalize_querydict(request.GET)
+        if "kwargs_from_job_result" in initial:
+            job_result_pk = initial.pop("kwargs_from_job_result")
+            try:
+                job_result = job_model.results.get(pk=job_result_pk)
+                # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
+                # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
+                explicit_initial = initial
+                initial = job_result.job_kwargs.get("data", {}).copy()
+                commit = job_result.job_kwargs.get("commit")
+                if commit is not None:
+                    initial.setdefault("_commit", commit)
+                initial.update(explicit_initial)
+            except JobResult.DoesNotExist:
+                messages.warning(request, f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.")
+
         template_name = "extras/job.html"
         try:
             job_class = job_model.job_class()
-            job_form = job_class.as_form(initial=normalize_querydict(request.GET))
+            job_form = job_class.as_form(initial=initial)
             if hasattr(job_class, "template_name"):
                 try:
                     get_template(job_class.template_name)
@@ -1015,7 +1033,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
 
-        schedule_form = forms.JobScheduleForm(initial=normalize_querydict(request.GET))
+        schedule_form = forms.JobScheduleForm(initial=initial)
 
         return render(
             request,
@@ -1427,37 +1445,15 @@ class ObjectChangeView(generic.ObjectView):
     queryset = ObjectChange.objects.all()
 
     def get_extra_context(self, request, instance):
-        related_changes = (
-            ObjectChange.objects.restrict(request.user, "view")
-            .filter(request_id=instance.request_id)
-            .exclude(pk=instance.pk)
-        )
+        related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
         related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
 
-        objectchanges = ObjectChange.objects.restrict(request.user, "view").filter(
-            changed_object_type=instance.changed_object_type,
-            changed_object_id=instance.changed_object_id,
-        )
-
-        next_change = objectchanges.filter(time__gt=instance.time).order_by("time").first()
-        prev_change = objectchanges.filter(time__lt=instance.time).order_by("-time").first()
-
-        if prev_change:
-            diff_added = shallow_compare_dict(
-                prev_change.object_data,
-                instance.object_data,
-                exclude=["last_updated"],
-            )
-            diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
-        else:
-            # No previous change; this is the initial change that added the object
-            diff_added = diff_removed = instance.object_data
-
+        snapshots = instance.get_snapshots()
         return {
-            "diff_added": diff_added,
-            "diff_removed": diff_removed,
-            "next_change": next_change,
-            "prev_change": prev_change,
+            "diff_added": snapshots["differences"]["added"],
+            "diff_removed": snapshots["differences"]["removed"],
+            "next_change": instance.get_next_change(request.user),
+            "prev_change": instance.get_prev_change(request.user),
             "related_changes_table": related_changes_table,
             "related_changes_count": related_changes.count(),
         }
