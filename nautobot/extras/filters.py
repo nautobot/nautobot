@@ -697,6 +697,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "commit_default",
             "hidden",
             "read_only",
+            "is_job_hook_receiver",
             "soft_time_limit",
             "time_limit",
             "grouping_override",
