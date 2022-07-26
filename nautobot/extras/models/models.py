@@ -686,8 +686,7 @@ class Note(BaseModel, ChangeLoggedModel):
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings
-        if not self.user_name:
-            self.user_name = self.user.username if self.user else "Undefined"
+        self.user_name = self.user.username if self.user else "Undefined"
         return super().save(*args, **kwargs)
 
 

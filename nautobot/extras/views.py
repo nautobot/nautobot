@@ -1536,8 +1536,7 @@ class NoteEditView(generic.ObjectEditView):
     model_form = forms.NoteForm
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
-        if not obj.present_in_database:
-            obj.user = request.user
+        obj.user = request.user
         return obj
 
 
