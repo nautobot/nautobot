@@ -120,6 +120,7 @@ __all__ = (
     "LocalContextFilterForm",
     "LocalContextModelForm",
     "LocalContextModelBulkEditForm",
+    "NoteForm",
     "ObjectChangeFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipForm",
