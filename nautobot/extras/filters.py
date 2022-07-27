@@ -38,6 +38,7 @@ from .models import (
     Job,
     JobLogEntry,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -69,6 +70,7 @@ __all__ = (
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "NautobotFilterSet",
+    "NoteFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
@@ -805,6 +807,37 @@ class LocalContextFilterSet(django_filters.FilterSet):
 
     def _local_context_data(self, queryset, name, value):
         return queryset.exclude(local_context_data__isnull=value)
+
+
+class NoteFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "user_name": "icontains",
+            "note": "icontains",
+        },
+    )
+    assigned_object_type = ContentTypeFilter()
+    user_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=get_user_model().objects.all(),
+        label="User (ID)",
+    )
+    user = django_filters.ModelMultipleChoiceFilter(
+        field_name="user__username",
+        queryset=get_user_model().objects.all(),
+        to_field_name="username",
+        label="User name",
+    )
+
+    class Meta:
+        model = Note
+        fields = [
+            "id",
+            "user",
+            "user_name",
+            "assigned_object_type_id",
+            "assigned_object_id",
+            "note",
+        ]
 
 
 class ObjectChangeFilterSet(BaseFilterSet):

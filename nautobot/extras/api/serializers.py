@@ -829,7 +829,7 @@ class JobLogEntrySerializer(serializers.ModelSerializer):
 class NoteSerializer(serializers.ModelSerializer):
     #url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
     user = NestedUserSerializer(read_only=True)
-    assigned_object_type = ContentTypeField(read_only=True)
+    assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
     assigned_object = serializers.SerializerMethodField(read_only=True)
 
     class Meta:

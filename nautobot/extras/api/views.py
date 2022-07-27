@@ -25,7 +25,7 @@ from nautobot.core.api.views import (
     ReadOnlyModelViewSet,
 )
 from nautobot.core.graphql import execute_saved_query
-from nautobot.extras import filters
+from nautobot.extras import filters, querysets
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
@@ -41,6 +41,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -77,17 +78,30 @@ class ExtrasRootView(APIRootView):
 
 
 class NotesMixin(object):
-    @action(detail=True, url_path="notes", methods=["get"])
+    @action(detail=True, url_path="notes", methods=["get", "post"])
     def notes(self, request, pk=None):
         """
-        A convenience method for returning notes within an object.
+        API methods for returning or creating notes on an object.
         """
         obj = get_object_or_404(self.queryset, pk=pk)
-        serializer = serializers.NoteSerializer(
-            obj.notes,
-            many=True,
-            context={"request": request}
-        )
+        if request.method == "POST":
+                content_type = ContentType.objects.get_for_model(obj)
+                data = request.data
+                data["assigned_object_id"] = obj.pk
+                data["assigned_object_type"] = f"{content_type.app_label}.{content_type.model}"
+                serializer = serializers.NoteSerializer(data=data, context={"request": request})
+
+                # Create the new Note.
+                serializer.is_valid(raise_exception=True)
+                serializer.save(user=request.user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            serializer = serializers.NoteSerializer(
+                obj.notes,
+                many=True,
+                context={"request": request}
+            )
 
         return Response(serializer.data)
 
@@ -848,6 +862,21 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
         return Response(serializer.data)
+
+
+#
+# Notes
+#
+
+class NoteViewSet(ModelViewSet):
+    metadata_class = ContentTypeMetadata
+    queryset = Note.objects.prefetch_related("user")
+    serializer_class = serializers.NoteSerializer
+    filterset_class = filters.NoteFilterSet
+
+    # Assign user from request
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 #
