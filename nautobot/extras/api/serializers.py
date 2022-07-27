@@ -825,9 +825,8 @@ class JobLogEntrySerializer(serializers.ModelSerializer):
 
 
 class NoteSerializer(serializers.ModelSerializer):
-    #url = serializers.HyperlinkedIdentityField(view_name="extras-api:objectchange-detail")
+    #url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
     user = NestedUserSerializer(read_only=True)
-    #action = ChoiceField(choices=ObjectChangeActionChoices, read_only=True)
     assigned_object_type = ContentTypeField(read_only=True)
     assigned_object = serializers.SerializerMethodField(read_only=True)
 
@@ -847,6 +846,13 @@ class NoteSerializer(serializers.ModelSerializer):
             "note",
         ]
 
+    @extend_schema_field(serializers.DictField(allow_null=True))
+    def get_assigned_object(self, obj):
+        if obj.assigned_object is None:
+            return None
+        serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
+        context = {"request": self.context["request"]}
+        return serializer(obj.assigned_object, context=context).data
 
 #
 # Change logging

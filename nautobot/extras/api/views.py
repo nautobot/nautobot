@@ -77,7 +77,7 @@ class ExtrasRootView(APIRootView):
 
 
 class NotesMixin(object):
-    @action(detail=True, url_path="notes")
+    @action(detail=True, url_path="notes", methods=["get"])
     def notes(self, request, pk=None):
         """
         A convenience method for returning notes within an object.
@@ -86,6 +86,7 @@ class NotesMixin(object):
         serializer = serializers.NoteSerializer(
             obj.notes,
             many=True,
+            context={"request": request}
         )
 
         return Response(serializer.data)
