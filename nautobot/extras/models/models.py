@@ -679,7 +679,7 @@ class Note(BaseModel, ChangeLoggedModel):
         ordering = ["created"]
 
     def slugify_function(self, content):
-        return slugify(f"{content[:50]}-{datetime.now().isoformat()}")
+        return slugify(f"{str(content)[:50]}-{datetime.now().isoformat()}")
 
     def __str__(self):
         return self.slug
