@@ -146,6 +146,14 @@ It is no longer possible to connect an interface to itself in the cable connect 
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
+## v1.3.10 (2022-MM-DD)
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## v1.3.9 (2022-07-25)
 
 ### Added
