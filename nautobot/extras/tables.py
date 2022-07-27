@@ -774,10 +774,10 @@ class RelationshipAssociationTable(BaseTable):
     relationship = tables.Column(linkify=True)
 
     source_type = tables.Column()
-    source = tables.Column(linkify=True, orderable=False, accessor="get_source")
+    source = tables.Column(linkify=True, orderable=False, accessor="get_source", default="unknown")
 
     destination_type = tables.Column()
-    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination")
+    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination", default="unknown")
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
