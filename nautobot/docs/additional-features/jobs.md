@@ -31,6 +31,9 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
+!!! warning
+    Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
+
 ```python
 from nautobot.extras.jobs import Job
 
@@ -94,7 +97,7 @@ class ExampleJob(Job):
     class Meta:
         description = """
             This job does a number of interesting things.
-            
+
              1. It hacks the Gibson
              2. It immanentizes the eschaton
              3. It's a floor wax *and* a dessert topping
@@ -125,7 +128,7 @@ class MyJob(Job):
 
 Default: `[]`
 
-A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code.
+A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code. If variables are defined on a parent class and no field order is defined, the parent class variables will appear before the subclass variables.
 
 #### `hidden`
 
@@ -309,7 +312,7 @@ A particular object within Nautobot. Each ObjectVar must specify a particular mo
 
 * `model` - The model class
 * `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
-* `query_params` - A dictionary of query parameters to use when retrieving available options (optional)
+* `query_params` - A dictionary of REST API query parameters to use when retrieving available options (optional)
 * `null_option` - A label representing a "null" or empty choice (optional)
 
 The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
@@ -332,16 +335,20 @@ device = ObjectVar(
 )
 ```
 
-Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name.
+Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Site` `ObjectVar` for its `tenant_group_id`.
 
 ```python
 region = ObjectVar(
     model=Region
 )
+tenant_group = ObjectVar(
+    model=TenantGroup
+)
 site = ObjectVar(
     model=Site,
     query_params={
-        'region_id': '$region'
+        'region_id': '$region',
+        'tenant_group_id': '$tenant_group'
     }
 )
 ```

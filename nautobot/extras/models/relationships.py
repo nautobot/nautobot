@@ -266,7 +266,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Queryset filter matching the applicable source objects of the selected type",
+        help_text="Filterset filter matching the applicable source objects of the selected type",
     )
 
     #
@@ -295,7 +295,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Queryset filter matching the applicable destination objects of the selected type",
+        help_text="Filterset filter matching the applicable destination objects of the selected type",
     )
     advanced_ui = models.BooleanField(
         default=False,

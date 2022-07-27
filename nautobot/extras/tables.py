@@ -305,7 +305,6 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "members",
             "filter",
             "operator",
-            "weight",
             "description",
             "actions",
         )
@@ -525,6 +524,7 @@ class JobTable(BaseTable):
     hidden = BooleanColumn()
     read_only = BooleanColumn()
     approval_required = BooleanColumn()
+    is_job_hook_receiver = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
@@ -559,6 +559,7 @@ class JobTable(BaseTable):
             "commit_default",
             "hidden",
             "read_only",
+            "is_job_hook_receiver",
             "approval_required",
             "soft_time_limit",
             "time_limit",
@@ -628,6 +629,25 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+    actions = tables.TemplateColumn(
+        template_code="""
+            {% load helpers %}
+            {% if record.job_model and record.job_kwargs %}
+                <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
+                   class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+                    <i class="mdi mdi-repeat"></i>
+                </a>
+            {% else %}
+                <a href="#" class="btn btn-xs btn-default disabled" title="No saved job arguments, cannot be re-run">
+                    <i class="mdi mdi-repeat-off"></i>
+                </a>
+            {% endif %}
+            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger"
+               title="Delete this job result.">
+                <i class="mdi mdi-trash-can-outline"></i>
+            </a>
+        """
+    )
 
     def order_linked_record(self, queryset, is_descending):
         return (
@@ -670,8 +690,9 @@ class JobResultTable(BaseTable):
             "user",
             "status",
             "summary",
+            "actions",
         )
-        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
+        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary", "actions")
 
 
 #
