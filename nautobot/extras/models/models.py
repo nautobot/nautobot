@@ -671,7 +671,7 @@ class Note(BaseModel, ChangeLoggedModel):
     )
     user_name = models.CharField(max_length=150, editable=False)
 
-    slug = AutoSlugField(populate_from="assigned_object", max_length=150)
+    slug = AutoSlugField(populate_from="assigned_object")
     note = models.TextField()
     objects = NotesQuerySet.as_manager()
 

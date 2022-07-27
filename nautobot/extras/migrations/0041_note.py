@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
                 (
                     "slug",
                     nautobot.core.fields.AutoSlugField(
-                        blank=True, max_length=150, populate_from="assigned_object", unique=True
+                        blank=True, max_length=100, populate_from="assigned_object", unique=True
                     ),
                 ),
                 ("note", models.TextField()),
