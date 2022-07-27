@@ -24,21 +24,18 @@ class NoteModelTest(TestCase):
         ]
 
         Note.objects.create(
-            name="Site Maintenance",
             note="Site has been placed on **maintenance**.",
             user=user,
             assigned_object_type=site_ct,
             assigned_object_id=cls.sites[0].pk,
         ),
         Note.objects.create(
-            name="Site Maintenance End",
             note="Site maintenance has ended.",
             user=user,
             assigned_object_type=site_ct,
             assigned_object_id=cls.sites[0].pk,
         ),
         Note.objects.create(
-            name="Site Trouble",
             note="Site is under duress.",
             user=user,
             assigned_object_type=site_ct,
