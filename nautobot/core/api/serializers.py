@@ -56,6 +56,10 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
+            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
+            if request is not None and request.method != "GET":
+                return fields
+
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
             params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
