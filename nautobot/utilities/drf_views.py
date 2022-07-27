@@ -27,7 +27,6 @@ from django.views.generic.edit import FormView
 
 from rest_framework import generics, mixins
 from rest_framework_bulk import mixins as bulk_mixins
-from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSetMixin
 
@@ -43,6 +42,7 @@ from nautobot.utilities.forms import (
     restrict_form_fields,
 )
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.utilities.renderers import NautobotHTMLRender
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     csv_format,
@@ -56,14 +56,15 @@ class NautobotViewSetMixin(
     ViewSetMixin, ObjectPermissionRequiredMixin, GetReturnURLMixin, FormView, generics.GenericAPIView
 ):
     serializer_class = None
-    renderer_classes = [TemplateHTMLRenderer]
+    renderer_classes = [NautobotHTMLRender]
 
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries
         return self.queryset.all()
 
-    def form_valid(self, request, obj, form, view_type, pk_list=[], new_objs=[], **kwargs):
-        if view_type == "delete":
+    def form_valid(self, request, obj, form, pk_list=[], new_objs=[], **kwargs):
+        self.logger.debug("Form validation was successful")
+        if self.action == "perform_destroy":
             try:
                 obj.delete()
             except ProtectedError as e:
@@ -74,14 +75,10 @@ class NautobotViewSetMixin(
             msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
             self.logger.info(msg)
             messages.success(request, msg)
-            return_url = form.cleaned_data.get("return_url")
-            if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                return redirect(return_url)
-            else:
-                return redirect(self.get_return_url(request, obj))
-        elif view_type == "bulk_delete":
+            self.success_url = self.get_return_url(request)
+            return super().form_valid(form)
+        elif self.action == "perform_bulk_destroy":
             model = self.queryset.model
-            self.logger.debug("Form validation was successful")
             # Delete objects
             queryset = self.queryset.filter(pk__in=pk_list)
             try:
@@ -92,9 +89,10 @@ class NautobotViewSetMixin(
                 return redirect(self.get_return_url(request))
             msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
             self.logger.info(msg)
+            self.success_url = self.get_return_url(request)
             messages.success(request, msg)
-            return redirect(self.get_return_url(request))
-        elif view_type == "edit":
+            return super().form_valid(form)
+        elif self.action == "perform_create_or_update":
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
@@ -118,16 +116,16 @@ class NautobotViewSetMixin(
                     return redirect(request.get_full_path())
                 return_url = form.cleaned_data.get("return_url")
                 if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                    self.success_url = return_url
                 else:
-                    return redirect(self.get_return_url(request, obj))
+                    self.success_url = self.get_return_url(request, obj)
+                return super().form_valid(form)
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
                 self.logger.debug(msg)
                 form.add_error(None, msg)
-        elif view_type == "bulk_edit":
+        elif self.action == "perform_bulk_edit":
             model = self.queryset.model
-            self.logger.debug("Form validation was successful")
             custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
             standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
             nullified_fields = request.POST.getlist("_nullify")
@@ -188,7 +186,8 @@ class NautobotViewSetMixin(
                     self.logger.info(msg)
                     messages.success(self.request, msg)
 
-                return redirect(self.get_return_url(request))
+                self.success_url = self.get_return_url(request)
+                return super().form_valid(form)
 
             except ValidationError as e:
                 messages.error(self.request, f"{obj} failed validation: {e}")
@@ -198,8 +197,7 @@ class NautobotViewSetMixin(
                 self.logger.debug(msg)
                 form.add_error(None, msg)
                 return self.retrieve_object_bulk(request, pk_list, model, form, "bulk_edit")
-        elif view_type == "bulk_import":
-            self.logger.debug("Form validation was successful")
+        elif self.action == "perform_bulk_create":
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
@@ -213,7 +211,7 @@ class NautobotViewSetMixin(
                             new_objs.append(obj)
                         else:
                             for field, err in obj_form.errors.items():
-                                form.add_error("csv", f"Row {row} {field}: {err[0]}")
+                                form.add_error("csv_data", f"Row {row} {field}: {err[0]}")
                             raise ValidationError("")
 
                     # Enforce object-level permissions
@@ -231,8 +229,8 @@ class NautobotViewSetMixin(
                         {
                             "table": obj_table,
                             "return_url": self.get_return_url(request),
+                            "template": "import_success.html",
                         },
-                        template_name="import_success.html",
                     )
             except ValidationError:
                 pass
@@ -241,21 +239,22 @@ class NautobotViewSetMixin(
                 msg = "Object import failed due to object-level permissions violation"
                 self.logger.debug(msg)
                 form.add_error(None, msg)
-        return self.form_invalid(request, obj, form, view_type=view_type)
+        return self.form_invalid(request, obj, form)
 
-    def form_invalid(self, request, obj, form, view_type, context={}):
+    def form_invalid(self, request, obj, form, context={}):
         self.logger.debug("Form Validation Failed")
-        if view_type == "delete":
+        if self.action == "perform_destroy":
             context.update(
                 {
                     "obj": obj,
                     "form": form,
                     "obj_type": self.queryset.model._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
+                    "template": self.get_template_name("delete"),
                 }
             )
-            return Response(context, template_name=self.get_template_name(view_type))
-        elif view_type == "edit":
+            return Response(context)
+        elif self.action == "perform_create_or_update":
             context.update(
                 {
                     "obj": obj,
@@ -263,10 +262,11 @@ class NautobotViewSetMixin(
                     "obj_type": self.queryset.model._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
                     "editing": obj.present_in_database,
+                    "template": self.get_template_name("edit"),
                 }
             )
-            return Response(context, template_name=self.get_template_name(view_type))
-        elif view_type == "bulk_import":
+            return Response(context)
+        elif self.action == "perform_bulk_create":
             context.update(
                 {
                     "form": form,
@@ -274,9 +274,10 @@ class NautobotViewSetMixin(
                     "obj_type": self.import_form._meta.model._meta.verbose_name,
                     "return_url": self.get_return_url(request),
                     "active_tab": "csv-data",
+                    "template": self.get_template_name("bulk_import"),
                 }
             )
-            return Response(context, template_name=self.get_template_name(view_type))
+            return Response(context)
         else:
             pass
 
@@ -291,10 +292,8 @@ class NautobotViewSetMixin(
 
         # Perform the lookup filtering.
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-
         if lookup_url_kwarg not in self.kwargs:
             return self.queryset.model()
-
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = get_object_or_404(queryset, **filter_kwargs)
 
@@ -333,14 +332,15 @@ class NautobotViewSetMixin(
             )
             return redirect(self.get_return_url(request))
 
-        context = {
+        data = {
             "form": form,
             "table": table,
             "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
+            "template": self.get_template_name(view_type),
         }
-        context.update(self.get_extra_context(request, view_type, instance=None))
-        return Response(context, template_name=self.get_template_name(view_type))
+        data.update(self.get_extra_context(request, view_type, instance=None))
+        return Response(data)
 
     def initial(self, request, *args, **kwargs):
         """
@@ -483,9 +483,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
         """
         data = {}
         instance = self.get_object()
-        serializer = super().get_serializer(instance)
         self.context = self.get_extra_context(request, "detail", instance)
-        data.update(serializer.data)
         data.update(
             {
                 "object": instance,
@@ -493,9 +491,10 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 **self.context,
                 "changelog_url": self.get_changelog_url(instance),
+                "template": self.get_template_name("detail"),
             }
         )
-        return Response(data, template_name=self.get_template_name("detail"))
+        return Response(data)
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
@@ -626,9 +625,10 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": self.filterset_form(request.GET, label_suffix="") if self.filterset_form else None,
+            "template": self.get_template_name("list"),
         }
         data.update(self.get_extra_context(request, "list", instance=None))
-        return Response(data, template_name=self.get_template_name("list"))
+        return Response(data)
 
 
 class ObjectDeleteViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
@@ -644,17 +644,17 @@ class ObjectDeleteViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
                 "form": form,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request, instance),
+                "template": self.get_template_name("delete"),
             },
-            template_name=self.get_template_name("delete"),
         )
 
     def perform_destroy(self, request, **kwargs):
         obj = self.get_object()
         form = ConfirmationForm(request.POST)
         if form.is_valid():
-            return self.form_valid(request, obj, form, view_type="delete")
+            return self.form_valid(request, obj, form)
         else:
-            return self.form_invalid(request, obj, form, view_type="delete")
+            return self.form_invalid(request, obj, form)
 
 
 class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin):
@@ -677,8 +677,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
+                "template": self.get_template_name("edit"),
             },
-            template_name=self.get_template_name("edit"),
         )
 
     def perform_create_or_update(self, request, *args, **kwargs):
@@ -687,9 +687,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
-            return self.form_valid(request, obj, form, "edit")
+            return self.form_valid(request, obj, form)
         else:
-            return self.form_invalid(request, form, obj, "edit")
+            return self.form_invalid(request, form, obj)
 
 
 class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixin):
@@ -710,7 +710,7 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixi
 
         return BulkDeleteForm
 
-    def bulk_destroy(self, request, **kwargs):
+    def perform_bulk_destroy(self, request, **kwargs):
         model = self.queryset.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
@@ -726,9 +726,9 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixi
         if "_confirm" in request.POST:
             form = form_cls(request.POST)
             if form.is_valid():
-                return self.form_valid(request, obj=None, form=form, view_type="bulk_delete", pk_list=pk_list)
+                return self.form_valid(request, obj=None, form=form, pk_list=pk_list)
             else:
-                self.form_invalid(request, obj=None, form=form, view_type="bulk_delete")
+                self.form_invalid(request, obj=None, form=form)
         else:
             form = form_cls(
                 initial={
@@ -766,16 +766,16 @@ class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
                 "obj_type": self.import_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
+                "template": self.get_template_name("bulk_import"),
             },
-            template_name=self.get_template_name("bulk_import"),
         )
 
     def perform_bulk_create(self, request):
         form = self._import_form_for_bulk_import(request.POST)
         if form.is_valid():
-            return self.form_valid(request, obj=None, form=form, view_type="bulk_import")
+            return self.form_valid(request, obj=None, form=form)
         else:
-            return self.form_invalid(request, obj=None, form=form, view_type="bulk_import")
+            return self.form_invalid(request, obj=None, form=form)
 
 
 class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin):
@@ -788,7 +788,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         # For example, a parent object can be defined given some parameter from the request URL.
         return obj
 
-    def bulk_edit(self, request, **kwargs):
+    def perform_bulk_edit(self, request, **kwargs):
         model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
@@ -801,9 +801,9 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
             form = self.bulk_edit_form(model, request.POST)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.form_valid(request, obj=None, form=form, view_type="bulk_edit", pk_list=pk_list, **kwargs)
+                return self.form_valid(request, obj=None, form=form, pk_list=pk_list, **kwargs)
             else:
-                self.form_invalid(request, obj=None, form=form, view_type="bulk_edit")
+                self.form_invalid(request, obj=None, form=form)
         else:
             # Include the PK list as initial data for the form
             initial_data = {"pk": pk_list}

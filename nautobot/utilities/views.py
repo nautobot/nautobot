@@ -733,7 +733,7 @@ class BulkImportViewMixin(GetReturnURLMixin, NautobotViewSetMixin):
                             new_objs.append(obj)
                         else:
                             for field, err in obj_form.errors.items():
-                                form.add_error("csv", f"Row {row} {field}: {err[0]}")
+                                form.add_error("csv_data", f"Row {row} {field}: {err[0]}")
                             raise ValidationError("")
 
                     # Enforce object-level permissions
