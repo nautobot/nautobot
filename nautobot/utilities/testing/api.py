@@ -137,7 +137,7 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             # Fields that should be present in *ALL* model serializers:
             self.assertIn("id", response.data)
-            self.assertEqual(response.data["id"], str(instance1.pk))
+            self.assertEqual(str(response.data["id"]), str(instance1.pk))  # coerce to str to handle both int and uuid
             self.assertIn("url", response.data)
             self.assertIn("display", response.data)
             self.assertIsInstance(response.data["display"], str)
