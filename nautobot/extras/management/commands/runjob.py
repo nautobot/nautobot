@@ -60,7 +60,7 @@ class Command(BaseCommand):
             if options.get("data"):
                 data = json.loads(options["data"])
         except json.decoder.JSONDecodeError as error:
-            raise CommandError(f"Original Error: {str(error)}\n\n invalid json data.\n\n")
+            raise CommandError(f"Invalid JSON data:\n{str(error)}")
 
         job_content_type = get_job_content_type()
 
