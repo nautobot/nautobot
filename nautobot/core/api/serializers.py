@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from django.core.exceptions import (
@@ -10,7 +11,10 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from nautobot.utilities.utils import dict_to_filter_params
+from nautobot.utilities.utils import dict_to_filter_params, normalize_querydict
+
+
+logger = logging.getLogger(__name__)
 
 
 class OptInFieldsMixin:
@@ -54,10 +58,10 @@ class OptInFieldsMixin:
 
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
-            params = getattr(request, "query_params", getattr(request, "GET", None))
+            params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
 
             try:
-                user_opt_in_fields = params.get("include", None).split(",")
+                user_opt_in_fields = params.get("include", [])
             except AttributeError:
                 # include parameter was not specified
                 user_opt_in_fields = []
@@ -87,9 +91,23 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         return getattr(instance, "display", str(instance))
 
+    def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
+        """Helper method to get_field_names."""
+        if field_name not in fields:
+            if at_start:
+                fields.insert(0, field_name)
+            else:
+                fields.append(field_name)
+        if opt_in_only:
+            if not getattr(self.Meta, "opt_in_fields", None):
+                self.Meta.opt_in_fields = [field_name]
+            elif field_name not in self.Meta.opt_in_fields:
+                self.Meta.opt_in_fields.append(field_name)
+        return fields
+
     def get_field_names(self, declared_fields, info):
         """
-        Override get_field_names() to append the `display` field so it is always included in the
+        Override get_field_names() to prepend the `id` and `display` fields so they are always included in the
         serializer's `Meta.fields`.
 
         DRF does not automatically add declared fields to `Meta.fields`, nor does it require that declared fields
@@ -99,8 +117,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         which would surely lead to errors of omission; therefore we have chosen the former approach.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
-        fields.append("display")
-
+        self.extend_field_names(fields, "display", at_start=True)
+        self.extend_field_names(fields, "id", at_start=True)
         return fields
 
 
@@ -115,6 +133,7 @@ class ValidatedModelSerializer(BaseModelSerializer):
         # Remove custom fields data and tags (if any) prior to model validation
         attrs = data.copy()
         attrs.pop("custom_fields", None)
+        attrs.pop("relationships", None)
         attrs.pop("tags", None)
 
         # Skip ManyToManyFields
@@ -151,6 +170,14 @@ class WritableNestedSerializer(BaseModelSerializer):
         # Dictionary of related object attributes
         if isinstance(data, dict):
             params = dict_to_filter_params(data)
+
+            # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
+            # data any serializer fields that do not correspond to a specific model field
+            for field_name, field_instance in self.fields.items():
+                if field_name in params and field_instance.source == "*":
+                    logger.debug("Discarding non-database field %s", field_name)
+                    del params[field_name]
+
             queryset = self.get_queryset()
             try:
                 return queryset.get(**params)

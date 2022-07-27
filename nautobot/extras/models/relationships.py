@@ -9,12 +9,12 @@ from django.db import models
 from django.db.models import Q
 from django.urls import reverse
 
+from nautobot.core.fields import AutoSlugField
+from nautobot.core.models import BaseModel
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
 from nautobot.utilities.utils import get_filterset_for_model
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
@@ -53,6 +53,10 @@ class RelationshipModel(models.Model):
         object_id_field="destination_id",
         related_query_name="destination_%(app_label)s_%(class)s",  # e.g. 'destination_dcim_rack'
     )
+
+    @property
+    def associations(self):
+        return list(self.source_for_associations.all()) + list(self.destination_for_associations.all())
 
     def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
@@ -126,9 +130,11 @@ class RelationshipModel(models.Model):
 
         return resp
 
-    def get_relationships_data(self, advanced_ui=None):
+    def get_relationships_data(self, **kwargs):
         """
         Return a dictionary of relationships with the label and the value or the queryset for each.
+
+        Used for rendering relationships in the UI; see nautobot/core/templates/inc/relationships_table_rows.html
 
         Returns:
             response {
@@ -157,7 +163,7 @@ class RelationshipModel(models.Model):
             }
         """
 
-        relationships_by_side = self.get_relationships(advanced_ui=advanced_ui)
+        relationships_by_side = self.get_relationships(**kwargs)
 
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: {},
@@ -318,6 +324,13 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
+
+    @property
+    def peer_type(self):
+        """Virtual attribute for symmetric relationships only."""
+        if self.symmetric:
+            return self.source_type
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:relationship", args=[self.slug])

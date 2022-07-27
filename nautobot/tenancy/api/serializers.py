@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.extras.api.customfields import CustomFieldModelSerializer
-from nautobot.extras.api.serializers import TaggedObjectSerializer
+from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedObjectSerializer
 from nautobot.tenancy.models import Tenant, TenantGroup
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -13,7 +12,7 @@ from .nested_serializers import NestedTenantGroupSerializer, NestedTenantSeriali
 #
 
 
-class TenantGroupSerializer(CustomFieldModelSerializer):
+class TenantGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenantgroup-detail")
     parent = NestedTenantGroupSerializer(required=False, allow_null=True)
     tenant_count = serializers.IntegerField(read_only=True)
@@ -22,7 +21,6 @@ class TenantGroupSerializer(CustomFieldModelSerializer):
     class Meta:
         model = TenantGroup
         fields = [
-            "id",
             "url",
             "name",
             "slug",
@@ -30,15 +28,10 @@ class TenantGroupSerializer(CustomFieldModelSerializer):
             "description",
             "tenant_count",
             "_depth",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
 
-class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class TenantSerializer(NautobotModelSerializer, TaggedObjectSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
     group = NestedTenantGroupSerializer(required=False)
     circuit_count = serializers.IntegerField(read_only=True)
@@ -55,17 +48,12 @@ class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     class Meta:
         model = Tenant
         fields = [
-            "id",
             "url",
             "name",
             "slug",
             "group",
             "description",
             "comments",
-            "tags",
-            "custom_fields",
-            "created",
-            "last_updated",
             "circuit_count",
             "device_count",
             "ipaddress_count",
@@ -76,6 +64,4 @@ class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "vlan_count",
             "vrf_count",
             "cluster_count",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
