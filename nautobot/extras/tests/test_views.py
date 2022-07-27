@@ -592,21 +592,18 @@ class NoteTestCase(
 
         # Notes Objects to test
         Note.objects.create(
-            name="Site Maintenance",
             note="Site has been placed on maintenance.",
             user=user,
             assigned_object_type=content_type,
             assigned_object_id=site.pk,
         ),
         Note.objects.create(
-            name="Site Maintenance End",
             note="Site maintenance has ended.",
             user=user,
             assigned_object_type=content_type,
             assigned_object_id=site.pk,
         ),
         Note.objects.create(
-            name="Site Trouble",
             note="Site is under duress.",
             user=user,
             assigned_object_type=content_type,
@@ -614,7 +611,6 @@ class NoteTestCase(
         ),
 
         cls.form_data = {
-            "name": "Site Note",
             "note": "This is Site note.",
             "assigned_object_type": content_type.pk,
             "assigned_object_id": site.pk,

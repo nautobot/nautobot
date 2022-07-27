@@ -671,7 +671,7 @@ class Note(BaseModel, ChangeLoggedModel):
     )
     user_name = models.CharField(max_length=150, editable=False)
 
-    slug = AutoSlugField(populate_from="assigned_object", max_length=150)
+    slug = AutoSlugField(populate_from="assigned_object")
     note = models.TextField()
     objects = NotesQuerySet.as_manager()
 
@@ -679,7 +679,7 @@ class Note(BaseModel, ChangeLoggedModel):
         ordering = ["created"]
 
     def slugify_function(self, content):
-        return slugify(f"{content}-{datetime.now().isoformat()}")
+        return slugify(f"{str(content)[:50]}-{datetime.now().isoformat()}")
 
     def __str__(self):
         return self.slug
