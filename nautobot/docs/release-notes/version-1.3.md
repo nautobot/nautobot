@@ -134,13 +134,182 @@ Note that a Tag created programmatically via the ORM without assigning any `cont
 
 We've updated the Jinja2 dependency from version 2.11 to version 3.0.3. This may affect the syntax of any `nautobot.extras.models.ComputedField` objects in your database... Specifically, the `template` attribute, which is parsed as a Jinja2 template. Please refer to [Jinja2 3.0.x's release notes](https://jinja.palletsprojects.com/en/3.0.x/changes/) to check if any changes might be required in your computed fields' templates.
 
+#### Virtual Chassis Master Device Interfaces List
+
+The device column will now show on a device's interfaces list if this device is the master in a virtual chassis. And will conversely not appear if the device is not a master on a virtual chassis.
+
+It is no longer possible to connect an interface to itself in the cable connect form.
+
 ### Removed
 
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
 
-## v1.3.3 (2022-MM-DD)
+## v1.3.10 (2022-MM-DD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+## v1.3.9 (2022-07-25)
+
+### Added
+
+- [#860](https://github.com/nautobot/nautobot/issues/860) - Added documentation that adding device component to device type does not modify existing device instances
+- [#1595](https://github.com/nautobot/nautobot/issues/1595) - Add ability to specify uWSGI buffer size via environment variable.
+- [#1757](https://github.com/nautobot/nautobot/issues/1757) - Added nullable face, position to Device bulk edit form to provided desired behavior to bulk assigning to a new rack.
+
+### Changed
+
+- [#386](https://github.com/nautobot/nautobot/issues/386) - Clarified messaging in API for rack position occupied.
+- [#1356](https://github.com/nautobot/nautobot/issues/1356) - Virtual chassis master device interface list is less confusing.
+- [#2045](https://github.com/nautobot/nautobot/pull/2045) - Clarified Job authoring around proper class inheritance.
+
+### Fixed
+
+- [#1035](https://github.com/nautobot/nautobot/issues/1035) - Fix assertion raised if SLAAC Status is missing when creating `IPAddress` objects
+- [#1694](https://github.com/nautobot/nautobot/issues/1694) - Fixed CablePath not found error when disconnects/delete action performed on a cable
+- [#1795](https://github.com/nautobot/nautobot/issues/1795) - Corrected relationship source/destination filter help text from queryset Filter to filterset Filter and updated documentations.
+- [#1839](https://github.com/nautobot/nautobot/issues/1795) - Fixed staff users with auth > group permissions unable to view groups in admin UI.
+- [#1937](https://github.com/nautobot/nautobot/issues/1937) - Solved _custom_field_data do not fully delete when using CustomFieldBulkDeleteView.
+- [#1947](https://github.com/nautobot/nautobot/issues/1947) - Fixed unbound local error by initializing template variable before conditional logic statements.
+- [#2036](https://github.com/nautobot/nautobot/pull/2036) - Fixed outdated UI navigation references in documentation.
+- [#2039](https://github.com/nautobot/nautobot/issues/2039) - Fixed IntegerVar with default set to 0 on Job evaluating to False.
+- [#2057](https://github.com/nautobot/nautobot/issues/2057) - Fixed RIR changelog route being in VRF name prefix.
+- [#2077](https://github.com/nautobot/nautobot/issues/2077) - Fixed an error when viewing object detail pages after uninstalling a plugin but still having RelationshipAssociations involving the plugin's models.
+- [#2081](https://github.com/nautobot/nautobot/issues/2081) - Fixed error raised if status connected not found when creating a cable
+
+## v1.3.8 (2022-07-11)
+
+### Added
+
+- [#1464](https://github.com/nautobot/nautobot/issues/1464) - Added "Continue with SSO" link on login page.
+
+### Changed
+
+- [#1407](https://github.com/nautobot/nautobot/issues/1407) - Changed custom field export column headings to prefix with `cf_`.
+- [#1603](https://github.com/nautobot/nautobot/issues/1603) - Changed GraphQL schema generation to call time for GraphQL API.
+- [#1977](https://github.com/nautobot/nautobot/pull/1977) - Updated Renovate config to batch updates (additional PRs included to further refine config).
+- [#2020](https://github.com/nautobot/nautobot/pull/2020) - Updated `celery >= 5.2.7`, `django-jinja  >= 2.10.2`, and `mysqlclient >= 2.1.1` versions in lock file (patch updates).
+
+### Fixed
+
+- [#1838](https://github.com/nautobot/nautobot/issues/1838) - Fixed job result to show latest not oldest.
+- [#1874](https://github.com/nautobot/nautobot/issues/1874) - Fixed Git repo sync issue with Sentinel with deprecated rq_count check.
+
+### Security
+
+!!! important
+    CVE in Django versions `>= 3.2, < 3.2.14`. This update upgrades Django to `3.2.14`.
+
+- [#2004](https://github.com/nautobot/nautobot/pull/2004) - Bump Django from 3.2.13 to 3.2.14 for for [CVE-2022-34265](https://github.com/advisories/GHSA-p64x-8rxx-wf6q).
+
+## v1.3.7 (2022-06-27)
+
+### Added
+
+- [#1896](https://github.com/nautobot/nautobot/pull/1856) - Added Renovate Bot configuration, targeting `next`.
+- [#1900](https://github.com/nautobot/nautobot/issues/1900) - Added ability to filter Git repository table based on provided contents.
+
+### Changed
+
+- [#1645](https://github.com/nautobot/nautobot/issues/1645) - Hide search bar for unauthenticated users if `HIDE_RESTRICTED_UI` is True
+- [#1946](https://github.com/nautobot/nautobot/pull/1946) - Increase character limit on `FileAttachment.mimetype` to 255 to allow for all mime types to be used.
+- [#1948](https://github.com/nautobot/nautobot/issues/1948) - Switched Renovate Bot configuration to bump lock-file only on patch releases instead of bumping in `pyproject.toml`.
+
+### Fixed
+
+- [#1677](https://github.com/nautobot/nautobot/issues/1677) - Fixed default values of custom fields on device components (such as Interface) not being applied upon Device creation.
+- [#1769](https://github.com/nautobot/nautobot/issues/1769) - Resolve missing menu 'General / Installed Plugins' in navbar if `HIDE_RESTRICTED_UI` is activated
+- [#1836](https://github.com/nautobot/nautobot/issues/1836) - Fixed incorrect pre-population of custom field filters in table views.
+- [#1870](https://github.com/nautobot/nautobot/issues/1870) - Fixed cable `_abs_length` validation error.
+- [#1941](https://github.com/nautobot/nautobot/pull/1941) - Fixes uWSGI config example, development environment links in Docker section of docs.
+
+## v1.3.6 (2022-06-13)
+
+### Changed
+
+- [#207](https://github.com/nautobot/nautobot/issues/207) - Update permissions documentation to add assigning permissions section.
+- [#1763](https://github.com/nautobot/nautobot/issues/1763) - Job testing documentation updated to include details around enabling jobs. Job logs database added to `TransactionTestCase`.
+- [#1829](https://github.com/nautobot/nautobot/pull/1829) - Change Docker build GitHub Action to cache with matrix awareness.
+- [#1856](https://github.com/nautobot/nautobot/pull/1856) - Updated links to Slack community.
+
+### Fixed
+
+- [#1409](https://github.com/nautobot/nautobot/issues/1409) - Fixed page title on device status (NAPALM) page template.
+- [#1524](https://github.com/nautobot/nautobot/issues/1524) - Fixed valid "None" option removed from search field upon display.
+- [#1649](https://github.com/nautobot/nautobot/issues/1649) - Changed the incorrect view permission (circuits.view_vrf to ipam.view_vrf)
+- [#1750](https://github.com/nautobot/nautobot/issues/1750) - Fixed incorrect display of boolean value in Virtual Chassis display.
+- [#1759](https://github.com/nautobot/nautobot/issues/1759) - Fixed TypeError on webhook REST API PATCH.
+- [#1787](https://github.com/nautobot/nautobot/issues/1787) - Fix scheduled jobs failing when scheduled from REST API.
+- [#1841](https://github.com/nautobot/nautobot/issues/1841) - Fixed incorrect display of boolean values in Git Repository view.
+- [#1848](https://github.com/nautobot/nautobot/pull/1848) - Fix Poetry cache issue in CI causing version tests to fail in `next`.
+- [#1850](https://github.com/nautobot/nautobot/pull/1850) - Added {{block.super}} to negate the override from the js block in rack.html. This change fixed the issue of unable to navigate away from rack changelog tab.
+- [#1868](https://github.com/nautobot/nautobot/pull/1868) - Updated link to advanced Docker compose use in getting started guide.
+
+## v1.3.5 (2022-05-30)
+
+### Added
+
+- [#1606](https://github.com/nautobot/nautobot/issues/1606) - Added best practices for working with FilterSet classes to developer documentation.
+- [#1796](https://github.com/nautobot/nautobot/issues/1796) - Added documentation for using Git Repositories behind/via proxies.
+- [#1811](https://github.com/nautobot/nautobot/pull/1811) - Added developer Docker container for running mkdocs instead of locally.
+
+### Changed
+
+- [#1818](https://github.com/nautobot/nautobot/pull/1818) - Changed README.md to link to correct build status workflows.
+
+### Fixed
+
+- [#895](https://github.com/nautobot/nautobot/issues/895) - Fixed validation when creating `Interface` and `VMInterface` objects via the REST API while specifying `untagged_vlan` without `mode` also set in the payload. A 400 error will now be raised as expected.
+- [#1289](https://github.com/nautobot/nautobot/issues/1289) - Fixed issue where job result live pagination would reset to page 1 on refresh. The currently selected page will now persist until the job run completes.
+- [#1290](https://github.com/nautobot/nautobot/issues/1290) - Fix NAPALM enable password argument for devices using the eos NAPALM driver.
+- [#1427](https://github.com/nautobot/nautobot/issues/1427) - Fix NoReverseMatch exception when related views for action_buttons don't exist.
+- [#1428](https://github.com/nautobot/nautobot/issues/1428) - Fix IPAM prefix utilization sometimes showing greater than 100 percent for IPv4 prefixes.
+- [#1604](https://github.com/nautobot/nautobot/issues/1604) - Fix missing filter restriction enforcement on relationship association.
+- [#1771](https://github.com/nautobot/nautobot/issues/1771) - Fix exception raised for RelationshipAssociation when updating source.
+- [#1772](https://github.com/nautobot/nautobot/issues/1772) - Fix RelationshipAssociationSerializer not triggering model clean method.
+- [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
+- [#1805](https://github.com/nautobot/nautobot/pull/1805) - Fix git pre-commit hook incompatibility with dash shell and add warning on skipped tests.
+
+### Security
+
+!!! attention
+    `PyJWT` - Nautobot does not directly depend on `PyJWT` so your upgrading Nautobot via `pip` or other package management tools may not pick up the patched version (we are not pinning this dependency). However some tools support an "eager" upgrade policy as an option. For example, `pip install --upgrade --upgrade-strategy eager nautobot` will upgrade Nautobot and all it's dependencies to their latest compatible version. This may not work for all use cases so it may be safer to update Nautobot then perform `pip install --upgrade PyJWT`.
+
+    Docker containers published with this build will have PyJWT upgraded.
+
+- [#1808](https://github.com/nautobot/nautobot/pull/1808) - Bump PyJWT from 2.3.0 to 2.4.0
+
+## v1.3.4 (2022-05-16)
+
+### Added
+
+- [#1766](https://github.com/nautobot/nautobot/pull/1766) - Added configuration for downloaded filename branding.
+- [#1752](https://github.com/nautobot/nautobot/pull/1752) - Added a new `SearchFilter` that is now used on all core filtersets to provide the `q=` search parameter for basic searching in list view of objects.
+
+### Changed
+
+- [#1744](https://github.com/nautobot/nautobot/issues/1744) - Updated REST API token provisioning docs to include added in version.
+- [#1751](https://github.com/nautobot/nautobot/pull/1751) - Updated secrets documentation advisory notes.
+
+### Fixed
+
+- [#1263](https://github.com/nautobot/nautobot/issues/1263) - Rack device image toggle added back to detail UI.
+- [#1449](https://github.com/nautobot/nautobot/issues/1449) - Fixed a performance bug in `/api/dcim/devices/` and `/api/virtualization/virtual-machines/` relating to configuration contexts.
+- [#1652](https://github.com/nautobot/nautobot/issues/1652) - Unicode now renders correctly on uses of json.dumps and yaml.dump throughout the code base.
+- [#1712](https://github.com/nautobot/nautobot/issues/1712) - Fixed circuit termination detail view getting 500 response when it's a provider network.
+- [#1755](https://github.com/nautobot/nautobot/issues/1755) - Fixed "Select All" helper widget from taking full UI height.
+- [#1761](https://github.com/nautobot/nautobot/pull/1761) - Fixed typo in upgrading documentation.
+
+### Security
+
+- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../configuration/optional-settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
+
+## v1.3.3 (2022-05-02)
 
 ### Added
 
@@ -149,6 +318,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#1481](https://github.com/nautobot/nautobot/issues/1481) - Docs link in footer now opens link to bundled documentation instead of Read the Docs.
 - [#1680](https://github.com/nautobot/nautobot/pull/1680) - Bump netutils dependency to 1.1.0.
 - [#1700](https://github.com/nautobot/nautobot/pull/1700) - Revert vendoring `drf-spectacular`.
 

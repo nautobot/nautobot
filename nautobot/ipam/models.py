@@ -1,3 +1,5 @@
+import logging
+
 import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -42,6 +44,9 @@ __all__ = (
     "VLANGroup",
     "VRF",
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @extras_features(
@@ -704,11 +709,10 @@ class Prefix(PrimaryModel, StatusModel):
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
         else:
-            # Compile an IPSet to avoid counting duplicate IPs
-            child_count = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()]).size
             prefix_size = self.prefix.size
             if self.prefix.version == 4 and self.prefix.prefixlen < 31 and not self.is_pool:
                 prefix_size -= 2
+            child_count = prefix_size - self.get_available_ips().size
             return UtilizationData(numerator=child_count, denominator=prefix_size)
 
 
@@ -853,8 +857,12 @@ class IPAddress(PrimaryModel, StatusModel):
     @classproperty
     def STATUS_SLAAC(cls):
         """Return a cached "slaac" `Status` object for later reference."""
-        if getattr(cls, "__status_slaac", None) is None:
-            cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(slug="slaac")
+        cls.__status_slaac = getattr(cls, "__status_slaac", None)
+        if cls.__status_slaac is None:
+            try:
+                cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(slug="slaac")
+            except Status.DoesNotExist:
+                logger.error("SLAAC Status not found")
         return cls.__status_slaac
 
     def clean(self):

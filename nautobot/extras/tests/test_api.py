@@ -20,7 +20,12 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer, NestedScheduledJobSerializer
-from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.choices import (
+    JobExecutionType,
+    RelationshipTypeChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -207,12 +212,24 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(rendered_context["bar"], 456)
         self.assertEqual(rendered_context["baz"], 789)
 
+        # Test API response as well
+        self.add_permissions("dcim.view_device")
+        device_url = reverse("dcim-api:device-detail", kwargs={"pk": device.pk})
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"], {"foo": 123, "bar": 456, "baz": 789}, response.data)
+
         # Add another context specific to the site
         configcontext4 = ConfigContext(name="Config Context 4", data={"site_data": "ABC"})
         configcontext4.save()
         configcontext4.sites.add(site)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["site_data"], "ABC")
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"]["site_data"], "ABC", response.data["config_context"])
 
         # Override one of the default contexts
         configcontext5 = ConfigContext(name="Config Context 5", weight=2000, data={"foo": 999})
@@ -220,6 +237,10 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext5.sites.add(site)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["foo"], 999)
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"]["foo"], 999, response.data["config_context"])
 
         # Add a context which does NOT match our device and ensure it does not apply
         site2 = Site.objects.create(name="Site 2", slug="site-2")
@@ -228,6 +249,10 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext6.sites.add(site2)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["bar"], 456)
+        response = self.client.get(device_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("config_context", response.data)
+        self.assertEqual(response.data["config_context"]["bar"], 456, response.data["config_context"])
 
     def test_schema_validation_pass(self):
         """
@@ -1421,6 +1446,13 @@ class JobTestVersion13(
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_future_schedule_kwargs_pk(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify that kwargs['scheduled_job_pk'] was set in the scheduled job."""
+        _, schedule = super().test_run_job_future()
+
+        self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_interval(self):
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_interval()
@@ -1872,15 +1904,15 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site_type = ContentType.objects.get_for_model(Site)
-        device_type = ContentType.objects.get_for_model(Device)
+        cls.site_type = ContentType.objects.get_for_model(Site)
+        cls.device_type = ContentType.objects.get_for_model(Device)
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
             slug="elsewhere-devices",
             type="many-to-many",
-            source_type=site_type,
-            destination_type=device_type,
+            source_type=cls.site_type,
+            destination_type=cls.device_type,
         )
         cls.relationship.validated_save()
         cls.sites = (
@@ -1899,23 +1931,23 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
         RelationshipAssociation(
             relationship=cls.relationship,
-            source_type=site_type,
+            source_type=cls.site_type,
             source_id=cls.sites[0].pk,
-            destination_type=device_type,
+            destination_type=cls.device_type,
             destination_id=cls.devices[0].pk,
         ).validated_save()
         RelationshipAssociation(
             relationship=cls.relationship,
-            source_type=site_type,
+            source_type=cls.site_type,
             source_id=cls.sites[0].pk,
-            destination_type=device_type,
+            destination_type=cls.device_type,
             destination_id=cls.devices[1].pk,
         ).validated_save()
         RelationshipAssociation(
             relationship=cls.relationship,
-            source_type=site_type,
+            source_type=cls.site_type,
             source_id=cls.sites[0].pk,
-            destination_type=device_type,
+            destination_type=cls.device_type,
             destination_id=cls.devices[2].pk,
         ).validated_save()
 
@@ -1942,6 +1974,74 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 "destination_id": cls.devices[2].pk,
             },
         ]
+
+    def test_create_invalid_relationship_association(self):
+        """Test creation of invalid relationship association restricted by destination/source filter."""
+
+        relationship = Relationship.objects.create(
+            name="Device to Site Rel 1",
+            slug="device-to-site-rel-1",
+            source_type=self.device_type,
+            source_filter={"name": [self.devices[0].name]},
+            destination_type=self.site_type,
+            destination_label="Primary Rack",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            destination_filter={"name": [self.sites[0].name]},
+        )
+
+        associations = [
+            (
+                "destination",  # side
+                self.sites[2].name,  # field name with an error
+                {
+                    "relationship": relationship.pk,
+                    "source_type": "dcim.device",
+                    "source_id": self.devices[0].pk,
+                    "destination_type": "dcim.site",
+                    "destination_id": self.sites[2].pk,
+                },
+            ),
+            (
+                "source",  # side
+                self.devices[1].name,  # field name with an error
+                {
+                    "relationship": relationship.pk,
+                    "source_type": "dcim.device",
+                    "source_id": self.devices[1].pk,
+                    "destination_type": "dcim.site",
+                    "destination_id": self.sites[0].pk,
+                },
+            ),
+        ]
+
+        self.add_permissions("extras.add_relationshipassociation")
+
+        for side, field_error_name, data in associations:
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.data[side],
+                [f"{field_error_name} violates {relationship.name} {side}_filter restriction"],
+            )
+
+    def test_model_clean_method_is_called(self):
+        """Validate RelationshipAssociation clean method is called"""
+
+        data = {
+            "relationship": self.relationship.pk,
+            "source_type": "dcim.device",
+            "source_id": self.sites[2].pk,
+            "destination_type": "dcim.device",
+            "destination_id": self.devices[2].pk,
+        }
+
+        self.add_permissions("extras.add_relationshipassociation")
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["source_type"], [f"source_type has a different value than defined in {self.relationship}"]
+        )
 
 
 class SecretTest(APIViewTestCases.APIViewTestCase):
@@ -2424,5 +2524,84 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEquals(
             response.data[0]["type_create"][0],
+            "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
+        )
+
+    def test_patch_webhooks_with_same_content_type_same_url_common_action(self):
+        self.add_permissions("extras.change_webhook")
+
+        self.webhooks[2].payload_url = self.webhooks[1].payload_url
+        self.webhooks[2].save()
+
+        data = {"type_update": True}
+
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEquals(
+            response.data["type_update"][0],
+            f"A webhook already exists for update on dcim | device type to URL {self.webhooks[1].payload_url}",
+        )
+
+    def test_patch_webhooks(self):
+        self.add_permissions("extras.change_webhook")
+
+        instance = Webhook.objects.create(
+            name="api-test-4",
+            type_update=True,
+            payload_url=self.webhooks[1].payload_url,
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance.content_types.set([ContentType.objects.get_for_model(DeviceType)])
+
+        data = {"type_delete": True}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"content_types": ["dcim.device"]}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"payload_url": "http://example.com/test4"}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_invalid_webhooks_patch(self):
+        self.add_permissions("extras.change_webhook")
+
+        # Test patch payload_url with conflicts
+        instance_1 = Webhook.objects.create(
+            name="api-test-4",
+            type_update=True,
+            payload_url="http://example.com/test4",
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance_1.content_types.set([ContentType.objects.get_for_model(DeviceType)])
+
+        data = {"payload_url": "http://example.com/test2"}
+        response = self.client.patch(self._get_detail_url(instance_1), data, format="json", **self.header)
+        self.assertEquals(
+            response.data["type_update"][0],
+            "A webhook already exists for update on dcim | device type to URL http://example.com/test2",
+        )
+
+        # Test patch content_types with conflicts
+        instance_2 = Webhook.objects.create(
+            name="api-test-5",
+            type_create=True,
+            payload_url="http://example.com/test1",
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance_2.content_types.set([ContentType.objects.get_for_model(Device)])
+
+        data = {"content_types": ["dcim.devicetype"]}
+        response = self.client.patch(self._get_detail_url(instance_2), data, format="json", **self.header)
+        self.assertEquals(
+            response.data["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )

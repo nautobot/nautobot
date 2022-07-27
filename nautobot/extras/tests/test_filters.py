@@ -3,8 +3,17 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
-
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
+from nautobot.dcim.models import (
+    Device,
+    DeviceRole,
+    DeviceType,
+    Interface,
+    Manufacturer,
+    Platform,
+    Rack,
+    Region,
+    Site,
+)
 from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
@@ -15,6 +24,7 @@ from nautobot.extras.filters import (
     ConfigContextFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
+    GitRepositoryFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
     JobFilterSet,
@@ -23,8 +33,8 @@ from nautobot.extras.filters import (
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
     SecretFilterSet,
-    SecretsGroupFilterSet,
     SecretsGroupAssociationFilterSet,
+    SecretsGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
     WebhookFilterSet,
@@ -53,7 +63,6 @@ from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -215,6 +224,11 @@ class ConfigContextTestCase(TestCase):
         params = {"tenant": [tenants[0].slug, tenants[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
 
 class CustomLinkTestCase(TestCase):
     queryset = CustomLink.objects.all()
@@ -309,6 +323,71 @@ class ExportTemplateTestCase(TestCase):
     def test_search(self):
         params = {"q": "export"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class GitRepositoryTestCase(TestCase):
+    queryset = GitRepository.objects.all()
+    filterset = GitRepositoryFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create Three GitRepository records
+        repos = (
+            GitRepository(
+                name="Repo 1",
+                slug="repo-1",
+                branch="main",
+                provided_contents=[
+                    "extras.configcontext",
+                ],
+                remote_url="https://example.com/repo1.git",
+            ),
+            GitRepository(
+                name="Repo 2",
+                slug="repo-2",
+                branch="develop",
+                provided_contents=[
+                    "extras.configcontext",
+                    "extras.job",
+                ],
+                remote_url="https://example.com/repo2.git",
+            ),
+            GitRepository(
+                name="Repo 3",
+                slug="repo-3",
+                branch="next",
+                provided_contents=[
+                    "extras.configcontext",
+                    "extras.job",
+                    "extras.exporttemplate",
+                ],
+                remote_url="https://example.com/repo3.git",
+            ),
+        )
+        for repo in repos:
+            repo.save(trigger_resync=False)
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Repo 3", "Repo 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_remote_url(self):
+        params = {"remote_url": ["https://example.com/repo1.git"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_branch(self):
+        params = {"branch": ["main", "next"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_provided_contents(self):
+        params = {"provided_contents": ["extras.exporttemplate"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"provided_contents": ["extras.job"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class GraphQLTestCase(TestCase):
@@ -531,13 +610,13 @@ class JobFilterSetTestCase(TestCase):
 
     def test_installed(self):
         params = {"installed": True}
-        # 30 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 33)
+        # 32 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 35)
 
     def test_enabled(self):
         params = {"enabled": False}
-        # 30 local jobs and 3 plugin jobs
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 33)
+        # 32 local jobs and 3 plugin jobs
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 35)
 
     def test_commit_default(self):
         params = {"commit_default": False}
@@ -558,6 +637,9 @@ class JobFilterSetTestCase(TestCase):
     def test_search(self):
         params = {"q": "file"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class JobLogEntryTestCase(TestCase):
@@ -696,6 +778,11 @@ class ObjectChangeTestCase(TestCase):
     def test_changed_object_type_id(self):
         params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="site").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class RelationshipTestCase(TestCase):
@@ -889,6 +976,11 @@ class SecretTestCase(TestCase):
         params = {"provider": ["environment-variable"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
 
 class SecretsGroupTestCase(TestCase):
     queryset = SecretsGroup.objects.all()
@@ -911,6 +1003,11 @@ class SecretsGroupTestCase(TestCase):
     def test_slug(self):
         params = {"slug": ["group-1", "group-2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class SecretsGroupAssociationTestCase(TestCase):
@@ -1038,6 +1135,9 @@ class StatusTestCase(TestCase):
     def test_search(self):
         params = {"q": "active"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class TagTestCase(TestCase):
@@ -1082,6 +1182,9 @@ class TagTestCase(TestCase):
     def test_search(self):
         params = {"q": "tag-1"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class WebhookTestCase(TestCase):
@@ -1141,3 +1244,6 @@ class WebhookTestCase(TestCase):
     def test_search(self):
         params = {"q": "webhook"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        value = self.queryset.values_list("pk", flat=True)[0]
+        params = {"q": value}
+        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

@@ -10,12 +10,13 @@ from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.models import CustomField
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
 from nautobot.ipam.models import IPAddress, Prefix
-from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField
+from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField, JSONField
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
     add_field_to_filter_form_class,
 )
+from nautobot.utilities.forms.widgets import APISelect
 from nautobot.utilities.forms.forms import AddressFieldMixin, PrefixFieldMixin
 from nautobot.utilities.testing import TestCase as NautobotTestCase
 
@@ -572,3 +573,13 @@ class JSONFieldTest(NautobotTestCase):
         # Fetch URL with filter parameter
         response = self.client.get(f'{reverse("dcim:device_list")}?name=Foo%20Device')
         self.assertIn("Foo Device", str(response.content))
+
+    def test_prepare_value_with_utf8(self):
+        self.assertEqual('"I am UTF-8! 😀"', JSONField().prepare_value("I am UTF-8! 😀"))
+
+
+class WidgetsTest(TestCase):
+    def test_api_select_add_query_param_with_utf8(self):
+        widget = APISelect()
+        widget.add_query_param("utf8", "I am UTF-8! 😀")
+        self.assertEqual('["I am UTF-8! 😀"]', widget.attrs["data-query-param-utf8"])

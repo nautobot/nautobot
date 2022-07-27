@@ -37,6 +37,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
+from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     csv_format,
     normalize_querydict,
@@ -169,7 +170,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append(custom_field.name)
+                headers.append("cf_" + custom_field.name)
                 custom_fields.append(custom_field.name)
 
         csv_data.append(",".join(headers))
@@ -184,6 +185,22 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             csv_data.append(csv_format(data))
 
         return "\n".join(csv_data)
+
+    def validate_action_buttons(self, request):
+        """Verify actions in self.action_buttons are valid view actions."""
+
+        always_valid_actions = ("export",)
+        valid_actions = []
+        invalid_actions = []
+
+        for action in self.action_buttons:
+            if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
+                valid_actions.append(action)
+            else:
+                invalid_actions.append(action)
+        if invalid_actions:
+            messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
+        return valid_actions
 
     def get(self, request):
 
@@ -211,14 +228,18 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Check for YAML export support
         elif "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
-            filename = "nautobot_{}.yaml".format(self.queryset.model._meta.verbose_name_plural)
+            filename = "{}{}.yaml".format(
+                settings.BRANDING_PREPENDED_FILENAME, self.queryset.model._meta.verbose_name_plural
+            )
             response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
             return response
 
         # Fall back to built-in CSV formatting if export requested but no template specified
         elif "export" in request.GET and hasattr(model, "to_csv"):
             response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = "nautobot_{}.csv".format(self.queryset.model._meta.verbose_name_plural)
+            filename = "{}{}.csv".format(
+                settings.BRANDING_PREPENDED_FILENAME, self.queryset.model._meta.verbose_name_plural
+            )
             response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
             return response
 
@@ -252,11 +273,13 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 # Use unbound form with default (initial) values
                 filter_form = self.filterset_form(label_suffix="")
 
+        valid_actions = self.validate_action_buttons(request)
+
         context = {
             "content_type": content_type,
             "table": table,
             "permissions": permissions,
-            "action_buttons": self.action_buttons,
+            "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": filter_form,
         }
@@ -1146,8 +1169,11 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
+
+                self.perform_pre_delete(request, queryset)
                 try:
-                    deleted_count = queryset.delete()[1][model._meta.label]
+                    _, deleted_info = queryset.delete()
+                    deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
@@ -1186,6 +1212,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
+
+    def perform_pre_delete(self, request, queryset):
+        pass
 
     def extra_context(self):
         return {}

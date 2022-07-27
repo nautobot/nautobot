@@ -1,21 +1,26 @@
 import json
-from io import StringIO
+import re
 import uuid
+from io import StringIO
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.test.client import RequestFactory
-
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, Job, Status, CustomField, JobResult
+from nautobot.extras.models import CustomField, FileProxy, Job, JobResult, Status
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
+from nautobot.utilities.testing import (
+    CeleryTestCase,
+    TransactionTestCase,
+    run_job_for_testing,
+)
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -85,6 +90,8 @@ class JobTest(TransactionTestCase):
         module = "test_pass"
         name = "TestPass"
         job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = JobResult.objects.create(
             name=job_model.class_path,
@@ -114,6 +121,29 @@ class JobTest(TransactionTestCase):
         name = "TestFail"
         job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+
+    def test_field_default(self):
+        """
+        Job test with field that is a default value that is falsey.
+        https://github.com/nautobot/nautobot/issues/2039
+        """
+        module = "test_field_default"
+        name = "TestFieldDefault"
+        job_class = get_job(f"local/{module}/{name}")
+        form = job_class().as_form()
+
+        self.assertHTMLEqual(
+            form.as_table(),
+            """<tr><th><label for="id_var_int">Var int:</label></th><td>
+<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
+<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
+<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
+<br><span class="helptext">Test default without default</span></td></tr>
+<tr><th><label for="id__commit">Commit changes:</label></th><td>
+<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
+<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+        )
 
     def test_field_order(self):
         """
@@ -246,6 +276,22 @@ class JobTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
         self.assertEqual(form_data, job_result_data)
 
+    @override_settings(
+        SANITIZER_PATTERNS=((re.compile(r"(secret is )\S+"), r"\1{replacement}"),),
+    )
+    def test_log_redaction(self):
+        """
+        Test that an attempt is made at log redaction.
+        """
+        module = "test_log_redaction"
+        name = "TestLogRedaction"
+        job_result = create_job_result_and_run_job(module, name, data=None, commit=True, request=self.request)
+
+        logs = JobLogEntry.objects.filter(job_result=job_result, grouping="run")
+        self.assertGreater(logs.count(), 0)
+        for log in logs:
+            self.assertEqual(log.message, "The secret is (redacted)")
+
     def test_object_vars(self):
         """
         Test that Object variable fields behave as expected.
@@ -327,6 +373,21 @@ class JobTest(TransactionTestCase):
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
         self.assertIn("Data should be a dictionary", log_failure.message)
+
+    def test_job_latest_result_property(self):
+        """
+        Job test to see if the latest_result property is indeed returning the most recent job result
+        """
+        module = "test_pass"
+        name = "TestPass"
+        job_result_1 = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_COMPLETED)
+        job_result_2 = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_COMPLETED)
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertGreaterEqual(job_model.results.count(), 2)
+        latest_job_result = job_model.latest_result
+        self.assertEqual(job_result_2.completed, latest_job_result.completed)
 
 
 class JobFileUploadTest(TransactionTestCase):

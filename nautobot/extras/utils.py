@@ -8,7 +8,6 @@ import sys
 
 from cacheops import file_cache
 from django.apps import apps
-from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.deconstruct import deconstructible
@@ -163,20 +162,11 @@ def get_worker_count(request=None):
     """
     # Inner imports so we don't risk circular imports
     from nautobot.core.celery import app  # noqa
-    from rq.worker import Worker  # noqa
-    from django_rq.queues import get_connection  # noqa
 
-    # Try RQ first since, it's faster.
-    rq_count = Worker.count(get_connection("default"))
-
-    # Celery next, since it's slower.
+    # Count the number of active celery workers
     inspect = app.control.inspect()
     active = inspect.active()  # None if no active workers
     celery_count = len(active) if active is not None else 0
-
-    if rq_count and not celery_count:
-        if request:
-            messages.warning(request, "RQ workers are deprecated. Please migrate your workers to Celery.")
 
     return celery_count
 

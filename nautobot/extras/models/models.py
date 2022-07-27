@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -183,8 +184,15 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         Return the rendered configuration context for a device or VM.
         """
 
-        # always manually query for config contexts
-        config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+        if not hasattr(self, "config_context_data"):
+            # Annotation not available, so fall back to manually querying for the config context
+            config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+        else:
+            config_context_data = self.config_context_data or []
+            # Annotation has keys "weight" and "name" (used for ordering) and "data" (the actual config context data)
+            config_context_data = [
+                c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
+            ]
 
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
@@ -403,7 +411,8 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
 
         # Build the response
         response = HttpResponse(output, content_type=mime_type)
-        filename = "nautobot_{}{}".format(
+        filename = "{}{}{}".format(
+            settings.BRANDING_PREPENDED_FILENAME,
             queryset.model._meta.verbose_name_plural,
             ".{}".format(self.file_extension) if self.file_extension else "",
         )
@@ -449,7 +458,7 @@ class FileAttachment(BaseModel):
 
     bytes = models.BinaryField()
     filename = models.CharField(max_length=255)
-    mimetype = models.CharField(max_length=50)
+    mimetype = models.CharField(max_length=255)
 
     def __str__(self):
         return self.filename
@@ -738,18 +747,20 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
     def render_body(self, context):
         """
-        Render the body template, if defined. Otherwise, jump the context as a JSON object.
+        Render the body template, if defined. Otherwise, dump the context as a JSON object.
         """
         if self.body_template:
             return render_jinja2(self.body_template, context)
         else:
-            return json.dumps(context, cls=JSONEncoder)
+            return json.dumps(context, cls=JSONEncoder, ensure_ascii=False)
 
     def get_absolute_url(self):
         return reverse("extras:webhook", kwargs={"pk": self.pk})
 
     @classmethod
-    def check_for_conflicts(cls, instance, content_types, payload_url, type_create, type_update, type_delete):
+    def check_for_conflicts(
+        cls, instance=None, content_types=None, payload_url=None, type_create=None, type_update=None, type_delete=None
+    ):
         """
         Helper method for enforcing uniqueness.
 
@@ -760,28 +771,38 @@ class Webhook(BaseModel, ChangeLoggedModel):
         conflicts = {}
         webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
 
-        for content_type in content_types:
-            webhooks = cls.objects.filter(content_types__in=[content_type], payload_url=payload_url)
-            if instance and instance.present_in_database:
-                webhooks = webhooks.exclude(pk=instance.pk)
+        if instance is not None and instance.present_in_database:
+            # This is a PATCH and might not include all relevant data e.g content_types, payload_url or actions
+            # Therefore we get data not available from instance
+            content_types = instance.content_types.all() if content_types is None else content_types
+            payload_url = instance.payload_url if payload_url is None else payload_url
+            type_create = instance.type_create if type_create is None else type_create
+            type_update = instance.type_update if type_update is None else type_update
+            type_delete = instance.type_delete if type_delete is None else type_delete
 
-            existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
-            existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
-            existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
+        if content_types is not None:
+            for content_type in content_types:
+                webhooks = cls.objects.filter(content_types__in=[content_type], payload_url=payload_url)
+                if instance and instance.present_in_database:
+                    webhooks = webhooks.exclude(pk=instance.pk)
 
-            if existing_type_create:
-                conflicts.setdefault("type_create", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
-                )
+                existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
+                existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
+                existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
 
-            if existing_type_update:
-                conflicts.setdefault("type_update", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
-                )
+                if existing_type_create:
+                    conflicts.setdefault("type_create", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
+                    )
 
-            if existing_type_delete:
-                conflicts.setdefault("type_delete", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
-                )
+                if existing_type_update:
+                    conflicts.setdefault("type_update", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
+                    )
+
+                if existing_type_delete:
+                    conflicts.setdefault("type_delete", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
+                    )
 
         return conflicts

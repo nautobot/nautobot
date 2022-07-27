@@ -38,6 +38,7 @@ from nautobot.extras.constants import (
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import get_job_content_type, extras_features, FeatureQuery, jobs_in_directory
+from nautobot.utilities.logging import sanitize
 
 from .customfields import CustomFieldModel
 
@@ -291,7 +292,7 @@ class Job(PrimaryModel):
     @property
     def latest_result(self):
         if self._latest_result is None:
-            self._latest_result = self.results.last()
+            self._latest_result = self.results.first()
         return self._latest_result
 
     @property
@@ -588,7 +589,7 @@ class JobResult(BaseModel, CustomFieldModel):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
 
-        message (str): Message to log
+        message (str): Message to log (an attempt will be made to sanitize sensitive information from this message)
         obj (object): Object associated with this message, if any
         level_choice (LogLevelChoices): Message severity level
         grouping (str): Grouping to store the log message under
@@ -597,11 +598,13 @@ class JobResult(BaseModel, CustomFieldModel):
         if level_choice not in LogLevelChoices.as_dict():
             raise Exception(f"Unknown logging level: {level_choice}")
 
+        message = sanitize(str(message))
+
         log = JobLogEntry(
             job_result=self,
             log_level=level_choice,
             grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
-            message=str(message),
+            message=message,
             created=timezone.now().isoformat(),
             log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else None,
             absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
@@ -625,7 +628,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 log_level = logging.WARNING
             else:
                 log_level = logging.INFO
-            logger.log(log_level, str(message))
+            logger.log(log_level, message)
 
 
 class ScheduledJobs(models.Model):
@@ -771,6 +774,8 @@ class ScheduledJob(BaseModel):
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or None
+        # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
+        self.kwargs["scheduled_job_pk"] = self.pk
         if not self.enabled:
             self.last_run_at = None
         elif not self.last_run_at:

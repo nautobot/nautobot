@@ -31,6 +31,9 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
+!!! warning
+    Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
+
 ```python
 from nautobot.extras.jobs import Job
 
@@ -281,7 +284,7 @@ A particular object within Nautobot. Each ObjectVar must specify a particular mo
 
 * `model` - The model class
 * `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
-* `query_params` - A dictionary of query parameters to use when retrieving available options (optional)
+* `query_params` - A dictionary of REST API query parameters to use when retrieving available options (optional)
 * `null_option` - A label representing a "null" or empty choice (optional)
 
 The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
@@ -304,16 +307,20 @@ device = ObjectVar(
 )
 ```
 
-Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name.
+Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Site` `ObjectVar` for its `tenant_group_id`.
 
 ```python
 region = ObjectVar(
     model=Region
 )
+tenant_group = ObjectVar(
+    model=TenantGroup
+)
 site = ObjectVar(
     model=Site,
     query_params={
-        'region_id': '$region'
+        'region_id': '$region',
+        'tenant_group_id': '$tenant_group'
     }
 )
 ```
@@ -403,6 +410,9 @@ Messages recorded with `log()` or `log_debug()` will appear in a job's results b
 It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
 
 Markdown rendering is supported for log messages.
+
+!!! note
+    As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.utilities.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
 !!! note
     Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising `nautobot.utilities.exceptions.AbortTransaction` will ensure that any database changes are rolled back as part of the process of ending the job.
@@ -560,6 +570,8 @@ While individual methods within your Job can and should be tested in isolation, 
 The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.utilities.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
 
 Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.utilities.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
+
+When using `TransactionTestCase` (whether from Django or from Nautobot) each tests runs on a completely empty database. Furthermore, Nautobot requires new jobs to be enabled before they can run. Therefore, we need to make sure the job is enabled before each run which `run_job_for_testing` handles for us.
 
 A simple example of a Job test case for 1.3.3 and forward might look like the following:
 

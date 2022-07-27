@@ -114,7 +114,7 @@ def render_json(value):
     """
     Render a dictionary as formatted JSON.
     """
-    return json.dumps(value, indent=4, sort_keys=True)
+    return json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
 
 
 @library.filter()
@@ -123,7 +123,7 @@ def render_yaml(value):
     """
     Render a dictionary as formatted YAML.
     """
-    return yaml.dump(json.loads(json.dumps(value)))
+    return yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
 
 
 @library.filter()
@@ -349,6 +349,7 @@ def has_one_or_more_perms(user, permissions_list):
     """
     Return True if the user has *at least one* permissions in the list.
     """
+
     for permission in permissions_list:
         if user.has_perm(permission):
             return True

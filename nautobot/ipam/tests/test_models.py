@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.choices import IPAddressRoleChoices
+from nautobot.ipam.choices import IPAddressRoleChoices, IPAddressStatusChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
 
 
@@ -311,14 +311,37 @@ class TestPrefix(TestCase):
         )
         self.assertEqual(prefix.get_utilization(), (128, 256))
 
-        # Non-container Prefix
+        # IPv4 Non-container Prefix /24
         prefix.status = self.statuses.get(slug="active")
         prefix.save()
         IPAddress.objects.bulk_create(
             # Create 32 IPAddresses within the Prefix
             [IPAddress(address=netaddr.IPNetwork("10.0.0.{}/24".format(i))) for i in range(1, 33)]
         )
+        # Create IPAddress objects for network and broadcast addresses
+        IPAddress.objects.bulk_create(
+            (IPAddress(address=netaddr.IPNetwork("10.0.0.0/32")), IPAddress(address=netaddr.IPNetwork("10.0.0.255/32")))
+        )
         self.assertEqual(prefix.get_utilization(), (32, 254))
+
+        # Change prefix to a pool, network and broadcast address will count toward numerator and denominator in utilization
+        prefix.is_pool = True
+        prefix.save()
+        self.assertEqual(prefix.get_utilization(), (34, 256))
+
+        # IPv4 Non-container Prefix /31, network and broadcast addresses count toward utilization
+        prefix = Prefix.objects.create(prefix="10.0.1.0/31")
+        IPAddress.objects.bulk_create(
+            (IPAddress(address=netaddr.IPNetwork("10.0.1.0/32")), IPAddress(address=netaddr.IPNetwork("10.0.1.1/32")))
+        )
+        self.assertEqual(prefix.get_utilization(), (2, 2))
+
+        # IPv6 Non-container Prefix, network and broadcast addresses count toward utilization
+        prefix = Prefix.objects.create(prefix="aaaa::/124")
+        IPAddress.objects.bulk_create(
+            (IPAddress(address=netaddr.IPNetwork("aaaa::0/128")), IPAddress(address=netaddr.IPNetwork("aaaa::f/128")))
+        )
+        self.assertEqual(prefix.get_utilization(), (2, 16))
 
     #
     # Uniqueness enforcement tests
@@ -477,6 +500,11 @@ class TestIPAddress(TestCase):
             assigned_object_type=ContentType.objects.get_for_model(Interface),
         )
         self.assertIsNone(ipaddress_2.clean())
+
+    def test_create_ip_address_without_slaac_status(self):
+        Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
+        IPAddress.objects.create(address="1.1.1.1/32")
+        self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
 
 
 class TestVLANGroup(TestCase):

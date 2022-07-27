@@ -38,6 +38,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Webhook,
 )
 from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
@@ -1194,3 +1195,46 @@ class JobLogEntryTest(TestCase):
         self.assertEqual(log_object.message, log.message)
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
+
+
+class WebhookTest(TestCase):
+    def test_type_error_not_raised_when_calling_check_for_conflicts(self):
+        """
+        Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments
+        """
+        device_content_type = ContentType.objects.get_for_model(Device)
+        url = "http://example.com/test"
+
+        webhooks = [
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                type_update=True,
+                type_delete=False,
+                payload_url=url,
+                http_method="POST",
+                http_content_type="application/json",
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_create=False,
+                type_update=False,
+                type_delete=True,
+                payload_url=url,
+                http_method="POST",
+                http_content_type="application/json",
+            ),
+        ]
+        for webhook in webhooks:
+            webhook.save()
+            webhook.content_types.add(device_content_type)
+
+        data = {"type_create": True}
+
+        conflicts = Webhook.check_for_conflicts(instance=webhooks[1], type_create=data.get("type_create"))
+        self.assertEqual(
+            conflicts["type_create"],
+            [f"A webhook already exists for create on dcim | device to URL {url}"],
+        )

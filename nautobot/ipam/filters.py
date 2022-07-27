@@ -12,6 +12,7 @@ from nautobot.utilities.filters import (
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     NumericArrayFilter,
+    SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -46,9 +47,12 @@ __all__ = (
 
 
 class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "rd": "icontains",
+            "description": "icontains",
+        },
     )
     import_target_id = django_filters.ModelMultipleChoiceFilter(
         field_name="import_targets",
@@ -74,20 +78,17 @@ class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
     )
     tag = TagFilter()
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(rd__icontains=value) | Q(description__icontains=value))
-
     class Meta:
         model = VRF
         fields = ["id", "name", "rd", "enforce_unique"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
     )
     importing_vrf_id = django_filters.ModelMultipleChoiceFilter(
         field_name="importing_vrfs",
@@ -113,11 +114,6 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
     )
     tag = TagFilter()
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))
-
     class Meta:
         model = RouteTarget
         fields = ["id", "name"]
@@ -129,7 +125,9 @@ class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "is_private", "description"]
 
 
-class AggregateFilterSet(NautobotFilterSet, TenancyFilterSet):
+class IPAMFilterSetMixin(django_filters.FilterSet):
+    """Filterset mixin to add shared filters across all IPAM objects."""
+
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -138,6 +136,20 @@ class AggregateFilterSet(NautobotFilterSet, TenancyFilterSet):
         method="filter_ip_family",
         label="Family",
     )
+
+    def search(self, qs, name, value):
+        value = value.strip()
+
+        if not value:
+            return qs
+
+        return qs.string_search(value)
+
+    def filter_ip_family(self, qs, name, value):
+        return qs.ip_family(value)
+
+
+class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -158,14 +170,6 @@ class AggregateFilterSet(NautobotFilterSet, TenancyFilterSet):
         model = Aggregate
         fields = ["id", "date_added"]
 
-    def search(self, queryset, name, value):
-        value = value.strip()
-
-        if not value:
-            return queryset
-
-        return queryset.string_search(value)
-
     def filter_prefix(self, queryset, name, value):
         if not value.strip():
             return queryset
@@ -174,30 +178,14 @@ class AggregateFilterSet(NautobotFilterSet, TenancyFilterSet):
         except (AddrFormatError, ValueError):
             return queryset.none()
 
-    def filter_ip_family(self, queryset, name, value):
-        return queryset.ip_family(value)
-
 
 class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
-
     class Meta:
         model = Role
         fields = ["id", "name", "slug"]
 
 
-class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
-    family = django_filters.NumberFilter(
-        method="filter_ip_family",
-        label="Family",
-    )
+class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -287,14 +275,6 @@ class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetM
         model = Prefix
         fields = ["id", "is_pool", "prefix"]
 
-    def search(self, queryset, name, value):
-        value = value.strip()
-
-        if not value:
-            return queryset
-
-        return queryset.string_search(value)
-
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
         if not value:
@@ -358,19 +338,8 @@ class PrefixFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetM
             return queryset.none
         return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
-    def filter_ip_family(self, queryset, name, value):
-        return queryset.ip_family(value)
 
-
-class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
-    family = django_filters.NumberFilter(
-        method="filter_ip_family",
-        label="Family",
-    )
+class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -459,14 +428,6 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         model = IPAddress
         fields = ["id", "dns_name"]
 
-    def search(self, queryset, name, value):
-        value = value.strip()
-
-        if not value:
-            return queryset
-
-        return queryset.string_search(value)
-
     def search_by_parent(self, queryset, name, value):
         value = value.strip()
         if not value:
@@ -492,9 +453,6 @@ class IPAddressFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterS
         if value is None:
             return queryset.none
         return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
-
-    def filter_ip_family(self, queryset, name, value):
-        return queryset.ip_family(value)
 
     def filter_device(self, queryset, name, value):
         devices = Device.objects.filter(**{"{}__in".format(name): value})
@@ -549,9 +507,15 @@ class VLANGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "vid": {
+                "lookup_expr": "exact",
+                "preprocessor": int,  # vid expects an int
+            },
+        },
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -602,21 +566,13 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         model = VLAN
         fields = ["id", "vid", "name"]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = Q(name__icontains=value) | Q(description__icontains=value)
-        try:
-            qs_filter |= Q(vid=int(value.strip()))
-        except ValueError:
-            pass
-        return queryset.filter(qs_filter)
-
 
 class ServiceFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
     )
     device_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
@@ -644,9 +600,3 @@ class ServiceFilterSet(NautobotFilterSet):
     class Meta:
         model = Service
         fields = ["id", "name", "protocol"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = Q(name__icontains=value) | Q(description__icontains=value)
-        return queryset.filter(qs_filter)
