@@ -1270,20 +1270,19 @@ def enqueue_job_hooks(object_change):
     }[object_change.action]
     job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
-    if job_hooks.exists():
-        # Enqueue the jobs related to the job_hooks
-        for job_hook in job_hooks:
-            job_content_type = get_job_content_type()
-            job_model = job_hook.job
-            request = RequestFactory().request(SERVER_NAME="job_hook")
-            request.id = object_change.request_id
-            request.user = object_change.user
-            JobResult.enqueue_job(
-                run_job,
-                job_model.class_path,
-                job_content_type,
-                object_change.user,
-                data=job_model.job_class.serialize_data({"object_change": object_change}),
-                request=copy_safe_request(request),
-                commit=True,
-            )
+    # Enqueue the jobs related to the job_hooks
+    for job_hook in job_hooks:
+        job_content_type = get_job_content_type()
+        job_model = job_hook.job
+        request = RequestFactory().request(SERVER_NAME="job_hook")
+        request.id = object_change.request_id
+        request.user = object_change.user
+        JobResult.enqueue_job(
+            run_job,
+            job_model.class_path,
+            job_content_type,
+            object_change.user,
+            data=job_model.job_class.serialize_data({"object_change": object_change}),
+            request=copy_safe_request(request),
+            commit=True,
+        )

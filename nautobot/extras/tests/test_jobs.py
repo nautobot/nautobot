@@ -193,6 +193,28 @@ class JobTest(TransactionTestCase):
 <br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
         )
 
+    def test_no_field_order_inherited_variable(self):
+        """
+        Job test without field_order with a variable inherited from the base class
+        """
+        module = "test_no_field_order"
+        name = "TestDefaultFieldOrderWithInheritance"
+        job_class = get_job(f"local/{module}/{name}")
+        form = job_class().as_form()
+        self.assertHTMLEqual(
+            form.as_table(),
+            """<tr><th><label for="id_testvar1">Testvar1:</label></th><td>
+            <input type="text" name="testvar1" class="form-control form-control" required placeholder="None" id="id_testvar1">
+            <br><span class="helptext">This var should come before any vars defined in subclasses</span></td></tr><tr><th>
+            <label for="id_b_testvar2">B testvar2:</label></th><td>
+            <input type="text" name="b_testvar2" class="form-control form-control" required placeholder="None" id="id_b_testvar2">
+            <br><span class="helptext">This var should be second</span></td></tr>\n<tr><th><label for="id_a_testvar3">A testvar3:</label></th><td>
+            <input type="text" name="a_testvar3" class="form-control form-control" required placeholder="None" id="id_a_testvar3">
+            <br><span class="helptext">This var should be third</span></td></tr>\n<tr><th><label for="id__commit">Commit changes:</label></th><td>
+            <input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br><span class="helptext">
+            Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+        )
+
     def test_read_only_job_pass(self):
         """
         Job read only test with pass result.
@@ -674,24 +696,6 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverFail"
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
-
-    def test_inherited_field_order(self):
-        module = "test_job_hook_receiver"
-        name = "TestJobHookReceiverChange"
-        job_class, job_model = get_job_class_and_model(module, name)
-        form = job_class().as_form()
-        self.assertHTMLEqual(
-            form.as_table(),
-            """<tr><th><label for="id_object_change">Object change:</label></th><td>
-            <select name="object_change" class="nautobot-select2-api form-control form-control" display-field="display" required placeholder="None" data-url="/api/extras/object-changes/" id="id_object_change">
-            <option value="" selected>---------</option></select></td></tr>
-            <tr><th><label for="id_a_testvar_b_first">A testvar b first:</label></th><td>
-            <input type="text" name="a_testvar_b_first" class="form-control form-control" required placeholder="None" id="id_a_testvar_b_first"></td></tr>
-            <tr><th><label for="id_a_testvar_a_second">A testvar a second:</label></th><td>
-            <input type="text" name="a_testvar_a_second" class="form-control form-control" required placeholder="None" id="id_a_testvar_a_second"></td></tr>
-            <tr><th><label for="id__commit">Commit changes:</label></th><td>
-            <input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
-        )
 
 
 class JobHookTest(TransactionTestCase):

@@ -23,7 +23,7 @@ from django_celery_beat.managers import ExtendedManager
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
 from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
@@ -35,7 +35,6 @@ from nautobot.extras.constants import (
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
-from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import get_job_content_type, extras_features, FeatureQuery, jobs_in_directory
@@ -336,7 +335,7 @@ class Job(PrimaryModel):
 
 
 @extras_features("graphql")
-class JobHook(BaseModel, ChangeLoggedModel):
+class JobHook(OrganizationalModel):
     """
     A job hook defines a request that will trigger a job hook receiver when an object is created, updated, and/or
     deleted in Nautobot. Each job hook can be limited to firing only on certain actions or certain object types.
