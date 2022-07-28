@@ -86,7 +86,8 @@ class NautobotViewSetMixin(
             except ProtectedError as e:
                 self.logger.info("Caught ProtectedError while attempting to delete objects")
                 handle_protectederror(queryset, request, e)
-                return redirect(self.get_return_url(request))
+                self.success_url = self.get_return_url(request)
+                return super().form_valid(form)
             msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
             self.logger.info(msg)
             self.success_url = self.get_return_url(request)
@@ -108,7 +109,6 @@ class NautobotViewSetMixin(
                     msg = f"{msg} { escape(obj)}"
                 messages.success(request, mark_safe(msg))
                 if "_addanother" in request.POST:
-
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"
@@ -133,25 +133,20 @@ class NautobotViewSetMixin(
                 with transaction.atomic():
                     updated_objects = []
                     for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
-
                         obj = self.alter_obj_for_bulk_edit(obj, request, [], kwargs)
-
                         # Update standard fields. If a field is listed in _nullify, delete its value.
                         for name in standard_fields:
-
                             try:
                                 model_field = model._meta.get_field(name)
                             except FieldDoesNotExist:
                                 # This form field is used to modify a field rather than set its value directly
                                 model_field = None
-
                             # Handle nullification
                             if name in form.nullable_fields and name in nullified_fields:
                                 if isinstance(model_field, ManyToManyField):
                                     getattr(obj, name).set([])
                                 else:
                                     setattr(obj, name, None if model_field.null else "")
-
                             # ManyToManyFields
                             elif isinstance(model_field, ManyToManyField):
                                 if form.cleaned_data[name]:
@@ -159,7 +154,6 @@ class NautobotViewSetMixin(
                             # Normal fields
                             elif form.cleaned_data[name] not in (None, ""):
                                 setattr(obj, name, form.cleaned_data[name])
-
                         # Update custom fields
                         for name in custom_fields:
                             if name in form.nullable_fields and name in nullified_fields:
@@ -185,13 +179,10 @@ class NautobotViewSetMixin(
                     msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
                     self.logger.info(msg)
                     messages.success(self.request, msg)
-
                 self.success_url = self.get_return_url(request)
                 return super().form_valid(form)
-
             except ValidationError as e:
                 messages.error(self.request, f"{obj} failed validation: {e}")
-
             except ObjectDoesNotExist:
                 msg = "Object update failed due to object-level permissions violation"
                 self.logger.debug(msg)
@@ -224,7 +215,6 @@ class NautobotViewSetMixin(
                     msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
                     self.logger.info(msg)
                     messages.success(request, msg)
-
                     return Response(
                         {
                             "table": obj_table,
@@ -498,8 +488,8 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
-    action_buttons = ("add", "import", "export")
     action = "view"
+    action_buttons = ("add", "import", "export")
     filterset_form = None
 
     def queryset_to_yaml(self):
