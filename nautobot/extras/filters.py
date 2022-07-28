@@ -11,6 +11,7 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    MultiValueUUIDFilter,
     SearchFilter,
     TagFilter,
 )
@@ -722,18 +723,6 @@ class RelationshipFilterSet(BaseFilterSet):
         fields = ["id", "name", "type", "source_type", "destination_type"]
 
 
-class PeerIDFilter(django_filters.UUIDFilter):
-    def __init__(self, field_name):
-        self.field_name = field_name
-        super().__init__(field_name=field_name)
-
-    def filter(self, qs, value):
-        if not value:
-            return qs
-        qs = qs.filter(source_id=value) | qs.filter(destination_id=value)
-        return qs
-
-
 class RelationshipAssociationFilterSet(BaseFilterSet):
 
     relationship = django_filters.ModelMultipleChoiceFilter(
@@ -746,11 +735,19 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
     destination_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("relationships").get_choices, conjoined=False
     )
-    peer_id = PeerIDFilter(field_name="peer_id")
+    peer_id = MultiValueUUIDFilter(method="peer_id_filter")
 
     class Meta:
         model = RelationshipAssociation
         fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id", "peer_id"]
+
+    def peer_id_filter(self, queryset, name, value):
+        filtered_value = [entry.id for entry in queryset if entry.relationship.symmetric]
+        # Filter down to symmetric relationships only.
+        queryset = queryset.filter(id__in=filtered_value)
+        # Then Filter based on peer_id.
+        queryset = queryset.filter(source_id__in=value) | queryset.filter(destination_id__in=value)
+        return queryset
 
 
 #
