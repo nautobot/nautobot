@@ -1,4 +1,3 @@
-from dataclasses import field
 import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -722,6 +721,7 @@ class RelationshipFilterSet(BaseFilterSet):
         model = Relationship
         fields = ["id", "name", "type", "source_type", "destination_type"]
 
+
 class PeerIDFilter(django_filters.UUIDFilter):
     def __init__(self, field_name):
         self.field_name = field_name
@@ -732,6 +732,7 @@ class PeerIDFilter(django_filters.UUIDFilter):
             return qs
         qs = qs.filter(source_id=value) | qs.filter(destination_id=value)
         return qs
+
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
 
