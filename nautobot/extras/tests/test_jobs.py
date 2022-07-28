@@ -1,23 +1,26 @@
 import json
-from io import StringIO
 import re
 import uuid
+from io import StringIO
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.test.client import RequestFactory
-
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, Job, Status, CustomField, JobResult
+from nautobot.extras.models import CustomField, FileProxy, Job, JobResult, Status
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
+from nautobot.utilities.testing import (
+    CeleryTestCase,
+    TransactionTestCase,
+    run_job_for_testing,
+)
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -118,6 +121,29 @@ class JobTest(TransactionTestCase):
         name = "TestFail"
         job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+
+    def test_field_default(self):
+        """
+        Job test with field that is a default value that is falsey.
+        https://github.com/nautobot/nautobot/issues/2039
+        """
+        module = "test_field_default"
+        name = "TestFieldDefault"
+        job_class = get_job(f"local/{module}/{name}")
+        form = job_class().as_form()
+
+        self.assertHTMLEqual(
+            form.as_table(),
+            """<tr><th><label for="id_var_int">Var int:</label></th><td>
+<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
+<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
+<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
+<br><span class="helptext">Test default without default</span></td></tr>
+<tr><th><label for="id__commit">Commit changes:</label></th><td>
+<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
+<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+        )
 
     def test_field_order(self):
         """

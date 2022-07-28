@@ -1,3 +1,5 @@
+import logging
+
 import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -42,6 +44,9 @@ __all__ = (
     "VLANGroup",
     "VRF",
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @extras_features(
@@ -852,8 +857,12 @@ class IPAddress(PrimaryModel, StatusModel):
     @classproperty
     def STATUS_SLAAC(cls):
         """Return a cached "slaac" `Status` object for later reference."""
-        if getattr(cls, "__status_slaac", None) is None:
-            cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(slug="slaac")
+        cls.__status_slaac = getattr(cls, "__status_slaac", None)
+        if cls.__status_slaac is None:
+            try:
+                cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(slug="slaac")
+            except Status.DoesNotExist:
+                logger.error("SLAAC Status not found")
         return cls.__status_slaac
 
     def clean(self):

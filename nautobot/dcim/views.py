@@ -1311,6 +1311,8 @@ class DeviceInterfacesView(generic.ObjectView):
             "tags",
         )
         interface_table = tables.DeviceInterfaceTable(data=interfaces, user=request.user, orderable=False)
+        if VirtualChassis.objects.filter(master=instance).exists():
+            interface_table.columns.show("device")
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
             interface_table.columns.show("pk")
 
@@ -2384,8 +2386,24 @@ class CableCreateView(generic.ObjectEditView):
         if "termination_b_rack" not in initial_data:
             initial_data["termination_b_rack"] = getattr(obj.termination_a.parent, "rack", None)
 
-        form = self.model_form(instance=obj, initial=initial_data)
+        form = self.model_form(exclude_id=kwargs.get("termination_a_id"), instance=obj, initial=initial_data)
 
+        # the following builds up a CSS query selector to match all drop-downs
+        # in the termination_b form except the termination_b_id. this is necessary to reset the termination_b_id
+        # drop-down whenever any of these drop-downs' values changes. this cannot be hardcoded because the form is
+        # selected dynamically and therefore the fields change depending on the value of termination_b_type (L2358)
+        js_select_onchange_query = ", ".join(
+            [
+                f"select#id_{field_name}"
+                for field_name, field in form.fields.items()
+                # include all termination_b_* fields:
+                if field_name.startswith("termination_b")
+                # exclude termination_b_id:
+                and field_name != "termination_b_id"
+                # include only HTML select fields:
+                and field.widget.input_type == "select"
+            ]
+        )
         return render(
             request,
             self.template_name,
@@ -2395,6 +2413,7 @@ class CableCreateView(generic.ObjectEditView):
                 "termination_b_type": self.termination_b_type.name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
+                "js_select_onchange_query": js_select_onchange_query,
             },
         )
 

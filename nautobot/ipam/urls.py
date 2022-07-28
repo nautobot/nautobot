@@ -80,7 +80,7 @@ urlpatterns = [
     path("rirs/<slug:slug>/edit/", views.RIREditView.as_view(), name="rir_edit"),
     path("rirs/<slug:slug>/delete/", views.RIRDeleteView.as_view(), name="rir_delete"),
     path(
-        "vrfs/<slug:slug>/changelog/",
+        "rirs/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="rir_changelog",
         kwargs={"model": RIR},
