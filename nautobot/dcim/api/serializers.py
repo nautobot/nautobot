@@ -458,7 +458,6 @@ class RackReservationSerializer(NautobotModelSerializer, TaggedObjectSerializer)
             "url",
             "rack",
             "units",
-            "created",
             "user",
             "tenant",
             "description",
