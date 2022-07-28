@@ -86,6 +86,14 @@
                                     </span>
                                 </div>
                             {% endif %}
+                            {% if job_model.sensitive %}
+                                <div class="panel-footer">
+                                    <span class="help-block">
+                                        <i class="mdi mdi-information-outline"></i>
+                                        This job is marked as sensitive and can only be executed immediately.
+                                    </span>
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="pull-right">
                             <button type="submit" name="_run" id="id__run" class="btn btn-primary"
@@ -147,7 +155,12 @@
     }
 
     $(document).ready(function() {
-        $("#id__schedule_type").change(toggleExecutionType);
+        if ("{{ job_model.sensitive }}" == "False") {
+            $("#id__schedule_type").change(toggleExecutionType);
+        }
+        else {
+            $("#id__schedule_type").attr("disabled", "true");
+        }
         toggleExecutionType();
     });
 </script>
