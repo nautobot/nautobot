@@ -143,19 +143,7 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
                 ).values_list("source_id", flat=True)
 
                 values = list(destinations) + list(sources)
-
-            # qs._result_cache indicates if qs has been modified or not, None if not.
-            if not qs._result_cache:
-                # If qs has not been modified from the original queryset, we take the intersection of the original queryset and the filtered queryset.
-                # Essentially the filtered queryset.
-                qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
-            else:
-                # If qs has been modified from the original queryset, we take the union of the modified qs and the filtered queryset.
-                # Essentially modified qs and the filtered queryset combined.
-                qs |= self.get_method(self.qs)(Q(**{"id__in": values}))
-            # len(qs) evaluates qs so qs._result_cache is updated to the length of the queryset instead of None
-            # calling len() at the end here makes sure that the next filter modifying qs already knows that qs has been modified.
-            len(qs)
+            qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
             return qs
 
 

@@ -538,6 +538,7 @@ class RelationshipModelFilterFormMixin(forms.Form):
                 # No need to process it a second time!
                 continue
             self.fields[field_name] = relationship.to_form_field(side=side)
+            self.fields[field_name].empty_label = None
             self.relationships.append(field_name)
 
 
