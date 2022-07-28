@@ -233,7 +233,7 @@ class NautobotViewSetMixin(
                 form.add_error(None, msg)
         return self.form_invalid(request, obj, form)
 
-    def form_invalid(self, request, obj, form):
+    def form_invalid(self, request, obj, form, **kwargs):
         context={}
         self.logger.debug("Form Validation Failed")
         if self.action == "perform_destroy":
@@ -316,19 +316,20 @@ class NautobotViewSetMixin(
         except TemplateDoesNotExist:
             return f"generic/object_{view_type}.html"
 
-    def retrieve_object_bulk(self, request, pk_list, model, form, view_type):
+    def retrieve_object_bulk(self, request, form, view_type, **kwargs):
+        pk_list = kwargs.pop("pk_list")
         table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
         if not table.rows:
             messages.warning(
                 request,
-                f"No {model._meta.verbose_name_plural} were selected for deletion.",
+                f"No {self.queryset.model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
 
         data = {
             "form": form,
             "table": table,
-            "obj_type_plural": model._meta.verbose_name_plural,
+            "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
             "template": self.get_template_name(view_type),
         }
@@ -731,7 +732,7 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixi
             )
 
         # Retrieve objects being deleted
-        return self.retrieve_object_bulk(request, pk_list, model, form, "bulk_delete")
+        return self.retrieve_object_bulk(request, form, "bulk_delete", pk_list=pk_list)
 
 
 class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin):
@@ -813,7 +814,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
             restrict_form_fields(form, request.user)
 
         # Retrieve objects being edited
-        return self.retrieve_object_bulk(request, pk_list, model, form, "bulk_edit")
+        return self.retrieve_object_bulk(request, form, "bulk_edit", pk_list=pk_list)
 
 
 class NautobotDRFViewSet(
