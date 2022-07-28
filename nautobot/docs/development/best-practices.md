@@ -4,11 +4,17 @@ While there are many different development interfaces in Nautobot that each expo
 
 ## Base Classes
 
-- All Form classes should inherit from `nautobot.extras.forms.NautobotModelForm` (for models that support change-logging, custom fields and relationships).
-- All BulkEditForm classes should inherit from `nautobot.extras.forms.NautobotBulkEditForm` (for models that support change-logging, custom fields and relationships).
-- All FilterForm classes should inherit from `nautobot.extras.forms.NautobotFilterForm` (for models that support change-logging, custom fields and relationships).
-- All FilterSet classes should inherit from either `nautobot.utilities.filters.BaseFilterSet` (for bare-bones models) or `nautobot.extras.filters.NautobotFilterSet` (for models that support change-logging, custom fields and relationships).
-- All Serializer classes should inherit from either `NautobotModelSerializer` (for models that support custom fields and relationships, _added in version 1.4.0_), `ValidatedModelSerializer` (for writable nested serializers and more bare-bones models), or `BaseModelSerializer` (for read-only serializers and extremely minimal models).
+For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
+
+| Feature                  | Full-featured models       | Minimal models             |
+| ------------------------ | -------------------------- | -------------------------- |
+| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`            |
+| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`           |
+| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`           |
+| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`           |
+| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`      |
+| Nested serializers       | `WritableNestedSerializer` | `WritableNestedSerializer` |
+| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
 
 ## Model Existence in the Database
 
