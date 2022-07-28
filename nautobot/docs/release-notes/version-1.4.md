@@ -101,6 +101,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Fixed
 
 - [#1710](https://github.com/nautobot/nautobot/issues/1710) - Fixed invalid CSS when clicking "Add another" row buttons for formsets on Secrets Groups, Dynamic Groups edit view in the UI.
+- [#2109](https://github.com/nautobot/nautobot/issues/2109) - Fixed Relationship Filters are not Applied with "And" Operator.
+- [#2111](https://github.com/nautobot/nautobot/issues/2111) - Fixed Invalid filter error thrown for __source with message: “” is not a valid UUID.
 
 ## v1.4.0a2 (2022-07-11)
 
