@@ -62,7 +62,7 @@ class NautobotViewSetMixin(
         # .all() is necessary to avoid caching queries
         return self.queryset.all()
 
-    def form_valid(self, request, obj, form, pk_list=[], new_objs=[], **kwargs):
+    def form_valid(self, request, obj, form, **kwargs):
         self.logger.debug("Form validation was successful")
         if self.action == "perform_destroy":
             try:
@@ -78,6 +78,7 @@ class NautobotViewSetMixin(
             self.success_url = self.get_return_url(request)
             return super().form_valid(form)
         elif self.action == "perform_bulk_destroy":
+            pk_list = kwargs.pop("pk_list")
             model = self.queryset.model
             # Delete objects
             queryset = self.queryset.filter(pk__in=pk_list)
@@ -189,6 +190,7 @@ class NautobotViewSetMixin(
                 form.add_error(None, msg)
                 return self.retrieve_object_bulk(request, pk_list, model, form, "bulk_edit")
         elif self.action == "perform_bulk_create":
+            new_objs=[]
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
@@ -231,7 +233,8 @@ class NautobotViewSetMixin(
                 form.add_error(None, msg)
         return self.form_invalid(request, obj, form)
 
-    def form_invalid(self, request, obj, form, context={}):
+    def form_invalid(self, request, obj, form):
+        context={}
         self.logger.debug("Form Validation Failed")
         if self.action == "perform_destroy":
             context.update(
