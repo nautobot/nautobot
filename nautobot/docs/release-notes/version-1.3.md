@@ -152,6 +152,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Changed
 
+- [#2025](https://github.com/nautobot/nautobot/pull/2025) - Tweak Renovate config for automated package management.
+
 ### Fixed
 
 ## v1.3.9 (2022-07-25)
