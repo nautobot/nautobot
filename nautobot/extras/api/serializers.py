@@ -997,7 +997,7 @@ class SecretsGroupSerializer(NautobotModelSerializer):
         ]
 
 
-class SecretsGroupAssociationSerializer(BaseModelSerializer):
+class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
     """Serializer for `SecretsGroupAssociation` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
