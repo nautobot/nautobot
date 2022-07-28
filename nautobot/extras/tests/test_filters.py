@@ -1142,7 +1142,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
                 },
                 self.queryset,
             ).qs.count(),
-            3,
+            2,
         )
         self.assertEqual(
             self.filterset(
