@@ -199,7 +199,7 @@ If set to `False`, all caching is bypassed and Nautobot operates as if there is 
 
 Default: `False`
 
-A boolean that turns on/off health checks for the Redis server connection utilized by Cacheops. Most deployments share a Redis server with `django-redis` as such we only need to check the health of Redis one time.  If you are utilizigin a separate Redis deployment for Cacheops, please consider enabling this to monitor that Redis deployment.  Keep in mind the more health checks enabled the longer the health checks will take and timeouts might need to be increased.
+A boolean that turns on/off health checks for the Redis server connection utilized by Cacheops. Most deployments share a Redis server with `django-redis` as such we only need to check the health of Redis one time.  If you are using a separate Redis deployment for Cacheops, please consider enabling this to monitor that Redis deployment.  Keep in mind the more health checks enabled the longer the health checks will take and timeouts might need to be increased.
 
 ---
 
