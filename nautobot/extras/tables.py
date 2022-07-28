@@ -634,7 +634,7 @@ class JobResultTable(BaseTable):
     actions = tables.TemplateColumn(
         template_code="""
             {% load helpers %}
-            {% if record.job_model and record.job_kwargs %}
+            {% if record.job_model and not record.job_model.sensitive  and record.job_kwargs %}
                 <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
                    class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                     <i class="mdi mdi-repeat"></i>
