@@ -21,7 +21,7 @@ class NoteTestCase(SeleniumTestCase):
 
     def test_create_and_update(self):
         """
-        Test initial add and then update of a new DynamicGroup
+        Test initial add and then update of a new Note
         """
         Site.objects.create(name="Site 1", slug="site-1")
 
