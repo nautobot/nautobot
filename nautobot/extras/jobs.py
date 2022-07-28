@@ -177,6 +177,10 @@ class BaseJob:
         return getattr(module, "name", module.__name__)
 
     @classproperty
+    def sensitive(cls):
+        return getattr(cls.Meta, "sensitive", False)
+
+    @classproperty
     def name(cls):
         return getattr(cls.Meta, "name", cls.__name__)
 
@@ -235,6 +239,7 @@ class BaseJob:
             "read_only": cls.read_only,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
+            "sensitive": cls.sensitive,
         }
 
     @classmethod

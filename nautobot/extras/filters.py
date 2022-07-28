@@ -693,6 +693,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "grouping",
             "installed",
             "enabled",
+            "sensitive",
             "approval_required",
             "commit_default",
             "hidden",

@@ -518,6 +518,7 @@ class JobTable(BaseTable):
     name = tables.Column(linkify=True)
     installed = BooleanColumn()
     enabled = BooleanColumn()
+    sensitive = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
     commit_default = BooleanColumn()
     hidden = BooleanColumn()
@@ -554,6 +555,7 @@ class JobTable(BaseTable):
             "name",
             "installed",
             "enabled",
+            "sensitive",
             "description",
             "commit_default",
             "hidden",
@@ -570,6 +572,7 @@ class JobTable(BaseTable):
         default_columns = (
             "name",
             "enabled",
+            "sensitive",
             "description",
             "last_run",
             "last_status",
