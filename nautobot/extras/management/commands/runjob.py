@@ -29,7 +29,7 @@ class Command(BaseCommand):
             "--username",
             help="User account to impersonate as the requester of this job",
         )
-        parser.add_argument("-d", "--data", type=str, help="Provide json serializable data to be passed to job.")
+        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
         if "/" not in options["job"]:

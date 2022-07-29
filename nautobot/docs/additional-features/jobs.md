@@ -543,7 +543,7 @@ nautobot-server runjob [--username <username>] [--commit] [--data <data>] <class
     [See above](#jobs-and-class_path) for `class_path` definitions.
 
 !!! note
-    The `--data` parameter should be constructed as a JSON serializable string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
+    The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 
 Using the same example shown in the API:
 
