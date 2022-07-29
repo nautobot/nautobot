@@ -885,72 +885,35 @@ class ScheduledJobTestCase(
     def test_non_valid_crontab_syntax(self):
         self.add_permissions("extras.view_scheduledjob")
 
-        with self.assertRaises(ValidationError):
+        def scheduled_job_factory(name, crontab):
             ScheduledJob.objects.create(
                 enabled=True,
-                name="test10",
+                name=name,
                 task="nautobot.extras.jobs.scheduled_job_handler",
                 job_class="local/test_pass/TestPass",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
-                crontab=None,
+                crontab=crontab,
             )
+
         with self.assertRaises(ValidationError):
-            ScheduledJob.objects.create(
-                enabled=True,
-                name="test10",
-                task="nautobot.extras.jobs.scheduled_job_handler",
-                job_class="local/test_pass/TestPass",
-                interval=JobExecutionType.TYPE_CUSTOM,
-                user=self.user,
-                start_time=timezone.now(),
-                crontab="",
-            )
+            scheduled_job_factory("test5", None)
+
         with self.assertRaises(ValidationError):
-            ScheduledJob.objects.create(
-                enabled=True,
-                name="test10",
-                task="nautobot.extras.jobs.scheduled_job_handler",
-                job_class="local/test_pass/TestPass",
-                interval=JobExecutionType.TYPE_CUSTOM,
-                user=self.user,
-                start_time=timezone.now(),
-                crontab="not_enough_values_to_unpack",
-            )
+            scheduled_job_factory("test6", "")
+
         with self.assertRaises(ValidationError):
-            ScheduledJob.objects.create(
-                enabled=True,
-                name="test10",
-                task="nautobot.extras.jobs.scheduled_job_handler",
-                job_class="local/test_pass/TestPass",
-                interval=JobExecutionType.TYPE_CUSTOM,
-                user=self.user,
-                start_time=timezone.now(),
-                crontab="one too many values to unpack",
-            )
+            scheduled_job_factory("test7", "not_enough_values_to_unpack")
+
         with self.assertRaises(ValidationError):
-            ScheduledJob.objects.create(
-                enabled=True,
-                name="test10",
-                task="nautobot.extras.jobs.scheduled_job_handler",
-                job_class="local/test_pass/TestPass",
-                interval=JobExecutionType.TYPE_CUSTOM,
-                user=self.user,
-                start_time=timezone.now(),
-                crontab="-1 * * * *",
-            )
+            scheduled_job_factory("test8", "one too many values to unpack")
+
         with self.assertRaises(ValidationError):
-            ScheduledJob.objects.create(
-                enabled=True,
-                name="test10",
-                task="nautobot.extras.jobs.scheduled_job_handler",
-                job_class="local/test_pass/TestPass",
-                interval=JobExecutionType.TYPE_CUSTOM,
-                user=self.user,
-                start_time=timezone.now(),
-                crontab="invalid literal * * *",
-            )
+            scheduled_job_factory("test9", "-1 * * * *")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test10", "invalid literal * * *")
 
     def test_valid_crontab_syntax(self):
         self.add_permissions("extras.view_scheduledjob")
