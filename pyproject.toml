@@ -53,7 +53,7 @@ django-cryptography = "~1.0"
 # Store files in the database for background tasks
 django-db-file-storage = "~0.5.5"
 # AutoSlugField and shell_plus
-django-extensions = "~3.1.5"
+django-extensions = "~3.2.0"
 # Advanced query filters
 django-filter = "~21.1"
 # Health check endpoint
@@ -87,7 +87,7 @@ djangorestframework = "~3.13.1"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.22.1", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
-drf-yasg = {version = "~1.20.0", extras = ["validation"]}
+drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
 GitPython = "~3.1.27"
 # GraphQL support
@@ -96,11 +96,14 @@ graphene-django = "~2.15.0"
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Package version detection in older versions of Python
-importlib-metadata = {version = "~4.4", python = "<3.10"}
+# NOTE: We want to permit newer versions of importlib-metadata to be installed while not forcing
+#       plugins to move their dependencies ahead. Currently this is a direct dependency until
+#       Python 3.8+ where our direct dependency becomes part of stdlib.
+importlib-metadata = {version = "^4.4", python = "<3.8"}
 # Template rendering engine
 Jinja2 = "~3.0.3"
 # Optional data validation of config contexts
-jsonschema = "~4.4.0"
+jsonschema = "~4.7.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.7"
 # Escape text to use HTML and XML
@@ -114,7 +117,7 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.1.0"
 # Image processing library
-Pillow = "~9.1.1"
+Pillow = "~9.2.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.3"
@@ -125,7 +128,7 @@ pyuwsgi = "~2.0.20"
 # YAML parsing and rendering
 PyYAML = "~6.0"
 # Social authentication core
-social-auth-core = {version = "~4.2.0", optional = true, extras = ["openidconnect", "saml"]}
+social-auth-core = {version = "~4.3.0", optional = true, extras = ["openidconnect", "saml"]}
 # Social authentication/registration with support for many auth providers
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
@@ -146,11 +149,11 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = "~22.3.0"
+black = "~22.6.0"
 # Test code coverage measurement
 coverage = "~6.4.1"
 # Tool for debugging Django
-django-debug-toolbar = "~3.4.0"
+django-debug-toolbar = "~3.5.0"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
@@ -161,7 +164,7 @@ flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.7.1"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.2.3"
+mkdocs-include-markdown-plugin = "~3.6.0"
 # Rendering docs to HTML
 mkdocs = "~1.3.0"
 # Integration Tests
