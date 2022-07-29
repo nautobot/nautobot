@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
-from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -1094,7 +1094,7 @@ class WebhookFilterSet(BaseFilterSet):
 class JobHookFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
     content_types = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("webhooks").get_choices,
+        choices=ChangeLoggedModelsQuery().get_choices,
     )
     job = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Job.objects.all(),

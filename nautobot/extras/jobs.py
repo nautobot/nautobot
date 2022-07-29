@@ -35,7 +35,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import get_job_content_type, jobs_in_directory
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -1255,10 +1255,9 @@ def enqueue_job_hooks(object_change):
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
         return
 
-    # Determine whether this type of object supports webhooks
-    app_label = object_change.changed_object._meta.app_label
-    model_name = object_change.changed_object._meta.model_name
-    if model_name not in registry["model_features"]["webhooks"].get(app_label, []):
+    # Determine whether this type of object supports job hooks
+    model_type = object_change.changed_object._meta.model
+    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
         return
 
     # Retrieve any applicable job hooks

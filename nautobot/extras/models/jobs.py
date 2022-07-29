@@ -37,7 +37,13 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
-from nautobot.extras.utils import get_job_content_type, extras_features, FeatureQuery, jobs_in_directory
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    extras_features,
+    get_job_content_type,
+    jobs_in_directory,
+)
 from nautobot.utilities.logging import sanitize
 
 from .customfields import CustomFieldModel
@@ -345,7 +351,7 @@ class JobHook(OrganizationalModel):
         to=ContentType,
         related_name="job_hooks",
         verbose_name="Object types",
-        limit_choices_to=FeatureQuery("webhooks"),
+        limit_choices_to=ChangeLoggedModelsQuery,
         help_text="The object(s) to which this job hook applies.",
     )
     enabled = models.BooleanField(default=True)

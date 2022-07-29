@@ -72,7 +72,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from .base import (
     NautobotBulkEditForm,
     NautobotModelForm,
@@ -1335,7 +1335,9 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
 
 
 class JobHookForm(BootstrapMixin, forms.ModelForm):
-    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
+    content_types = MultipleContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(), required=True, label="Content Type(s)"
+    )
 
     class Meta:
         model = JobHook
@@ -1371,7 +1373,10 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
     model = JobHook
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(
-        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
     )
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     job = DynamicModelMultipleChoiceField(

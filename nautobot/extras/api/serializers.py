@@ -58,7 +58,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.api.fields import StatusSerializerField
-from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -846,7 +846,7 @@ class JobLogEntrySerializer(BaseModelSerializer):
 class JobHookSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
     content_types = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
         many=True,
     )
 
