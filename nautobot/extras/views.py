@@ -1,5 +1,5 @@
 import inspect
-from datetime import datetime
+from datetime import timedelta
 import logging
 
 from celery import chain
@@ -1015,20 +1015,30 @@ class JobView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                crontab = ""
 
-                if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                    # Schedule the job instead of running it now
-                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
-                    schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
-
-                else:
+                if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
                     # The job must be approved.
                     # If the schedule_type is immediate, we still create the task, but mark it for approval
                     # as a once in the future task with the due date set to the current time. This means
                     # when approval is granted, the task is immediately due for execution.
                     schedule_type = JobExecutionType.TYPE_FUTURE
-                    schedule_datetime = datetime.now()
+                    schedule_datetime = timezone.now()
                     schedule_name = f"{job_model} - {schedule_datetime}"
+
+                else:
+                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
+
+                    if schedule_type == JobExecutionType.TYPE_CUSTOM:
+                        crontab = schedule_form.cleaned_data["_recurrence_custom_time"]
+                        # doing .get("key", "default") returns None instead of "default" here for some reason
+                        schedule_datetime = schedule_form.cleaned_data.get("_schedule_start_time")
+                        if schedule_datetime is None:
+                            # "_schedule_start_time" is checked against ScheduledJob.earliest_possible_time()
+                            # which returns timezone.now() + timedelta(seconds=15)
+                            schedule_datetime = timezone.now() + timedelta(seconds=20)
+                    else:
+                        schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
                 job_kwargs = {
                     "data": job_model.job_class.serialize_data(job_form.cleaned_data),
@@ -1050,6 +1060,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     user=request.user,
                     approval_required=job_model.approval_required,
+                    crontab=crontab,
                 )
                 scheduled_job.save()
 
