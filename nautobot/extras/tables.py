@@ -579,6 +579,33 @@ class JobTable(BaseTable):
         )
 
 
+class JobHookTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
+    job = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = JobHook
+        fields = (
+            "pk",
+            "name",
+            "content_types",
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "job",
+            "enabled",
+        )
+
+
 class JobLogEntryTable(BaseTable):
     created = tables.DateTimeColumn(verbose_name="Time", format="Y-m-d H:i:s.u")
     grouping = tables.Column()
@@ -934,32 +961,5 @@ class WebhookTable(BaseTable):
             "content_types",
             "payload_url",
             "http_content_type",
-            "enabled",
-        )
-
-
-class JobHookTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
-    job = tables.Column(linkify=True)
-
-    class Meta(BaseTable.Meta):
-        model = JobHook
-        fields = (
-            "pk",
-            "name",
-            "content_types",
-            "job",
-            "enabled",
-            "type_create",
-            "type_update",
-            "type_delete",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_types",
-            "job",
             "enabled",
         )

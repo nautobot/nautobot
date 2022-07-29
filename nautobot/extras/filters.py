@@ -704,6 +704,30 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
         ]
 
 
+class JobHookFilterSet(BaseFilterSet):
+    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=ChangeLoggedModelsQuery().get_choices,
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (slug or ID)",
+    )
+
+    class Meta:
+        model = JobHook
+        fields = [
+            "name",
+            "content_types",
+            "enabled",
+            "job",
+            "slug",
+            "type_create",
+            "type_update",
+            "type_delete",
+        ]
+
+
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
     q = SearchFilter(
         filter_predicates={
@@ -1080,35 +1104,6 @@ class WebhookFilterSet(BaseFilterSet):
             "payload_url",
             "enabled",
             "content_types",
-            "type_create",
-            "type_update",
-            "type_delete",
-        ]
-
-
-#
-# Job hooks
-#
-
-
-class JobHookFilterSet(BaseFilterSet):
-    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
-    content_types = ContentTypeMultipleChoiceFilter(
-        choices=ChangeLoggedModelsQuery().get_choices,
-    )
-    job = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Job.objects.all(),
-        label="Job (slug or ID)",
-    )
-
-    class Meta:
-        model = JobHook
-        fields = [
-            "name",
-            "content_types",
-            "enabled",
-            "job",
-            "slug",
             "type_create",
             "type_update",
             "type_delete",

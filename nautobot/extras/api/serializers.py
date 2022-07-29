@@ -810,39 +810,6 @@ class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
 
 
-class JobInputSerializer(serializers.Serializer):
-    data = serializers.JSONField(required=False, default=dict)
-    commit = serializers.BooleanField(required=False, default=None)
-    schedule = NestedScheduledJobSerializer(required=False)
-
-
-class JobLogEntrySerializer(BaseModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
-    display = serializers.SerializerMethodField()
-
-    class Meta:
-        model = JobLogEntry
-        fields = [
-            "url",
-            "absolute_url",
-            "created",
-            "grouping",
-            "job_result",
-            "log_level",
-            "log_object",
-            "message",
-        ]
-
-    @extend_schema_field(serializers.CharField)
-    def get_display(self, obj):
-        return obj.created.isoformat()
-
-
-#
-# Job Hooks
-#
-
-
 class JobHookSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
     content_types = ContentTypeField(
@@ -880,6 +847,34 @@ class JobHookSerializer(ValidatedModelSerializer):
             raise serializers.ValidationError(conflicts)
 
         return validated_data
+
+
+class JobInputSerializer(serializers.Serializer):
+    data = serializers.JSONField(required=False, default=dict)
+    commit = serializers.BooleanField(required=False, default=None)
+    schedule = NestedScheduledJobSerializer(required=False)
+
+
+class JobLogEntrySerializer(BaseModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
+    display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JobLogEntry
+        fields = [
+            "url",
+            "absolute_url",
+            "created",
+            "grouping",
+            "job_result",
+            "log_level",
+            "log_object",
+            "message",
+        ]
+
+    @extend_schema_field(serializers.CharField)
+    def get_display(self, obj):
+        return obj.created.isoformat()
 
 
 #

@@ -126,6 +126,14 @@ class NestedJobSerializer(BaseModelSerializer):
         fields = ["id", "url", "source", "module_name", "job_class_name", "grouping", "name", "slug"]
 
 
+class NestedJobHookSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
+
+    class Meta:
+        model = models.JobHook
+        fields = ["id", "url", "name"]
+
+
 class NestedJobLogEntrySerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
 
@@ -253,12 +261,4 @@ class NestedWebhookSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Webhook
-        fields = ["id", "url", "name"]
-
-
-class NestedJobHookSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
-
-    class Meta:
-        model = models.JobHook
         fields = ["id", "url", "name"]
