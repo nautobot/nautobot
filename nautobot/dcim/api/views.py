@@ -157,6 +157,10 @@ class SiteViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     serializer_class = serializers.SiteSerializer
     filterset_class = filters.SiteFilterSet
 
+    def retrieve(self, request, *args, **kwargs):
+        breakpoint()
+        return super().retrieve(request, *args, **kwargs)
+
 
 #
 # Rack groups

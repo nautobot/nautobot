@@ -64,7 +64,7 @@ class NautobotViewSetMixin(
 
     def form_valid(self, request, obj, form, **kwargs):
         self.logger.debug("Form validation was successful")
-        if self.action == "perform_destroy":
+        if self.action == "destroy":
             try:
                 obj.delete()
             except ProtectedError as e:
@@ -77,7 +77,7 @@ class NautobotViewSetMixin(
             messages.success(request, msg)
             self.success_url = self.get_return_url(request)
             return super().form_valid(form)
-        elif self.action == "perform_bulk_destroy":
+        elif self.action == "bulk_destroy":
             pk_list = kwargs.pop("pk_list")
             model = self.queryset.model
             # Delete objects
@@ -94,7 +94,7 @@ class NautobotViewSetMixin(
             self.success_url = self.get_return_url(request)
             messages.success(request, msg)
             return super().form_valid(form)
-        elif self.action == "perform_create_or_update":
+        elif self.action in ["create", "update"]:
             try:
                 with transaction.atomic():
                     object_created = not form.instance.present_in_database
@@ -125,7 +125,7 @@ class NautobotViewSetMixin(
                 msg = "Object save failed due to object-level permissions violation"
                 self.logger.debug(msg)
                 form.add_error(None, msg)
-        elif self.action == "perform_bulk_edit":
+        elif self.action == "bulk_update":
             model = self.queryset.model
             custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
             standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
@@ -189,7 +189,7 @@ class NautobotViewSetMixin(
                 self.logger.debug(msg)
                 form.add_error(None, msg)
                 return self.retrieve_object_bulk(request, pk_list, model, form, "bulk_edit")
-        elif self.action == "perform_bulk_create":
+        elif self.action == "bulk_create":
             new_objs=[]
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
@@ -236,7 +236,7 @@ class NautobotViewSetMixin(
     def form_invalid(self, request, obj, form, **kwargs):
         context={}
         self.logger.debug("Form Validation Failed")
-        if self.action == "perform_destroy":
+        if self.action == "destroy":
             context.update(
                 {
                     "obj": obj,
@@ -247,7 +247,7 @@ class NautobotViewSetMixin(
                 }
             )
             return Response(context)
-        elif self.action == "perform_create_or_update":
+        elif self.action in ["create", "update"]:
             context.update(
                 {
                     "obj": obj,
@@ -259,7 +259,7 @@ class NautobotViewSetMixin(
                 }
             )
             return Response(context)
-        elif self.action == "perform_bulk_create":
+        elif self.action == "bulk_create":
             context.update(
                 {
                     "form": form,
@@ -267,7 +267,8 @@ class NautobotViewSetMixin(
                     "obj_type": self.import_form._meta.model._meta.verbose_name,
                     "return_url": self.get_return_url(request),
                     "active_tab": "csv-data",
-                    "template": self.get_template_name("bulk_import"),
+                    # "template": self.get_template_name("bulk_import"),
+                    "template": self.get_template_name(self.action),
                 }
             )
             return Response(context)
@@ -443,7 +444,6 @@ class NautobotViewSetMixin(
 
 
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
-    action = "view"
 
     def get_changelog_url(self, instance):
         """Return the changelog URL for a given instance."""
@@ -492,7 +492,6 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
-    action = "view"
     action_buttons = ("add", "import", "export")
     filterset_form = None
 
@@ -533,22 +532,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
         return "\n".join(csv_data)
 
-    def validate_action_buttons(self, request):
-        """Verify actions in self.action_buttons are valid view actions."""
-
-        always_valid_actions = ("export",)
-        valid_actions = []
-        invalid_actions = []
-
-        for action in self.action_buttons:
-            if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
-                valid_actions.append(action)
-            else:
-                invalid_actions.append(action)
-        if invalid_actions:
-            messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
-        return valid_actions
-
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
         if request.GET.get("export"):
@@ -578,26 +561,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             filename = f"nautobot_{self.queryset.model._meta.verbose_name_plural}.csv"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
-
-    def construct_user_permissions(self, request, model):
-        permissions = {}
-        for action in ("add", "change", "delete", "view"):
-            perm_name = get_permission_for_model(model, action)
-            permissions[action] = request.user.has_perm(perm_name)
-        return permissions
-
-    def construct_table(self, request, permissions):
-        table = self.table(self.queryset, user=request.user)
-        if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
-            table.columns.show("pk")
-
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        return RequestConfig(request, paginate).configure(table)
-
+    '''
     def list(self, request, *args, **kwargs):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
@@ -607,7 +571,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
         self.queryset = self.alter_queryset(request)
         # Compile a dictionary indicating which permissions are available to the current user for this model
-        permissions = self.construct_user_permissions(request, model)
+        # permissions = self.construct_user_permissions(request, model)
         # Construct the objects table
         table = self.construct_table(request, permissions)
         valid_actions = self.validate_action_buttons(request)
@@ -615,7 +579,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         data = {
             "content_type": content_type,
             "table": table,
-            "permissions": permissions,
+            # "permissions": permissions,
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": self.filterset_form(request.GET, label_suffix="") if self.filterset_form else None,
@@ -623,10 +587,14 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         }
         data.update(self.get_extra_context(request, "list", instance=None))
         return Response(data)
+    '''
+
+    def list(self, request, *args, **kwargs):
+        ctx = self.get_extra_context(request, "list", instance=None)
+        return Response(ctx)
 
 
 class ObjectDeleteViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
-    action = "delete"
     logger = logging.getLogger("nautobot.views.ObjectDeleteView")
 
     def destroy(self, request, *args, **kwargs):
@@ -687,7 +655,6 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
 
 
 class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixin):
-    action = "delete"
     bulk_delete_form = None
     logger = logging.getLogger("nautobot.views.BulkDeleteView")
 
@@ -817,6 +784,20 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         return self.retrieve_object_bulk(request, form, "bulk_edit", pk_list=pk_list)
 
 
+PERMISSIONS_ACTION_MAP = {
+    "retrieve": "view",
+    "list": "view",
+    "create": "add",
+    "bulk_create": "add",
+    "update": "change",
+    "partial_update": "change",
+    "partial_bulk_update": "change",
+    "bulk_update": "change",
+    "destroy": "delete",
+    "bulkd_destroy": "delete",
+}
+
+
 class NautobotDRFViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -826,5 +807,9 @@ class NautobotDRFViewSet(
     BulkImportViewMixin,
     BulkUpdateViewMixin,
 ):
+
+    def get_permission_action(self):
+        return PERMISSIONS_ACTION_MAP[self.action]
+
     def get_required_permission(self):
-        return get_permission_for_model(self.queryset.model, self.action)
+        return get_permission_for_model(self.queryset.model, self.get_permission_action())
