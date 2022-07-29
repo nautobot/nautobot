@@ -120,7 +120,7 @@ Nautobot supports database query caching using [`django-cacheops`](https://githu
 
 Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
 
-For more details Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../../additional-features/caching).
+For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../../additional-features/caching).
 
 !!! important
     Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching, as `django-cacheops` takes its place.
