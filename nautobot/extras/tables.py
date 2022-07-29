@@ -301,11 +301,11 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
         model = DynamicGroupMembership
         fields = (
             "pk",
-            "name",
-            "members",
-            "filter",
             "operator",
+            "name",
             "weight",
+            "filter",
+            "members",
             "description",
             "actions",
         )
@@ -349,11 +349,27 @@ DESCENDANTS_LINK = """
 """
 
 
+OPERATOR_LINK = """
+{% load helpers %}
+{% for node in descendants_tree %}
+    {% if node.name == record.name %}
+        {% for i in node.depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+{{ record.get_operator_display }}
+"""
+
+
 class NestedDynamicGroupDescendantsTable(DynamicGroupMembershipTable):
     """
     Subclass of DynamicGroupMembershipTable used in detail views to show parenting hierarchy with dots.
     """
 
+    operator = tables.TemplateColumn(template_code=OPERATOR_LINK)
     name = tables.TemplateColumn(template_code=DESCENDANTS_LINK)
 
     class Meta(DynamicGroupMembershipTable.Meta):
