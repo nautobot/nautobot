@@ -8,6 +8,7 @@ from rest_framework.test import APIClient, APITransactionTestCase as _APITransac
 
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
@@ -26,6 +27,7 @@ __all__ = (
 #
 
 
+@tag("api")
 class APITestCase(ModelTestCase):
     """
     Base test case for API requests.
@@ -141,6 +143,10 @@ class APIViewTestCases:
             self.assertIn("url", response.data)
             self.assertIn("display", response.data)
             self.assertIsInstance(response.data["display"], str)
+            # Fields that should be present in appropriate model serializers:
+            if issubclass(self.model, ChangeLoggedModel):
+                self.assertIn("created", response.data)
+                self.assertIn("last_updated", response.data)
             # Fields that should be absent by default (opt-in fields):
             self.assertNotIn("computed_fields", response.data)
             self.assertNotIn("relationships", response.data)

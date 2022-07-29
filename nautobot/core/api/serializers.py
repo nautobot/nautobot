@@ -56,6 +56,10 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
+            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
+            if request is not None and request.method != "GET":
+                return fields
+
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
             params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
@@ -79,7 +83,12 @@ class OptInFieldsMixin:
 class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
-    Namely it defines the `display` field which exposes a human friendly value for the given object.
+
+    Namely, it:
+
+    - defines the `display` field which exposes a human friendly value for the given object.
+    - ensures that `id` field is always present on the serializer as well
+    - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
     """
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
@@ -92,7 +101,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         return getattr(instance, "display", str(instance))
 
     def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
-        """Helper method to get_field_names."""
+        """Prepend or append the given field_name to `fields` and optionally self.Meta.opt_in_fields as well."""
         if field_name not in fields:
             if at_start:
                 fields.insert(0, field_name)
@@ -107,18 +116,26 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     def get_field_names(self, declared_fields, info):
         """
-        Override get_field_names() to prepend the `id` and `display` fields so they are always included in the
-        serializer's `Meta.fields`.
+        Override get_field_names() to ensure certain fields are present even when not explicitly stated in Meta.fields.
 
         DRF does not automatically add declared fields to `Meta.fields`, nor does it require that declared fields
         on a super class be included in `Meta.fields` to allow for a subclass to include only a subset of declared
-        fields from the super. This means either we intercept and append the display field at this level, or
-        enforce by convention that all consumers of BaseModelSerializer include `display` in their `Meta.fields`
-        which would surely lead to errors of omission; therefore we have chosen the former approach.
+        fields from the super. This means either we intercept and ensure the fields at this level, or
+        enforce by convention that all consumers of BaseModelSerializer include each of these standard fields in their
+        `Meta.fields` which would surely lead to errors of omission; therefore we have chosen the former approach.
+
+        Adds "id" and "display" to the start of `fields` for all models; also appends "created" and "last_updated"
+        to the end of `fields` if they are applicable to this model and this is not a Nested serializer.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
         self.extend_field_names(fields, "display", at_start=True)
         self.extend_field_names(fields, "id", at_start=True)
+        # Needed because we don't have a common base class for all nested serializers vs non-nested serializers
+        if not self.__class__.__name__.startswith("Nested"):
+            if hasattr(self.Meta.model, "created"):
+                self.extend_field_names(fields, "created")
+            if hasattr(self.Meta.model, "last_updated"):
+                self.extend_field_names(fields, "last_updated")
         return fields
 
 

@@ -6,6 +6,7 @@ from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 
 __all__ = [
+    "NestedComputedFieldSerializer",
     "NestedConfigContextSerializer",
     "NestedConfigContextSchemaSerializer",
     "NestedCustomFieldSerializer",
@@ -27,6 +28,15 @@ __all__ = [
     "NestedTagSerializer",
     "NestedWebhookSerializer",
 ]
+
+
+class NestedComputedFieldSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
+    content_type = ContentTypeField(queryset=ContentType.objects.all())
+
+    class Meta:
+        model = models.ComputedField
+        fields = ["id", "url", "content_type", "label"]
 
 
 class NestedConfigContextSerializer(WritableNestedSerializer):
@@ -174,7 +184,7 @@ class NestedScheduledJobSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.ScheduledJob
-        fields = ["url", "name", "start_time", "interval"]
+        fields = ["url", "name", "start_time", "interval", "crontab"]
 
     def validate(self, data):
         data = super().validate(data)
@@ -183,12 +193,23 @@ class NestedScheduledJobSerializer(BaseModelSerializer):
             if "name" not in data:
                 raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
 
-            if "start_time" not in data or data["start_time"] < models.ScheduledJob.earliest_possible_time():
+            if ("start_time" not in data and data["interval"] != choices.JobExecutionType.TYPE_CUSTOM) or (
+                "start_time" in data and data["start_time"] < models.ScheduledJob.earliest_possible_time()
+            ):
                 raise serializers.ValidationError(
                     {
                         "start_time": "Please enter a valid date and time greater than or equal to the current date and time."
                     }
                 )
+
+            if data["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
+
+                if data.get("crontab") is None:
+                    raise serializers.ValidationError({"crontab": "Please enter a valid crontab."})
+                try:
+                    models.ScheduledJob.get_crontab(data["crontab"])
+                except Exception as e:
+                    raise serializers.ValidationError({"crontab": e})
 
         return data
 

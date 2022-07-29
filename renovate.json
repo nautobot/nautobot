@@ -13,7 +13,7 @@
   "packageRules": [
     {
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
-      "groupName": "Develop Updates",
+      "groupName": "Lock-file Patch Releases for Develop",
       "matchBaseBranches": ["develop"],
       "schedule": [
         "before 3am on Friday"
@@ -31,8 +31,8 @@
     },
     {
       "description": "Group updates to next cut down on PR noise.",
-      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit"],
-      "groupName": "Next Updates",
+      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit", "flake8"],
+      "groupName": "Releases Batched for Next",
       "matchBaseBranches": ["next"]
     },
     {
@@ -43,10 +43,10 @@
       "matchUpdateTypes": ["major", "minor"]
     },
     {
-      "description": "Require dashboard approval for major updates for django-taggit.",
+      "description": "Require dashboard approval for major updates for packages known to have breaking changes.",
       "dependencyDashboardApproval": true,
       "matchBaseBranches": ["next"],
-      "matchPackageNames": ["django-taggit"],
+      "matchPackageNames": ["django-taggit", "flake8"],
       "matchUpdateTypes": ["major"]
     }
   ],

@@ -2256,6 +2256,68 @@ class CableTestCase(
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
 
+    def test_delete_a_cable_which_has_a_peer_connection(self):
+        """Test for https://github.com/nautobot/nautobot/issues/1694."""
+        self.add_permissions("dcim.delete_cable")
+
+        site = Site.objects.first()
+        device = Device.objects.first()
+
+        interfaces = [
+            Interface.objects.create(device=device, name="eth0"),
+            Interface.objects.create(device=device, name="eth1"),
+        ]
+
+        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
+        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuittype)
+
+        circuit_terminations = [
+            CircuitTermination.objects.create(
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
+            ),
+            CircuitTermination.objects.create(
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z, site=site
+            ),
+        ]
+
+        connected = Status.objects.get(slug="connected")
+        cables = [
+            Cable.objects.create(termination_a=circuit_terminations[0], termination_b=interfaces[0], status=connected),
+            Cable.objects.create(termination_a=circuit_terminations[1], termination_b=interfaces[1], status=connected),
+        ]
+
+        request = {
+            "path": self._get_url("delete", cables[0]),
+            "data": post_data({"confirm": True}),
+        }
+
+        from nautobot.dcim.models import CablePath
+        from django.db.models import Q
+
+        termination_ct = ContentType.objects.get_for_model(CircuitTermination)
+        interface_ct = ContentType.objects.get_for_model(Interface)
+
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertFalse(Cable.objects.filter(pk=cables[0].pk).exists())
+
+        # Assert the wrong CablePath did not get deleted
+        cable_path_1 = CablePath.objects.filter(
+            Q(origin_type=termination_ct, origin_id=circuit_terminations[0].pk)
+            | Q(origin_type=interface_ct, origin_id=interfaces[0].pk)
+            | Q(destination_type=termination_ct, destination_id=circuit_terminations[0].pk)
+            | Q(destination_type=interface_ct, destination_id=interfaces[0].pk)
+        )
+        self.assertFalse(cable_path_1.exists())
+
+        cable_path_2 = CablePath.objects.filter(
+            Q(origin_type=termination_ct, origin_id=circuit_terminations[1].pk)
+            | Q(origin_type=interface_ct, origin_id=interfaces[1].pk)
+            | Q(destination_type=termination_ct, destination_id=circuit_terminations[1].pk)
+            | Q(destination_type=interface_ct, destination_id=interfaces[1].pk)
+        )
+        self.assertTrue(cable_path_2.exists())
+
 
 class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """

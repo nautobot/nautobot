@@ -1,7 +1,8 @@
 import inspect
-from datetime import datetime
+from datetime import timedelta
 import logging
 
+from celery import chain
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -24,6 +25,7 @@ from jsonschema.validators import Draft7Validator
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
@@ -451,6 +453,30 @@ class CustomFieldDeleteView(generic.ObjectDeleteView):
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
+
+    def construct_custom_field_delete_tasks(self, queryset):
+        """
+        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
+        """
+        tasks = [
+            delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
+            for obj in queryset
+        ]
+        return tasks
+
+    def perform_pre_delete(self, request, queryset):
+        """
+        Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
+        """
+        if not get_worker_count(request):
+            messages.error(
+                request, "Celery worker process not running. Object custom fields may fail to reflect this deletion."
+            )
+            return
+        tasks = self.construct_custom_field_delete_tasks(queryset)
+        # Executing the tasks in the background sequentially using chain() aligns with how a single CustomField object is deleted.
+        # We decided to not check the result because it needs at least one worker to be active and comes with extra performance penalty.
+        chain(*tasks).apply_async()
 
 
 #
@@ -1066,20 +1092,30 @@ class JobView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                crontab = ""
 
-                if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                    # Schedule the job instead of running it now
-                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
-                    schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
-
-                else:
+                if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
                     # The job must be approved.
                     # If the schedule_type is immediate, we still create the task, but mark it for approval
                     # as a once in the future task with the due date set to the current time. This means
                     # when approval is granted, the task is immediately due for execution.
                     schedule_type = JobExecutionType.TYPE_FUTURE
-                    schedule_datetime = datetime.now()
+                    schedule_datetime = timezone.now()
                     schedule_name = f"{job_model} - {schedule_datetime}"
+
+                else:
+                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
+
+                    if schedule_type == JobExecutionType.TYPE_CUSTOM:
+                        crontab = schedule_form.cleaned_data["_recurrence_custom_time"]
+                        # doing .get("key", "default") returns None instead of "default" here for some reason
+                        schedule_datetime = schedule_form.cleaned_data.get("_schedule_start_time")
+                        if schedule_datetime is None:
+                            # "_schedule_start_time" is checked against ScheduledJob.earliest_possible_time()
+                            # which returns timezone.now() + timedelta(seconds=15)
+                            schedule_datetime = timezone.now() + timedelta(seconds=20)
+                    else:
+                        schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
                 job_kwargs = {
                     "data": job_model.job_class.serialize_data(job_form.cleaned_data),
@@ -1101,6 +1137,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     user=request.user,
                     approval_required=job_model.approval_required,
+                    crontab=crontab,
                 )
                 scheduled_job.save()
 
