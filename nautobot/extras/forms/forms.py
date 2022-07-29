@@ -765,6 +765,11 @@ class JobEditForm(NautobotModelForm):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
+
+        if cleaned_data["sensitive"] is True and cleaned_data["approval_required"] is True:
+            raise ValidationError({
+                "approval_required": "A sensitive job cannot be marked for approval"
+            })
         return cleaned_data
 
 

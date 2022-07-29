@@ -3,6 +3,11 @@
 {% load helpers %}
 
 {% block form %}
+    {% if obj.sensitive and obj.approval_required %}
+        <div class="alert alert-danger">
+            <i class="mdi mdi-alert"></i> This job is sensitive and can not be marked for approval.
+        </div>
+    {% endif %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Job Source</strong></div>
         <div class="panel-body">

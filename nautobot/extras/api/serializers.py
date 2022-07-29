@@ -643,6 +643,7 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "description_override",
             "installed",
             "enabled",
+            "sensitive",
             "is_job_hook_receiver",
             "approval_required",
             "approval_required_override",
@@ -663,6 +664,17 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        if data["sensitive"] is True and data["approval_required"] is True:
+            raise serializers.ValidationError({
+                "approval_required": ["A sensitive job cannot be marked for approval"]
+            })
+
+        return data
+
 
 
 class JobVariableSerializer(serializers.Serializer):
