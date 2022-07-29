@@ -39,6 +39,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -661,6 +662,21 @@ class JobViewSet(
         except Job.DoesNotExist:
             raise Http404
         return _run_job(request, job_model, legacy_response=True)
+
+
+#
+# Job Hooks
+#
+
+
+class JobHooksViewSet(ModelViewSet):
+    """
+    Manage job hooks through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobHook.objects.all()
+    serializer_class = serializers.JobHookSerializer
+    filterset_class = filters.JobHookFilterSet
 
 
 #

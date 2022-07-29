@@ -5,13 +5,14 @@ from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
-from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
     TagFilter,
 )
@@ -38,6 +39,7 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -699,6 +701,30 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "read_only_override",
             "soft_time_limit_override",
             "time_limit_override",
+        ]
+
+
+class JobHookFilterSet(BaseFilterSet):
+    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=ChangeLoggedModelsQuery().get_choices,
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (slug or ID)",
+    )
+
+    class Meta:
+        model = JobHook
+        fields = [
+            "name",
+            "content_types",
+            "enabled",
+            "job",
+            "slug",
+            "type_create",
+            "type_update",
+            "type_delete",
         ]
 
 

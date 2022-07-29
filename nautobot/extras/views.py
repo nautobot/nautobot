@@ -62,6 +62,7 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     Job as JobModel,
+    JobHook,
     ObjectChange,
     JobResult,
     Relationship,
@@ -1377,6 +1378,40 @@ class ScheduledJobView(generic.ObjectView):
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
     queryset = ScheduledJob.objects.all()
+
+
+#
+# Job hooks
+#
+
+
+class JobHookListView(generic.ObjectListView):
+    queryset = JobHook.objects.all()
+    table = tables.JobHookTable
+    filterset = filters.JobHookFilterSet
+    filterset_form = forms.JobHookFilterForm
+    action_buttons = ("add",)
+
+
+class JobHookView(generic.ObjectView):
+    queryset = JobHook.objects.all()
+
+    def get_extra_context(self, request, instance):
+        return {"content_types": instance.content_types.order_by("app_label", "model")}
+
+
+class JobHookEditView(generic.ObjectEditView):
+    queryset = JobHook.objects.all()
+    model_form = forms.JobHookForm
+
+
+class JobHookDeleteView(generic.ObjectDeleteView):
+    queryset = JobHook.objects.all()
+
+
+class JobHookBulkDeleteView(generic.BulkDeleteView):
+    queryset = JobHook.objects.all()
+    table = tables.JobHookTable
 
 
 #

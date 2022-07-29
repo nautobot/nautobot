@@ -44,6 +44,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -57,7 +58,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.api.fields import StatusSerializerField
-from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -98,6 +99,7 @@ from .nested_serializers import (  # noqa: F401
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
+    NestedJobHookSerializer,
 )
 
 #
@@ -806,6 +808,45 @@ class JobClassSerializer(serializers.Serializer):
 
 class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
+
+
+class JobHookSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
+    content_types = ContentTypeField(
+        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        many=True,
+    )
+
+    class Meta:
+        model = JobHook
+        fields = [
+            "id",
+            "url",
+            "name",
+            "content_types",
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+        ]
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        conflicts = JobHook.check_for_conflicts(
+            instance=self.instance,
+            content_types=data.get("content_types"),
+            job=data.get("job"),
+            type_create=data.get("type_create"),
+            type_update=data.get("type_update"),
+            type_delete=data.get("type_delete"),
+        )
+
+        if conflicts:
+            raise serializers.ValidationError(conflicts)
+
+        return validated_data
 
 
 class JobInputSerializer(serializers.Serializer):

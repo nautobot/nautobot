@@ -13,6 +13,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     Note,
+    JobHook,
     Relationship,
     Secret,
     SecretsGroup,
@@ -446,6 +447,27 @@ urlpatterns = [
     # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
     path("jobs/<slug:slug>/run/", views.JobView.as_view(), name="job_run"),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
+    # Job hooks
+    path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
+    path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),
+    path(
+        "job-hooks/delete/",
+        views.JobHookBulkDeleteView.as_view(),
+        name="jobhook_bulk_delete",
+    ),
+    path("job-hooks/<uuid:pk>/", views.JobHookView.as_view(), name="jobhook"),
+    path("job-hooks/<uuid:pk>/edit/", views.JobHookEditView.as_view(), name="jobhook_edit"),
+    path(
+        "job-hooks/<uuid:pk>/delete/",
+        views.JobHookDeleteView.as_view(),
+        name="jobhook_delete",
+    ),
+    path(
+        "job-hooks/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="jobhook_changelog",
+        kwargs={"model": JobHook},
+    ),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),

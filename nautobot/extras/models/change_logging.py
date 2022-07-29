@@ -223,8 +223,8 @@ class ObjectChange(BaseModel):
         prior_change = ObjectChange.objects.filter(
             changed_object_type=self.changed_object_type,
             changed_object_id=self.changed_object_id,
-            time__lte=self.time,
-        ).exclude(pk=self.pk)
+            time__lt=self.time,
+        )
 
         if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change.exists():
             prechange = prior_change.first().object_data_v2
