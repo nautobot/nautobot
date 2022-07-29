@@ -744,7 +744,12 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
 
     def peer_id_filter(self, queryset, name, value):
         # Filter down to symmetric relationships only.
-        queryset = queryset.filter(relationship__type__in=[RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC, RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC])
+        queryset = queryset.filter(
+            relationship__type__in=[
+                RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+            ]
+        )
         # Then Filter based on peer_id.
         queryset = queryset.filter(source_id__in=value) | queryset.filter(destination_id__in=value)
         return queryset
