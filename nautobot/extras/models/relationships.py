@@ -14,6 +14,7 @@ from nautobot.core.models import BaseModel
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.utilities.utils import get_filterset_for_model
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
@@ -233,7 +234,7 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         )
 
 
-class Relationship(BaseModel, ChangeLoggedModel):
+class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
     name = models.CharField(max_length=100, unique=True, help_text="Internal relationship name")
     slug = AutoSlugField(populate_from="name")

@@ -4,6 +4,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -30,6 +31,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -574,6 +576,48 @@ class GitRepositoryTestCase(
         cls.slug_test_object = "Repo 4"
 
 
+class NoteTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+):
+    model = Note
+
+    @classmethod
+    def setUpTestData(cls):
+
+        content_type = ContentType.objects.get_for_model(Site)
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        user = User.objects.first()
+
+        # Notes Objects to test
+        Note.objects.create(
+            note="Site has been placed on maintenance.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+        Note.objects.create(
+            note="Site maintenance has ended.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+        Note.objects.create(
+            note="Site is under duress.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+
+        cls.form_data = {
+            "note": "This is Site note.",
+            "assigned_object_type": content_type.pk,
+            "assigned_object_id": site.pk,
+        }
+
+
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
 class SecretTestCase(
     ViewTestCases.GetObjectViewTestCase,
@@ -885,6 +929,57 @@ class ScheduledJobTestCase(
         response = self.client.get(self._get_url("list"))
         self.assertHttpStatus(response, 200)
         self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
+
+    def test_non_valid_crontab_syntax(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        def scheduled_job_factory(name, crontab):
+            ScheduledJob.objects.create(
+                enabled=True,
+                name=name,
+                task="nautobot.extras.jobs.scheduled_job_handler",
+                job_class="local/test_pass/TestPass",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                user=self.user,
+                start_time=timezone.now(),
+                crontab=crontab,
+            )
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test5", None)
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test6", "")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test7", "not_enough_values_to_unpack")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test8", "one too many values to unpack")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test9", "-1 * * * *")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test10", "invalid literal * * *")
+
+    def test_valid_crontab_syntax(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        ScheduledJob.objects.create(
+            enabled=True,
+            name="test11",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            user=self.user,
+            start_time=datetime.now(),
+            crontab="*/15 9,17 3 * 1-5",
+        )
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
 
 
 class ApprovalQueueTestCase(

@@ -16,6 +16,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
@@ -50,7 +51,7 @@ class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("graphql")
-class ComputedField(BaseModel, ChangeLoggedModel):
+class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
     """
     Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
@@ -235,7 +236,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel, ChangeLoggedModel):
+class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",

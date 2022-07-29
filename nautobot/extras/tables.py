@@ -32,6 +32,7 @@ from .models import (
     Job as JobModel,
     JobResult,
     JobLogEntry,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -695,6 +696,22 @@ class JobResultTable(BaseTable):
 
 
 #
+# Notes
+#
+
+
+class NoteTable(BaseTable):
+    actions = ButtonsColumn(Note, pk_field="slug")
+
+    class Meta(BaseTable.Meta):
+        model = Note
+        fields = ("created", "note", "user_name")
+
+    def render_note(self, value):
+        return render_markdown(value)
+
+
+#
 # ScheduledJobs
 #
 
@@ -774,10 +791,10 @@ class RelationshipAssociationTable(BaseTable):
     relationship = tables.Column(linkify=True)
 
     source_type = tables.Column()
-    source = tables.Column(linkify=True, orderable=False, accessor="get_source")
+    source = tables.Column(linkify=True, orderable=False, accessor="get_source", default="unknown")
 
     destination_type = tables.Column()
-    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination")
+    destination = tables.Column(linkify=True, orderable=False, accessor="get_destination", default="unknown")
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation

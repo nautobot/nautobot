@@ -1669,7 +1669,7 @@ class ScheduledJobTest(
     APIViewTestCases.ListObjectsViewTestCase,
 ):
     model = ScheduledJob
-    brief_fields = ["display", "id", "interval", "name", "start_time", "url"]
+    brief_fields = ["crontab", "display", "id", "interval", "name", "start_time", "url"]
     choices_fields = []
 
     @classmethod

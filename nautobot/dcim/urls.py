@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView, ImageAttachmentEditView
+from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView, ImageAttachmentEditView
 from nautobot.ipam.views import ServiceEditView
 from . import views
 from .models import (
@@ -56,6 +56,12 @@ urlpatterns = [
         name="region_changelog",
         kwargs={"model": Region},
     ),
+    path(
+        "regions/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="region_notes",
+        kwargs={"model": Region},
+    ),
     # Sites
     path("sites/", views.SiteListView.as_view(), name="site_list"),
     path("sites/add/", views.SiteEditView.as_view(), name="site_add"),
@@ -69,6 +75,12 @@ urlpatterns = [
         "sites/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="site_changelog",
+        kwargs={"model": Site},
+    ),
+    path(
+        "sites/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="site_notes",
         kwargs={"model": Site},
     ),
     path(
@@ -91,6 +103,12 @@ urlpatterns = [
         name="locationtype_changelog",
         kwargs={"model": LocationType},
     ),
+    path(
+        "location-types/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="locationtype_notes",
+        kwargs={"model": LocationType},
+    ),
     # Locations
     path("locations/", views.LocationListView.as_view(), name="location_list"),
     path("locations/add/", views.LocationEditView.as_view(), name="location_add"),
@@ -104,6 +122,12 @@ urlpatterns = [
         "locations/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="location_changelog",
+        kwargs={"model": Location},
+    ),
+    path(
+        "locations/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="location_notes",
         kwargs={"model": Location},
     ),
     path(
@@ -142,6 +166,12 @@ urlpatterns = [
         name="rackgroup_changelog",
         kwargs={"model": RackGroup},
     ),
+    path(
+        "rack-groups/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="rackgroup_notes",
+        kwargs={"model": RackGroup},
+    ),
     # Rack roles
     path("rack-roles/", views.RackRoleListView.as_view(), name="rackrole_list"),
     path("rack-roles/add/", views.RackRoleEditView.as_view(), name="rackrole_add"),
@@ -170,6 +200,12 @@ urlpatterns = [
         "rack-roles/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="rackrole_changelog",
+        kwargs={"model": RackRole},
+    ),
+    path(
+        "rack-roles/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="rackrole_notes",
         kwargs={"model": RackRole},
     ),
     # Rack reservations
@@ -219,6 +255,12 @@ urlpatterns = [
         name="rackreservation_changelog",
         kwargs={"model": RackReservation},
     ),
+    path(
+        "rack-reservations/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="rackreservation_notes",
+        kwargs={"model": RackReservation},
+    ),
     # Racks
     path("racks/", views.RackListView.as_view(), name="rack_list"),
     path(
@@ -237,6 +279,12 @@ urlpatterns = [
         "racks/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="rack_changelog",
+        kwargs={"model": Rack},
+    ),
+    path(
+        "racks/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="rack_notes",
         kwargs={"model": Rack},
     ),
     path(
@@ -283,6 +331,12 @@ urlpatterns = [
         name="manufacturer_changelog",
         kwargs={"model": Manufacturer},
     ),
+    path(
+        "manufacturers/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="manufacturer_notes",
+        kwargs={"model": Manufacturer},
+    ),
     # Device types
     path("device-types/", views.DeviceTypeListView.as_view(), name="devicetype_list"),
     path("device-types/add/", views.DeviceTypeEditView.as_view(), name="devicetype_add"),
@@ -316,6 +370,12 @@ urlpatterns = [
         "device-types/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="devicetype_changelog",
+        kwargs={"model": DeviceType},
+    ),
+    path(
+        "device-types/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="devicetype_notes",
         kwargs={"model": DeviceType},
     ),
     # Console port templates
@@ -596,6 +656,12 @@ urlpatterns = [
         name="devicerole_changelog",
         kwargs={"model": DeviceRole},
     ),
+    path(
+        "device-roles/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="devicerole_notes",
+        kwargs={"model": DeviceRole},
+    ),
     # Platforms
     path("platforms/", views.PlatformListView.as_view(), name="platform_list"),
     path("platforms/add/", views.PlatformEditView.as_view(), name="platform_add"),
@@ -624,6 +690,12 @@ urlpatterns = [
         "platforms/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="platform_changelog",
+        kwargs={"model": Platform},
+    ),
+    path(
+        "platforms/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="platform_notes",
         kwargs={"model": Platform},
     ),
     # Devices
@@ -705,6 +777,12 @@ urlpatterns = [
         kwargs={"model": Device},
     ),
     path(
+        "devices/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="device_notes",
+        kwargs={"model": Device},
+    ),
+    path(
         "devices/<uuid:pk>/status/",
         views.DeviceStatusView.as_view(),
         name="device_status",
@@ -777,6 +855,12 @@ urlpatterns = [
         "console-ports/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="consoleport_changelog",
+        kwargs={"model": ConsolePort},
+    ),
+    path(
+        "console-ports/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="consoleport_notes",
         kwargs={"model": ConsolePort},
     ),
     path(
@@ -854,6 +938,12 @@ urlpatterns = [
         kwargs={"model": ConsoleServerPort},
     ),
     path(
+        "console-server-ports/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="consoleserverport_notes",
+        kwargs={"model": ConsoleServerPort},
+    ),
+    path(
         "console-server-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
         name="consoleserverport_trace",
@@ -913,6 +1003,12 @@ urlpatterns = [
         "power-ports/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="powerport_changelog",
+        kwargs={"model": PowerPort},
+    ),
+    path(
+        "power-ports/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="powerport_notes",
         kwargs={"model": PowerPort},
     ),
     path(
@@ -982,6 +1078,12 @@ urlpatterns = [
         kwargs={"model": PowerOutlet},
     ),
     path(
+        "power-outlets/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="poweroutlet_notes",
+        kwargs={"model": PowerOutlet},
+    ),
+    path(
         "power-outlets/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
         name="poweroutlet_trace",
@@ -1041,6 +1143,12 @@ urlpatterns = [
         "interfaces/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="interface_changelog",
+        kwargs={"model": Interface},
+    ),
+    path(
+        "interfaces/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="interface_notes",
         kwargs={"model": Interface},
     ),
     path(
@@ -1106,6 +1214,12 @@ urlpatterns = [
         kwargs={"model": FrontPort},
     ),
     path(
+        "front-ports/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="frontport_notes",
+        kwargs={"model": FrontPort},
+    ),
+    path(
         "front-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
         name="frontport_trace",
@@ -1164,6 +1278,12 @@ urlpatterns = [
         kwargs={"model": RearPort},
     ),
     path(
+        "rear-ports/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="rearport_notes",
+        kwargs={"model": RearPort},
+    ),
+    path(
         "rear-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
         name="rearport_trace",
@@ -1218,6 +1338,12 @@ urlpatterns = [
         "device-bays/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="devicebay_changelog",
+        kwargs={"model": DeviceBay},
+    ),
+    path(
+        "device-bays/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="devicebay_notes",
         kwargs={"model": DeviceBay},
     ),
     path(
@@ -1288,6 +1414,12 @@ urlpatterns = [
         kwargs={"model": InventoryItem},
     ),
     path(
+        "inventory-items/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="inventoryitem_notes",
+        kwargs={"model": InventoryItem},
+    ),
+    path(
         "devices/inventory-items/add/",
         views.DeviceBulkAddInventoryItemView.as_view(),
         name="device_bulk_add_inventoryitem",
@@ -1304,6 +1436,12 @@ urlpatterns = [
         "cables/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="cable_changelog",
+        kwargs={"model": Cable},
+    ),
+    path(
+        "cables/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="cable_notes",
         kwargs={"model": Cable},
     ),
     # Console/power/interface connections (read-only)
@@ -1370,6 +1508,12 @@ urlpatterns = [
         kwargs={"model": VirtualChassis},
     ),
     path(
+        "virtual-chassis/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="virtualchassis_notes",
+        kwargs={"model": VirtualChassis},
+    ),
+    path(
         "virtual-chassis/<uuid:pk>/add-member/",
         views.VirtualChassisAddMemberView.as_view(),
         name="virtualchassis_add_member",
@@ -1414,6 +1558,12 @@ urlpatterns = [
         name="powerpanel_changelog",
         kwargs={"model": PowerPanel},
     ),
+    path(
+        "power-panels/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="powerpanel_notes",
+        kwargs={"model": PowerPanel},
+    ),
     # Power feeds
     path("power-feeds/", views.PowerFeedListView.as_view(), name="powerfeed_list"),
     path("power-feeds/add/", views.PowerFeedEditView.as_view(), name="powerfeed_add"),
@@ -1453,6 +1603,12 @@ urlpatterns = [
         "power-feeds/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="powerfeed_changelog",
+        kwargs={"model": PowerFeed},
+    ),
+    path(
+        "power-feeds/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="powerfeed_notes",
         kwargs={"model": PowerFeed},
     ),
     path(

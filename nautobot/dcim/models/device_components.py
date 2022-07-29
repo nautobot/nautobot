@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     StatusModel,
     TaggedItem,
 )
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import NaturalOrderingField
@@ -60,7 +61,7 @@ __all__ = (
 )
 
 
-class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
+class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin):
     """
     An abstract model inherited by any model which has a parent Device.
     """

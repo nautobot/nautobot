@@ -13,6 +13,7 @@ from nautobot.extras.models import (
     StatusModel,
     TaggedItem,
 )
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
@@ -438,7 +439,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "statuses",
     "webhooks",
 )
-class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
+class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
     virtual_machine = models.ForeignKey(
         to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,

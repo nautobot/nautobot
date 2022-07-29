@@ -764,6 +764,7 @@ class ScheduledJobSerializer(BaseModelSerializer):
             "approved_by_user",
             "approval_required",
             "approved_at",
+            "crontab",
         ]
 
 

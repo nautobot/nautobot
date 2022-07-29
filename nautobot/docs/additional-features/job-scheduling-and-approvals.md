@@ -14,6 +14,8 @@ The Job Scheduling views can be accessed via the navigation at `Jobs > Jobs`, se
 
 The UI allows you to select a scheduling type. Further fields will be displayed as appropriate for that schedule type.
 
+If `Recurring custom` is chosen, you can schedule the recurrence in the `Crontab` field in [crontab](https://en.wikipedia.org/wiki/Cron#Overview) syntax.
+
 If the job requires no approval, it will then be added to the queue of scheduled jobs or run immediately. Otherwise, the job will be added to the approval queue where it can be approved by other users.
 
 ### Scheduling via the API
@@ -28,6 +30,12 @@ curl -X POST \
 http://nautobot/api/extras/jobs/$JOB_ID/run/ \
 --data '{"schedule": {"name": "test", "interval": "future", "start_time": "2030-01-01T01:00:00.000Z"}}'
 ```
+
+For custom interval, a `crontab` parameter must be added.
+
+`start_time` becomes optional when `interval` is set to `custom`.
+
+`--data '{"schedule": {"name": "test", "interval": "custom", "start_time": "2030-01-01T01:00:00.000Z", "crontab": "*/15 * * * *"}}'`
 
 ## Job Approvals
 
