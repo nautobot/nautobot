@@ -156,6 +156,8 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Fixed
 
+- [#2060](https://github.com/nautobot/nautobot/issues/2060) - Fixed relationship peer_id filter non-existent error on relationship association page.
+
 ## v1.3.9 (2022-07-25)
 
 ### Added
