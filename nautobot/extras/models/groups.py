@@ -432,7 +432,7 @@ class DynamicGroup(OrganizationalModel):
             raise ValidationError(filterset.errors)
 
     def delete(self):
-        """Check if we're a parent or child and attempt to block delete if we are."""
+        """Check if we're a child and attempt to block delete if we are."""
         if self.parents.exists():
             raise models.ProtectedError(
                 msg="Cannot delete DynamicGroup while child of other DynamicGroups.",
@@ -871,45 +871,8 @@ class DynamicGroupMembership(BaseModel):
             return siblings
         return siblings.exclude(pk=self.pk)
 
-    def _get_next_or_previous_by_weight(self, is_next):
-        """Get siblings and return the next/previous based on `is_next`."""
-        siblings = self.get_siblings(include_self=True)
-        if not is_next:
-            siblings = reversed(siblings)
-
-        siblings = list(siblings)
-        self_idx = siblings.index(self)
-
-        try:
-            return siblings[self_idx + 1]
-        except IndexError:
-            raise self.DoesNotExist(f"{self.__class__._meta.object_name} matching query does not exist.")
-
-    def get_next_by_weight(self):
-        """Get the next membership by weight."""
-        return self._get_next_or_previous_by_weight(is_next=True)
-
-    def get_previous_by_weight(self):
-        """Get the previous membership by weight."""
-        return self._get_next_or_previous_by_weight(is_next=False)
-
     def generate_query(self):
         return self.group.generate_query()
-
-    def calculate_next_query(self):
-        try:
-            prev_sib = self.get_previous_by_weight()
-        except self.DoesNotExist:
-            prev_sib = None
-
-        query = prev_sib.generate_query() if prev_sib is not None else models.Q()
-        next_set = self.generate_query()
-        return self.group.perform_membership_set_operation(self.operator, query, next_set)
-
-    def compute_member_count(self):
-        # query = self.group.generate_query()
-        next_query = self.calculate_next_query()
-        return self.group.model.objects.filter(next_query).count()
 
     def clean(self):
         super().clean()
