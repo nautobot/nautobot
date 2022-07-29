@@ -22,10 +22,9 @@ from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
     CustomFieldModelCSVForm,
-    CustomFieldFilterForm,
-    CustomFieldModelForm,
     NautobotBulkEditForm,
     NautobotModelForm,
+    NautobotFilterForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -158,7 +157,7 @@ class ConnectCableExcludeIDMixin:
             self.fields["termination_b_id"].widget.add_query_param("id__n", str(exclude_id))
 
 
-class DeviceComponentFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class DeviceComponentFilterForm(NautobotFilterForm):
     field_order = ["q", "region", "site"]
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -290,7 +289,7 @@ class RegionCSVForm(CustomFieldModelCSVForm):
         fields = Region.csv_headers
 
 
-class RegionFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class RegionFilterForm(NautobotFilterForm):
     model = Site
     q = forms.CharField(required=False, label="Search")
 
@@ -400,7 +399,7 @@ class SiteBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkE
         ]
 
 
-class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class SiteFilterForm(NautobotFilterForm, TenancyFilterForm, StatusFilterFormMixin):
     model = Site
     field_order = ["q", "status", "region", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
@@ -450,7 +449,7 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
         fields = LocationType.csv_headers
 
 
-class LocationTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class LocationTypeFilterForm(NautobotFilterForm):
     model = LocationType
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(feature="locations", choices_as_strings=True, required=False)
@@ -524,7 +523,7 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = Location.csv_headers
 
 
-class LocationFilterForm(BootstrapMixin, StatusFilterFormMixin, TenancyFilterForm, CustomFieldFilterForm):
+class LocationFilterForm(NautobotFilterForm, StatusFilterFormMixin, TenancyFilterForm):
     model = Location
     field_order = ["q", "location_type", "parent", "status", "tenant_group", "tenant", "tag"]
 
@@ -578,7 +577,7 @@ class RackGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = RackGroup.csv_headers
 
 
-class RackGroupFilterForm(BootstrapMixin, LocatableModelFilterFormMixin, CustomFieldFilterForm):
+class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = RackGroup
     parent = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
@@ -760,13 +759,7 @@ class RackBulkEditForm(
         ]
 
 
-class RackFilterForm(
-    BootstrapMixin,
-    LocatableModelFilterFormMixin,
-    TenancyFilterForm,
-    StatusFilterFormMixin,
-    CustomFieldFilterForm,
-):
+class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin):
     model = Rack
     field_order = [
         "q",
@@ -925,7 +918,7 @@ class RackReservationBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
         nullable_fields = []
 
 
-class RackReservationFilterForm(BootstrapMixin, TenancyFilterForm):
+class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
     model = RackReservation
     field_order = [
         "q",
@@ -1048,7 +1041,7 @@ class DeviceTypeBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
         nullable_fields = []
 
 
-class DeviceTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class DeviceTypeFilterForm(NautobotFilterForm):
     model = DeviceType
     q = forms.CharField(required=False, label="Search")
     manufacturer = DynamicModelMultipleChoiceField(
@@ -2153,12 +2146,11 @@ class DeviceBulkEditForm(
 
 
 class DeviceFilterForm(
-    BootstrapMixin,
+    NautobotFilterForm,
     LocalContextFilterForm,
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusFilterFormMixin,
-    CustomFieldFilterForm,
 ):
     model = Device
     field_order = [
@@ -3508,8 +3500,7 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
-class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
-
+class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     """
     Base form for connecting a Cable to a Device component
     """
@@ -3633,7 +3624,7 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
     )
 
 
-class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     termination_b_provider = DynamicModelChoiceField(queryset=Provider.objects.all(), label="Provider", required=False)
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
@@ -3679,7 +3670,7 @@ class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, Bootstrap
         return getattr(self.cleaned_data["termination_b_id"], "pk", None)
 
 
-class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, BootstrapMixin, CustomFieldModelForm):
+class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
     termination_b_site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
@@ -3729,7 +3720,7 @@ class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, BootstrapMixin, Cu
         return getattr(self.cleaned_data["termination_b_id"], "pk", None)
 
 
-class CableForm(BootstrapMixin, CustomFieldModelForm):
+class CableForm(NautobotModelForm):
     class Meta:
         model = Cable
         fields = [
@@ -4167,7 +4158,7 @@ class VirtualChassisCSVForm(CustomFieldModelCSVForm):
         fields = VirtualChassis.csv_headers
 
 
-class VirtualChassisFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class VirtualChassisFilterForm(NautobotFilterForm):
     model = VirtualChassis
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
@@ -4251,7 +4242,7 @@ class PowerPanelBulkEditForm(
         nullable_fields = ["location", "rack_group"]
 
 
-class PowerPanelFilterForm(BootstrapMixin, LocatableModelFilterFormMixin, CustomFieldFilterForm):
+class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = PowerPanel
     q = forms.CharField(required=False, label="Search")
     rack_group_id = DynamicModelMultipleChoiceField(
@@ -4396,7 +4387,7 @@ class PowerFeedBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, Nautobot
         ]
 
 
-class PowerFeedFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilterForm):
+class PowerFeedFilterForm(NautobotFilterForm, StatusFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)

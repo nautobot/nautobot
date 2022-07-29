@@ -2,6 +2,7 @@ import inspect
 from datetime import datetime
 import logging
 
+from celery import chain
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -24,6 +25,7 @@ from jsonschema.validators import Draft7Validator
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
@@ -33,7 +35,6 @@ from nautobot.utilities.utils import (
     get_table_for_model,
     prepare_cloned_fields,
     pretty_print_query,
-    shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
@@ -452,6 +453,30 @@ class CustomFieldDeleteView(generic.ObjectDeleteView):
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
+
+    def construct_custom_field_delete_tasks(self, queryset):
+        """
+        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
+        """
+        tasks = [
+            delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
+            for obj in queryset
+        ]
+        return tasks
+
+    def perform_pre_delete(self, request, queryset):
+        """
+        Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
+        """
+        if not get_worker_count(request):
+            messages.error(
+                request, "Celery worker process not running. Object custom fields may fail to reflect this deletion."
+            )
+            return
+        tasks = self.construct_custom_field_delete_tasks(queryset)
+        # Executing the tasks in the background sequentially using chain() aligns with how a single CustomField object is deleted.
+        # We decided to not check the result because it needs at least one worker to be active and comes with extra performance penalty.
+        chain(*tasks).apply_async()
 
 
 #
@@ -964,11 +989,13 @@ class JobListView(generic.ObjectListView):
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        # Default to hiding "hidden" and non-installed jobs
+        # Default to hiding "hidden", non-installed jobs and job hook receivers
         if "hidden" not in request.GET:
             queryset = queryset.filter(hidden=False)
         if "installed" not in request.GET:
             queryset = queryset.filter(installed=True)
+        if "is_job_hook_receiver" not in request.GET:
+            queryset = queryset.filter(is_job_hook_receiver=False)
         queryset = queryset.prefetch_related("results")
         return queryset
 
@@ -1446,37 +1473,15 @@ class ObjectChangeView(generic.ObjectView):
     queryset = ObjectChange.objects.all()
 
     def get_extra_context(self, request, instance):
-        related_changes = (
-            ObjectChange.objects.restrict(request.user, "view")
-            .filter(request_id=instance.request_id)
-            .exclude(pk=instance.pk)
-        )
+        related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
         related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
 
-        objectchanges = ObjectChange.objects.restrict(request.user, "view").filter(
-            changed_object_type=instance.changed_object_type,
-            changed_object_id=instance.changed_object_id,
-        )
-
-        next_change = objectchanges.filter(time__gt=instance.time).order_by("time").first()
-        prev_change = objectchanges.filter(time__lt=instance.time).order_by("-time").first()
-
-        if prev_change:
-            diff_added = shallow_compare_dict(
-                prev_change.object_data,
-                instance.object_data,
-                exclude=["last_updated"],
-            )
-            diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
-        else:
-            # No previous change; this is the initial change that added the object
-            diff_added = diff_removed = instance.object_data
-
+        snapshots = instance.get_snapshots()
         return {
-            "diff_added": diff_added,
-            "diff_removed": diff_removed,
-            "next_change": next_change,
-            "prev_change": prev_change,
+            "diff_added": snapshots["differences"]["added"],
+            "diff_removed": snapshots["differences"]["removed"],
+            "next_change": instance.get_next_change(request.user),
+            "prev_change": instance.get_prev_change(request.user),
             "related_changes_table": related_changes_table,
             "related_changes_count": related_changes.count(),
         }

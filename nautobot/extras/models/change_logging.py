@@ -9,7 +9,7 @@ from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
+from nautobot.utilities.utils import serialize_object, serialize_object_v2, shallow_compare_dict
 
 
 #
@@ -181,3 +181,67 @@ class ObjectChange(BaseModel):
 
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
+
+    def get_next_change(self, user=None):
+        """Return next change for this changed object, optionally restricting by user view permission"""
+        related_changes = self.get_related_changes(user=user)
+        return related_changes.filter(time__gt=self.time).order_by("time").first()
+
+    def get_prev_change(self, user=None):
+        """Return previous change for this changed object, optionally restricting by user view permission"""
+        related_changes = self.get_related_changes(user=user)
+        return related_changes.filter(time__lt=self.time).order_by("-time").first()
+
+    def get_related_changes(self, user=None, permission="view"):
+        """Return queryset of all ObjectChanges for this changed object, excluding this ObjectChange"""
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=self.changed_object_type,
+            changed_object_id=self.changed_object_id,
+        ).exclude(pk=self.pk)
+        if user is not None:
+            return related_changes.restrict(user, permission)
+        return related_changes
+
+    def get_snapshots(self):
+        """
+        Return a dictionary with the changed object's serialized data before and after this change
+        occurred and a key with a shallow diff of those dictionaries.
+
+        Returns:
+        {
+            "prechange": dict(),
+            "postchange": dict(),
+            "differences": {
+                "removed": dict(),
+                "added": dict(),
+            }
+        }
+        """
+        prechange = None
+        postchange = None
+
+        prior_change = ObjectChange.objects.filter(
+            changed_object_type=self.changed_object_type,
+            changed_object_id=self.changed_object_id,
+            time__lte=self.time,
+        ).exclude(pk=self.pk)
+
+        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change.exists():
+            prechange = prior_change.first().object_data_v2
+
+        if self.action != ObjectChangeActionChoices.ACTION_DELETE:
+            postchange = self.object_data_v2
+
+        if prechange and postchange:
+            diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
+            diff_removed = {x: prechange.get(x) for x in diff_added}
+        elif prechange and not postchange:
+            diff_added, diff_removed = None, prechange
+        else:
+            diff_added, diff_removed = postchange, None
+
+        return {
+            "prechange": prechange,
+            "postchange": postchange,
+            "differences": {"removed": diff_removed, "added": diff_added},
+        }

@@ -15,10 +15,10 @@ from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, R
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
     CustomFieldBulkCreateForm,
-    CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
+    NautobotFilterForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -169,7 +169,7 @@ class ClusterBulkEditForm(
         ]
 
 
-class ClusterFilterForm(BootstrapMixin, LocatableModelFilterFormMixin, TenancyFilterForm, CustomFieldFilterForm):
+class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm):
     model = Cluster
     field_order = ["q", "type", "region", "site", "group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
@@ -415,12 +415,7 @@ class VirtualMachineBulkEditForm(
 
 
 class VirtualMachineFilterForm(
-    BootstrapMixin,
-    LocatableModelFilterFormMixin,
-    TenancyFilterForm,
-    StatusFilterFormMixin,
-    CustomFieldFilterForm,
-    LocalContextFilterForm,
+    NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin, LocalContextFilterForm
 ):
     model = VirtualMachine
     field_order = [
@@ -737,7 +732,7 @@ class VMInterfaceBulkRenameForm(BulkRenameForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VMInterfaceFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilterForm):
+class VMInterfaceFilterForm(NautobotFilterForm, StatusFilterFormMixin):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     virtual_machine_id = DynamicModelMultipleChoiceField(

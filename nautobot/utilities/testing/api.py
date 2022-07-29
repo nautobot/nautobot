@@ -8,9 +8,8 @@ from rest_framework.test import APIClient, APITransactionTestCase as _APITransac
 
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.models import ObjectChange
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_filterset_for_model
+from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
 from .utils import disable_warnings
 from .views import ModelTestCase
 
@@ -385,9 +384,7 @@ class APIViewTestCases:
 
                 # Verify ObjectChange creation
                 if hasattr(self.model, "to_objectchange"):
-                    objectchanges = ObjectChange.objects.filter(
-                        changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
-                    )
+                    objectchanges = get_changes_for_model(instance)
                     self.assertEqual(len(objectchanges), 1)
                     self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
@@ -462,9 +459,7 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
-                )
+                objectchanges = get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -592,9 +587,7 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
-                )
+                objectchanges = get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
 
