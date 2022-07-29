@@ -1118,7 +1118,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model.class_path,
                     job_content_type,
                     request.user,
-                    data=job_model.job_class.serialize_data(job_form.cleaned_data),
+                    data=job_model.job_class.serialize_data(job_form.cleaned_data) if not job_model.sensitive else {},
                     request=copy_safe_request(request),
                     commit=commit,
                 )

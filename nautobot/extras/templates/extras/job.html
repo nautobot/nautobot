@@ -68,30 +68,6 @@
                                 <div class="panel-body">
                                     {% render_form job_form %}
                                 </div>
-                            </div>
-                        {% else %}
-                             <div class="alert alert-info">
-                                <i class="mdi mdi-information"></i>
-                                This job does not require any input to run.
-                            </div>
-                            {% render_form job_form %}
-                        {% endif %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <strong>Job Execution</strong>
-                            </div>
-                            <div class="panel-body">
-                                {% render_form schedule_form %}
-                            </div>
-                            {% if not job_model.approval_required and not job_model.sensitive %}
-                                {% if job_model.approval_required %}
-                                    <div class="panel-footer">
-                                        <span class="help-block">
-                                            <i class="mdi mdi-information-outline"></i>
-                                            This job requires approval to run or schedule.
-                                        </span>
-                                    </div>
-                                {% endif %}
                                 {% if job_model.sensitive %}
                                     <div class="panel-footer">
                                         <span class="help-block">
@@ -100,6 +76,28 @@
                                         </span>
                                     </div>
                                 {% endif %}
+                            </div>
+                        {% else %}
+                             <div class="alert alert-info">
+                                <i class="mdi mdi-information"></i>
+                                This job does not require any input to run.
+                            </div>
+                            {% render_form job_form %}
+                        {% endif %}
+                        <div class="panel panel-default job_execution">
+                            <div class="panel-heading">
+                                <strong>Job Execution</strong>
+                            </div>
+                            <div class="panel-body">
+                                {% render_form schedule_form %}
+                            </div>
+                            {% if job_model.approval_required %}
+                                <div class="panel-footer">
+                                    <span class="help-block">
+                                        <i class="mdi mdi-information-outline"></i>
+                                        This job requires approval to run or schedule.
+                                    </span>
+                                </div>
                             {% endif %}
                         </div>
                         <div class="pull-right">
@@ -165,11 +163,12 @@
     $(document).ready(function() {
         if ("{{ job_model.sensitive }}" == "False") {
             $("#id__schedule_type").change(toggleExecutionType);
+            toggleExecutionType();
         }
         else {
-            $("#id__schedule_type").attr("disabled", "true");
+            $("#id__schedule_type").val("immediately");
+            $(".job_execution").hide();
         }
-        toggleExecutionType();
     });
 </script>
 {% endblock %}
