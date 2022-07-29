@@ -669,12 +669,9 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
         data = super().validate(data)
 
         if data["sensitive"] is True and data["approval_required"] is True:
-            raise serializers.ValidationError({
-                "approval_required": ["A sensitive job cannot be marked for approval"]
-            })
+            raise serializers.ValidationError({"approval_required": ["A sensitive job cannot be marked for approval"]})
 
         return data
-
 
 
 class JobVariableSerializer(serializers.Serializer):
