@@ -28,6 +28,10 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
+#### Job Hooks ([#2103](https://github.com/nautobot/nautobot/pull/2103))
+
+Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook. See the [Job Hooks](../additional-features/job-hooks/) documentation for more information.
+
 #### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
 
 JobResult records now save the arguments with which the Job was called, allowing for easy re-execution of the Job with the same arguments as before. A "re-run" button has been added to the JobResult list view and detail view.
@@ -114,6 +118,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
 - [#2051](https://github.com/nautobot/nautobot/issues/2051) - Add changelog url for Relationships.
 - [#2061](https://github.com/nautobot/nautobot/pulls/2061) - Add draggable child groups to Dynamic Groups edit view in UI, recompute and hide weights.
+- [#2103](https://github.com/nautobot/nautobot/pull/2103) - Add job hooks feature.
 
 ### Changed
 
