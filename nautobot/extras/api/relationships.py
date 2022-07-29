@@ -214,7 +214,7 @@ class RelationshipsDataField(JSONField):
                 # Don't allow omitting 'objects' altogether as a shorthand for deleting all associations
                 if "objects" not in relationship_data[other_side]:
                     raise ValidationError(
-                        f'"objects" must be specified under [{relationship.slug}][{other_side}] when present'
+                        f'"objects" must be specified under ["{relationship.slug}"]["{other_side}"] when present'
                     )
                 objects_data = relationship_data[other_side]["objects"]
                 if not isinstance(objects_data, (list, tuple)):
