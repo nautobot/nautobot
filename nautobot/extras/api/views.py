@@ -344,6 +344,8 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
     elif type_ == JobExecutionType.TYPE_CUSTOM:
         time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
         if time is None:
+            # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
+            # which returns timezone.now() + timedelta(seconds=15)
             time = timezone.now() + timedelta(seconds=20)
         name = serializer["name"]
     else:
