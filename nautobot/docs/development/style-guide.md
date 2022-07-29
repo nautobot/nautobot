@@ -67,6 +67,8 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * _Added in version 1.4_: `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedObjectSerializer` and `StatusModelSerializerMixin` will automatically add the `tags` and `status` fields when included in a serializer class.
 
+* _Added in version 1.4_: API Views for most models should inherit from `nautobot.extras.api.views.NautobotModelViewSet`. Only use more abstract base classes such as `ModelViewSet` where absolutely required.
+
 ## Branding
 
 * When referring to Nautobot in writing, use the proper form "Nautobot," with the letter N. The lowercase form "nautobot" should be used in code, filenames, etc.

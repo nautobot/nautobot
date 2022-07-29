@@ -142,6 +142,15 @@ class NestedJobResultSerializer(BaseModelSerializer):
         fields = ["id", "url", "name", "created", "completed", "user", "status"]
 
 
+class NestedNoteSerializer(BaseModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
+    user = NestedUserSerializer(read_only=True)
+
+    class Meta:
+        model = models.Note
+        fields = ["id", "url", "note", "user", "slug"]
+
+
 class NestedRelationshipSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationship-detail")
 

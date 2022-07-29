@@ -814,6 +814,7 @@ class NoteFilterSet(BaseFilterSet):
         filter_predicates={
             "user_name": "icontains",
             "note": "icontains",
+            "assigned_object_id": "exact",
         },
     )
     assigned_object_type = ContentTypeFilter()

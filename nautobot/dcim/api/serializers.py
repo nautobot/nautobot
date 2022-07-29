@@ -72,6 +72,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    NotesSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
