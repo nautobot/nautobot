@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
 
@@ -11,6 +12,7 @@ from nautobot.utilities.utils import (
     get_route_for_model,
     get_table_for_model,
     normalize_querydict,
+    pretty_print_query,
 )
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
@@ -215,3 +217,35 @@ class IsTruthyTest(TestCase):
         self.assertFalse(is_truthy("n"))
         self.assertFalse(is_truthy(0))
         self.assertFalse(is_truthy("0"))
+
+
+class PrettyPrintQueryTest(TestCase):
+    """Tests for `pretty_print_query()."""
+
+    def test_pretty_print_query(self):
+        """Test that each Q object, from deeply nested to flat, pretty prints as expected."""
+        queries = [
+            ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),
+            (Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active"),
+            Q(site__slug="ams01") | Q(site__slug="ang01"),
+            Q(site__slug="ang01") & ~Q(status__slug="active"),
+            Q(site__slug="ams01", status__slug="planned"),
+            Q(site__slug="ang01"),
+            Q(status__id=12345),
+            Q(site__slug__in=["ams01", "ang01"]),
+        ]
+        results = [
+            "(((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active')) OR status__slug='planned')",
+            "((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active'))",
+            "(site__slug='ams01' OR site__slug='ang01')",
+            "(site__slug='ang01' AND (NOT status__slug='active'))",
+            "(site__slug='ams01' AND status__slug='planned')",
+            "(site__slug='ang01')",
+            "(status__id=12345)",
+            "(site__slug__in=['ams01', 'ang01'])",
+        ]
+
+        tests = zip(queries, results)
+
+        for query, expected in tests:
+            self.assertEqual(pretty_print_query(query), expected)

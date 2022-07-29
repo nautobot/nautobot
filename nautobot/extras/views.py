@@ -34,6 +34,7 @@ from nautobot.utilities.utils import (
     count_related,
     get_table_for_model,
     prepare_cloned_fields,
+    pretty_print_query,
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
@@ -526,9 +527,13 @@ class DynamicGroupListView(generic.ObjectListView):
 class DynamicGroupView(generic.ObjectView):
     queryset = DynamicGroup.objects.all()
 
-    def get_descendants_memberships(self, descendants):
-        """Return memberships objects for all descendants."""
-        return DynamicGroupMembership.objects.filter(group__in=descendants)
+    def get_descendants_memberships(self, instance):
+        """Return topologically-ordered memberships objects for all descendants."""
+        return instance._ordered_filter(
+            queryset=DynamicGroupMembership.objects,
+            field_names=["group__pk"],
+            values=[d.pk for d in instance.get_descendants()],
+        )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -545,26 +550,24 @@ class DynamicGroupView(generic.ObjectView):
             RequestConfig(request, paginate).configure(members_table)
 
             # Descendants table
-            descendants = instance.get_descendants()
+            descendants_memberships = self.get_descendants_memberships(instance)
             descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                self.get_descendants_memberships(descendants),
+                descendants_memberships,
                 orderable=False,
             )
             descendants_tree = instance.flatten_descendants_tree(instance.descendants_tree())
-            descendants_map = {node.name: node.depth for node in descendants_tree}
 
             # Ancestors table
             ancestors = instance.get_ancestors()
             ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
             ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
-            ancestors_map = {node.name: node.depth for node in ancestors_tree}
 
-            context["raw_query"] = str(instance.generate_query())
+            context["raw_query"] = pretty_print_query(instance.generate_query())
             context["members_table"] = members_table
             context["ancestors_table"] = ancestors_table
-            context["ancestors_map"] = ancestors_map
+            context["ancestors_tree"] = ancestors_tree
             context["descendants_table"] = descendants_table
-            context["descendants_map"] = descendants_map
+            context["descendants_tree"] = descendants_tree
 
         return context
 

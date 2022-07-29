@@ -440,7 +440,7 @@ class DynamicGroupMembershipFormSetForm(forms.ModelForm):
 
     class Meta:
         model = DynamicGroupMembership
-        fields = ("group", "operator", "weight")
+        fields = ("operator", "group", "weight")
 
 
 # Inline formset for use with providing dynamic rows when creating/editing memberships of child

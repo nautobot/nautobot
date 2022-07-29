@@ -271,7 +271,7 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit", "delete"))
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug")
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
@@ -296,15 +296,17 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
     description = tables.Column(accessor="group.description")
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
         fields = (
             "pk",
-            "name",
-            "members",
-            "filter",
             "operator",
+            "name",
+            "weight",
+            "filter",
+            "members",
             "description",
             "actions",
         )
@@ -335,9 +337,9 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
 
 DESCENDANTS_LINK = """
 {% load helpers %}
-{% for node, depth in descendants_map.items %}
-    {% if node == record.name %}
-        {% for i in depth|as_range %}
+{% for node in descendants_tree %}
+    {% if node.name == record.name %}
+        {% for i in node.depth|as_range %}
             {% if not forloop.first %}
             <i class="mdi mdi-circle-small"></i>
             {% endif %}
@@ -348,11 +350,27 @@ DESCENDANTS_LINK = """
 """
 
 
+OPERATOR_LINK = """
+{% load helpers %}
+{% for node in descendants_tree %}
+    {% if node.name == record.name %}
+        {% for i in node.depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+{{ record.get_operator_display }}
+"""
+
+
 class NestedDynamicGroupDescendantsTable(DynamicGroupMembershipTable):
     """
     Subclass of DynamicGroupMembershipTable used in detail views to show parenting hierarchy with dots.
     """
 
+    operator = tables.TemplateColumn(template_code=OPERATOR_LINK)
     name = tables.TemplateColumn(template_code=DESCENDANTS_LINK)
 
     class Meta(DynamicGroupMembershipTable.Meta):
@@ -361,9 +379,9 @@ class NestedDynamicGroupDescendantsTable(DynamicGroupMembershipTable):
 
 ANCESTORS_LINK = """
 {% load helpers %}
-{% for node, depth in ancestors_map.items %}
-    {% if node == record.name %}
-        {% for i in depth|as_range %}
+{% for node in ancestors_tree %}
+    {% if node.name == record.name %}
+        {% for i in node.depth|as_range %}
             {% if not forloop.first %}
             <i class="mdi mdi-circle-small"></i>
             {% endif %}
@@ -380,10 +398,11 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
     """
 
     name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
 
     class Meta(DynamicGroupTable.Meta):
-        fields = ["name", "members", "description"]
-        exclude = ["actions", "content_type"]
+        fields = ["name", "members", "description", "actions"]
+        exclude = ["content_type"]
 
 
 class ExportTemplateTable(BaseTable):
