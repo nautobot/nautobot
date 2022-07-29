@@ -943,10 +943,6 @@ class JobHookTable(BaseTable):
     name = tables.Column(linkify=True)
     content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
     job = tables.Column(linkify=True)
-    enabled = BooleanColumn()
-    type_create = BooleanColumn()
-    type_update = BooleanColumn()
-    type_delete = BooleanColumn()
 
     class Meta(BaseTable.Meta):
         model = JobHook
