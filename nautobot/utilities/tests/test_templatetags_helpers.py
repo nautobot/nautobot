@@ -60,7 +60,17 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_render_markdown(self):
         self.assertTrue(callable(render_markdown))
-        # TODO add more unit tests for render_markdown
+        # Test common markdown formatting.
+        self.assertEqual(render_markdown("**bold**"), "<p><strong>bold</strong></p>")
+        self.assertEqual(render_markdown("__bold__"), "<p><strong>bold</strong></p>")
+        self.assertEqual(render_markdown("_italics_"), "<p><em>italics</em></p>")
+        self.assertEqual(render_markdown("*italics*"), "<p><em>italics</em></p>")
+        self.assertEqual(render_markdown("**bold and _italics_**"), "<p><strong>bold and <em>italics</em></strong></p>")
+        self.assertEqual(render_markdown("* list"), "<ul>\n<li>list</li>\n</ul>")
+        self.assertEqual(
+            render_markdown("[I am a link](https://www.example.com)"),
+            '<p><a href="https://www.example.com">I am a link</a></p>',
+        )
 
     def test_render_json(self):
         self.assertEqual(

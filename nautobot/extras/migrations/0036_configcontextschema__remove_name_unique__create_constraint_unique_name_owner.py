@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0034_alter_fileattachment_mimetype"),
+        ("extras", "0035_scheduledjob_crontab"),
     ]
 
     operations = [

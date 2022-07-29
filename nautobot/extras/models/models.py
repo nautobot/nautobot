@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from collections import OrderedDict
 
@@ -10,6 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
+from django.utils.text import slugify
 from django.urls import reverse
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
@@ -29,8 +31,9 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.querysets import ConfigContextQuerySet
+from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
@@ -61,7 +64,7 @@ class ConfigContextSchemaValidationMixin:
 
 
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin):
+class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
@@ -298,7 +301,7 @@ class ConfigContextSchema(OrganizationalModel):
 
 
 @extras_features("graphql")
-class CustomLink(BaseModel, ChangeLoggedModel):
+class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     """
     A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
     code to be rendered with an object as context.
@@ -352,7 +355,7 @@ class CustomLink(BaseModel, ChangeLoggedModel):
     "graphql",
     "relationships",
 )
-class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
+class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -524,7 +527,7 @@ class FileProxy(BaseModel):
 
 
 @extras_features("graphql")
-class GraphQLQuery(BaseModel, ChangeLoggedModel):
+class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     query = models.TextField()
@@ -646,12 +649,54 @@ class ImageAttachment(BaseModel):
 
 
 #
+# Notes
+#
+
+
+@extras_features("graphql", "webhooks")
+class Note(BaseModel, ChangeLoggedModel):
+    """
+    Notes allow anyone with proper permissions to add a note to an object.
+    """
+
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    assigned_object_id = models.UUIDField(db_index=True)
+    assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="note",
+        blank=True,
+        null=True,
+    )
+    user_name = models.CharField(max_length=150, editable=False)
+
+    slug = AutoSlugField(populate_from="assigned_object")
+    note = models.TextField()
+    objects = NotesQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["created"]
+
+    def slugify_function(self, content):
+        return slugify(f"{str(content)[:50]}-{datetime.now().isoformat()}")
+
+    def __str__(self):
+        return self.slug
+
+    def save(self, *args, **kwargs):
+        # Record the user's name as static strings
+        self.user_name = self.user.username if self.user else "Undefined"
+        return super().save(*args, **kwargs)
+
+
+#
 # Webhooks
 #
 
 
 @extras_features("graphql")
-class Webhook(BaseModel, ChangeLoggedModel):
+class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.

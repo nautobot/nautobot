@@ -150,9 +150,17 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Added
 
+- [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
+
 ### Changed
 
+- [#2025](https://github.com/nautobot/nautobot/pull/2025) - Tweak Renovate config for automated package management.
+- [#2115](https://github.com/nautobot/nautobot/pull/2115) - Patch updates to `mkdocs`, `svgwrite`.
+
 ### Fixed
+
+- [#1739](https://github.com/nautobot/nautobot/issues/1739) - Fixed paginator not enforcing max_page_size setting in web ui views.
+- [#2060](https://github.com/nautobot/nautobot/issues/2060) - Fixed relationship peer_id filter non-existent error on relationship association page.
 
 ## v1.3.9 (2022-07-25)
 

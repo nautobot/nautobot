@@ -7,7 +7,7 @@ import nautobot.core.celery
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0038_dynamicgroup__dynamicgroupmembership"),
+        ("extras", "0039_dynamicgroup__dynamicgroupmembership"),
     ]
 
     operations = [

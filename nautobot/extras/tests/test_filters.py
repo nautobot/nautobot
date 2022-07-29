@@ -904,6 +904,13 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
                 source_type=cls.vlan_type,
                 destination_type=cls.device_type,
             ),
+            Relationship(
+                name="Device Device",
+                slug="symmetric-device-device",
+                type="symmetric-many-to-many",
+                source_type=cls.device_type,
+                destination_type=cls.device_type,
+            ),
         )
         for relationship in cls.relationships:
             relationship.validated_save()
@@ -915,6 +922,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         cls.devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
             Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
         )
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -949,6 +957,20 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
             destination_type=cls.device_type,
             destination_id=cls.devices[1].pk,
         ).validated_save()
+        RelationshipAssociation(
+            relationship=cls.relationships[2],
+            source_type=cls.device_type,
+            source_id=cls.devices[0].pk,
+            destination_type=cls.device_type,
+            destination_id=cls.devices[1].pk,
+        ).validated_save()
+        RelationshipAssociation(
+            relationship=cls.relationships[2],
+            source_type=cls.device_type,
+            source_id=cls.devices[1].pk,
+            destination_type=cls.device_type,
+            destination_id=cls.devices[2].pk,
+        ).validated_save()
 
     def test_relationship(self):
         params = {"relationship": [self.relationships[0].slug]}
@@ -956,19 +978,25 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
 
     def test_source_type(self):
         params = {"source_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_source_id(self):
         params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_destination_type(self):
         params = {"destination_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_destination_id(self):
         params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_peer_id(self):
+        params = {"peer_id": [self.devices[0].pk, self.devices[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"peer_id": [self.devices[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):

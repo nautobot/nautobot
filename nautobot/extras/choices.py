@@ -131,6 +131,7 @@ class JobExecutionType(ChoiceSet):
     TYPE_HOURLY = "hourly"
     TYPE_DAILY = "daily"
     TYPE_WEEKLY = "weekly"
+    TYPE_CUSTOM = "custom"
 
     CHOICES = (
         (TYPE_IMMEDIATELY, "Once immediately"),
@@ -138,6 +139,7 @@ class JobExecutionType(ChoiceSet):
         (TYPE_HOURLY, "Recurring hourly"),
         (TYPE_DAILY, "Recurring daily"),
         (TYPE_WEEKLY, "Recurring weekly"),
+        (TYPE_CUSTOM, "Recurring custom"),
     )
 
     SCHEDULE_CHOICES = (
@@ -145,12 +147,14 @@ class JobExecutionType(ChoiceSet):
         TYPE_HOURLY,
         TYPE_DAILY,
         TYPE_WEEKLY,
+        TYPE_CUSTOM,
     )
 
     RECURRING_CHOICES = (
         TYPE_HOURLY,
         TYPE_DAILY,
         TYPE_WEEKLY,
+        TYPE_CUSTOM,
     )
 
     CELERY_INTERVAL_MAP = {

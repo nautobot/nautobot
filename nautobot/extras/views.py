@@ -1,5 +1,5 @@
 import inspect
-from datetime import datetime
+from datetime import timedelta
 import logging
 
 from celery import chain
@@ -73,6 +73,7 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
+    Note,
 )
 from .registry import registry
 
@@ -1091,20 +1092,30 @@ class JobView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                crontab = ""
 
-                if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                    # Schedule the job instead of running it now
-                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
-                    schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
-
-                else:
+                if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
                     # The job must be approved.
                     # If the schedule_type is immediate, we still create the task, but mark it for approval
                     # as a once in the future task with the due date set to the current time. This means
                     # when approval is granted, the task is immediately due for execution.
                     schedule_type = JobExecutionType.TYPE_FUTURE
-                    schedule_datetime = datetime.now()
+                    schedule_datetime = timezone.now()
                     schedule_name = f"{job_model} - {schedule_datetime}"
+
+                else:
+                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
+
+                    if schedule_type == JobExecutionType.TYPE_CUSTOM:
+                        crontab = schedule_form.cleaned_data["_recurrence_custom_time"]
+                        # doing .get("key", "default") returns None instead of "default" here for some reason
+                        schedule_datetime = schedule_form.cleaned_data.get("_schedule_start_time")
+                        if schedule_datetime is None:
+                            # "_schedule_start_time" is checked against ScheduledJob.earliest_possible_time()
+                            # which returns timezone.now() + timedelta(seconds=15)
+                            schedule_datetime = timezone.now() + timedelta(seconds=20)
+                    else:
+                        schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
                 job_kwargs = {
                     "data": job_model.job_class.serialize_data(job_form.cleaned_data),
@@ -1126,6 +1137,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     user=request.user,
                     approval_required=job_model.approval_required,
+                    crontab=crontab,
                 )
                 scheduled_job.save()
 
@@ -1539,6 +1551,84 @@ class ObjectChangeLogView(View):
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
+            },
+        )
+
+
+#
+# Notes
+#
+
+
+class NoteView(generic.ObjectView):
+    queryset = Note.objects.all()
+
+
+class NoteEditView(generic.ObjectEditView):
+    queryset = Note.objects.all()
+    model_form = forms.NoteForm
+
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        obj.user = request.user
+        return obj
+
+
+class NoteDeleteView(generic.ObjectDeleteView):
+    queryset = Note.objects.all()
+
+
+class ObjectNotesView(View):
+    """
+    Present a history of changes made to a particular object.
+    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+    """
+
+    base_template = None
+
+    def get(self, request, model, **kwargs):
+
+        # Handle QuerySet restriction of parent object if needed
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        notes_form = forms.NoteForm(
+            initial={
+                "assigned_object_type": ContentType.objects.get_for_model(obj),
+                "assigned_object_id": obj.pk,
+            }
+        )
+        notes_table = tables.NoteTable(obj.notes)
+
+        # Apply the request context
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(notes_table)
+
+        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
+        # fall back to using base.html.
+        if self.base_template is None:
+            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
+            # TODO: This can be removed once an object view has been established for every model.
+            try:
+                template.loader.get_template(self.base_template)
+            except template.TemplateDoesNotExist:
+                self.base_template = "base.html"
+
+        return render(
+            request,
+            "extras/object_notes.html",
+            {
+                "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "table": notes_table,
+                "base_template": self.base_template,
+                "active_tab": "notes",
+                "notes_form": notes_form,
             },
         )
 

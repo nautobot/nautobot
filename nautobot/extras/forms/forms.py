@@ -17,6 +17,7 @@ from nautobot.utilities.forms import (
     BulkEditForm,
     BulkEditNullBooleanSelect,
     ColorSelect,
+    CommentField,
     CSVContentTypeField,
     CSVModelChoiceField,
     CSVModelForm,
@@ -57,6 +58,7 @@ from nautobot.extras.models import (
     ImageAttachment,
     Job,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -118,6 +120,7 @@ __all__ = (
     "LocalContextFilterForm",
     "LocalContextModelForm",
     "LocalContextModelBulkEditForm",
+    "NoteForm",
     "ObjectChangeFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipForm",
@@ -814,6 +817,11 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         label="Starting date and time",
         widget=DateTimePicker(),
     )
+    _recurrence_custom_time = forms.CharField(
+        required=False,
+        label="Crontab",
+        help_text="Custom crontab syntax (* * * * *)",
+    )
 
     def clean(self):
         """
@@ -827,13 +835,22 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
 
             if (
                 not cleaned_data.get("_schedule_start_time")
-                or cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
+                and cleaned_data.get("_schedule_type") != JobExecutionType.TYPE_CUSTOM
+            ) or (
+                cleaned_data.get("_schedule_start_time")
+                and cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
             ):
                 raise ValidationError(
                     {
                         "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
                     }
                 )
+
+            if cleaned_data.get("_schedule_type") == JobExecutionType.TYPE_CUSTOM:
+                try:
+                    ScheduledJob.get_crontab(cleaned_data.get("_recurrence_custom_time"))
+                except Exception as e:
+                    raise ValidationError({"_recurrence_custom_time": e})
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
@@ -875,6 +892,23 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+
+
+#
+# Notes
+#
+
+
+class NoteForm(BootstrapMixin, forms.ModelForm):
+    note = CommentField
+
+    class Meta:
+        model = Note
+        fields = ["assigned_object_type", "assigned_object_id", "note"]
+        widgets = {
+            "assigned_object_type": forms.HiddenInput,
+            "assigned_object_id": forms.HiddenInput,
+        }
 
 
 #

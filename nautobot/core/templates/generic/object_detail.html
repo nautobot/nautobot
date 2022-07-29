@@ -78,6 +78,13 @@
             </a>
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
+        {% if perms.extras.view_notes %}
+            {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
+                <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
+                    <a href="{{ object.get_notes_url }}">Notes</a>
+                </li>
+            {% endif %}
+        {% endif %}
         {% if perms.extras.view_dynamicgroup and object.dynamic_groups %}
             <li role="presentation"{% if request.GET.tab == 'dynamic-groups' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#dynamic-groups" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">

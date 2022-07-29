@@ -2,7 +2,7 @@ from django.templatetags.static import static
 from django.urls import path
 from django.views.generic import RedirectView
 
-from nautobot.extras.views import ObjectChangeLogView
+from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
 
 from example_plugin import views
 from example_plugin.models import AnotherExampleModel, ExampleModel
@@ -47,6 +47,12 @@ urlpatterns = [
         name="examplemodel_changelog",
         kwargs={"model": ExampleModel},
     ),
+    path(
+        "models/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="examplemodel_notes",
+        kwargs={"model": ExampleModel},
+    ),
     path("other-models/", views.AnotherExampleModelListView.as_view(), name="anotherexamplemodel_list"),
     path("other-models/add/", views.AnotherExampleModelEditView.as_view(), name="anotherexamplemodel_add"),
     path(
@@ -74,6 +80,12 @@ urlpatterns = [
         "other-models/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="anotherexamplemodel_changelog",
+        kwargs={"model": AnotherExampleModel},
+    ),
+    path(
+        "other-models/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="anotherexamplemodel_notes",
         kwargs={"model": AnotherExampleModel},
     ),
     path(

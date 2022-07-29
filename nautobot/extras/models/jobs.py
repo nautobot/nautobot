@@ -779,6 +779,12 @@ class ScheduledJob(BaseModel):
         verbose_name="Approval date/time",
         help_text="Datetime that the schedule was approved",
     )
+    crontab = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Custom cronjob",
+        help_text="Cronjob syntax string for custom scheduling",
+    )
 
     objects = ScheduledJobExtendedQuerySet.as_manager()
     no_changes = False
@@ -793,6 +799,12 @@ class ScheduledJob(BaseModel):
         self.queue = self.queue or None
         # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
         self.kwargs["scheduled_job_pk"] = self.pk
+        # make sure non-valid crontab doesn't get saved
+        if self.interval == JobExecutionType.TYPE_CUSTOM:
+            try:
+                self.get_crontab(self.crontab)
+            except Exception as e:
+                raise ValidationError({"crontab": e})
         if not self.enabled:
             self.last_run_at = None
         elif not self.last_run_at:
@@ -834,6 +846,29 @@ class ScheduledJob(BaseModel):
     def earliest_possible_time():
         return timezone.now() + timedelta(seconds=15)
 
+    @classmethod
+    def get_crontab(cls, crontab):
+        """
+        Wrapper method translates crontab syntax to Celery crontab.
+
+        Supports following symbols:
+
+        • Asterisk (*) - signifies all possible values
+        • Comma (,) - lists multiple values
+        • Hyphen (-) - determine a range of values
+        • Slash (/) - divide a value ({*/15 * * * *} runs every 15 minutes)
+
+        No support for Last (L), Weekday (W), Number symbol (#), Question mark (?), and special @ strings.
+        """
+        minute, hour, day_of_month, month_of_year, day_of_week = crontab.split(" ")
+        return schedules.crontab(
+            minute=minute,
+            hour=hour,
+            day_of_month=day_of_month,
+            month_of_year=month_of_year,
+            day_of_week=day_of_week,
+        )
+
     def to_cron(self):
         t = self.start_time
         if self.interval == JobExecutionType.TYPE_HOURLY:
@@ -842,6 +877,8 @@ class ScheduledJob(BaseModel):
             return schedules.crontab(minute=t.minute, hour=t.hour)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
             return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
+        elif self.interval == JobExecutionType.TYPE_CUSTOM:
+            return self.get_crontab(self.crontab)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 
