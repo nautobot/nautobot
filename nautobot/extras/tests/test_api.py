@@ -79,15 +79,10 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
     brief_fields = [
         "content_type",
-        "description",
         "display",
-        "fallback_value",
         "id",
         "label",
-        "slug",
-        "template",
         "url",
-        "weight",
     ]
     create_data = [
         {

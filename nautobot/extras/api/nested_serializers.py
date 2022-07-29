@@ -6,6 +6,7 @@ from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 
 __all__ = [
+    "NestedComputedFieldSerializer",
     "NestedConfigContextSerializer",
     "NestedConfigContextSchemaSerializer",
     "NestedCustomFieldSerializer",
@@ -27,6 +28,15 @@ __all__ = [
     "NestedTagSerializer",
     "NestedWebhookSerializer",
 ]
+
+
+class NestedComputedFieldSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
+    content_type = ContentTypeField(queryset=ContentType.objects.all())
+
+    class Meta:
+        model = models.ComputedField
+        fields = ["id", "url", "content_type", "label"]
 
 
 class NestedConfigContextSerializer(WritableNestedSerializer):

@@ -77,6 +77,7 @@ from .relationships import RelationshipModelSerializerMixin
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import (  # noqa: F401
+    NestedComputedFieldSerializer,
     NestedConfigContextSchemaSerializer,
     NestedConfigContextSerializer,
     NestedCustomFieldSerializer,
@@ -109,15 +110,6 @@ class NautobotModelSerializer(RelationshipModelSerializerMixin, CustomFieldModel
 
     Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
     """
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that fields includes "created" and "last_updated" fields if applicable."""
-        fields = list(super().get_field_names(declared_fields, info))
-        if hasattr(self.Meta.model, "created"):
-            self.extend_field_names(fields, "created")
-        if hasattr(self.Meta.model, "last_updated"):
-            self.extend_field_names(fields, "last_updated")
-        return fields
 
 
 class StatusModelSerializerMixin(BaseModelSerializer):
@@ -318,8 +310,6 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "tenants",
             "tags",
             "data",
-            "created",
-            "last_updated",
         ]
 
     @extend_schema_field(serializers.DictField(allow_null=True))
@@ -922,8 +912,6 @@ class RelationshipSerializer(ValidatedModelSerializer):
             "destination_label",
             "destination_hidden",
             "destination_filter",
-            "created",
-            "last_updated",
         ]
 
 
