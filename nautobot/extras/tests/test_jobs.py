@@ -151,24 +151,8 @@ class JobTest(TransactionTestCase):
         module = "test_field_order"
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
-
         form = job_class().as_form()
-
-        self.assertHTMLEqual(
-            form.as_table(),
-            """<tr><th><label for="id_var1">Var1:</label></th><td>
-<input class="form-control form-control" id="id_var1" name="var1" placeholder="None" required type="file">
-<br><span class="helptext">Some file wants to be first</span></td></tr>
-<tr><th><label for="id_var2">Var2:</label></th><td>
-<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span></td></tr>
-<tr><th><label for="id_var23">Var23:</label></th><td>
-<input class="form-control form-control" id="id_var23" name="var23" placeholder="None" required type="text">
-<br><span class="helptext">I want to be second</span></td></tr>
-<tr><th><label for="id__commit">Commit changes:</label></th><td>
-<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
-<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_commit"])
 
     def test_no_field_order(self):
         """
@@ -177,21 +161,8 @@ class JobTest(TransactionTestCase):
         module = "test_no_field_order"
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
-
         form = job_class().as_form()
-
-        self.assertHTMLEqual(
-            form.as_table(),
-            """<tr><th><label for="id_var23">Var23:</label></th><td>
-<input class="form-control form-control" id="id_var23" name="var23" placeholder="None" required type="text">
-<br><span class="helptext">I want to be second</span></td></tr>
-<tr><th><label for="id_var2">Var2:</label></th><td>
-<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span></td></tr>
-<tr><th><label for="id__commit">Commit changes:</label></th><td>
-<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
-<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_commit"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -201,19 +172,7 @@ class JobTest(TransactionTestCase):
         name = "TestDefaultFieldOrderWithInheritance"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertHTMLEqual(
-            form.as_table(),
-            """<tr><th><label for="id_testvar1">Testvar1:</label></th><td>
-            <input type="text" name="testvar1" class="form-control form-control" required placeholder="None" id="id_testvar1">
-            <br><span class="helptext">This var should come before any vars defined in subclasses</span></td></tr><tr><th>
-            <label for="id_b_testvar2">B testvar2:</label></th><td>
-            <input type="text" name="b_testvar2" class="form-control form-control" required placeholder="None" id="id_b_testvar2">
-            <br><span class="helptext">This var should be second</span></td></tr>\n<tr><th><label for="id_a_testvar3">A testvar3:</label></th><td>
-            <input type="text" name="a_testvar3" class="form-control form-control" required placeholder="None" id="id_a_testvar3">
-            <br><span class="helptext">This var should be third</span></td></tr>\n<tr><th><label for="id__commit">Commit changes:</label></th><td>
-            <input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br><span class="helptext">
-            Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["testvar1", "b_testvar2", "a_testvar3", "_commit"])
 
     def test_read_only_job_pass(self):
         """
