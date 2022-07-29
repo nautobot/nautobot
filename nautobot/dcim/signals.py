@@ -2,7 +2,7 @@ import logging
 
 from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.signals import post_save, post_delete, pre_delete
+from django.db.models.signals import post_save, pre_delete
 from django.db import transaction
 from django.dispatch import receiver
 
@@ -157,7 +157,7 @@ def update_connected_endpoints(instance, created, raw=False, **kwargs):
             rebuild_paths(instance)
 
 
-@receiver(post_delete, sender=Cable)
+@receiver(pre_delete, sender=Cable)
 def nullify_connected_endpoints(instance, **kwargs):
     """
     When a Cable is deleted, check for and update its two connected endpoints
