@@ -1,11 +1,12 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from nautobot.core.api import ChoiceField, ContentTypeField, WritableNestedSerializer
+from nautobot.core.api import BaseModelSerializer, ChoiceField, ContentTypeField, WritableNestedSerializer
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 
 __all__ = [
+    "NestedComputedFieldSerializer",
     "NestedConfigContextSerializer",
     "NestedConfigContextSchemaSerializer",
     "NestedCustomFieldSerializer",
@@ -27,6 +28,15 @@ __all__ = [
     "NestedTagSerializer",
     "NestedWebhookSerializer",
 ]
+
+
+class NestedComputedFieldSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
+    content_type = ContentTypeField(queryset=ContentType.objects.all())
+
+    class Meta:
+        model = models.ComputedField
+        fields = ["id", "url", "content_type", "label"]
 
 
 class NestedConfigContextSerializer(WritableNestedSerializer):
@@ -107,7 +117,7 @@ class NestedImageAttachmentSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name", "image"]
 
 
-class NestedJobSerializer(serializers.ModelSerializer):
+class NestedJobSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
@@ -115,7 +125,7 @@ class NestedJobSerializer(serializers.ModelSerializer):
         fields = ["id", "url", "source", "module_name", "job_class_name", "grouping", "name", "slug"]
 
 
-class NestedJobLogEntrySerializer(serializers.ModelSerializer):
+class NestedJobLogEntrySerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
 
     class Meta:
@@ -132,7 +142,7 @@ class NestedJobLogEntrySerializer(serializers.ModelSerializer):
         ]
 
 
-class NestedJobResultSerializer(serializers.ModelSerializer):
+class NestedJobResultSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     status = ChoiceField(choices=choices.JobResultStatusChoices)
     user = NestedUserSerializer(read_only=True)
@@ -158,13 +168,14 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
         fields = ["id", "url", "relationship", "source_id", "destination_id"]
 
 
-class NestedScheduledJobSerializer(serializers.ModelSerializer):
+class NestedScheduledJobSerializer(BaseModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
     name = serializers.CharField(max_length=255, required=False)
     start_time = serializers.DateTimeField(format=None, required=False)
 
     class Meta:
         model = models.ScheduledJob
-        fields = ["name", "start_time", "interval", "crontab"]
+        fields = ["url", "name", "start_time", "interval", "crontab"]
 
     def validate(self, data):
         data = super().validate(data)

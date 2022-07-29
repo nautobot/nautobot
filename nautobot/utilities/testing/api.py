@@ -8,6 +8,8 @@ from rest_framework.test import APIClient, APITransactionTestCase as _APITransac
 
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
 from .utils import disable_warnings
@@ -25,6 +27,7 @@ __all__ = (
 #
 
 
+@tag("api")
 class APITestCase(ModelTestCase):
     """
     Base test case for API requests.
@@ -125,13 +128,62 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Try GET to permitted object
-            url = self._get_detail_url(instance1)
-            self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
-
             # Try GET to non-permitted object
             url = self._get_detail_url(instance2)
             self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_404_NOT_FOUND)
+
+            # Try GET to permitted object
+            url = self._get_detail_url(instance1)
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            # Fields that should be present in *ALL* model serializers:
+            self.assertIn("id", response.data)
+            self.assertEqual(str(response.data["id"]), str(instance1.pk))  # coerce to str to handle both int and uuid
+            self.assertIn("url", response.data)
+            self.assertIn("display", response.data)
+            self.assertIsInstance(response.data["display"], str)
+            # Fields that should be present in appropriate model serializers:
+            if issubclass(self.model, ChangeLoggedModel):
+                self.assertIn("created", response.data)
+                self.assertIn("last_updated", response.data)
+            # Fields that should be absent by default (opt-in fields):
+            self.assertNotIn("computed_fields", response.data)
+            self.assertNotIn("relationships", response.data)
+
+            # If opt-in fields are supported on this model, make sure they can be opted into
+
+            custom_fields_registry = registry["model_features"]["custom_fields"]
+            # computed fields and custom fields use the same registry
+            cf_supported = self.model._meta.model_name in custom_fields_registry.get(self.model._meta.app_label, {})
+            if cf_supported:  # custom_fields is not an opt-in field, it should always be present if supported
+                self.assertIn("custom_fields", response.data)
+                self.assertIsInstance(response.data["custom_fields"], dict)
+
+            relationships_registry = registry["model_features"]["relationships"]
+            rel_supported = self.model._meta.model_name in relationships_registry.get(self.model._meta.app_label, {})
+            if cf_supported or rel_supported:
+                query_params = []
+                if cf_supported:
+                    query_params.append("include=computed_fields")
+                if rel_supported:
+                    query_params.append("include=relationships")
+                query_string = "&".join(query_params)
+                url = f"{url}?{query_string}"
+
+                response = self.client.get(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertIsInstance(response.data, dict)
+                if cf_supported:
+                    self.assertIn("computed_fields", response.data)
+                    self.assertIsInstance(response.data["computed_fields"], dict)
+                else:
+                    self.assertNotIn("computed_fields", response.data)
+                if rel_supported:
+                    self.assertIn("relationships", response.data)
+                    self.assertIsInstance(response.data["relationships"], dict)
+                else:
+                    self.assertNotIn("relationships", response.data)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_options_object(self):

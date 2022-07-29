@@ -57,6 +57,12 @@ Users can now toggle device full name and truncated name in the rack elevation v
 
 Current preferred toggle state is preserved across tabs (requires refresh) and persists in-browser until local storage is cleared. This presents a consistent behavior when browsing between multiple racks.
 
+#### REST API Enhancements ([#1463](https://github.com/nautobot/nautobot/issues/1463))
+
+- For all models that support Relationships, their corresponding list and detail REST API endpoints now include the option to include data on their associated Relationships and related objects by specifying `include=relationships` as a query parameter.
+- Relationship associations on a model can be edited by a PATCH to the appropriate nested value, such as `"relationships" -> <relationship-slug> -> "source"` or `"relationships" -> <relationship-slug> -> "destination"`.
+- For implementers of REST API serializers (core and/or plugins), a new `nautobot.extras.api.serializers.NautobotModelSerializer` base class has been added. Using this class guarantees support for relationships, custom fields, and computed fields on the serializer, and provides for a streamlined developer experience.
+
 #### Status Field on Interface, VMInterface Models ([#984](https://github.com/nautobot/nautobot/issues/984))
 
 Interface and VMInterface models now support a status. Default statuses that are available to be set are: Active, Planned, Maintenance, Failed, and Decommissioned. During migration all existing interfaces will be set to the status of "Active".
@@ -91,6 +97,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
+- [#1463](https://github.com/nautobot/nautobot/issues/1463) - Added REST API support for opt-in `relationships` data on model endpoints; added `NautobotModelSerializer` base class.
 - [#1614](https://github.com/nautobot/nautobot/issues/1614) - Added support for nesting of Dynamic Groupsallowing inclusion/exclusion rules of sub-group members
 - [#1735](https://github.com/nautobot/nautobot/issues/1735) - Added missing filters to model FilterSets for Virtualization models.
 - [#1865](https://github.com/nautobot/nautobot/issues/1865) - Added support for a custom template on Job forms.

@@ -234,6 +234,8 @@ def normalize_querydict(querydict):
     This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
     values.
     """
+    if not querydict:
+        return {}
     return {k: v if len(v) > 1 else v[0] for k, v in querydict.lists()}
 
 

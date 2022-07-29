@@ -837,6 +837,12 @@ class ObjectChangeFilterSet(BaseFilterSet):
 
 
 class RelationshipFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        }
+    )
 
     source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
     destination_type = ContentTypeMultipleChoiceFilter(

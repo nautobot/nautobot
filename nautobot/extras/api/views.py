@@ -416,11 +416,11 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
-    input_serializer = serializers.JobInputSerializer(data=request.data)
+    input_serializer = serializers.JobInputSerializer(data=request.data, context={"request": request})
     input_serializer.is_valid(raise_exception=True)
 
-    data = input_serializer.data["data"] or {}
-    commit = input_serializer.data["commit"]
+    data = input_serializer.validated_data.get("data", {})
+    commit = input_serializer.validated_data.get("commit", None)
     if commit is None:
         commit = job_model.commit_default
 
@@ -436,7 +436,7 @@ def _run_job(request, job_model, legacy_response=False):
         raise CeleryWorkerNotRunningException()
 
     job_content_type = get_job_content_type()
-    schedule_data = input_serializer.data.get("schedule")
+    schedule_data = input_serializer.validated_data.get("schedule")
 
     # Default to a null JobResult.
     job_result = None

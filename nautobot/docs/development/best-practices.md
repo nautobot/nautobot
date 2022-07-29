@@ -4,16 +4,22 @@ While there are many different development interfaces in Nautobot that each expo
 
 ## Base Classes
 
-- All Form classes should inherit from `nautobot.extras.forms.NautobotModelForm` (for models that support change-logging, custom fields and relationships).
-- All BulkEditForm classes should inherit from `nautobot.extras.forms.NautobotBulkEditForm` (for models that support change-logging, custom fields and relationships).
-- All FilterForm classes should inherit from `nautobot.extras.forms.NautobotFilterForm` (for models that support change-logging, custom fields and relationships).
-- All FilterSet classes should inherit from either `nautobot.utilities.filters.BaseFilterSet` (for bare-bones models) or `nautobot.extras.filters.NautobotFilterSet` (for models that support change-logging, custom fields and relationships).
-- All Serializer classes should inherit from `ValidatedModelSerializer`.
+For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
+
+| Feature                  | Full-featured models       | Minimal models             |
+| ------------------------ | -------------------------- | -------------------------- |
+| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`            |
+| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`           |
+| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`           |
+| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`           |
+| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`      |
+| Nested serializers       | `WritableNestedSerializer` | `WritableNestedSerializer` |
+| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
 
 ## Model Existence in the Database
 
 A common Django pattern is to check whether a model instance's primary key (`pk`) field is set as a proxy for whether the instance has been written to the database or whether it exists only in memory.
-Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID in memory *at instance creation time*, not at the time they are written to the database (when the model's `save()` method is called).
+Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID in memory _at instance creation time_, not at the time they are written to the database (when the model's `save()` method is called).
 Instead, for any model which inherits from `nautobot.core.models.BaseModel`, you should check an instance's `present_in_database` property which will be either `True` or `False`.
 
 Wrong:
@@ -40,7 +46,7 @@ else:
 ```
 
 !!! note
-    There is one case where a model instance *will* have a null primary key, and that is the case where it has been removed from the database and is in the process of being deleted.
+    There is one case where a model instance _will_ have a null primary key, and that is the case where it has been removed from the database and is in the process of being deleted.
     For most purposes, this is not the case you are intending to check!
 
 ## Model Validation
@@ -121,7 +127,7 @@ class UserFilter(NautobotFilterSet):
     - The field **must** be shadowed utilizing a hybrid `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
     - Fields that use `name` instead of `slug` can set the `natural_key` argument on `NaturalKeyOrPKMultipleChoiceFilter`.
     - In default settings for filtersets, when not using `NaturalKeyOrPKMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyOrPKMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
-    - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. *We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release.*
+    - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. _We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release._
     - Using the previous field (`provider`) as an example, it would look something like this:
 
 ```python
