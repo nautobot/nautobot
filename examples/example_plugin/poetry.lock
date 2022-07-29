@@ -38,7 +38,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "843e0b829d0543ec527bf45140d5caf6db2e00a0d5a290bac96641b3eb467fa3"
+content-hash = "34d2cdc5eee53516b588f77db5b1773e6d259e68094cf840c734faa2f1617a3b"
 
 [metadata.files]
 importlib-metadata = [

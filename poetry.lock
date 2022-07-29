@@ -813,7 +813,7 @@ python-versions = "^3.7"
 develop = true
 
 [package.dependencies]
-importlib-metadata = {version = "^4.4", markers = "python_version < \"3.10\""}
+importlib-metadata = {version = "^4.4", markers = "python_version < \"3.8\""}
 
 [package.source]
 type = "directory"
@@ -1099,7 +1099,7 @@ format-nongpl = ["fqdn", "idna", "isoduration", "jsonpointer (>1.13)", "rfc3339-
 
 [[package]]
 name = "junos-eznc"
-version = "2.6.4"
+version = "2.6.5"
 description = "Junos 'EZ' automation for non-programmers"
 category = "main"
 optional = true
@@ -2263,7 +2263,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "c4dba925fafa53fe866ba831c0d0029a9b1abe4ccf3b992c96615efd86da9614"
+content-hash = "679b92649eec3a65f0700e842d2a35fb8d7adc73c537cdb2ad584e4ec95ac997"
 
 [metadata.files]
 amqp = [
@@ -2664,10 +2664,7 @@ jinja2 = [
     {file = "Jinja2-3.0.3.tar.gz", hash = "sha256:611bb273cd68f3b993fabdc4064fc858c5b47a973cb5aa7999ec1ba405c87cd7"},
 ]
 jsonschema = []
-junos-eznc = [
-    {file = "junos-eznc-2.6.4.tar.gz", hash = "sha256:19d5b111e31482c09af8c6627227aae99e109ae5a33bc7ca900a61732e9aa75c"},
-    {file = "junos_eznc-2.6.4-py2.py3-none-any.whl", hash = "sha256:491a3cfc612048fc41ed9d1d039a20141a962fce23357f5e45eb88977e3e4dc0"},
-]
+junos-eznc = []
 kombu = [
     {file = "kombu-5.2.4-py3-none-any.whl", hash = "sha256:8b213b24293d3417bcf0d2f5537b7f756079e3ea232a8386dcc89a59fd2361a4"},
     {file = "kombu-5.2.4.tar.gz", hash = "sha256:37cee3ee725f94ea8bb173eaab7c1760203ea53bbebae226328600f9d2799610"},

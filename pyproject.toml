@@ -99,7 +99,7 @@ graphene-django-optimizer = "~0.8.0"
 # NOTE: We want to permit newer versions of importlib-metadata to be installed while not forcing
 #       plugins to move their dependencies ahead. Currently this is a direct dependency until
 #       Python 3.8+ where our direct dependency becomes part of stdlib.
-importlib-metadata = {version = "^4.4", python = "<3.10"}
+importlib-metadata = {version = "^4.4", python = "<3.8"}
 # Template rendering engine
 Jinja2 = "~3.0.3"
 # Optional data validation of config contexts
