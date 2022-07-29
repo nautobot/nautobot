@@ -588,16 +588,20 @@ def pretty_print_query(query):
         Q instance
     """
 
-    def __our_str__(self):
+    def pretty_str(self, node=None):
         """Improvement to default `Node.__str__` with a more human-readable style."""
         template = "(NOT %s)" if self.negated else "(%s)"
         children = []
 
+        # If we don't have a node, we are the node!
+        if node is None:
+            node = self
+
         # Iterate over children. They will be either a Q object (a Node subclass) or a 2-tuple.
-        for child in self.children:
+        for child in node.children:
             # Trust that we can stringify the child if it is a Node instance.
             if isinstance(child, Node):
-                children.append(str(child))
+                children.append(pretty_str(child))
             # If a 2-tuple, stringify to key=value
             else:
                 key, value = child
@@ -605,10 +609,5 @@ def pretty_print_query(query):
 
         return template % (f" {self.connector} ".join(children))
 
-    # Swap `Node.__str__` for our version and replace it when we're done.
-    try:
-        orig_str = query.__class__.__str__
-        query.__class__.__str__ = __our_str__
-        return str(query)
-    finally:
-        query.__class__.__str__ = orig_str
+    # Use pretty_str() as the string generator vs. just stringify the `Q` object.
+    return pretty_str(query)

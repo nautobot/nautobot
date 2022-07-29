@@ -225,19 +225,21 @@ class PrettyPrintQueryTest(TestCase):
     def test_pretty_print_query(self):
         """Test that each Q object, from deeply nested to flat, pretty prints as expected."""
         queries = [
-            ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status_slug="planned"),
+            ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),
             (Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active"),
             Q(site__slug="ams01") | Q(site__slug="ang01"),
             Q(site__slug="ang01") & ~Q(status__slug="active"),
+            Q(site__slug="ams01", status__slug="planned"),
             Q(site__slug="ang01"),
             Q(status__id=12345),
             Q(site__slug__in=["ams01", "ang01"]),
         ]
         results = [
-            "(((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active')) OR status_slug='planned')",
+            "(((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active')) OR status__slug='planned')",
             "((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active'))",
             "(site__slug='ams01' OR site__slug='ang01')",
             "(site__slug='ang01' AND (NOT status__slug='active'))",
+            "(site__slug='ams01' AND status__slug='planned')",
             "(site__slug='ang01')",
             "(status__id=12345)",
             "(site__slug__in=['ams01', 'ang01'])",

@@ -641,7 +641,7 @@ class DynamicGroup(OrganizationalModel):
 
         if include_self:
             return siblings
-        return siblings.exclude(slug=self.slug)
+        return siblings.exclude(slug=self.pk)
 
     def is_root(self):
         """Return whether this is a root node (has children, but no parents)."""
