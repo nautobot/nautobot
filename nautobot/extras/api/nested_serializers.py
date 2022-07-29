@@ -185,7 +185,7 @@ class NestedScheduledJobSerializer(serializers.ModelSerializer):
             if data["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
 
                 if data.get("crontab") is None:
-                    raise serializers.ValidationError({"crontab": "ya need sth"})
+                    raise serializers.ValidationError({"crontab": "Please enter a valid crontab."})
                 try:
                     models.ScheduledJob.get_crontab(data["crontab"])
                 except Exception as e:
