@@ -351,6 +351,7 @@ class JobHook(OrganizationalModel):
         to=ContentType,
         related_name="job_hooks",
         verbose_name="Object types",
+        # 2.0 TODO: standardize verbose name for ContentType fields
         limit_choices_to=ChangeLoggedModelsQuery,
         help_text="The object(s) to which this job hook applies.",
     )
