@@ -17,6 +17,7 @@ from nautobot.utilities.forms import (
     BulkEditForm,
     BulkEditNullBooleanSelect,
     ColorSelect,
+    CommentField,
     CSVContentTypeField,
     CSVModelChoiceField,
     CSVModelForm,
@@ -57,6 +58,7 @@ from nautobot.extras.models import (
     ImageAttachment,
     Job,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -118,6 +120,7 @@ __all__ = (
     "LocalContextFilterForm",
     "LocalContextModelForm",
     "LocalContextModelBulkEditForm",
+    "NoteForm",
     "ObjectChangeFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipForm",
@@ -875,6 +878,23 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+
+
+#
+# Notes
+#
+
+
+class NoteForm(BootstrapMixin, forms.ModelForm):
+    note = CommentField
+
+    class Meta:
+        model = Note
+        fields = ["assigned_object_type", "assigned_object_id", "note"]
+        widgets = {
+            "assigned_object_type": forms.HiddenInput,
+            "assigned_object_id": forms.HiddenInput,
+        }
 
 
 #

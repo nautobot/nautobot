@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, OuterRef, Subquery, Q, F
 from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
@@ -187,6 +188,18 @@ class DynamicGroupMembershipQuerySet(RestrictedQuerySet):
             operator=operator,
             weight=weight,
         )
+
+
+class NotesQuerySet(RestrictedQuerySet):
+    """Queryset for `Notes` objects that provides a `get_for_object` method."""
+
+    def get_for_object(self, obj):
+        """Return all `Notes` assigned to the given object."""
+        if not isinstance(obj, Model):
+            raise TypeError(f"{obj} is not an instance of Django Model class")
+
+        content_type = ContentType.objects.get_for_model(obj)
+        return self.filter(assigned_object_id=obj.pk, assigned_object_type=content_type)
 
 
 class JobQuerySet(RestrictedQuerySet):

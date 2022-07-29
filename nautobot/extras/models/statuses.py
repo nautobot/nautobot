@@ -5,6 +5,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.encoding import force_str
 from django.utils.hashable import make_hashable
+from nautobot.extras.models.mixins import NotesMixin
 
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.extras.models import ChangeLoggedModel
@@ -38,7 +39,7 @@ class StatusQuerySet(RestrictedQuerySet):
     "relationships",
     "webhooks",
 )
-class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(
