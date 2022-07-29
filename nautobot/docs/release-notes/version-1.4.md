@@ -80,6 +80,13 @@ Primary and Organizational models now support notes. A notes tab has been added 
 
 ### Changed
 
+#### Dynamic Groups of Dynamic Groups ([#1614](https://github.com/nautobot/nautobot/issues/1614))
+
+Dynamic Groups may now be nested in parent/child relationships. The Dynamic Group edit view now has a "Child Groups" tab that allows one to make other Dynamic Groups of the same content type children of the parent group. Any filters provided by the child groups are used to filter the members from the parent group using one of three operators: "Restrict (AND)", "Include (OR)", or "Exclude (NOT)". This allows for logical parenthetical grouping of nested groups by the operator you choose for that child group association to the parent.
+
+!!! warning
+    The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
+
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
 
 Filtering of object lists in the UI and in the REST API will now report an error if an unknown or unrecognized filter parameter is specified. _This is a behavior change from previous Nautobot releases, in which unknown filter parameters would be silently discarded and ignored._
@@ -116,6 +123,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Fixed
 
 - [#1710](https://github.com/nautobot/nautobot/issues/1710) - Fixed invalid CSS when clicking "Add another" row buttons for formsets on Secrets Groups, Dynamic Groups edit view in the UI.
+- [#2069](https://github.com/nautobot/nautobot/issues/2069) - Addressed numerous UX improvements for Dynamic Groups of Dynamic Groups feature to ease usability of this feature.
 - [#2109](https://github.com/nautobot/nautobot/issues/2109) - Fixed Relationship Filters are not Applied with "And" Operator.
 - [#2111](https://github.com/nautobot/nautobot/issues/2111) - Fixed Invalid filter error thrown for __source with message: “” is not a valid UUID.
 
