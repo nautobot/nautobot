@@ -66,7 +66,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
         self.assertEqual("Interface 2", select2_results[0].text)
         self.assertEqual("Interface 3", select2_results[1].text)
 
-        # Find 'Interface 1' in drop-down and click it
+        # Find 'Interface 2' in drop-down and click it
         self.browser.find_by_xpath(
             "//ul[@id='select2-id_termination_b_id-results']/li[contains(@class,'select2-results__option') and contains(text(),'Interface 2')]"
         ).click()
