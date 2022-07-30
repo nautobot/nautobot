@@ -431,6 +431,15 @@ class DynamicGroup(OrganizationalModel):
         if not filterset.is_valid():
             raise ValidationError(filterset.errors)
 
+    def delete(self):
+        """Check if we're a child and attempt to block delete if we are."""
+        if self.parents.exists():
+            raise models.ProtectedError(
+                msg="Cannot delete DynamicGroup while child of other DynamicGroups.",
+                protected_objects=set(self.parents.all()),
+            )
+        return super().delete()
+
     def clean(self):
         super().clean()
 
@@ -496,13 +505,11 @@ class DynamicGroup(OrganizationalModel):
 
         return query
 
-    def perform_membership_set_operation(self, group, operator, query, next_set):
+    def perform_membership_set_operation(self, operator, query, next_set):
         """
         Perform set operation for a group membership. The `operator` and `next_set` are used to
         decide the appropriate action to take on the `query`. The updated `Q` object is returned.
 
-        :param group:
-            DynamicGroup instance
         :param operator:
             DynamicGroupOperatorChoices choice (str)
         :param query:
@@ -531,7 +538,7 @@ class DynamicGroup(OrganizationalModel):
             group = membership.group
             operator = membership.operator
             next_set = self.generate_query_for_group(group)
-            query = self.perform_membership_set_operation(group, operator, query, next_set)
+            query = self.perform_membership_set_operation(operator, query, next_set)
 
         return query
 
@@ -556,7 +563,7 @@ class DynamicGroup(OrganizationalModel):
                 logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
 
             next_set = group.generate_members_query()
-            query = self.perform_membership_set_operation(group, operator, query, next_set)
+            query = self.perform_membership_set_operation(operator, query, next_set)
 
         return query
 
@@ -628,9 +635,13 @@ class DynamicGroup(OrganizationalModel):
 
         return ancestors
 
-    def get_siblings(self):
+    def get_siblings(self, include_self=False):
         """Return groups that share the same parents."""
-        return DynamicGroup.objects.filter(parents__in=self.parents.all()).exclude(slug=self.slug)
+        siblings = DynamicGroup.objects.filter(parents__in=self.parents.all())
+        if include_self:
+            return siblings
+
+        return siblings.exclude(pk=self.pk)
 
     def is_root(self):
         """Return whether this is a root node (has children, but no parents)."""
@@ -852,6 +863,17 @@ class DynamicGroupMembership(BaseModel):
     def get_group_members_url(self):
         """Return the group members URL."""
         return self.group.get_group_members_url()
+
+    def get_siblings(self, include_self=False):
+        """Return group memberships that share the same parent group."""
+        siblings = DynamicGroupMembership.objects.filter(parent_group=self.parent_group)
+        if include_self:
+            return siblings
+
+        return siblings.exclude(pk=self.pk)
+
+    def generate_query(self):
+        return self.group.generate_query()
 
     def clean(self):
         super().clean()

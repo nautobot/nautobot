@@ -13,6 +13,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+from django.utils.tree import Node
+
 from django.template import engines
 from django.utils.module_loading import import_string
 
@@ -596,3 +598,36 @@ def is_uuid(value):
     except (ValueError, TypeError, AttributeError):
         pass
     return False
+
+
+def pretty_print_query(query):
+    """
+    Given a `Q` object, display it in a more human-readable format.
+
+    :param query:
+        Q instance
+    """
+
+    def pretty_str(self, node=None):
+        """Improvement to default `Node.__str__` with a more human-readable style."""
+        template = "(NOT %s)" if self.negated else "(%s)"
+        children = []
+
+        # If we don't have a node, we are the node!
+        if node is None:
+            node = self
+
+        # Iterate over children. They will be either a Q object (a Node subclass) or a 2-tuple.
+        for child in node.children:
+            # Trust that we can stringify the child if it is a Node instance.
+            if isinstance(child, Node):
+                children.append(pretty_str(child))
+            # If a 2-tuple, stringify to key=value
+            else:
+                key, value = child
+                children.append(f"{key}={value!r}")
+
+        return template % (f" {self.connector} ".join(children))
+
+    # Use pretty_str() as the string generator vs. just stringify the `Q` object.
+    return pretty_str(query)

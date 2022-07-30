@@ -12,7 +12,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import signals
 from django.urls import reverse
 from django.utils import timezone
@@ -23,7 +23,7 @@ from django_celery_beat.managers import ExtendedManager
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
 from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
@@ -37,7 +37,13 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
-from nautobot.extras.utils import get_job_content_type, extras_features, FeatureQuery, jobs_in_directory
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    extras_features,
+    get_job_content_type,
+    jobs_in_directory,
+)
 from nautobot.utilities.logging import sanitize
 
 from .customfields import CustomFieldModel
@@ -334,6 +340,102 @@ class Job(PrimaryModel):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})
 
 
+@extras_features("graphql")
+class JobHook(OrganizationalModel):
+    """
+    A job hook defines a request that will trigger a job hook receiver when an object is created, updated, and/or
+    deleted in Nautobot. Each job hook can be limited to firing only on certain actions or certain object types.
+    """
+
+    content_types = models.ManyToManyField(
+        to=ContentType,
+        related_name="job_hooks",
+        verbose_name="Object types",
+        # 2.0 TODO: standardize verbose name for ContentType fields
+        limit_choices_to=ChangeLoggedModelsQuery,
+        help_text="The object(s) to which this job hook applies.",
+    )
+    enabled = models.BooleanField(default=True)
+    job = models.ForeignKey(
+        to=Job,
+        related_name="job_hook",
+        verbose_name="Job",
+        help_text="The job that this job hook will initiate",
+        on_delete=models.CASCADE,
+        limit_choices_to={"is_job_hook_receiver": True},
+    )
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
+    type_create = models.BooleanField(default=False, help_text="Call this job hook when a matching object is created.")
+    type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
+    type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        super().clean()
+
+        # At least one action type must be selected
+        if not self.type_create and not self.type_delete and not self.type_update:
+            raise ValidationError("You must select at least one type: create, update, and/or delete.")
+
+    def get_absolute_url(self):
+        return reverse("extras:jobhook", kwargs={"pk": self.pk})
+
+    @classmethod
+    def check_for_conflicts(
+        cls, instance=None, content_types=None, job=None, type_create=None, type_update=None, type_delete=None
+    ):
+        """
+        Helper method for enforcing uniqueness.
+
+        Don't allow two job hooks with the same content_type, same job, and any action(s) in common.
+        Called by JobHookForm.clean() and JobHookSerializer.validate()
+        """
+
+        conflicts = {}
+        job_hook_error_msg = "A job hook already exists for {action} on {content_type} to job {job}"
+
+        if instance is not None and instance.present_in_database:
+            # This is a PATCH and might not include all relevant data
+            # Therefore we get data not available from instance
+            content_types = instance.content_types.all() if content_types is None else content_types
+            type_create = instance.type_create if type_create is None else type_create
+            type_update = instance.type_update if type_update is None else type_update
+            type_delete = instance.type_delete if type_delete is None else type_delete
+
+        if content_types is not None:
+            for content_type in content_types:
+                job_hooks = cls.objects.filter(content_types__in=[content_type], job=job)
+                if instance and instance.present_in_database:
+                    job_hooks = job_hooks.exclude(pk=instance.pk)
+
+                existing_type_create = job_hooks.filter(type_create=type_create).exists() if type_create else False
+                existing_type_update = job_hooks.filter(type_update=type_update).exists() if type_update else False
+                existing_type_delete = job_hooks.filter(type_delete=type_delete).exists() if type_delete else False
+
+                if existing_type_create:
+                    conflicts.setdefault("type_create", []).append(
+                        job_hook_error_msg.format(content_type=content_type, action="create", job=job),
+                    )
+
+                if existing_type_update:
+                    conflicts.setdefault("type_update", []).append(
+                        job_hook_error_msg.format(content_type=content_type, action="update", job=job),
+                    )
+
+                if existing_type_delete:
+                    conflicts.setdefault("type_delete", []).append(
+                        job_hook_error_msg.format(content_type=content_type, action="delete", job=job),
+                    )
+
+        return conflicts
+
+
 @extras_features(
     "graphql",
 )
@@ -589,7 +691,10 @@ class JobResult(BaseModel, CustomFieldModel):
                 else:
                     logger.error("Neither a Job database record nor a Job source class were found for %s", name)
 
-        func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
+        # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
+        transaction.on_commit(
+            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
+        )
 
         return job_result
 

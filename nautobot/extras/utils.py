@@ -61,6 +61,39 @@ def image_upload(instance, filename):
 
 
 @deconstructible
+class ChangeLoggedModelsQuery:
+    """
+    Helper class to get ContentType for models that implements the to_objectchange method for change logging.
+    """
+
+    def list_subclasses(self):
+        """
+        Return a list of classes that implement the to_objectchange method
+        """
+        return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
+
+    def __call__(self):
+        return self.get_query()
+
+    def get_query(self):
+        """
+        Return a Q object for content type lookup
+        """
+        query = Q()
+        for model in self.list_subclasses():
+            app_label, model_name = model._meta.label_lower.split(".")
+            query |= Q(app_label=app_label, model=model_name)
+
+        return query
+
+    def as_queryset(self):
+        return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
+
+
+@deconstructible
 class FeatureQuery:
     """
     Helper class that delays evaluation of the registry contents for the functionality store

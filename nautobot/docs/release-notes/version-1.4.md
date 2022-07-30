@@ -28,6 +28,10 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
+#### Job Hooks ([#2103](https://github.com/nautobot/nautobot/pull/2103))
+
+Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook. See the [Job Hooks](../additional-features/job-hooks/) documentation for more information.
+
 #### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
 
 JobResult records now save the arguments with which the Job was called, allowing for easy re-execution of the Job with the same arguments as before. A "re-run" button has been added to the JobResult list view and detail view.
@@ -86,6 +90,13 @@ Notes support the REST API at endpoint `/api/extras/notes`. Additionally notes c
 
 ### Changed
 
+#### Dynamic Groups of Dynamic Groups ([#1614](https://github.com/nautobot/nautobot/issues/1614))
+
+Dynamic Groups may now be nested in parent/child relationships. The Dynamic Group edit view now has a "Child Groups" tab that allows one to make other Dynamic Groups of the same content type children of the parent group. Any filters provided by the child groups are used to filter the members from the parent group using one of three operators: "Restrict (AND)", "Include (OR)", or "Exclude (NOT)". This allows for logical parenthetical grouping of nested groups by the operator you choose for that child group association to the parent.
+
+!!! warning
+    The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
+
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
 
 Filtering of object lists in the UI and in the REST API will now report an error if an unknown or unrecognized filter parameter is specified. _This is a behavior change from previous Nautobot releases, in which unknown filter parameters would be silently discarded and ignored._
@@ -113,6 +124,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
 - [#2051](https://github.com/nautobot/nautobot/issues/2051) - Add changelog url for Relationships.
 - [#2061](https://github.com/nautobot/nautobot/pulls/2061) - Add draggable child groups to Dynamic Groups edit view in UI, recompute and hide weights.
+- [#2103](https://github.com/nautobot/nautobot/pull/2103) - Add job hooks feature.
 
 ### Changed
 
@@ -122,6 +134,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Fixed
 
 - [#1710](https://github.com/nautobot/nautobot/issues/1710) - Fixed invalid CSS when clicking "Add another" row buttons for formsets on Secrets Groups, Dynamic Groups edit view in the UI.
+- [#2069](https://github.com/nautobot/nautobot/issues/2069) - Addressed numerous UX improvements for Dynamic Groups of Dynamic Groups feature to ease usability of this feature.
 - [#2109](https://github.com/nautobot/nautobot/issues/2109) - Fixed Relationship Filters are not Applied with "And" Operator.
 - [#2111](https://github.com/nautobot/nautobot/issues/2111) - Fixed Invalid filter error thrown for __source with message: “” is not a valid UUID.
 

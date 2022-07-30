@@ -100,9 +100,9 @@ class DynamicGroupOperatorChoices(ChoiceSet):
     OPERATOR_DIFFERENCE = "difference"
 
     CHOICES = (
-        (OPERATOR_UNION, "Union (OR)"),
-        (OPERATOR_INTERSECTION, "Intersection (AND)"),
-        (OPERATOR_DIFFERENCE, "Difference (NOT)"),
+        (OPERATOR_UNION, "Include (OR)"),
+        (OPERATOR_INTERSECTION, "Restrict (AND)"),
+        (OPERATOR_DIFFERENCE, "Exclude (NOT)"),
     )
 
 

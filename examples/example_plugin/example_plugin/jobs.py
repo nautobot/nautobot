@@ -50,7 +50,7 @@ class ExampleJobHookReceiver(JobHookReceiver):
         name = "Example job hook receiver"
         description = "Validate changes to object serial field"
 
-    def receive_jobhook(self, change, action, changed_object):
+    def receive_job_hook(self, change, action, changed_object):
         # return on delete action
         if action == ObjectChangeActionChoices.ACTION_DELETE:
             return

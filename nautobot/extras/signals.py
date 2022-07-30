@@ -46,6 +46,8 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
     """
     Fires when an object is created or updated.
     """
+    from .jobs import enqueue_job_hooks  # avoid circular import
+
     m2m_changed = False
 
     # Determine the type of change being made
@@ -63,11 +65,14 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
         if m2m_changed:
-            ObjectChange.objects.filter(
+            related_changes = ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(instance),
                 changed_object_id=instance.pk,
                 request_id=change_context.id,
-            ).update(object_data=instance.to_objectchange(action).object_data)
+            )
+            m2m_changes = instance.to_objectchange(action)
+            related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
+            objectchange = related_changes.first() if related_changes.exists() else None
         else:
             objectchange = instance.to_objectchange(action)
             objectchange.user = _get_user_if_authenticated(change_context.user, objectchange)
@@ -75,6 +80,10 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
             objectchange.change_context = change_context.context
             objectchange.change_context_detail = change_context.context_detail
             objectchange.save()
+
+        # Enqueue job hooks
+        if objectchange is not None:
+            enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
     enqueue_webhooks(instance, change_context.user, change_context.id, action)
@@ -96,6 +105,8 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
+    from .jobs import enqueue_job_hooks  # avoid circular import
+
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
@@ -104,6 +115,9 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
         objectchange.change_context = change_context.context
         objectchange.change_context_detail = change_context.context_detail
         objectchange.save()
+
+        # Enqueue job hooks
+        enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
     enqueue_webhooks(instance, change_context.user, change_context.id, ObjectChangeActionChoices.ACTION_DELETE)

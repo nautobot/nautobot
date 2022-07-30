@@ -2,6 +2,7 @@ import random
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.urls import reverse
 
 from nautobot.dcim.filters import DeviceFilterSet
@@ -588,6 +589,16 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # And have the same members...
         expected = ["device-site-3"]
         self.assertEqual(sorted(group_qs.values_list("name", flat=True)), expected)
+
+    def test_delete(self):
+        """Test `DynamicGroup(instance).delete()`."""
+        # Has parents
+        with self.assertRaises(ProtectedError):
+            self.nested_child.delete()
+
+        # Clear the deeply nested child's parents then delete it!
+        self.nested_child.parents.clear()
+        self.nested_child.delete()
 
 
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):

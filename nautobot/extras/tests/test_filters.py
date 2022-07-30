@@ -30,6 +30,7 @@ from nautobot.extras.filters import (
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
     JobFilterSet,
+    JobHookFilterSet,
     JobLogEntryFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
@@ -50,6 +51,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -698,6 +700,79 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_is_job_hook_receiver(self):
         params = {"is_job_hook_receiver": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+
+class JobHookFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+    queryset = JobHook.objects.all()
+    filterset = JobHookFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        job_hooks = (
+            JobHook.objects.create(
+                name="JobHook1",
+                job=Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                type_create=True,
+                type_update=True,
+                type_delete=True,
+            ),
+            JobHook.objects.create(
+                name="JobHook2",
+                job=Job.objects.get(job_class_name="TestJobHookReceiverChange"),
+                type_create=True,
+                type_update=True,
+                type_delete=False,
+            ),
+            JobHook.objects.create(
+                name="JobHook3",
+                enabled=False,
+                job=Job.objects.get(job_class_name="TestJobHookReceiverFail"),
+                type_delete=True,
+            ),
+        )
+
+        devicetype_ct = ContentType.objects.get_for_model(DeviceType)
+        job_hooks[0].content_types.set([devicetype_ct])
+        job_hooks[1].content_types.set([devicetype_ct])
+
+    def test_name(self):
+        params = {"name": ["JobHook1", "JobHook2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_types(self):
+        params = {"content_types": ["dcim.devicetype"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_enabled(self):
+        params = {"enabled": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_job(self):
+        jobs = Job.objects.filter(job_class_name__in=["TestJobHookReceiverLog", "TestJobHookReceiverChange"])[:2]
+        params = {"job": [jobs[0].slug, jobs[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {"slug": ["jobhook1", "jobhook2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_type_create(self):
+        params = {"type_create": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_type_delete(self):
+        params = {"type_delete": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_type_update(self):
+        params = {"type_update": True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        params = {"q": "hook"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"q": "hook1"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class JobLogEntryTestCase(FilterTestCases.FilterTestCase):

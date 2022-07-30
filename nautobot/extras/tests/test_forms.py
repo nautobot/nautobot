@@ -6,10 +6,129 @@ from django.test import TestCase
 from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm
 import nautobot.dcim.models as dcim_models
 from nautobot.extras.choices import RelationshipTypeChoices
-from nautobot.extras.forms import WebhookForm
-from nautobot.extras.models import Relationship, RelationshipAssociation, Status, Webhook
+from nautobot.extras.forms import JobHookForm, WebhookForm
+from nautobot.extras.models import Job, JobHook, Relationship, RelationshipAssociation, Status, Webhook
 from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
+
+
+class JobHookFormTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        job_hook = JobHook.objects.create(
+            name="JobHook1",
+            job=Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+            type_create=True,
+            type_update=True,
+            type_delete=False,
+        )
+        devicetype_ct = ContentType.objects.get_for_model(dcim_models.DeviceType)
+        site_ct = ContentType.objects.get_for_model(dcim_models.Site)
+        job_hook.content_types.set([devicetype_ct])
+
+        cls.job_hooks_data = (
+            {
+                "name": "JobHook2",
+                "content_types": [devicetype_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverChange"),
+                "type_create": True,
+                "type_update": True,
+                "type_delete": False,
+            },
+            {
+                "name": "JobHook3",
+                "content_types": [devicetype_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                "type_create": False,
+                "type_update": False,
+                "type_delete": True,
+            },
+            {
+                "name": "JobHook4",
+                "content_types": [site_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                "type_create": True,
+                "type_update": True,
+                "type_delete": True,
+            },
+            {
+                "name": "JobHook5",
+                "content_types": [devicetype_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                "type_create": True,
+                "type_update": True,
+                "type_delete": True,
+            },
+        )
+
+    def test_create_job_hooks_with_same_content_type_same_action_diff_job(self):
+        """
+        Create a new job hook with the same content_types, same action and different job from a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverChange")
+        """
+        form = JobHookForm(data=self.job_hooks_data[0])
+
+        self.assertTrue(form.is_valid())
+        form.save()
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[0]["name"]).count(), 1)
+
+    def test_create_job_hooks_with_same_content_type_same_job_diff_action(self):
+        """
+        Create a new job hook with the same content_types, same job and different actions from a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | device type, delete, Job(job_class_name="TestJobHookReceiverLog")
+        """
+        form = JobHookForm(data=self.job_hooks_data[1])
+
+        self.assertTrue(form.is_valid())
+        form.save()
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[1]["name"]).count(), 1)
+
+    def test_create_job_hooks_with_same_job_same_action_diff_content_type(self):
+        """
+        Create a new job hook with the same job, same actions and different content types from a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | site, create, update, Job(job_class_name="TestJobHookReceiverLog")
+        """
+        form = JobHookForm(data=self.job_hooks_data[2])
+
+        self.assertTrue(form.is_valid())
+        form.save()
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[2]["name"]).count(), 1)
+
+    def test_create_job_hooks_with_same_job_common_action_same_content_type(self):
+        """
+        Create a new job hook with the same job, common actions and same content types as a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | device type, create, update, delete, Job(job_class_name="TestJobHookReceiverLog")
+        """
+        form = JobHookForm(data=self.job_hooks_data[3])
+
+        self.assertFalse(form.is_valid())
+        error_msg = json.loads(form.errors.as_json())
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[3]["name"]).count(), 0)
+        self.assertIn("type_create", error_msg)
+        self.assertEquals(
+            error_msg["type_create"][0]["message"],
+            "A job hook already exists for create on dcim | device type to job TestJobHookReceiverLog",
+        )
+        self.assertEquals(
+            error_msg["type_update"][0]["message"],
+            "A job hook already exists for update on dcim | device type to job TestJobHookReceiverLog",
+        )
 
 
 class RelationshipModelFormTestCase(TestCase):

@@ -42,6 +42,9 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 # Jobs
 router.register("jobs", views.JobViewSet)
 
+# Job hooks
+router.register("job-hooks", views.JobHooksViewSet)
+
 # Job Log Entries
 router.register("job-logs", views.JobLogEntryViewSet)
 

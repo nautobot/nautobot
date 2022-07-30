@@ -15,25 +15,27 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
+from django.test.client import RequestFactory
 from django.utils import timezone
 from django.utils.functional import classproperty
 import netaddr
 import yaml
 
 
-from .choices import JobResultStatusChoices, LogLevelChoices
+from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, ObjectChange, ScheduledJob
+from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import get_job_content_type, jobs_in_directory
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -47,6 +49,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.utilities.utils import copy_safe_request
 
 
 User = get_user_model()
@@ -1239,3 +1242,46 @@ def scheduled_job_handler(*args, **kwargs):
 
     job_content_type = get_job_content_type()
     JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)
+
+
+def enqueue_job_hooks(object_change):
+    """
+    Find job hook(s) assigned to this changed object type + action and enqueue them
+    to be processed
+    """
+    from nautobot.extras.models import JobResult  # avoid circular import
+
+    # Job hooks cannot trigger other job hooks
+    if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+        return
+
+    # Determine whether this type of object supports job hooks
+    model_type = object_change.changed_object._meta.model
+    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+        return
+
+    # Retrieve any applicable job hooks
+    content_type = ContentType.objects.get_for_model(object_change.changed_object)
+    action_flag = {
+        ObjectChangeActionChoices.ACTION_CREATE: "type_create",
+        ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
+        ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
+    }[object_change.action]
+    job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+
+    # Enqueue the jobs related to the job_hooks
+    for job_hook in job_hooks:
+        job_content_type = get_job_content_type()
+        job_model = job_hook.job
+        request = RequestFactory().request(SERVER_NAME="job_hook")
+        request.id = object_change.request_id
+        request.user = object_change.user
+        JobResult.enqueue_job(
+            run_job,
+            job_model.class_path,
+            job_content_type,
+            object_change.user,
+            data=job_model.job_class.serialize_data({"object_change": object_change}),
+            request=copy_safe_request(request),
+            commit=True,
+        )
