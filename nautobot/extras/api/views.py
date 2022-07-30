@@ -25,7 +25,7 @@ from nautobot.core.api.views import (
     ReadOnlyModelViewSet,
 )
 from nautobot.core.graphql import execute_saved_query
-from nautobot.extras import filters, querysets
+from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
