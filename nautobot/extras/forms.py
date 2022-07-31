@@ -968,6 +968,8 @@ class JobEditForm(NautobotModelForm):
             "time_limit_override",
             "time_limit",
             "tags",
+            "has_sensitive_variables",
+            "has_sensitive_variables_override",
         ]
 
     def clean(self):
@@ -980,6 +982,10 @@ class JobEditForm(NautobotModelForm):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
+
+        if cleaned_data["has_sensitive_variables"] is True and cleaned_data["approval_required"] is True:
+            raise ValidationError({"approval_required": "A job with sensitive variables cannot be marked for approval"})
+
         return cleaned_data
 
 
@@ -992,6 +998,9 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    has_sensitive_variables = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
     commit_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
         initial=False,

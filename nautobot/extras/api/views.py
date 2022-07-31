@@ -386,6 +386,16 @@ def _run_job(request, job_model, legacy_response=False):
         raise PermissionDenied("This job is not enabled to be run.")
     if not job_model.installed:
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
+    if job_model.has_sensitive_variables:
+        if job_model.approval_required:
+            raise MethodNotAllowed(
+                request.method,
+                detail="Jobs with sensitive variables cannot be marked for approval",
+            )
+        if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+            raise MethodNotAllowed(
+                request.method, detail="Jobs with sensitive variables can only be scheduled immediately"
+            )
 
     job_class = job_model.job_class
     if job_class is None:

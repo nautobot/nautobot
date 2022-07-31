@@ -126,6 +126,9 @@ class Job(PrimaryModel):
         help_text="Whether the Python module and class providing this job are presently installed and loadable",
     )
     enabled = models.BooleanField(default=False, help_text="Whether this job can be executed by users")
+    has_sensitive_variables = models.BooleanField(
+        default=True, help_text="Whether this job contains sensitive variables"
+    )
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
@@ -192,6 +195,10 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     time_limit_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    has_sensitive_variables_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
