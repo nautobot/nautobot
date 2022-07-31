@@ -1244,6 +1244,48 @@ class JobAPIRunTestMixin:
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_for_future(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["schedule"]["interval"][0], "Jobs with sensitive variables can only be scheduled immediately"
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_future_past(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
