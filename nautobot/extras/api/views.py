@@ -10,7 +10,7 @@ from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -387,14 +387,9 @@ def _run_job(request, job_model, legacy_response=False):
     if not job_model.installed:
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
     if job_model.has_sensitive_variables:
-        if job_model.approval_required:
-            raise MethodNotAllowed(
-                request.method,
-                detail="Jobs with sensitive variables cannot be marked for approval",
-            )
         if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
-            raise MethodNotAllowed(
-                request.method, detail="Jobs with sensitive variables can only be scheduled immediately"
+            raise ValidationError(
+                {"schedule": {"interval": ["Jobs with sensitive variables can only be scheduled immediately"]}}
             )
 
     job_class = job_model.job_class
