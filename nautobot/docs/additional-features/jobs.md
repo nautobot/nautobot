@@ -138,7 +138,7 @@ When set to True, it prevents the job's input parameters from being saved to the
 
 Important notes about jobs with sensitive variables:
 
-* Jobs can only be executed immediately via UI or API.
+* Jobs cannot be scheduled to run in the future or on a recurring schedule.
 * Jobs with sensitive variables cannot be set for approval.
 
 #### `hidden`
