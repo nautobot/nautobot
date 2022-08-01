@@ -1690,6 +1690,27 @@ class JobTestCase(
             scheduled = ScheduledJob.objects.last()
             self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_sensitive_variables_for_future(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.has_sensitive_variables = True
+        self.test_pass.validated_save()
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+
+        response = self.client.post(self.run_urls[1], data)
+        self.assertHttpStatus(response, 200, msg=self.run_urls[1])
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Job containing sensitive variables and can only be executed immediately.", content)
+
 
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
