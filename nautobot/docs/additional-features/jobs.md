@@ -130,6 +130,17 @@ Default: `[]`
 
 A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code.
 
+#### `has_sensitive_variables`
+
+Default: `True`
+
+When set to True, it prevents the job's input parameters from being saved to the database.
+
+Important notes about jobs with sensitive variables:
+
+* Jobs can only be executed immediately via UI or API.
+* Jobs with sensitive variables cannot be set for approval.
+
 #### `hidden`
 
 Default: `False`
