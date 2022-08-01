@@ -136,6 +136,11 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         return False
 
+    # TODO(jathan): We may not need this anymore. But we do want to consider the
+    # handling of no permissions and the custom error messages. DRF checks the
+    # permissions AFTER dispatch but BEFORE the response is generated. This
+    # current implementation of our dispatch breaks this order of operations.
+    """
     def dispatch(self, request, *args, **kwargs):
 
         if not hasattr(self, "queryset"):
@@ -148,6 +153,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
             return self.handle_no_permission()
 
         return super().dispatch(request, *args, **kwargs)
+    """
 
 
 class GetReturnURLMixin:

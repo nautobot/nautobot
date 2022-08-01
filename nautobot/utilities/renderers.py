@@ -30,6 +30,73 @@ ACTION_TO_VIEW_TYPE = {
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     template = None
     default_return_url = None
+    table = None
+
+    def get_return_url(self, request, view, obj=None):
+
+        # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
+        # considered safe.
+        query_param = request.GET.get("return_url") or request.POST.get("return_url")
+        if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
+            return query_param
+
+        # Next, check if the object being modified (if any) has an absolute URL.
+        # Note that the use of both `obj.present_in_database` and `obj.pk` is correct here because this conditional
+        # handles all three of the create, update, and delete operations. When Django deletes an instance
+        # from the DB, it sets the instance's PK field to None, regardless of the use of a UUID.
+        if obj is not None and obj.present_in_database and obj.pk and hasattr(obj, "get_absolute_url"):
+            return obj.get_absolute_url()
+
+        # Fall back to the default URL (if specified) for the view.
+        if self.default_return_url is not None:
+            return reverse(self.default_return_url)
+
+        # Attempt to dynamically resolve the list view for the object
+        if hasattr(view, "queryset"):
+            model_opts = view.queryset.model._meta
+            try:
+                prefix = "plugins:" if model_opts.app_label in settings.PLUGINS else ""
+                return reverse(f"{prefix}{model_opts.app_label}:{model_opts.model_name}_list")
+            except NoReverseMatch:
+                pass
+
+        # If all else fails, return home. Ideally this should never happen.
+        return reverse("home")
+
+    def construct_user_permissions(self, request, model):
+        permissions = {}
+        for action in ("add", "change", "delete", "view"):
+            perm_name = get_permission_for_model(model, action)
+            permissions[action] = request.user.has_perm(perm_name)
+        return permissions
+
+    def construct_table(self, request, queryset, permissions):
+        table = self.table(queryset, user=request.user)
+        if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
+            table.columns.show("pk")
+
+        # Apply the request context
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        return RequestConfig(request, paginate).configure(table)
+
+    def validate_action_buttons(self, view, request):
+        """Verify actions in self.action_buttons are valid view actions."""
+
+        always_valid_actions = ("export",)
+        valid_actions = []
+        invalid_actions = []
+
+        for action in view.action_buttons:
+            if action in always_valid_actions or validated_viewname(view.queryset.model, action) is not None:
+                valid_actions.append(action)
+            else:
+                invalid_actions.append(action)
+        if invalid_actions:
+            messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
+        return valid_actions
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""

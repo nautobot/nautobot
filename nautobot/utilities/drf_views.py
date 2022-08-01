@@ -88,7 +88,6 @@ class NautobotViewSetMixin(
             messages.success(request, msg)
             self.success_url = self.get_return_url(request)
             return super().form_valid(form)
-
         elif self.action == "bulk_destroy":
             pk_list = kwargs.pop("pk_list")
             model = self.queryset.model
@@ -690,6 +689,20 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         return Response(data)
 
 
+PERMISSIONS_ACTION_MAP = {
+    "retrieve": "view",
+    "list": "view",
+    "create": "add",
+    "bulk_create": "add",
+    "update": "change",
+    "partial_update": "change",
+    "partial_bulk_update": "change",
+    "bulk_update": "change",
+    "destroy": "delete",
+    "bulkd_destroy": "delete",
+}
+
+
 class NautobotDRFViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -699,5 +712,9 @@ class NautobotDRFViewSet(
     BulkImportViewMixin,
     BulkUpdateViewMixin,
 ):
+
+    def get_permission_action(self):
+        return PERMISSIONS_ACTION_MAP[self.action]
+
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, PERMISSIONS_ACTION_MAP[self.action])
