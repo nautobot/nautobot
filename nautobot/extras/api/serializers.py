@@ -665,7 +665,7 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
         if self.instance:
             if (self.instance.has_sensitive_variables or has_sensitive_variables is True) and approval_required is True:
                 raise serializers.ValidationError(
-                    {"approval_required": ["A job with sensitive variables cannot be marked for approval"]}
+                    {"approval_required": ["A job with sensitive variables cannot be marked as requiring approval"]}
                 )
             elif (self.instance.approval_required or approval_required is True) and has_sensitive_variables is True:
                 raise serializers.ValidationError(

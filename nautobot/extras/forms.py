@@ -984,7 +984,7 @@ class JobEditForm(NautobotModelForm):
                     cleaned_data[field_name] = getattr(job_class, field_name)
 
         if cleaned_data["has_sensitive_variables"] is True and cleaned_data["approval_required"] is True:
-            raise ValidationError({"approval_required": "A job with sensitive variables cannot be marked for approval"})
+            raise ValidationError({"approval_required": "A job with sensitive variables cannot be marked as requiring approval"})
 
         return cleaned_data
 
