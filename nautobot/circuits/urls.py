@@ -15,22 +15,22 @@ urlpatterns = [
     ),
     path(
         "providers/add/",
-        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="provider_add",
     ),
     path(
         "providers/import/",
-        views.ProviderDRFViewSet.as_view({"get": "bulk_create", "post": "perform_bulk_create"}),
+        views.ProviderDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
         name="provider_import",
     ),
     path(
         "providers/edit/",
-        views.ProviderDRFViewSet.as_view({"post": "perform_bulk_edit"}),
+        views.ProviderDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_edit"}),
         name="provider_bulk_edit",
     ),
     path(
         "providers/delete/",
-        views.ProviderDRFViewSet.as_view({"post": "perform_bulk_destroy"}),
+        views.ProviderDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="provider_bulk_delete",
     ),
     path(
@@ -40,12 +40,12 @@ urlpatterns = [
     ),
     path(
         "providers/<slug:slug>/edit/",
-        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="provider_edit",
     ),
     path(
         "providers/<slug:slug>/delete/",
-        views.ProviderDRFViewSet.as_view({"get": "destroy", "post": "perform_destroy"}),
+        views.ProviderDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
         name="provider_delete",
     ),
     path(
@@ -61,22 +61,22 @@ urlpatterns = [
     ),
     path(
         "provider-networks/add/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="providernetwork_add",
     ),
     path(
         "provider-networks/import/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_create", "post": "perform_bulk_create"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
         name="providernetwork_import",
     ),
     path(
         "provider-networks/edit/",
-        views.ProviderNetworkDRFViewSet.as_view({"post": "perform_bulk_edit"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_edit"}),
         name="providernetwork_bulk_edit",
     ),
     path(
         "provider-networks/delete/",
-        views.ProviderNetworkDRFViewSet.as_view({"post": "perform_bulk_destroy"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="providernetwork_bulk_delete",
     ),
     path(
@@ -86,12 +86,12 @@ urlpatterns = [
     ),
     path(
         "provider-networks/<slug:slug>/edit/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="providernetwork_edit",
     ),
     path(
         "provider-networks/<slug:slug>/delete/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "destroy", "post": "perform_destroy"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
         name="providernetwork_delete",
     ),
     path(
@@ -107,17 +107,17 @@ urlpatterns = [
     ),
     path(
         "circuit-types/add/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="circuittype_add",
     ),
     path(
         "circuit-types/import/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_create", "post": "perform_bulk_create"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
         name="circuittype_import",
     ),
     path(
         "circuit-types/delete/",
-        views.CircuitTypeDRFViewSet.as_view({"post": "perform_bulk_destroy"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="circuittype_bulk_delete",
     ),
     path(
@@ -127,12 +127,12 @@ urlpatterns = [
     ),
     path(
         "circuit-types/<slug:slug>/edit/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="circuittype_edit",
     ),
     path(
         "circuit-types/<slug:slug>/delete/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "destroy", "post": "perform_destroy"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
         name="circuittype_delete",
     ),
     path(
@@ -148,22 +148,22 @@ urlpatterns = [
     ),
     path(
         "circuits/add/",
-        views.CircuitDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.CircuitDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="circuit_add",
     ),
     path(
         "circuits/import/",
-        views.CircuitDRFViewSet.as_view({"get": "bulk_create", "post": "perform_bulk_create"}),
+        views.CircuitDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
         name="circuit_import",
     ),
     path(
         "circuits/edit/",
-        views.CircuitDRFViewSet.as_view({"post": "perform_bulk_edit"}),
+        views.CircuitDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_edit"}),
         name="circuit_bulk_edit",
     ),
     path(
         "circuits/delete/",
-        views.CircuitDRFViewSet.as_view({"post": "perform_bulk_destroy"}),
+        views.CircuitDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_destroy"}),
         name="circuit_bulk_delete",
     ),
     path(
@@ -173,12 +173,12 @@ urlpatterns = [
     ),
     path(
         "circuits/<uuid:pk>/edit/",
-        views.CircuitDRFViewSet.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.CircuitDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="circuit_edit",
     ),
     path(
         "circuits/<uuid:pk>/delete/",
-        views.CircuitDRFViewSet.as_view({"get": "destroy", "post": "perform_destroy"}),
+        views.CircuitDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
         name="circuit_delete",
     ),
     path(
@@ -194,7 +194,7 @@ urlpatterns = [
     ),
     path(
         "circuits/<uuid:circuit>/terminations/add/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.CircuitTerminationDRFViewset.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="circuittermination_add",
     ),
     path(
@@ -204,12 +204,12 @@ urlpatterns = [
     ),
     path(
         "circuit-terminations/<uuid:pk>/edit/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "create_or_update", "post": "perform_create_or_update"}),
+        views.CircuitTerminationDRFViewset.as_view({"get": "create_or_update", "post": "create_or_update"}),
         name="circuittermination_edit",
     ),
     path(
         "circuit-terminations/<uuid:pk>/delete/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "destroy", "post": "perform_destroy"}),
+        views.CircuitTerminationDRFViewset.as_view({"get": "destroy", "post": "destroy"}),
         name="circuittermination_delete",
     ),
     path(
