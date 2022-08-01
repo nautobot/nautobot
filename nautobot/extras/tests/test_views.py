@@ -1696,6 +1696,7 @@ class JobTestCase(
         self.add_permissions("extras.view_scheduledjob")
 
         self.test_pass.has_sensitive_variables = True
+        self.test_pass.has_sensitive_variables_override = True
         self.test_pass.validated_save()
 
         start_time = timezone.now() + timedelta(minutes=1)
@@ -1704,12 +1705,12 @@ class JobTestCase(
             "_schedule_name": "test",
             "_schedule_start_time": str(start_time),
         }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
 
-        response = self.client.post(self.run_urls[1], data)
-        self.assertHttpStatus(response, 200, msg=self.run_urls[1])
-
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Job containing sensitive variables and can only be executed immediately.", content)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Job containing sensitive variables and can only be executed immediately.", content)
 
 
 # TODO: Convert to StandardTestCases.Views

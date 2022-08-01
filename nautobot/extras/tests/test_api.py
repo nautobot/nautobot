@@ -1294,6 +1294,10 @@ class JobAPIRunTestMixin:
                 "name": "test",
             },
         }
+        job = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job.has_sensitive_variables = True
+        job.has_sensitive_variables_override = True
+        job.validated_save()
 
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
