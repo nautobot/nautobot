@@ -382,7 +382,9 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         route = "extras:customfield_changelog"
         return reverse(route, kwargs={"name": self.name})
 
-    def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
+    def to_form_field(
+        self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
+    ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
 
@@ -468,7 +470,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
 
         field.model = self
-        field.label = str(self)
+        if label is not None:
+            field.label = label
+        else:
+            field.label = str(self)
 
         if self.description:
             # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input
