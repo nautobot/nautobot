@@ -661,6 +661,7 @@ class JobSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
         has_sensitive_variables = data.get("has_sensitive_variables")
         approval_required = data.get("approval_required")
 
+        # note no validation for on creation of jobs because we do not support user creation of Job records
         if self.instance:
             if (self.instance.has_sensitive_variables or has_sensitive_variables is True) and approval_required is True:
                 raise serializers.ValidationError(

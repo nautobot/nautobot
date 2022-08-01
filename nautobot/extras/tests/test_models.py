@@ -719,6 +719,7 @@ class JobModelTest(TestCase):
             "hidden": not self.local_job.hidden,
             "read_only": not self.local_job.read_only,
             "approval_required": not self.local_job.approval_required,
+            "has_sensitive_variables": not self.local_job.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
         }
