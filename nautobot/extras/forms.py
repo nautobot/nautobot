@@ -967,9 +967,9 @@ class JobEditForm(NautobotModelForm):
             "soft_time_limit",
             "time_limit_override",
             "time_limit",
-            "tags",
             "has_sensitive_variables",
             "has_sensitive_variables_override",
+            "tags",
         ]
 
     def clean(self):

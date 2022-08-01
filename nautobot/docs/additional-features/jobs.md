@@ -134,12 +134,12 @@ A list of strings (field names) representing the order your job [variables](#var
 
 Default: `True`
 
-When set to True, it prevents the job's input parameters from being saved to the database.
+When set to True, it prevents the job's input parameters from being saved to the database. This is important to set correctly if the job's input parameters include sensitive data such as passwords or other user credentials, although if possible you should consider whether the job could be re-implemented using Nautobot's `Secrets` feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
 
 Important notes about jobs with sensitive variables:
 
-* Jobs can only be executed immediately via UI or API.
-* Jobs with sensitive variables cannot be set for approval.
+* Such jobs cannot be scheduled to run in the future or on a recurring schedule (as scheduled jobs must by necessity store their variables in the database for future reference).
+* Jobs with sensitive variables cannot be marked as requiring approval (as jobs pending approval must store their variables in the database until approved).
 
 #### `hidden`
 
