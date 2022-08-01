@@ -467,6 +467,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
             if cf.type == "date":
+                # TODO 2.0: revisit this when we do our filterset streamlining/consolidation for the v2 work
                 self.filters[f"cf_{cf.name}__gte"] = CustomFieldFilter(
                     field_name=cf.name, custom_field=cf, lookup_expr="gte"
                 )
