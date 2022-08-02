@@ -155,6 +155,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Changed
 
 - [#2025](https://github.com/nautobot/nautobot/pull/2025) - Tweak Renovate config for automated package management.
+- [#2114](https://github.com/nautobot/nautobot/issues/2114) - Home page now redirects to the login page when `HIDE_RESTRICTED_UI` is enabled and user is not authenticated.
 - [#2115](https://github.com/nautobot/nautobot/pull/2115) - Patch updates to `mkdocs`, `svgwrite`.
 
 ### Fixed
