@@ -70,6 +70,9 @@ class NautobotViewSetMixin(
         return obj
 
     def _destroy(self):
+        """
+        Helper method to destroy an object after the form is validated successfully.
+        """
         request = self.request
         obj = self.obj
         try:
@@ -85,6 +88,9 @@ class NautobotViewSetMixin(
         self.success_url = self.get_return_url(request)
 
     def _bulk_destroy(self, form):
+        """
+        Helper method to destroy objects after the form is validated successfully.
+        """
         request = self.request
         pk_list = self.pk_list
         model = self.queryset.model
@@ -103,6 +109,9 @@ class NautobotViewSetMixin(
         messages.success(request, msg)
 
     def _create_or_update(self, form):
+        """
+        Helper method to create or update an object after the form is validated successfully.
+        """
         request = self.request
         with transaction.atomic():
             object_created = not form.instance.present_in_database
@@ -131,6 +140,9 @@ class NautobotViewSetMixin(
                     self.success_url = self.get_return_url(request, obj)
 
     def _bulk_edit(self, form):
+        """
+        Helper method to edit objects in bulk after the form is validated successfully.
+        """
         request = self.request
         model = self.queryset.model
         custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
@@ -189,7 +201,10 @@ class NautobotViewSetMixin(
         self.success_url = self.get_return_url(request)
 
     def _bulk_create(self, form):
-         # Iterate through CSV data and bind each row to a new model form instance.
+        """
+        Helper method to create objects in bulk after the form is validated successfully.
+        """
+        # Iterate through CSV data and bind each row to a new model form instance.
         new_objs = []
         request = self.request
         with transaction.atomic():
@@ -251,8 +266,8 @@ class NautobotViewSetMixin(
 
         elif self.action == "bulk_create":
             try:
-               self._bulk_create(form)
-               return Response(
+                self._bulk_create(form)
+                return Response(
                     {
                         "table": self.obj_table,
                         "return_url": self.get_return_url(request),
