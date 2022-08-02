@@ -514,7 +514,7 @@ When set to `True`, users with limited permissions will only be able to see item
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 !!! note
-    As of Nautobot 1.3.10, when this settings is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
+    As of Nautobot 1.3.10, when this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
 
 ---
 
