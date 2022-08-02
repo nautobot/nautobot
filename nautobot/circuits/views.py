@@ -6,24 +6,24 @@ from django_tables2 import RequestConfig
 
 
 from nautobot.core.views import generic
+from nautobot.utilities.drf_views import NautobotDRFViewSet
 from nautobot.utilities.forms import ConfirmationForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-
+from nautobot.utilities.utils import count_related
 
 from . import filters, forms, tables
 from .api import nested_serializers
 from .choices import CircuitTerminationSideChoices
 from .models import Circuit, CircuitType, CircuitTermination, Provider, ProviderNetwork
-from nautobot.utilities.drf_views import NautobotDRFViewSet
 
 
 class CircuitTypeDRFViewSet(NautobotDRFViewSet):
     model = CircuitType
     serializer_class = nested_serializers.NestedCircuitTypeSerializer
-    queryset = CircuitType.objects.all()
-    table = tables.CircuitTypeTable
-    form = forms.CircuitTypeForm
-    filterset = filters.CircuitTypeFilterSet
+    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
+    table_class = tables.CircuitTypeTable
+    form_class = forms.CircuitTypeForm
+    filterset_class = filters.CircuitTypeFilterSet
     import_form = forms.CircuitTypeCSVForm
     lookup_field = "slug"
 
@@ -59,7 +59,7 @@ class CircuitTerminationDRFViewset(NautobotDRFViewSet):
     model = CircuitTermination
     queryset = CircuitTermination.objects.all()
     serializer_class = nested_serializers.NestedCircuitTerminationSerializer
-    form = forms.CircuitTerminationForm
+    form_class = forms.CircuitTerminationForm
     lookup_field = "pk"
 
     def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
@@ -74,13 +74,13 @@ class CircuitTerminationDRFViewset(NautobotDRFViewSet):
 class ProviderDRFViewSet(NautobotDRFViewSet):
     model = Provider
     serializer_class = nested_serializers.NestedProviderSerializer
-    queryset = Provider.objects.all()
-    table = tables.ProviderTable
-    form = forms.ProviderForm
-    filterset_form = forms.ProviderFilterForm
-    filterset = filters.ProviderFilterSet
+    queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
+    table_class = tables.ProviderTable
+    form_class = forms.ProviderForm
+    filterset_form_class = forms.ProviderFilterForm
+    filterset_class = filters.ProviderFilterSet
     import_form = forms.ProviderCSVForm
-    bulk_edit_form = forms.ProviderBulkEditForm
+    bulk_edit_form_class = forms.ProviderBulkEditForm
     lookup_field = "slug"
 
     def get_extra_context(self, request, view_type, instance):
@@ -90,7 +90,6 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
                 .filter(provider=instance)
                 .prefetch_related("type", "tenant", "terminations__site")
             )
-
             circuits_table = tables.CircuitTable(circuits)
             circuits_table.columns.hide("provider")
 
@@ -116,12 +115,12 @@ class CircuitDRFViewSet(NautobotDRFViewSet):
     prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
     serializer_class = nested_serializers.NestedCircuitSerializer
     queryset = Circuit.objects.all()
-    table = tables.CircuitTable
-    form = forms.CircuitForm
-    filterset = filters.CircuitFilterSet
-    filterset_form = forms.CircuitFilterForm
+    table_class = tables.CircuitTable
+    form_class = forms.CircuitForm
+    filterset_class = filters.CircuitFilterSet
+    filterset_form_class = forms.CircuitFilterForm
     import_form = forms.CircuitCSVForm
-    bulk_edit_form = forms.CircuitBulkEditForm
+    bulk_edit_form_class = forms.CircuitBulkEditForm
     lookup_field = "pk"
 
     def get_extra_context(self, request, view_type, instance):
@@ -174,12 +173,12 @@ class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
     model = ProviderNetwork
     queryset = ProviderNetwork.objects.all()
     serializer_class = nested_serializers.NestedProviderNetworkSerializer
-    table = tables.ProviderNetworkTable
-    form = forms.ProviderNetworkForm
-    filterset_form = forms.ProviderNetworkFilterForm
-    filterset = filters.ProviderNetworkFilterSet
+    table_class = tables.ProviderNetworkTable
+    form_class = forms.ProviderNetworkForm
+    filterset_form_class = forms.ProviderNetworkFilterForm
+    filterset_class = filters.ProviderNetworkFilterSet
     import_form = forms.ProviderNetworkCSVForm
-    bulk_edit_form = forms.ProviderNetworkBulkEditForm
+    bulk_edit_form_class = forms.ProviderNetworkBulkEditForm
     lookup_field = "slug"
 
     def get_extra_context(self, request, view_type, instance):

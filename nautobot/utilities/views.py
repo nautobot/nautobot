@@ -9,7 +9,6 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
-    ImproperlyConfigured,
     ObjectDoesNotExist,
     ValidationError,
 )

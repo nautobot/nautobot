@@ -1,5 +1,4 @@
 import logging
-from functools import update_wrapper
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,8 +19,6 @@ from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
-from django.utils.decorators import classonlymethod
-from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
 
 from rest_framework import generics, mixins
@@ -72,10 +69,12 @@ class NautobotViewSetMixin(
         # given some parameter from the request URL.
         return obj
 
-    def form_valid(self, obj, form, **kwargs):
+    def form_valid(self, form):
         self.logger.debug("Form validation was successful")
         request = self.request
+
         if self.action == "destroy":
+            obj = self.obj
             try:
                 obj.delete()
             except ProtectedError as e:
@@ -88,8 +87,9 @@ class NautobotViewSetMixin(
             messages.success(request, msg)
             self.success_url = self.get_return_url(request)
             return super().form_valid(form)
+
         elif self.action == "bulk_destroy":
-            pk_list = kwargs.pop("pk_list")
+            pk_list = self.pk_list
             model = self.queryset.model
             # Delete objects
             queryset = self.queryset.filter(pk__in=pk_list)
@@ -147,7 +147,7 @@ class NautobotViewSetMixin(
                 with transaction.atomic():
                     updated_objects = []
                     for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
-                        obj = self.alter_obj_for_bulk_edit(obj, request, [], kwargs)
+                        obj = self.alter_obj_for_bulk_edit(obj, request, [], self.kwargs)
                         # Update standard fields. If a field is listed in _nullify, delete its value.
                         for name in standard_fields:
                             try:
@@ -225,7 +225,7 @@ class NautobotViewSetMixin(
                         raise ObjectDoesNotExist
 
                 # Compile a table containing the imported objects
-                obj_table = self.table(new_objs)
+                obj_table = self.table_class(new_objs)
                 if new_objs:
                     msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
                     self.logger.info(msg)
@@ -246,9 +246,9 @@ class NautobotViewSetMixin(
                 form.add_error(None, msg)
 
         data = {}
-        if self.action == "bulk_edit" or self.action == "bulk_delete":
-            pk_list = kwargs.pop("pk_list")
-            table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
+        if self.action in ["bulk_edit", "bulk_delete"]:
+            pk_list = self.pk_list
+            table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
                 messages.warning(
                     request,
@@ -263,12 +263,23 @@ class NautobotViewSetMixin(
         return Response(data)
 
     def form_invalid(self, form):
-        context = {}
-        context.update({"form": form})
-        self.logger.debug("Form Validation Failed")
-        if self.action == "bulk_edit" or self.action == "bulk_destroy":
-            return context
-        return Response(context)
+        data = {}
+        request = self.request
+        if self.action in ["bulk_edit", "bulk_delete"]:
+            pk_list = self.pk_list
+            table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
+            if not table.rows:
+                messages.warning(
+                    request,
+                    f"No {self.queryset.model._meta.verbose_name_plural} were selected for deletion.",
+                )
+                return redirect(self.get_return_url(request))
+
+            data = {
+                "table": table,
+            }
+        data.update({"form": form})
+        return Response(data)
 
     def get_object(self):
         """
@@ -299,18 +310,15 @@ class NautobotViewSetMixin(
         """
         return {}
 
-    def get_template_name(self, view_type):
-        # Use "<app>/<model>_<view_type> if available, else fall back to generic templates
+    def get_template_name(self, action):
+        # Use "<app>/<model>_<action> if available, else fall back to generic templates
         model_opts = self.model._meta
         app_label = model_opts.app_label
-        if view_type == "detail":
-            return f"{app_label}/{model_opts.model_name}.html"
-
         try:
-            select_template([f"{app_label}/{model_opts.model_name}_{view_type}.html"])
-            return f"{app_label}/{model_opts.model_name}_{view_type}.html"
+            select_template([f"{app_label}/{model_opts.model_name}_{action}.html"])
+            return f"{app_label}/{model_opts.model_name}_{action}.html"
         except TemplateDoesNotExist:
-            return f"generic/object_{view_type}.html"
+            return f"utilities/object_{action}.html"
 
     def initial(self, request, *args, **kwargs):
         """
@@ -330,93 +338,6 @@ class NautobotViewSetMixin(
         self.perform_authentication(request)
         self.check_permissions(request)
         self.check_throttles(request)
-
-    @classonlymethod
-    def as_view(cls, actions=None, **initkwargs):
-        """
-        Because of the way class based views create a closure around the
-        instantiated view, we need to totally reimplement `.as_view`,
-        and slightly modify the view function that is created and returned.
-        """
-        # The name and description initkwargs may be explicitly overridden for
-        # certain route confiugurations. eg, names of extra actions.
-        cls.name = None
-        cls.description = None
-
-        # The suffix initkwarg is reserved for displaying the viewset type.
-        # This initkwarg should have no effect if the name is provided.
-        # eg. 'List' or 'Instance'.
-        cls.suffix = None
-
-        # The detail initkwarg is reserved for introspecting the viewset type.
-        cls.detail = None
-
-        # Setting a basename allows a view to reverse its action urls. This
-        # value is provided by the router through the initkwargs.
-        cls.basename = None
-
-        # actions must not be empty
-        if not actions:
-            raise TypeError(
-                "The `actions` argument must be provided when "
-                "calling `.as_view()` on a ViewSet. For example "
-                "`.as_view({'get': 'list'})`"
-            )
-
-        # sanitize keyword arguments
-        for key in initkwargs:
-            if key in cls.http_method_names:
-                raise TypeError(
-                    "You tried to pass in the %s method name as a "
-                    "keyword argument to %s(). Don't do that." % (key, cls.__name__)
-                )
-            if not hasattr(cls, key):
-                raise TypeError("%s() received an invalid keyword %r" % (cls.__name__, key))
-
-        # name and suffix are mutually exclusive
-        if "name" in initkwargs and "suffix" in initkwargs:
-            raise TypeError(
-                "%s() received both `name` and `suffix`, which are mutually exclusive arguments." % (cls.__name__)
-            )
-
-        def view(request, *args, **kwargs):
-            self = cls(**initkwargs)
-            # We also store the mapping of request methods to actions,
-            # so that we can later set the action attribute.
-            # eg. `self.action = 'list'` on an incoming GET request.
-            self.action_map = actions
-
-            # Bind methods to actions
-            # This is the bit that's different to a standard view
-            for method, action in actions.items():
-                handler = getattr(self, action)
-                setattr(self, method, handler)
-
-            if hasattr(self, "get") and not hasattr(self, "head"):
-                self.head = self.get
-
-            self.request = request
-            self.args = args
-            self.kwargs = kwargs
-            self.action = action
-
-            # And continue as usual
-            return self.dispatch(request, *args, **kwargs)
-
-        # take name and docstring from class
-        update_wrapper(view, cls, updated=())
-
-        # and possible attributes set by decorators
-        # like csrf_exempt from dispatch
-        update_wrapper(view, cls.dispatch, assigned=())
-
-        # We need to set these on the view function, so that breadcrumb
-        # generation can pick out these bits of information from a
-        # resolved URL.
-        view.cls = cls
-        view.initkwargs = initkwargs
-        view.actions = actions
-        return csrf_exempt(view)
 
 
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
@@ -449,7 +370,8 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     action_buttons = ("add", "import", "export")
-    filterset_form = None
+    filterset_class = None
+    filterset_form_class = None
 
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
@@ -537,10 +459,10 @@ class ObjectDeleteViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
         return Response(context)
 
     def perform_destroy(self, request, **kwargs):
-        obj = self.get_object()
+        self.obj = self.get_object()
         form = ConfirmationForm(request.POST)
         if form.is_valid():
-            return self.form_valid(obj, form)
+            return self.form_valid(form)
         else:
             return self.form_invalid(form)
 
@@ -555,17 +477,18 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         return Response(context)
 
     def perform_create_or_update(self, request, *args, **kwargs):
-        obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
-        form = self.form(data=request.POST, files=request.FILES, instance=obj)
+        self.obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
+        form = self.form_class(data=request.POST, files=request.FILES, instance=self.obj)
         restrict_form_fields(form, request.user)
         if form.is_valid():
-            return self.form_valid(obj, form)
+            return self.form_valid(form)
         else:
             return self.form_invalid(form)
 
 
 class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixin):
     bulk_delete_form = None
+    filterset_class = None
     logger = logging.getLogger("nautobot.views.BulkDeleteView")
 
     def get_form(self):
@@ -589,22 +512,22 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixi
         model = self.queryset.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            if self.bulk_delete_filterset is not None:
-                pk_list = [obj.pk for obj in self.bulk_delete_filterset(request.GET, model.objects.only("pk")).qs]
+            if self.filterset_class is not None:
+                self.pk_list = [obj.pk for obj in self.filterset_class(request.GET, model.objects.only("pk")).qs]
             else:
-                pk_list = model.objects.values_list("pk", flat=True)
+                self.pk_list = model.objects.values_list("pk", flat=True)
         else:
-            pk_list = request.POST.getlist("pk")
+            self.pk_list = request.POST.getlist("pk")
 
-        form_cls = self.get_form()
+        form_class = self.get_form()
         data = {}
         if "_confirm" in request.POST:
-            form = form_cls(request.POST)
+            form = form_class(request.POST)
             if form.is_valid():
-                return self.form_valid(obj=None, form=form, pk_list=pk_list)
+                return self.form_valid(form)
             else:
-                data = self.form_invalid(form)
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
+                return self.form_invalid(form)
+        table = self.table_class(self.queryset.filter(pk__in=self.pk_list), orderable=False)
         if not table.rows:
             messages.warning(
                 request,
@@ -642,14 +565,14 @@ class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
     def perform_bulk_create(self, request):
         form = self._import_form_for_bulk_import(request.POST)
         if form.is_valid():
-            return self.form_valid(obj=None, form=form)
+            return self.form_valid(form)
         else:
             return self.form_invalid(form)
 
 
 class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin):
-    bulk_edit_filterset = None
-    bulk_edit_form = None
+    filterset_class = None
+    bulk_edit_form_class = None
     logger = logging.getLogger("nautobot.views.BulkEditView")
 
     def alter_obj_for_bulk_edit(self, obj, request, url_args, url_kwargs):
@@ -665,20 +588,21 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if request.POST.get("_all") and self.bulk_edit_filterset is not None:
-            pk_list = [obj.pk for obj in self.bulk_edit_filterset(request.GET, self.queryset.only("pk")).qs]
+        if request.POST.get("_all") and self.filterset_class is not None:
+            self.pk_list = [obj.pk for obj in self.filterset_class(request.GET, self.queryset.only("pk")).qs]
         else:
-            pk_list = request.POST.getlist("pk")
+            self.pk_list = request.POST.getlist("pk")
         data = {}
         if "_apply" in request.POST:
-            form = self.bulk_edit_form(model, request.POST)
+            self.kwargs = kwargs
+            form = self.bulk_edit_form_class(model, request.POST)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.form_valid(obj=None, form=form, pk_list=pk_list, **kwargs)
+                return self.form_valid(form)
             else:
-                data = self.form_invalid(form)
+                return self.form_invalid(form)
 
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
+        table = self.table_class(self.queryset.filter(pk__in=self.pk_list), orderable=False)
         if not table.rows:
             messages.warning(
                 request,
@@ -687,20 +611,6 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
             return redirect(self.get_return_url(request))
         data.update({"table": table})
         return Response(data)
-
-
-PERMISSIONS_ACTION_MAP = {
-    "retrieve": "view",
-    "list": "view",
-    "create": "add",
-    "bulk_create": "add",
-    "update": "change",
-    "partial_update": "change",
-    "partial_bulk_update": "change",
-    "bulk_update": "change",
-    "destroy": "delete",
-    "bulkd_destroy": "delete",
-}
 
 
 class NautobotDRFViewSet(
@@ -712,9 +622,5 @@ class NautobotDRFViewSet(
     BulkImportViewMixin,
     BulkUpdateViewMixin,
 ):
-
-    def get_permission_action(self):
-        return PERMISSIONS_ACTION_MAP[self.action]
-
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, PERMISSIONS_ACTION_MAP[self.action])
