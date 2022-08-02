@@ -4,13 +4,13 @@ from django_tables2 import RequestConfig
 
 from rest_framework import renderers
 
-from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.forms import (
     ConfirmationForm,
     TableConfigForm,
     restrict_form_fields,
 )
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     normalize_querydict,
@@ -59,7 +59,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
-
+        # added check for whether the action_buttons exist because of issue #2107
+        if not view.action_buttons:
+            view.actions_buttons = ("add", "import", "export")
         for action in view.action_buttons:
             if action in always_valid_actions or validated_viewname(view.queryset.model, action) is not None:
                 valid_actions.append(action)

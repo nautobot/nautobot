@@ -47,12 +47,8 @@ class CircuitTypeDRFViewSet(NautobotDRFViewSet):
             return {
                 "circuits_table": circuits_table,
             }
-        elif view_type == "list":
-            return {}
-        elif view_type == "bulk_edit":
-            return {}
         else:
-            return {}
+            return super().get_extra_context(request, view_type, instance)
 
 
 class CircuitTerminationDRFViewset(NautobotDRFViewSet):
@@ -102,12 +98,8 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
             return {
                 "circuits_table": circuits_table,
             }
-        elif view_type == "list":
-            return {}
-        elif view_type == "bulk_edit":
-            return {}
         else:
-            return {}
+            return super().get_extra_context(request, view_type, instance)
 
 
 class CircuitDRFViewSet(NautobotDRFViewSet):
@@ -161,12 +153,8 @@ class CircuitDRFViewSet(NautobotDRFViewSet):
                 "termination_a": termination_a,
                 "termination_z": termination_z,
             }
-        elif view_type == "list":
-            return {}
-        elif view_type == "bulk_edit":
-            return {}
         else:
-            return {}
+            return super().get_extra_context(request, view_type, instance)
 
 
 class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
@@ -199,12 +187,8 @@ class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
             return {
                 "circuits_table": circuits_table,
             }
-        elif view_type == "list":
-            return {}
-        elif view_type == "bulk_edit":
-            return {}
         else:
-            return {}
+            return super().get_extra_context(request, view_type, instance)
 
 
 class CircuitSwapTerminations(generic.ObjectEditView):
