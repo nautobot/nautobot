@@ -69,69 +69,169 @@ class NautobotViewSetMixin(
         # given some parameter from the request URL.
         return obj
 
-    def form_valid(self, form):
-        self.logger.debug("Form validation was successful")
+    def _destroy(self):
         request = self.request
+        obj = self.obj
+        try:
+            obj.delete()
+        except ProtectedError as e:
+            self.logger.info("Caught ProtectedError while attempting to delete object")
+            handle_protectederror([obj], request, e)
+            return redirect(obj.get_absolute_url())
 
-        if self.action == "destroy":
-            obj = self.obj
-            try:
-                obj.delete()
-            except ProtectedError as e:
-                self.logger.info("Caught ProtectedError while attempting to delete object")
-                handle_protectederror([obj], request, e)
-                return redirect(obj.get_absolute_url())
+        msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
+        self.logger.info(msg)
+        messages.success(request, msg)
+        self.success_url = self.get_return_url(request)
 
-            msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
-            self.logger.info(msg)
-            messages.success(request, msg)
+    def _bulk_destroy(self, form):
+        request = self.request
+        pk_list = self.pk_list
+        model = self.queryset.model
+        # Delete objects
+        queryset = self.queryset.filter(pk__in=pk_list)
+        try:
+            deleted_count = queryset.delete()[1][model._meta.label]
+        except ProtectedError as e:
+            self.logger.info("Caught ProtectedError while attempting to delete objects")
+            handle_protectederror(queryset, request, e)
             self.success_url = self.get_return_url(request)
             return super().form_valid(form)
+        msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
+        self.logger.info(msg)
+        self.success_url = self.get_return_url(request)
+        messages.success(request, msg)
 
-        elif self.action == "bulk_destroy":
-            pk_list = self.pk_list
-            model = self.queryset.model
-            # Delete objects
-            queryset = self.queryset.filter(pk__in=pk_list)
-            try:
-                deleted_count = queryset.delete()[1][model._meta.label]
-            except ProtectedError as e:
-                self.logger.info("Caught ProtectedError while attempting to delete objects")
-                handle_protectederror(queryset, request, e)
-                self.success_url = self.get_return_url(request)
-                return super().form_valid(form)
-            msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
-            self.logger.info(msg)
-            self.success_url = self.get_return_url(request)
-            messages.success(request, msg)
-            return super().form_valid(form)
+    def _create_or_update(self, form):
+        request = self.request
+        with transaction.atomic():
+            object_created = not form.instance.present_in_database
+            obj = form.save()
 
-        elif self.action == "create_or_update":
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-                msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
-                self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} { escape(obj)}"
-                messages.success(request, mark_safe(msg))
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-                    return redirect(request.get_full_path())
+            # Check that the new object conforms with any assigned object-level permissions
+            self.queryset.get(pk=obj.pk)
+            msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
+            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
+            if hasattr(obj, "get_absolute_url"):
+                msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+            else:
+                msg = f"{msg} { escape(obj)}"
+            messages.success(request, mark_safe(msg))
+            if "_addanother" in request.POST:
+                # If the object has clone_fields, pre-populate a new instance of the form
+                if hasattr(obj, "clone_fields"):
+                    url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                    self.success_url = url
+                self.success_url = request.get_full_path()
+            else:
                 return_url = form.cleaned_data.get("return_url")
                 if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
                     self.success_url = return_url
                 else:
                     self.success_url = self.get_return_url(request, obj)
+
+    def _bulk_edit(self, form):
+        request = self.request
+        model = self.queryset.model
+        custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
+        standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
+        nullified_fields = request.POST.getlist("_nullify")
+        with transaction.atomic():
+            updated_objects = []
+            for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
+                self.obj = obj
+                obj = self.alter_obj_for_bulk_edit(obj, request, [], self.kwargs)
+                # Update standard fields. If a field is listed in _nullify, delete its value.
+                for name in standard_fields:
+                    try:
+                        model_field = model._meta.get_field(name)
+                    except FieldDoesNotExist:
+                        # This form field is used to modify a field rather than set its value directly
+                        model_field = None
+                    # Handle nullification
+                    if name in form.nullable_fields and name in nullified_fields:
+                        if isinstance(model_field, ManyToManyField):
+                            getattr(obj, name).set([])
+                        else:
+                            setattr(obj, name, None if model_field.null else "")
+                    # ManyToManyFields
+                    elif isinstance(model_field, ManyToManyField):
+                        if form.cleaned_data[name]:
+                            getattr(obj, name).set(form.cleaned_data[name])
+                    # Normal fields
+                    elif form.cleaned_data[name] not in (None, ""):
+                        setattr(obj, name, form.cleaned_data[name])
+                # Update custom fields
+                for name in custom_fields:
+                    if name in form.nullable_fields and name in nullified_fields:
+                        obj.cf[name] = None
+                    elif form.cleaned_data.get(name) not in (None, ""):
+                        obj.cf[name] = form.cleaned_data[name]
+
+                obj.full_clean()
+                obj.save()
+                updated_objects.append(obj)
+                self.logger.debug(f"Saved {obj} (PK: {obj.pk})")
+
+                # Add/remove tags
+                if form.cleaned_data.get("add_tags", None):
+                    obj.tags.add(*form.cleaned_data["add_tags"])
+                if form.cleaned_data.get("remove_tags", None):
+                    obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+            # Enforce object-level permissions
+            if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
+                raise ObjectDoesNotExist
+        if updated_objects:
+            msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
+            self.logger.info(msg)
+            messages.success(self.request, msg)
+        self.success_url = self.get_return_url(request)
+
+    def _bulk_create(self, form):
+         # Iterate through CSV data and bind each row to a new model form instance.
+        new_objs = []
+        request = self.request
+        with transaction.atomic():
+            headers, records = form.cleaned_data["csv_data"]
+            for row, data in enumerate(records, start=1):
+                obj_form = self.import_form(data, headers=headers)
+                restrict_form_fields(obj_form, request.user)
+
+                if obj_form.is_valid():
+                    obj = self._save_obj_for_bulk_import(obj_form, request)
+                    new_objs.append(obj)
+                else:
+                    for field, err in obj_form.errors.items():
+                        form.add_error("csv_data", f"Row {row} {field}: {err[0]}")
+                    raise ValidationError("")
+
+            # Enforce object-level permissions
+            if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                raise ObjectDoesNotExist
+
+        # Compile a table containing the imported objects
+        self.obj_table = self.table_class(new_objs)
+        if new_objs:
+            msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
+            self.logger.info(msg)
+            messages.success(request, msg)
+
+    def form_valid(self, form):
+        self.logger.debug("Form validation was successful")
+        request = self.request
+
+        if self.action == "destroy":
+            self._destroy()
+            return super().form_valid(form)
+
+        elif self.action == "bulk_destroy":
+            self._bulk_destroy(form)
+            return super().form_valid(form)
+
+        elif self.action == "create_or_update":
+            try:
+                self._create_or_update(form)
                 return super().form_valid(form)
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
@@ -139,104 +239,26 @@ class NautobotViewSetMixin(
                 form.add_error(None, msg)
 
         elif self.action == "bulk_edit":
-            model = self.queryset.model
-            custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
-            standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
-            nullified_fields = request.POST.getlist("_nullify")
             try:
-                with transaction.atomic():
-                    updated_objects = []
-                    for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
-                        obj = self.alter_obj_for_bulk_edit(obj, request, [], self.kwargs)
-                        # Update standard fields. If a field is listed in _nullify, delete its value.
-                        for name in standard_fields:
-                            try:
-                                model_field = model._meta.get_field(name)
-                            except FieldDoesNotExist:
-                                # This form field is used to modify a field rather than set its value directly
-                                model_field = None
-                            # Handle nullification
-                            if name in form.nullable_fields and name in nullified_fields:
-                                if isinstance(model_field, ManyToManyField):
-                                    getattr(obj, name).set([])
-                                else:
-                                    setattr(obj, name, None if model_field.null else "")
-                            # ManyToManyFields
-                            elif isinstance(model_field, ManyToManyField):
-                                if form.cleaned_data[name]:
-                                    getattr(obj, name).set(form.cleaned_data[name])
-                            # Normal fields
-                            elif form.cleaned_data[name] not in (None, ""):
-                                setattr(obj, name, form.cleaned_data[name])
-                        # Update custom fields
-                        for name in custom_fields:
-                            if name in form.nullable_fields and name in nullified_fields:
-                                obj.cf[name] = None
-                            elif form.cleaned_data.get(name) not in (None, ""):
-                                obj.cf[name] = form.cleaned_data[name]
-
-                        obj.full_clean()
-                        obj.save()
-                        updated_objects.append(obj)
-                        self.logger.debug(f"Saved {obj} (PK: {obj.pk})")
-
-                        # Add/remove tags
-                        if form.cleaned_data.get("add_tags", None):
-                            obj.tags.add(*form.cleaned_data["add_tags"])
-                        if form.cleaned_data.get("remove_tags", None):
-                            obj.tags.remove(*form.cleaned_data["remove_tags"])
-
-                    # Enforce object-level permissions
-                    if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
-                        raise ObjectDoesNotExist
-                if updated_objects:
-                    msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-                    self.logger.info(msg)
-                    messages.success(self.request, msg)
-                self.success_url = self.get_return_url(request)
+                self._bulk_edit(form)
                 return super().form_valid(form)
             except ValidationError as e:
-                messages.error(self.request, f"{obj} failed validation: {e}")
+                messages.error(self.request, f"{self.obj} failed validation: {e}")
             except ObjectDoesNotExist:
                 msg = "Object update failed due to object-level permissions violation"
                 self.logger.debug(msg)
                 form.add_error(None, msg)
 
         elif self.action == "bulk_create":
-            new_objs = []
             try:
-                # Iterate through CSV data and bind each row to a new model form instance.
-                with transaction.atomic():
-                    headers, records = form.cleaned_data["csv_data"]
-                    for row, data in enumerate(records, start=1):
-                        obj_form = self.import_form(data, headers=headers)
-                        restrict_form_fields(obj_form, request.user)
-
-                        if obj_form.is_valid():
-                            obj = self._save_obj_for_bulk_import(obj_form, request)
-                            new_objs.append(obj)
-                        else:
-                            for field, err in obj_form.errors.items():
-                                form.add_error("csv_data", f"Row {row} {field}: {err[0]}")
-                            raise ValidationError("")
-
-                    # Enforce object-level permissions
-                    if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
-                        raise ObjectDoesNotExist
-
-                # Compile a table containing the imported objects
-                obj_table = self.table_class(new_objs)
-                if new_objs:
-                    msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
-                    self.logger.info(msg)
-                    messages.success(request, msg)
-                    return Response(
-                        {
-                            "table": obj_table,
-                            "return_url": self.get_return_url(request),
-                            "template": "import_success.html",
-                        },
-                    )
+               self._bulk_create(form)
+               return Response(
+                    {
+                        "table": self.obj_table,
+                        "return_url": self.get_return_url(request),
+                        "template": "import_success.html",
+                    },
+                )
             except ValidationError:
                 pass
 
