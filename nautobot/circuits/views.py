@@ -24,12 +24,12 @@ class CircuitTypeDRFViewSet(NautobotDRFViewSet):
     table_class = tables.CircuitTypeTable
     form_class = forms.CircuitTypeForm
     filterset_class = filters.CircuitTypeFilterSet
-    import_form = forms.CircuitTypeCSVForm
+    import_form_class = forms.CircuitTypeCSVForm
     lookup_field = "slug"
 
-    def get_extra_context(self, request, view_type, instance):
+    def get_extra_context(self, request, instance):
         # Circuits
-        if view_type == "detail":
+        if self.action == "retrieve":
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(type=instance)
@@ -48,7 +48,7 @@ class CircuitTypeDRFViewSet(NautobotDRFViewSet):
                 "circuits_table": circuits_table,
             }
         else:
-            return super().get_extra_context(request, view_type, instance)
+            return super().get_extra_context(request, instance)
 
 
 class CircuitTerminationDRFViewset(NautobotDRFViewSet):
@@ -75,12 +75,12 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
     form_class = forms.ProviderForm
     filterset_form_class = forms.ProviderFilterForm
     filterset_class = filters.ProviderFilterSet
-    import_form = forms.ProviderCSVForm
-    bulk_edit_form_class = forms.ProviderBulkEditForm
+    import_form_class = forms.ProviderCSVForm
+    bulk_update_form_class = forms.ProviderBulkEditForm
     lookup_field = "slug"
 
-    def get_extra_context(self, request, view_type, instance):
-        if view_type == "detail":
+    def get_extra_context(self, request, instance):
+        if self.action == "retrieve":
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(provider=instance)
@@ -99,7 +99,7 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
                 "circuits_table": circuits_table,
             }
         else:
-            return super().get_extra_context(request, view_type, instance)
+            return super().get_extra_context(request, instance)
 
 
 class CircuitDRFViewSet(NautobotDRFViewSet):
@@ -111,12 +111,12 @@ class CircuitDRFViewSet(NautobotDRFViewSet):
     form_class = forms.CircuitForm
     filterset_class = filters.CircuitFilterSet
     filterset_form_class = forms.CircuitFilterForm
-    import_form = forms.CircuitCSVForm
-    bulk_edit_form_class = forms.CircuitBulkEditForm
+    import_form_class = forms.CircuitCSVForm
+    bulk_update_form_class = forms.CircuitBulkEditForm
     lookup_field = "pk"
 
-    def get_extra_context(self, request, view_type, instance):
-        if view_type == "detail":
+    def get_extra_context(self, request, instance):
+        if self.action == "retrieve":
             # A-side termination
             termination_a = (
                 CircuitTermination.objects.restrict(request.user, "view")
@@ -154,7 +154,7 @@ class CircuitDRFViewSet(NautobotDRFViewSet):
                 "termination_z": termination_z,
             }
         else:
-            return super().get_extra_context(request, view_type, instance)
+            return super().get_extra_context(request, instance)
 
 
 class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
@@ -165,12 +165,12 @@ class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
     form_class = forms.ProviderNetworkForm
     filterset_form_class = forms.ProviderNetworkFilterForm
     filterset_class = filters.ProviderNetworkFilterSet
-    import_form = forms.ProviderNetworkCSVForm
-    bulk_edit_form_class = forms.ProviderNetworkBulkEditForm
+    import_form_class = forms.ProviderNetworkCSVForm
+    bulk_update_form_class = forms.ProviderNetworkBulkEditForm
     lookup_field = "slug"
 
-    def get_extra_context(self, request, view_type, instance):
-        if view_type == "detail":
+    def get_extra_context(self, request, instance):
+        if self.action == "retrieve":
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
@@ -188,7 +188,7 @@ class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
                 "circuits_table": circuits_table,
             }
         else:
-            return super().get_extra_context(request, view_type, instance)
+            return super().get_extra_context(request, instance)
 
 
 class CircuitSwapTerminations(generic.ObjectEditView):

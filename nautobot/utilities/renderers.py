@@ -16,16 +16,6 @@ from nautobot.utilities.utils import (
     normalize_querydict,
 )
 
-ACTION_TO_VIEW_TYPE = {
-    "list": "list",
-    "retrieve": "detail",
-    "destroy": "delete",
-    "create_or_update": "edit",
-    "bulk_create": "bulk_import",
-    "bulk_destroy": "bulk_delete",
-    "bulk_edit": "bulk_edit",
-}
-
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     def get_filter_form(self, view, request, *args, **kwargs):
@@ -125,13 +115,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     )
             elif view.action == "bulk_create":
                 form = view._import_form_for_bulk_import()
-            elif view.action == "bulk_edit":
+            elif view.action == "bulk_update":
                 if request.POST.get("_all") and view.filterset_class is not None:
                     pk_list = [obj.pk for obj in view.filterset_class(request.GET, view.queryset.only("pk")).qs]
                 else:
                     pk_list = request.POST.getlist("pk")
                 if "_apply" in request.POST:
-                    form = view.bulk_edit_form_class(model, request.POST)
+                    form = view.bulk_update_form_class(model, request.POST)
                     restrict_form_fields(form, request.user)
                 else:
                     # Include the PK list as initial data for the form
@@ -144,7 +134,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     elif "device_type" in request.GET:
                         initial_data["device_type"] = request.GET.get("device_type")
 
-                    form = view.bulk_edit_form_class(model, initial=initial_data)
+                    form = view.bulk_update_form_class(model, initial=initial_data)
                     restrict_form_fields(form, request.user)
 
         context = {
@@ -154,7 +144,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "obj_type_plural": view.queryset.model._meta.verbose_name_plural,
             "editing": obj.present_in_database,
             "form": form,
-            "fields": view.import_form().fields,
+            "fields": view.import_form_class().fields,
             "table": table if table else data.get("table", None),
             "return_url": view.get_return_url(request, instance),
             "verbose_name": view.queryset.model._meta.verbose_name,
@@ -168,9 +158,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "active_tab": "csv-data",
         }
         if view.action == "retrieve":
-            context.update(view.get_extra_context(request, ACTION_TO_VIEW_TYPE[view.action], instance))
+            context.update(view.get_extra_context(request, instance))
         else:
-            context.update(view.get_extra_context(request, ACTION_TO_VIEW_TYPE[view.action], instance=None))
+            context.update(view.get_extra_context(request, instance=None))
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):

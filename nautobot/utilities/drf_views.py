@@ -50,7 +50,7 @@ PERMISSIONS_ACTION_MAP = {
     "create_or_update": "change",
     "bulk_create": "add",
     "bulk_destroy": "delete",
-    "bulk_edit": "change",
+    "bulk_update": "change",
 }
 
 
@@ -69,7 +69,7 @@ class NautobotViewSetMixin(
         # given some parameter from the request URL.
         return obj
 
-    def _destroy(self):
+    def _destroy(self, form):
         """
         Helper method to destroy an object after the form is validated successfully.
         """
@@ -139,7 +139,7 @@ class NautobotViewSetMixin(
                 else:
                     self.success_url = self.get_return_url(request, obj)
 
-    def _bulk_edit(self, form):
+    def _bulk_update(self, form):
         """
         Helper method to edit objects in bulk after the form is validated successfully.
         """
@@ -152,7 +152,7 @@ class NautobotViewSetMixin(
             updated_objects = []
             for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                 self.obj = obj
-                obj = self.alter_obj_for_bulk_edit(obj, request, [], self.kwargs)
+                obj = self.alter_obj_for_bulk_update(obj, request, [], self.kwargs)
                 # Update standard fields. If a field is listed in _nullify, delete its value.
                 for name in standard_fields:
                     try:
@@ -210,7 +210,7 @@ class NautobotViewSetMixin(
         with transaction.atomic():
             headers, records = form.cleaned_data["csv_data"]
             for row, data in enumerate(records, start=1):
-                obj_form = self.import_form(data, headers=headers)
+                obj_form = self.import_form_class(data, headers=headers)
                 restrict_form_fields(obj_form, request.user)
 
                 if obj_form.is_valid():
@@ -237,7 +237,7 @@ class NautobotViewSetMixin(
         request = self.request
 
         if self.action == "destroy":
-            self._destroy()
+            self._destroy(form)
             return super().form_valid(form)
 
         elif self.action == "bulk_destroy":
@@ -253,9 +253,9 @@ class NautobotViewSetMixin(
                 self.logger.debug(msg)
                 form.add_error(None, msg)
 
-        elif self.action == "bulk_edit":
+        elif self.action == "bulk_update":
             try:
-                self._bulk_edit(form)
+                self._bulk_update(form)
                 return super().form_valid(form)
             except ValidationError as e:
                 messages.error(self.request, f"{self.obj} failed validation: {e}")
@@ -283,7 +283,7 @@ class NautobotViewSetMixin(
                 form.add_error(None, msg)
 
         data = {}
-        if self.action in ["bulk_edit", "bulk_delete"]:
+        if self.action in ["bulk_update", "bulk_delete"]:
             pk_list = self.pk_list
             table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
@@ -302,7 +302,7 @@ class NautobotViewSetMixin(
     def form_invalid(self, form):
         data = {}
         request = self.request
-        if self.action in ["bulk_edit", "bulk_delete"]:
+        if self.action in ["bulk_update", "bulk_delete"]:
             pk_list = self.pk_list
             table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
@@ -339,7 +339,7 @@ class NautobotViewSetMixin(
 
         return obj
 
-    def get_extra_context(self, request, view_type, instance=None):
+    def get_extra_context(self, request, instance=None):
         """
         Return any additional context data for the template.
         request: The current request
@@ -542,8 +542,7 @@ class BulkDeleteViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixi
         return BulkDeleteForm
 
     def bulk_destroy(self, request, *args, **kwargs):
-        if request.method == "POST":
-            return self.perform_bulk_destroy(request, **kwargs)
+        return self.perform_bulk_destroy(request, **kwargs)
 
     def perform_bulk_destroy(self, request, **kwargs):
         model = self.queryset.model
@@ -582,8 +581,10 @@ class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
 
     def _import_form_for_bulk_import(self, *args, **kwargs):
         class ImportForm(BootstrapMixin, Form):
-            csv_data = CSVDataField(from_form=self.import_form, widget=Textarea(attrs=self.bulk_import_widget_attrs))
-            csv_file = CSVFileField(from_form=self.import_form)
+            csv_data = CSVDataField(
+                from_form=self.import_form_class, widget=Textarea(attrs=self.bulk_import_widget_attrs)
+            )
+            csv_file = CSVFileField(from_form=self.import_form_class)
 
         return ImportForm(*args, **kwargs)
 
@@ -609,19 +610,18 @@ class BulkImportViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
 
 class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin):
     filterset_class = None
-    bulk_edit_form_class = None
+    bulk_update_form_class = None
     logger = logging.getLogger("nautobot.views.BulkEditView")
 
-    def alter_obj_for_bulk_edit(self, obj, request, url_args, url_kwargs):
+    def alter_obj_for_bulk_update(self, obj, request, url_args, url_kwargs):
         # Allow views to add extra info to an object before it is processed.
         # For example, a parent object can be defined given some parameter from the request URL.
         return obj
 
-    def bulk_edit(self, request, *args, **kwargs):
-        if request.method == "POST":
-            return self.perform_bulk_edit(request, **kwargs)
+    def bulk_update(self, request, *args, **kwargs):
+        return self.perform_bulk_update(request, **kwargs)
 
-    def perform_bulk_edit(self, request, **kwargs):
+    def perform_bulk_update(self, request, **kwargs):
         model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
@@ -632,7 +632,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         data = {}
         if "_apply" in request.POST:
             self.kwargs = kwargs
-            form = self.bulk_edit_form_class(model, request.POST)
+            form = self.bulk_update_form_class(model, request.POST)
             restrict_form_fields(form, request.user)
             if form.is_valid():
                 return self.form_valid(form)

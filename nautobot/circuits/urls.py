@@ -25,7 +25,7 @@ urlpatterns = [
     ),
     path(
         "providers/edit/",
-        views.ProviderDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_edit"}),
+        views.ProviderDRFViewSet.as_view({"get": "bulk_update", "post": "bulk_update"}),
         name="provider_bulk_edit",
     ),
     path(
@@ -71,7 +71,7 @@ urlpatterns = [
     ),
     path(
         "provider-networks/edit/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_edit"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_update", "post": "bulk_update"}),
         name="providernetwork_bulk_edit",
     ),
     path(
@@ -158,12 +158,12 @@ urlpatterns = [
     ),
     path(
         "circuits/edit/",
-        views.CircuitDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_edit"}),
+        views.CircuitDRFViewSet.as_view({"get": "bulk_update", "post": "bulk_update"}),
         name="circuit_bulk_edit",
     ),
     path(
         "circuits/delete/",
-        views.CircuitDRFViewSet.as_view({"get": "bulk_edit", "post": "bulk_destroy"}),
+        views.CircuitDRFViewSet.as_view({"get": "bulk_update", "post": "bulk_destroy"}),
         name="circuit_bulk_delete",
     ),
     path(
