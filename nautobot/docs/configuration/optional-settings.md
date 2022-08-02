@@ -742,6 +742,8 @@ Default: `[25, 50, 100, 250, 500, 1000]`
 
 The options displayed in the web interface dropdown to limit the number of objects per page. For proper user experience, this list should include the [`PAGINATE_COUNT`](#paginate_count) and [`MAX_PAGE_SIZE`](#max_page_size) values as options.
 
+---
+
 ## PAGINATE_COUNT
 
 Default: `50`
