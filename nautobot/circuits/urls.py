@@ -163,7 +163,7 @@ urlpatterns = [
     ),
     path(
         "circuits/delete/",
-        views.CircuitDRFViewSet.as_view({"get": "bulk_update", "post": "bulk_destroy"}),
+        views.CircuitDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="circuit_bulk_delete",
     ),
     path(
