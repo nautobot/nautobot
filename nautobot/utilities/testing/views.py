@@ -176,6 +176,7 @@ class ViewTestCases:
             if self.custom_fields:
                 for custom_field in self.custom_fields:
                     self.assertIn(str(custom_field), response_body, msg=response_body)
+                    # 2.0 TODO: #824 custom_field.slug rather than custom_field.name
                     if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                         for value in instance.cf.get(custom_field.name):
                             self.assertIn(str(value), response_body, msg=response_body)
@@ -253,6 +254,7 @@ class ViewTestCases:
 
         form_data = {}
         slug_source = None
+        slugify_function = staticmethod(slugify)
         slug_test_object = ""
 
         def test_create_object_without_permission(self):
@@ -349,7 +351,7 @@ class ViewTestCases:
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
                 object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = slugify(getattr(object, self.slug_source))
+                expected_slug = self.slugify_function(getattr(object, self.slug_source))
                 self.assertEqual(object.slug, expected_slug)
 
         def test_slug_not_modified(self):
@@ -357,7 +359,7 @@ class ViewTestCases:
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
                 object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = slugify(getattr(object, self.slug_source))
+                expected_slug = self.slugify_function(getattr(object, self.slug_source))
                 # Update slug source field str
                 filter = self.slug_source + "__contains"
                 self.model.objects.filter(**{filter: self.slug_test_object}).update(**{self.slug_source: "Test"})

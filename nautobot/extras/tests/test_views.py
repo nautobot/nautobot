@@ -49,6 +49,7 @@ from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
+from nautobot.utilities.utils import slugify_dashes_to_underscores
 
 
 # Use the proper swappable User model
@@ -65,6 +66,8 @@ class ComputedFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = ComputedField
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -118,7 +121,6 @@ class ComputedFieldTestCase(
             "weight": 100,
         }
 
-        cls.slug_source = "label"
         cls.slug_test_object = "Computed Field Five"
 
 
@@ -356,7 +358,8 @@ class CustomFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
-    reverse_url_attribute = "name"
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -381,7 +384,14 @@ class CustomFieldTestCase(
                 label="Custom Field Integer",
                 default="",
             ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_TEXT,
+                name="Custom field? With special / unusual characters!",
+                default="",
+            ),
         ]
+
+        cls.slug_test_object = "Custom Field Integer"
 
         for custom_field in custom_fields:
             custom_field.validated_save()
@@ -390,7 +400,7 @@ class CustomFieldTestCase(
         cls.form_data = {
             "content_types": [obj_type.pk],
             "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-            "name": "Custom Field Boolean",
+            "slug": "custom_field_boolean",
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
@@ -1784,6 +1794,8 @@ class RelationshipTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
+    slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -1826,7 +1838,6 @@ class RelationshipTestCase(
             "destination_filter": None,
         }
 
-        cls.slug_source = "name"
         cls.slug_test_object = "Primary Interface"
 
 

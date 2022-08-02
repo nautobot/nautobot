@@ -29,6 +29,7 @@ class CustomFieldDefaultValues:
 
         # Populate the default value for each CustomField
         value = {}
+        # 2.0 TODO: #824 use field.slug as key instead of field.name
         for field in fields:
             if field.default is not None:
                 value[field.name] = field.default
@@ -50,6 +51,7 @@ class CustomFieldsDataField(Field):
         return self._custom_fields
 
     def to_representation(self, obj):
+        # 2.0 TODO: #824 use field.slug as key instead of field.name
         return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
@@ -92,6 +94,7 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
     def _populate_custom_fields(self, instance, custom_fields):
         instance.custom_fields = {}
         for field in custom_fields:
+            # 2.0 TODO: #824 use field.slug as key instead of field.name
             instance.custom_fields[field.name] = instance.cf.get(field.name)
 
     @extend_schema_field(OpenApiTypes.OBJECT)

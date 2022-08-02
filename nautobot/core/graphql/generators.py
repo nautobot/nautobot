@@ -92,6 +92,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     return resolve_filter
 
 
+# 2.0 TODO: #824 rename `name` to `slug`
 def generate_custom_field_resolver(name, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 

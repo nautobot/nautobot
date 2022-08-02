@@ -203,6 +203,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field.save()
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
+        # 2.0 TODO: #824 replace custom_field.name with custom_field.slug
         device.cf[custom_field.name] = "This is some testing text"
         device.validated_save()
         # Visit the device detail page

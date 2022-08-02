@@ -67,6 +67,7 @@ class CustomFieldFilterForm(forms.Form):
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
         for cf in custom_fields:
+            # 2.0 TODO: #824 cf.name to cf.slug throughout
             field_name = "cf_{}".format(cf.name)
             if cf.type == "json":
                 self.fields[field_name] = cf.to_form_field(
@@ -92,9 +93,10 @@ class CustomFieldModelForm(forms.ModelForm):
         """
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = "cf_{}".format(cf.name)
+            field_name = "cf_{}".format(cf.slug)
             if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
+                # 2.0 TODO: #824 self.instance.cf.get(cf.slug)
                 self.fields[field_name].initial = self.instance.cf.get(cf.name)
             else:
                 self.fields[field_name] = cf.to_form_field()
@@ -105,8 +107,12 @@ class CustomFieldModelForm(forms.ModelForm):
     def clean(self):
 
         # Save custom field data on instance
-        for cf_name in self.custom_fields:
-            self.instance.cf[cf_name[3:]] = self.cleaned_data.get(cf_name)
+        for field_name in self.custom_fields:
+            # 2.0 TODO: #824 will let us just do:
+            # self.instance.cf[field_name[3:]] = self.cleaned_data.get(field_name)
+            # but for now we need:
+            cf = CustomField.objects.get(slug=field_name[3:])
+            self.instance.cf[cf.name] = self.cleaned_data.get(field_name)
 
         return super().clean()
 
@@ -122,18 +128,13 @@ class CustomFieldBulkEditForm(BulkEditForm):
         # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type)
         for cf in custom_fields:
-            name = self._get_field_name(cf.name)
+            field_name = "cf_{}".format(cf.slug)
             # Annotate non-required custom fields as nullable
             if not cf.required:
-                self.nullable_fields.append(name)
-            self.fields[name] = cf.to_form_field(set_initial=False, enforce_required=False)
+                self.nullable_fields.append(field_name)
+            self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
             # Annotate this as a custom field
-            self.custom_fields.append(name)
-
-    @staticmethod
-    def _get_field_name(name):
-        # Return the desired field name
-        return name
+            self.custom_fields.append(field_name)
 
 
 class RelationshipModelBulkEditFormMixin(BulkEditForm):

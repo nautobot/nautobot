@@ -398,8 +398,10 @@ class CustomFieldSerializer(ValidatedModelSerializer):
             "url",
             "content_types",
             "type",
+            # 2.0 TODO: #824 remove name field
             "name",
             "label",
+            "slug",
             "description",
             "required",
             "filter_logic",

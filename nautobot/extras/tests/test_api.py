@@ -58,6 +58,7 @@ from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
+from nautobot.utilities.utils import slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -122,6 +123,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -460,17 +462,20 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["filter_logic", "type"]
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
         site_ct = ContentType.objects.get_for_model(Site)
 
         custom_fields = (
-            CustomField.objects.create(name="cf1", type="text"),
-            CustomField.objects.create(name="cf2", type="integer"),
-            CustomField.objects.create(name="cf3", type="boolean"),
+            CustomField(name="cf1", type="text"),
+            CustomField(name="cf2", type="integer"),
+            CustomField(name="cf3", type="boolean"),
         )
         for cf in custom_fields:
+            cf.validated_save()
             cf.content_types.add(site_ct)
 
 
@@ -2018,6 +2023,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     }
     choices_fields = ["destination_type", "source_type", "type"]
     slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):

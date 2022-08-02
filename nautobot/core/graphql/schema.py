@@ -225,7 +225,20 @@ def extend_schema_type_custom_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
     for field in cfs:
+        # 2.0 TODO: #824 replace field.name with field.slug
         field_name = f"{prefix}{str_to_var_name(field.name)}"
+        if str_to_var_name(field.name) != field.name:
+            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
+            # In 2.0 we should simply omit fields whose names/slugs are invalid in GraphQL, instead of mapping them.
+            logger.warning(
+                'Custom field %s on %s does not have a GraphQL-safe name ("%s"); '
+                "for now it will be mapped to the GraphQL name %s, "
+                "but in a future release this field may fail to appear in GraphQL.",
+                field,
+                model._meta.verbose_name,
+                field.name,
+                field_name,
+            )
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
@@ -238,6 +251,7 @@ def extend_schema_type_custom_field(schema_type, model):
         setattr(
             schema_type,
             resolver_name,
+            # 2.0 TODO: #824 field.slug
             generate_custom_field_resolver(field.name, resolver_name),
         )
 
@@ -268,13 +282,25 @@ def extend_schema_type_computed_field(schema_type, model):
 
     for field in cfs:
         field_name = f"{prefix}{str_to_var_name(field.slug)}"
+        if str_to_var_name(field.slug) != field.slug:
+            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
+            # In 2.0 we should simply omit fields whose slugs are invalid in GraphQL, instead of mapping them.
+            logger.warning(
+                'Computed field %s on %s does not have a GraphQL-safe slug ("%s"); '
+                "for now it will be mapped to the GraphQL name %s, "
+                "but in a future release this field may fail to appear in GraphQL.",
+                field,
+                model._meta.verbose_name,
+                field.slug,
+                field_name,
+            )
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
                 "Unable to add the computed field %s to %s because there is already an attribute with the same name (%s)",
                 field.slug,
-                schema_type._meta.slug,
+                schema_type._meta.name,
                 field_name,
             )
             continue
@@ -362,6 +388,18 @@ def extend_schema_type_relationships(schema_type, model):
             if not relationship.symmetric and relationship.source_type == relationship.destination_type:
                 rel_name = f"{rel_name}_{peer_side}"
             resolver_name = f"resolve_{rel_name}"
+            if str_to_var_name(relationship.slug) != relationship.slug:
+                # 2.0 TODO: str_to_var_name is lossy, it may cause different relationships to map to the same rel_name
+                # In 2.0 we should simply omit relations whose slugs are invalid in GraphQL, instead of mapping them.
+                logger.warning(
+                    'Relationship %s on %s does not have a GraphQL-safe slug ("%s"); '
+                    "for now it will be mapped to the GraphQL name %s, "
+                    "but in a future release this relationship may fail to appear in GraphQL.",
+                    relationship,
+                    model._meta.verbose_name,
+                    relationship.slug,
+                    rel_name,
+                )
 
             if hasattr(schema_type, resolver_name):
                 # If a symmetric relationship, and this is destination side, we already added source side, expected
