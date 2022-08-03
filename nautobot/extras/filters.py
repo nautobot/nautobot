@@ -834,15 +834,10 @@ class NoteFilterSet(BaseFilterSet):
         },
     )
     assigned_object_type = ContentTypeFilter()
-    user_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=get_user_model().objects.all(),
-        label="User (ID)",
-    )
-    user = django_filters.ModelMultipleChoiceFilter(
-        field_name="user__username",
-        queryset=get_user_model().objects.all(),
+    user = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="username",
-        label="User name",
+        queryset=get_user_model().objects.all(),
+        label="User (username or ID)",
     )
 
     class Meta:

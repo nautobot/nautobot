@@ -60,7 +60,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,
-    NotesMixin,
+    NotesViewSetMixin,
     StatusViewSetMixin,
 )
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
@@ -274,7 +274,7 @@ class RackViewSet(StatusViewSetMixin, NautobotModelViewSet):
 #
 
 
-class RackReservationViewSet(ModelViewSet, NotesMixin):
+class RackReservationViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = RackReservation.objects.prefetch_related("rack", "user", "tenant")
     serializer_class = serializers.RackReservationSerializer
     filterset_class = filters.RackReservationFilterSet
@@ -735,7 +735,7 @@ class CableViewSet(StatusViewSetMixin, NautobotModelViewSet):
 #
 
 
-class VirtualChassisViewSet(ModelViewSet, NotesMixin):
+class VirtualChassisViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = VirtualChassis.objects.prefetch_related("tags").annotate(
         member_count=count_related(Device, "virtual_chassis")
     )
@@ -749,7 +749,7 @@ class VirtualChassisViewSet(ModelViewSet, NotesMixin):
 #
 
 
-class PowerPanelViewSet(ModelViewSet, NotesMixin):
+class PowerPanelViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = PowerPanel.objects.prefetch_related("site", "rack_group").annotate(
         powerfeed_count=count_related(PowerFeed, "power_panel")
     )

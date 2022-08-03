@@ -113,17 +113,17 @@ from .nested_serializers import (  # noqa: F401
 class NotesSerializerMixin(BaseModelSerializer):
     """Extend Serializer with a `notes` field."""
 
-    notes = serializers.SerializerMethodField()
+    notes_url = serializers.SerializerMethodField()
 
     def get_field_names(self, declared_fields, info):
         """Ensure that fields includes "notes" field if applicable."""
         fields = list(super().get_field_names(declared_fields, info))
         if hasattr(self.Meta.model, "notes"):
-            self.extend_field_names(fields, "notes")
+            self.extend_field_names(fields, "notes_url")
         return fields
 
     @extend_schema_field(serializers.URLField())
-    def get_notes(self, instance):
+    def get_notes_url(self, instance):
         notes_url = f"{instance._meta.app_label}-api:{instance._meta.model_name}-notes"
         if instance._meta.app_label in settings.PLUGINS:
             notes_url = f"plugins-api:{notes_url}"
@@ -450,7 +450,7 @@ class CustomFieldChoiceSerializer(ValidatedModelSerializer):
 #
 
 
-class CustomLinkSerializer(ValidatedModelSerializer):
+class CustomLinkSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:customlink-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
@@ -835,7 +835,7 @@ class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
 
 
-class JobHookSerializer(ValidatedModelSerializer):
+class JobHookSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
     content_types = ContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(),

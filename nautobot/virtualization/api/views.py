@@ -6,7 +6,7 @@ from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,
     ModelViewSet,
-    NotesMixin,
+    NotesViewSetMixin,
     StatusViewSetMixin,
 )
 from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
@@ -112,7 +112,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
     retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
     update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
-class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesMixin):
+class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
     queryset = VMInterface.objects.prefetch_related(
         "virtual_machine", "parent_interface", "bridge", "status", "tags", "tagged_vlans"
     )
