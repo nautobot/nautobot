@@ -1362,7 +1362,7 @@ class JobTestCase(
 
     def _get_queryset(self):
         """Don't include hidden or non-installed Jobs as they won't appear in the UI by default."""
-        return self.model.objects.filter(installed=True, hidden=False)
+        return self.model.objects.filter(installed=True, hidden=False, has_sensitive_variables=False)
 
     @classmethod
     def setUpTestData(cls):
