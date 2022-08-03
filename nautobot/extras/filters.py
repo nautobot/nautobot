@@ -1,5 +1,4 @@
 import django_filters
-import logging
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -86,8 +85,6 @@ __all__ = (
     "TagFilterSet",
     "WebhookFilterSet",
 )
-
-logger = logging.getLogger(__name__)
 
 
 #
@@ -517,7 +514,6 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
 
             magic_filters[new_filter_name] = new_filter
 
-        logger.debug(f"generated new filters {magic_filters}")
         return magic_filters
 
 
