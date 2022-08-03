@@ -13,6 +13,16 @@ from nautobot.extras.models import CustomField
 #
 
 
+def should_use_custom_field_slug(request=None):
+    if request is None:
+        # Default behavior for backwards compatibility
+        return False
+    major_version, minor_version = request.version.split(".", 1)
+    # Use slug for API versions 1.4 or greater
+    use_slug = int(major_version) > 1 or int(minor_version) >= 4
+    return use_slug
+
+
 class CustomFieldDefaultValues:
     """
     Return a dictionary of all CustomFields assigned to the parent model and their default values.
@@ -22,13 +32,7 @@ class CustomFieldDefaultValues:
 
     def __call__(self, serializer_field):
         self.model = serializer_field.parent.Meta.model
-        request = serializer_field.context.get("request")
-        if request and (request.major_version > 1 or request.minor_version >= 4):
-            # 1.4+ behavior
-            use_slug = True
-        else:
-            # Legacy behavior
-            use_slug = False
+        use_slug = should_use_custom_field_slug(serializer_field.context.get("request"))
 
         # Retrieve the CustomFields for the parent model
         content_type = ContentType.objects.get_for_model(self.model)
@@ -58,8 +62,7 @@ class CustomFieldsDataField(Field):
         return self._custom_fields
 
     def to_representation(self, obj):
-        request = self.context.get("request")
-        if request and (request.major_version > 1 or request.minor_version >= 4):
+        if should_use_custom_field_slug(self.context.get("request")):
             # 1.4+ behavior
             # 2.0 TODO: #824 use cf.slug as lookup key instead of cf.name
             return {cf.slug: obj.get(cf.name) for cf in self._get_custom_fields()}
@@ -69,15 +72,7 @@ class CustomFieldsDataField(Field):
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
-        request = self.context.get("request")
-        if request and (request.major_version > 1 or request.minor_version >= 4):
-            # 1.4+ behavior
-            use_slug = True
-        else:
-            # Legacy behavior
-            use_slug = False
-
-        if use_slug:
+        if should_use_custom_field_slug(self.context.get("request")):
             # Map slugs to names for the backend data
             # 2.0 TODO: #824 remove this translation
             new_data = {}
