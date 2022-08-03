@@ -1026,6 +1026,11 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         label="Starting date and time",
         widget=DateTimePicker(),
     )
+    _recurrence_custom_time = forms.CharField(
+        required=False,
+        label="Crontab",
+        help_text="Custom crontab syntax (* * * * *)",
+    )
 
     def clean(self):
         """
@@ -1039,13 +1044,22 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
 
             if (
                 not cleaned_data.get("_schedule_start_time")
-                or cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
+                and cleaned_data.get("_schedule_type") != JobExecutionType.TYPE_CUSTOM
+            ) or (
+                cleaned_data.get("_schedule_start_time")
+                and cleaned_data.get("_schedule_start_time") < ScheduledJob.earliest_possible_time()
             ):
                 raise ValidationError(
                     {
                         "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
                     }
                 )
+
+            if cleaned_data.get("_schedule_type") == JobExecutionType.TYPE_CUSTOM:
+                try:
+                    ScheduledJob.get_crontab(cleaned_data.get("_recurrence_custom_time"))
+                except Exception as e:
+                    raise ValidationError({"_recurrence_custom_time": e})
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
@@ -1136,7 +1150,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     )
     source_filter = JSONField(
         required=False,
-        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
+        help_text="Filterset filter matching the applicable source objects of the selected type.<br>"
         'Enter in <a href="https://json.org/">JSON</a> format.',
     )
     destination_type = forms.ModelChoiceField(
@@ -1145,7 +1159,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     )
     destination_filter = JSONField(
         required=False,
-        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
+        help_text="Filterset filter matching the applicable destination objects of the selected type.<br>"
         'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 

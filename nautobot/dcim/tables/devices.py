@@ -619,6 +619,7 @@ class DeviceInterfaceTable(InterfaceTable):
         fields = (
             "pk",
             "name",
+            "device",
             "label",
             "enabled",
             "type",
@@ -637,7 +638,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "tagged_vlans",
             "actions",
         )
-        default_columns = (
+        default_columns = [
             "pk",
             "name",
             "label",
@@ -651,7 +652,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "cable",
             "connection",
             "actions",
-        )
+        ]
         row_attrs = {
             "style": cable_status_color_css,
             "data-name": lambda record: record.name,

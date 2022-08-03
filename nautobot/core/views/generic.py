@@ -170,7 +170,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append(custom_field.name)
+                headers.append("cf_" + custom_field.name)
                 custom_fields.append(custom_field.name)
 
         csv_data.append(",".join(headers))
@@ -1169,8 +1169,11 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
+
+                self.perform_pre_delete(request, queryset)
                 try:
-                    deleted_count = queryset.delete()[1][model._meta.label]
+                    _, deleted_info = queryset.delete()
+                    deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
@@ -1209,6 +1212,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
+
+    def perform_pre_delete(self, request, queryset):
+        pass
 
     def extra_context(self):
         return {}
