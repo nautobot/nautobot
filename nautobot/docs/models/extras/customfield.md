@@ -8,7 +8,7 @@ Within the database, custom fields are stored as JSON data directly alongside ea
 
 ## Creating Custom Fields
 
-Custom fields can be created through the UI under Extensibility > Miscellaneous > Custom Fields or through the REST API.
+Custom fields can be created through the UI under **Extensibility > Miscellaneous > Custom Fields** or through the REST API.
 
 Nautobot supports these custom field types:
 
@@ -21,10 +21,18 @@ Nautobot supports these custom field types:
 * Selection: A selection of one of several pre-defined custom choices
 * Multiple selection: A selection field which supports the assignment of multiple values
 
-Each custom field must have a name; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
+Each custom field must have a name and slug; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
+
+_Changed in version 1.4.0_ Custom fields now have both a `name` and a `slug`; in older versions there was no `slug` field. When migrating existing data to 1.4.0 or later, the `label` and `slug` will be automatically populated for existing custom fields if necessary.
+
+!!! warning
+    In all Nautobot 1.x versions, the custom field `name` is used as the key to store and retrieve custom field data via the database, REST API, and GraphQL. In a future release, the `name` field will be removed and custom field data will be accessible via the `slug` instead.
+
+!!! tip
+    Because custom field data is included in the database, in the REST API and in GraphQL, we strongly recommend that when defining a custom field, you provide a slug that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug.
 
 !!! note
-    The name and type of a custom field cannot be modified once created, so take care in defining the name and type. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
+    The name, slug, and type of a custom field cannot be modified once created, so take care in defining these fields. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
 
 Marking a field as required will force the user to provide a value for the field when creating a new object or when saving an existing object. A default value for the field may also be provided. Use "true" or "false" for boolean fields, or the exact value of a choice for selection fields.
 
@@ -70,6 +78,9 @@ When retrieving an object via the REST API, all of its custom data will be inclu
     },
     ...
 ```
+
+!!! warning
+    In all Nautobot 1.x versions, each custom field's `name` is used as the key under `custom_fields` in the REST API. In a future release, the `name` field will be removed and custom field data will be accessible via its `slug` instead.
 
 To set or change these values, simply include nested JSON data. For example:
 

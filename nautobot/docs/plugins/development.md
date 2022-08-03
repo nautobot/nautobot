@@ -579,7 +579,7 @@ With this code, once your plugin is installed, the Git repository creation/editi
 
 ### Populating Extensibility Features
 
-In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../../additional-features/custom-fields) or [relationships](../../models/extras/relationship/). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
+In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../../models/extras/customfield/) or [relationships](../../models/extras/relationship/). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
 
 To make this possible, Nautobot provides a custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/), `nautobot_database_ready`, that plugins can register to listen for. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing a plugin, and provides an opportunity for the plugin to make any desired additions to the database at this time.
 
@@ -758,7 +758,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
-| [Custom fields](../additional-features/custom-fields.md) | ❌ | ❌ | ✅ | ✅ |
+| [Custom fields](../models/extras/customfield.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
 | [Note](../models/extras/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
@@ -845,7 +845,7 @@ Plugins can optionally expose their models via the GraphQL interface to allow th
 All GraphQL model types defined by your plugin, regardless of which method is chosen, will automatically support some built-in Nautobot features:
 
 * Support for object permissions based on their associated `Model` class
-* Include any [custom fields](../additional-features/custom-fields.md) defined for their `Model`
+* Include any [custom fields](../models/extras/customfield.md) defined for their `Model`
 * Include any [relationships](../models/extras/relationship.md) defined for their `Model`
 * Include [tags](../models/extras/tag.md), if the `Model` supports them
 
