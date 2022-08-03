@@ -344,13 +344,14 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             if self.slug and not self.name:
                 self.name = self.slug
 
-            # 2.0 TODO: this is to fixup existing ORM/API usage when caller specifies a name but not a label;
+            # 2.0 TODO: this is to fixup existing ORM usage when caller specifies a name but not a label;
             # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
             if self.name and not self.label:
                 self.label = self.name
 
-            if self.label and not self.slug:
-                self.slug = slugify_dashes_to_underscores(self.label)
+            # This is to fix up existing ORM usage when caller doesn't specify a slug since it wasn't a field before.
+            if not self.slug:
+                self.slug = slugify_dashes_to_underscores(self.label or self.name)
 
         super().clean_fields(exclude=exclude)
 

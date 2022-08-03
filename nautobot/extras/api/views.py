@@ -183,11 +183,54 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_partial_update=extend_schema(
+        filters=False,
+        request=serializers.CustomFieldSerializerVersion12(many=True),
+        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
+        versions=["1.2", "1.3"],
+    ),
+    bulk_update=extend_schema(
+        filters=False,
+        request=serializers.CustomFieldSerializerVersion12(many=True),
+        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
+        versions=["1.2", "1.3"],
+    ),
+    create=extend_schema(
+        request=serializers.CustomFieldSerializerVersion12,
+        responses={"201": serializers.CustomFieldSerializerVersion12},
+        versions=["1.2", "1.3"],
+    ),
+    list=extend_schema(
+        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
+    ),
+    partial_update=extend_schema(
+        request=serializers.CustomFieldSerializerVersion12,
+        responses={"200": serializers.CustomFieldSerializerVersion12},
+        versions=["1.2", "1.3"],
+    ),
+    retrieve=extend_schema(responses={"200": serializers.CustomFieldSerializerVersion12}, versions=["1.2", "1.3"]),
+    update=extend_schema(
+        request=serializers.CustomFieldSerializerVersion12,
+        responses={"200": serializers.CustomFieldSerializerVersion12},
+        versions=["1.2", "1.3"],
+    ),
+)
 class CustomFieldViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
+
+    def get_serializer_class(self):
+        serializer_choices = (
+            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.CustomFieldSerializerVersion12),
+        )
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )
 
 
 class CustomFieldChoiceViewSet(ModelViewSet):
@@ -958,11 +1001,27 @@ class StatusViewSetMixin(ModelViewSet):
 
 
 @extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
-    create=extend_schema(responses={"201": serializers.TagSerializer}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    bulk_update=extend_schema(
+        filters=False,
+        request=serializers.TagSerializer(many=True),
+        responses={"200": serializers.TagSerializer(many=True)},
+        versions=["1.2"],
+    ),
+    bulk_partial_update=extend_schema(
+        filters=False,
+        request=serializers.TagSerializer(many=True),
+        responses={"200": serializers.TagSerializer(many=True)},
+        versions=["1.2"],
+    ),
+    create=extend_schema(
+        request=serializers.TagSerializer, responses={"201": serializers.TagSerializer}, versions=["1.2"]
+    ),
+    partial_update=extend_schema(
+        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
+    ),
+    update=extend_schema(
+        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
+    ),
     list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
     retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
 )
