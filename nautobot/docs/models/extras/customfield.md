@@ -26,10 +26,10 @@ Each custom field must have a name and slug; this should be a simple database-fr
 _Changed in version 1.4.0_ Custom fields now have both a `name` and a `slug`; in older versions there was no `slug` field. When migrating existing data to 1.4.0 or later, the `label` and `slug` will be automatically populated for existing custom fields if necessary.
 
 !!! warning
-    In all Nautobot 1.x versions, the custom field `name` is used as the key to store and retrieve custom field data via the database, REST API, and GraphQL. In a future release, the `name` field will be removed and custom field data will be accessible via the `slug` instead.
+    In all Nautobot 1.x versions, the custom field `name` is used as the key to store and retrieve custom field data via the database and GraphQL. In a future major release, the `name` field will be removed and custom field data will be accessible via the `slug` instead. See [below](#custom-fields-and-the-rest-api) for REST API versioning behavior in this area.
 
 !!! tip
-    Because custom field data is included in the database, in the REST API and in GraphQL, we strongly recommend that when defining a custom field, you provide a slug that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug.
+    Because custom field data is included in the database, in the REST API and in GraphQL, we strongly recommend that when defining a custom field, you provide a `slug` that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug. Similarly, the provided `name` should also contain only alphanumeric characters and underscores, as it is currently treated in some cases like a slug.
 
 !!! note
     The name, slug, and type of a custom field cannot be modified once created, so take care in defining these fields. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
@@ -64,7 +64,7 @@ The value of a multiple selection field will always return a list, even if only 
 
 ## Custom Fields and the REST API
 
-When retrieving an object via the REST API, all of its custom data will be included within the `custom_fields` attribute. For example, below is the partial output of a site with two custom fields defined:
+When retrieving an object via the REST API, all of its custom field data will be included within the `custom_fields` attribute. For example, below is the partial output of a site with two custom fields defined:
 
 ```json
 {
@@ -79,10 +79,12 @@ When retrieving an object via the REST API, all of its custom data will be inclu
     ...
 ```
 
-!!! warning
-    In all Nautobot 1.x versions, each custom field's `name` is used as the key under `custom_fields` in the REST API. In a future release, the `name` field will be removed and custom field data will be accessible via its `slug` instead.
+!!! info
+    In REST API versions 1.3 and earlier, each custom field's `name` is used as the key under `custom_fields` in the REST API. As part of the planned future transition to removing the `name` attribute entirely from custom fields, when REST API version 1.4 or later is requested, the `custom_fields` data in the REST API is instead indexed by custom field `slug`.
 
-To set or change these values, simply include nested JSON data. For example:
+    Refer to the documentation on [REST API versioning](../../rest-api/overview.md#versioning) for more information about REST API versioning and how to request a specific version of the REST API.
+
+To set or change custom field values, simply include nested JSON data in your REST API POST, PATCH, or PUT request. Unchanged fields may be omitted from the data. For example, the below would set a value for the `deployed` custom field but would leave the `site_code` value unchanged:
 
 ```json
 {

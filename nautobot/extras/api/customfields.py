@@ -22,6 +22,13 @@ class CustomFieldDefaultValues:
 
     def __call__(self, serializer_field):
         self.model = serializer_field.parent.Meta.model
+        request = serializer_field.context.get("request")
+        if request and (request.major_version > 1 or request.minor_version >= 4):
+            # 1.4+ behavior
+            use_slug = True
+        else:
+            # Legacy behavior
+            use_slug = False
 
         # Retrieve the CustomFields for the parent model
         content_type = ContentType.objects.get_for_model(self.model)
@@ -29,12 +36,12 @@ class CustomFieldDefaultValues:
 
         # Populate the default value for each CustomField
         value = {}
-        # 2.0 TODO: #824 use field.slug as key instead of field.name
         for field in fields:
+            key = field.slug if use_slug else field.name
             if field.default is not None:
-                value[field.name] = field.default
+                value[key] = field.default
             else:
-                value[field.name] = None
+                value[key] = None
 
         return value
 
@@ -51,11 +58,34 @@ class CustomFieldsDataField(Field):
         return self._custom_fields
 
     def to_representation(self, obj):
-        # 2.0 TODO: #824 use field.slug as key instead of field.name
-        return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
+        request = self.context.get("request")
+        if request and (request.major_version > 1 or request.minor_version >= 4):
+            # 1.4+ behavior
+            # 2.0 TODO: #824 use cf.slug as lookup key instead of cf.name
+            return {cf.slug: obj.get(cf.name) for cf in self._get_custom_fields()}
+        else:
+            # Legacy behavior
+            return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
+        request = self.context.get("request")
+        if request and (request.major_version > 1 or request.minor_version >= 4):
+            # 1.4+ behavior
+            use_slug = True
+        else:
+            # Legacy behavior
+            use_slug = False
+
+        if use_slug:
+            # Map slugs to names for the backend data
+            # 2.0 TODO: #824 remove this translation
+            new_data = {}
+            for slug, value in data.items():
+                cf = CustomField.objects.get(slug=slug)
+                new_data[cf.name] = value
+            data = new_data
+
         # If updating an existing instance, start with existing _custom_field_data
         if self.parent.instance:
             data = {**self.parent.instance._custom_field_data, **data}
@@ -74,28 +104,6 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         source="_custom_field_data",
         default=CreateOnlyDefault(CustomFieldDefaultValues()),
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if self.instance is not None:
-
-            # Retrieve the set of CustomFields which apply to this type of object
-            content_type = ContentType.objects.get_for_model(self.Meta.model)
-            fields = CustomField.objects.filter(content_types=content_type)
-
-            # Populate CustomFieldValues for each instance from database
-            if isinstance(self.instance, (list, tuple)):
-                for obj in self.instance:
-                    self._populate_custom_fields(obj, fields)
-            else:
-                self._populate_custom_fields(self.instance, fields)
-
-    def _populate_custom_fields(self, instance, custom_fields):
-        instance.custom_fields = {}
-        for field in custom_fields:
-            # 2.0 TODO: #824 use field.slug as key instead of field.name
-            instance.custom_fields[field.name] = instance.cf.get(field.name)
 
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_computed_fields(self, obj):

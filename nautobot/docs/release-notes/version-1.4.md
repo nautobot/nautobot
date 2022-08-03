@@ -11,9 +11,13 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Custom Field Slugs ([#1962](https://github.com/nautobot/nautobot/issues/1962))
 
-Custom fields now have a distinct `slug` field. The custom field `name` attribute should be considered deprecated, and will be removed in a future release (see also [#824](https://github.com/nautobot/nautobot/issues/824).) Additionally, the `label` attribute, while currently optional in the database, will become mandatory in that same future release as a consequence.
+Custom fields now have a distinct `slug` field. The custom field `name` attribute should be considered deprecated, and will be removed in a future major release (see also [#824](https://github.com/nautobot/nautobot/issues/824).) Additionally, the `label` attribute, while currently optional in the database, will become mandatory in that same future release as a consequence. When migrating from an earlier Nautobot release to version 1.4 or later, the `slug` and `label` for all existing custom fields will be automatically populated if not previously defined.
 
 A new version of the `/api/extras/custom-fields/` REST API endpoints has been implemented. By default this endpoint continues to demonstrate the pre-1.4 behavior (`name` required, `slug` and `label` optional; if unspecified, the `slug` and `label` will receive default values based on the provided `name`). A REST API client can request API version 1.4, in which case the updated API will require `slug` and `label` parameters in place of `name`.
+
+Additionally, REST API serialization of custom field data is itself now versioned. For _all_ object endpoints that include custom field data under the `custom_fields` key, REST API versions 1.3 and earlier will continue the previous behavior of indexing the `custom_fields` dictionary by fields' `name` values, but when REST API version 1.4 or later is requested, the `custom_fields` data will be indexed by `slug` instead.
+
+For technical reasons of backwards-compatibility, the database (ORM) and GraphQL interfaces continue to access and store object custom field data exclusively under the `name` key; this will change to use the `slug` in a future major release. Again, watch [#824](https://github.com/nautobot/nautobot/issues/824) for plans in that regard.
 
 #### Custom Template (CSS, HTML, JavaScript) on Job Forms ([#1865](https://github.com/nautobot/nautobot/issues/1865))
 
