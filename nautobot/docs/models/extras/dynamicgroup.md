@@ -6,22 +6,61 @@ When creating a Dynamic Group, one must select a Content Type to which it is ass
 
 Once created the Content Type for a Dynamic Group may not be modified as this relationship is tightly-coupled to the available filtering parameters. All other fields may be updated at any time.
 
-## Basic Filtering
+## Creating Dynamic Groups
 
-Dynamic Groups filtering is powered by **FilterSet** objects underneath the hood. Basic filtering is performed using the `filter` that is defined on a given Dynamic Group.
+Dynamic Groups can be created through the UI under _Organization > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
+
+Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-site-ams01` and a **Slug**, which should be a simple database-friendly string. By default, the slug will be automatically generated from the name, however you may customize it if you like. You must select a **Content Type** for the group that determines the filtering parameters available include objects as member into the group. Finally, you may also assign a an optional human-friendly **Description** (e.g. "Devices in site AMS01").
+
+Once a new Dynamic Group is created, the **Filter Fields** or **Child Groups** may be specified. This must be done after the group has been created by clicking the "Edit" button.
+
+!!! warning
+    The content type of a Dynamic Group cannot be modified once created, so take care in selecting this initially. This is intended to prevent the possibility of inconsistent data and enforces the importance of thinking about the data model when defining a new Dynamic Group.
+
+### Working with Dynamic Groups
+
+Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group's filter has matching members, the number of members may be clicked to take you to a filtered list view of those objects.
+
+Dynamic Groups cannot be imported nor can they be updated in bulk, as these operations would be complex and do not make sense in most cases.
+
+From an individual object's detail page, if it is a member of any groups, a "Dynamic Groups" tab will display in the navigation tabs. Clicking that tab will display all Dynamic Groups of which this object is a member.
+
+
+## Filtering
+
+Dynamic Groups filtering is powered by **FilterSet** objects underneath the hood. Basic filtering is performed using the `filter` that is defined on a given Dynamic Group. Advanced filtering is performed using nested Dynamic Group memberships.
+
+### Basic Filtering
 
 An object is considered to be a member of a Dynamic Group if it is of the same Content Type and it is not excluded by way of any of the filter critera specified for that group. By default, if a group has an empty filter (`{}`) it will include all objects of the matching Content Type, just as a defaut list view of objects would prior to any filter fields being filled in the web UI.
 
-For example, for a Dynamic Group with Content Type of `dcim.device` and an empty filter, the list of members would be equivalent to the queryset for `Device.objects.all()`.
+For example, for a Dynamic Group with Content Type of `dcim.device` and an empty filter, the list of members would be equivalent to the queryset for `Device.objects.all()` from the database ORM.
 
 !!! warning
-    This behavior was changed in v1.4.0. In v1.3.0 the default for a group with an empty filter was to fail "closed" and have zero members. As of v1.4.0, this behavior has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
+    <!-- markdownlint-disable MD036 -->
+    _Changed in version 1.4.0_
+    <!-- markdownlint-enable MD036 -->
 
-The Dynamic Group edit view has a **Filter Fields** tab that allows one to specify filter criteria. The filter fields available for a given Content Type are backed and validated by underlying filterset classes (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field.
+    In v1.3.0 the default for a group with an empty filter was to fail "closed" and have zero members.
 
-Any invalid field names that are not eligible for filtering objects will be discarded upon validation. Any invalid field values will result in a validation error.
+    As of v1.4.0, this behavior has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
 
-## Advanced Filtering
+When editing a Dynamic Group, under the **Filter Options** section, you will find a **Filter Fields** tab that allows one to specify filter criteria. The filter fields available for a given Content Type are backed and validated by underlying filterset classes (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field.
+
+![Filter Fields](../../../media/models/dynamicgroup01.png)
+
+!!! warning
+    <!-- markdownlint-disable MD036 -->
+    _Changed in version 1.4.0_
+    <!-- markdownlint-enable MD036 -->
+
+    Prior to v1.4.0, any invalid field names that are not eligible for filtering objects will be discarded upon validation.
+
+    As of v1.4.0, [strict filtering is enabled by default](../../../configuration/optional-settings/#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
+
+Any invalid field values for valid field names will also result in a `ValidationError`.
+
+### Advanced Filtering
 
 <!-- markdownlint-disable MD036 -->
 _Added in version 1.4.0_
@@ -31,16 +70,21 @@ Advanced filtering is performed using nested Dynamic Group memberships.
 
 An object is considered a member of an advanced Dynamic Group if it matches the aggregated filter criteria across all descendant groups.
 
-The Dynamic Group edit view has a **Child Groups** tab that allows one to make other Dynamic Groups of the same content type children of the parent group.
+When editing a Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows one to make other Dynamic Groups of the same content type children of the parent group.
+
+![Filter Fields](../../../media/models/dynamicgroup02.png)
 
 !!! important
     Filter fields and child groups are mutually exclusive. A group may have either a filter defined, or child groups, but not both.
 
 ### Filter Generation
 
-Descendant filters are always processed from the top down (or from left to right) starting with the parent group and ending with the last nested child group.
+Filters are always processed hiearchically from the top down starting from the parent group and descending recursively to the last nested child group.
 
-The nesting of Dynamic Group is performed using two advanced patterns: Set and graphs. Rules for each child group are processed using a set `operator`, and groups are sorted hierarchically as a directed acyclic graph (DAG), where the `weight` is used for sorting child groups topologically.
+!!! note
+    For the purpose illustration, we will use "left to right" terminology since when verbally describing precedence in English, we read from left to right, so that following it will be more intuitive.
+
+The nesting of Dynamic Groups is performed using two advanced patterns: Set and graphs. Rules for each child group are processed using a set `operator`, and groups are sorted hierarchically as a directed acyclic graph (DAG), where the `weight` is used for sorting child groups topologically.
 
 In both cases, the ordering of the tree of descendants from a parent group to its nested children is significant and critically important to how each subsequent filter or group of filters are processed to result in a final set of member objects.
 
@@ -85,7 +129,7 @@ We have attempted to simplify working with these operators by giving them both h
 - **Include (Boolean `OR`)** - The **Include** operator performs a set _union_ on the queryset, and is equivalent to a Boolean `OR`. Any objects matching the child filter are _included_ (aka _unioned_) with the preceding filter. Any filter criteria may match between the filters for member objects to be included in the resultant filter.
 - **Exclude (Boolean `NOT`)** - The **Exclude** operator performs a set _difference_ on the queryset, and is equivalent to a Boolean `NOT`. Any objects matching the child filter are _excluded_ (aka _differenced_) from the preceding filter. Any matching objects from the child filter will be negated from the members of the resultant filter.
 
-Using the example group hiearchy from above, let's apply operators and explain how it would work:
+Using the example group hierarchy from above, let's apply operators and explain how it would work:
 
 ```no-highlight
 parent
@@ -94,25 +138,6 @@ parent
 - third-child {weight: 30, operator: difference}
   - nested-child {weight: 10, operator: intersection}
 ```
-
-## Creating Dynamic Groups
-
-Dynamic Groups can be created through the UI under _Organization > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
-
-Each Dynamic Group must have a human-readable **Name** string, e.g. `device-site-ams01` and a **Slug**, which should be a simple database-friendly string. By default, the slug will be automatically generated from the name, however you may customize it if you like. You may also assign a corresponding human-friendly **Description** (e.g. "Devices in site AMS01"). Finally, you must select a **Content Type** for the group that determines the filtering parameters available include objects as member into the group.
-
-Once a new Dynamic Group is created, the **Filter Fields** or **Child Groups** may be specified.
-
-!!! note
-    The content type of a Dynamic Group cannot be modified once created, so take care in selecting this initially. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new Dynamic Group.
-
-### Working with Dynamic Groups
-
-Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group's filter has matching members, the number of members may be clicked to take you to a filtered list view of those objects.
-
-Dynamic Groups cannot be imported nor can they be updated in bulk, as these operations would be complex and do not make sense in most cases.
-
-From an individual object's detail page, if it is a member of any groups, a "Dynamic Groups" tab will display in the navigation tabs. Clicking that tab will display all Dynamic Groups of which this object is a member.
 
 ## Dynamic Groups and the REST API
 
