@@ -337,22 +337,28 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.label or self.name.replace("_", " ").capitalize()
 
+    def _fixup_empty_fields(self):
+        """Handle the case when a new instance is created and some fields are left blank."""
+        if self.present_in_database:
+            return
+
+        # 2.0 TODO: this is to handle the UI case where `name` is no longer a directly configured form.
+        # Once `name` is no longer a model field, we can remove this.
+        if self.slug and not self.name:
+            self.name = self.slug
+
+        # 2.0 TODO: this is to fixup existing ORM usage when caller specifies a name but not a label;
+        # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
+        if self.name and not self.label:
+            self.label = self.name
+
+        # This is to fix up existing ORM usage when caller doesn't specify a slug since it wasn't a field before.
+        if not self.slug:
+            self.slug = slugify_dashes_to_underscores(self.label or self.name)
+
     def clean_fields(self, exclude=None):
-        if not self.present_in_database:
-            # 2.0 TODO: this is to handle the UI case where `name` is no longer a directly configured form.
-            # Once `name` is no longer a model field, we can remove this.
-            if self.slug and not self.name:
-                self.name = self.slug
-
-            # 2.0 TODO: this is to fixup existing ORM usage when caller specifies a name but not a label;
-            # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
-            if self.name and not self.label:
-                self.label = self.name
-
-            # This is to fix up existing ORM usage when caller doesn't specify a slug since it wasn't a field before.
-            if not self.slug:
-                self.slug = slugify_dashes_to_underscores(self.label or self.name)
-
+        # Ensure now-mandatory fields are correctly populated, as otherwise cleaning will fail.
+        self._fixup_empty_fields()
         super().clean_fields(exclude=exclude)
 
     def clean(self):
@@ -414,10 +420,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
-    def get_changelog_url(self):
-        """Overloaded from ChangeLoggedModel.get_changelog_url as custom fields route on name, not PK or slug."""
-        route = "extras:customfield_changelog"
-        return reverse(route, kwargs={"name": self.name})
+    def save(self, **kwargs):
+        # Prior to Nautobot 1.4, `slug` was a non-existent field, but now it's mandatory.
+        # Protect against get_or_create() or other ORM usage where callers aren't calling clean() before saving.
+        # Normally we'd just say "Don't do that!" but we know there are some cases of this in the wild.
+        self._fixup_empty_fields()
+        super().save(**kwargs)
 
     def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
         """

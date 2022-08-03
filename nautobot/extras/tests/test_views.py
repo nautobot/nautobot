@@ -350,11 +350,13 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
+    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
@@ -386,6 +388,7 @@ class CustomFieldTestCase(
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
+                # https://github.com/nautobot/nautobot/issues/1962
                 name="Custom field? With special / unusual characters!",
                 default="",
             ),
@@ -399,8 +402,8 @@ class CustomFieldTestCase(
 
         cls.form_data = {
             "content_types": [obj_type.pk],
-            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-            "slug": "custom_field_boolean",
+            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,  # type is mandatory but cannot be changed once set.
+            "slug": "custom_field_boolean",  # slug is mandatory but cannot be changed once set.
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
@@ -413,21 +416,25 @@ class CustomFieldTestCase(
         }
 
     def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
+        instance = self._get_queryset().get(slug="custom_field_boolean_2")
+        # 2.0 TODO: #824 removal of `name` field altogether
+        # Assure that `name` was auto-populated from the given slug
+        self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
 
 

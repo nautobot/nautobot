@@ -25,6 +25,31 @@ class CustomFieldTest(TestCase):
         Site.objects.create(name="Site B", slug="site-b", status=active_status)
         Site.objects.create(name="Site C", slug="site-c", status=active_status)
 
+    def test_immutable_fields(self):
+        """Some fields may not be changed once set, due to the potential for complex downstream effects."""
+        instance = CustomField.objects.create(
+            # 2.0 TODO: #824 remove name field
+            name="Custom Field",
+            slug="custom_field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        instance.validated_save()
+
+        instance.refresh_from_db()
+        instance.name = "Different Custom Field"
+        with self.assertRaises(ValidationError):
+            instance.validated_save()
+
+        instance.refresh_from_db()
+        instance.slug = "custom_field_2"
+        with self.assertRaises(ValidationError):
+            instance.validated_save()
+
+        instance.refresh_from_db()
+        instance.type = CustomFieldTypeChoices.TYPE_SELECT
+        with self.assertRaises(ValidationError):
+            instance.validated_save()
+
     def test_simple_fields(self):
         DATA = (
             {
@@ -89,9 +114,15 @@ class CustomFieldTest(TestCase):
         for data in DATA:
 
             # Create a custom field
+            # 2.0 TODO: #824 slug rather than name
             cf = CustomField(type=data["field_type"], name="my_field", required=False)
-            cf.save()
+            cf.save()  # not validated_save this time, as we're testing backwards-compatibility
             cf.content_types.set([obj_type])
+            # Assert that slug and label were auto-populated correctly
+            # 2.0 TODO: slug and label will become mandatory fields to specify.
+            cf.refresh_from_db()
+            self.assertEqual(cf.label, cf.name)
+            self.assertEqual(cf.slug, cf.name)
 
             # Assign a value to the first Site
             site = Site.objects.first()
@@ -249,7 +280,13 @@ class CustomFieldManagerTest(TestCase):
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
 
 
-class CustomFieldAPITest(APITestCase):
+class CustomFieldDataAPITest(APITestCase):
+    """
+    Check that object representations in the REST API include their custom field data.
+
+    For tests of the api/extras/custom-fields/ REST API endpoint itself, see test_api.py.
+    """
+
     @classmethod
     def setUpTestData(cls):
         content_type = ContentType.objects.get_for_model(Site)
@@ -795,6 +832,10 @@ class CustomFieldAPITest(APITestCase):
 
 
 class CustomFieldImportTest(TestCase):
+    """
+    Test importing object custom field data along with the object itself.
+    """
+
     user_permissions = (
         "dcim.view_site",
         "dcim.add_site",
@@ -947,6 +988,10 @@ class CustomFieldImportTest(TestCase):
 
 
 class CustomFieldModelTest(TestCase):
+    """
+    Test behavior of models that inherit from CustomFieldModel.
+    """
+
     @classmethod
     def setUpTestData(cls):
         cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="foo")
@@ -1089,6 +1134,10 @@ class CustomFieldModelTest(TestCase):
 
 
 class CustomFieldFilterTest(TestCase):
+    """
+    Test object filtering by custom field values.
+    """
+
     queryset = Site.objects.all()
     filterset = SiteFilterSet
 
@@ -1361,6 +1410,10 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
 
 class CustomFieldTableTest(TestCase):
+    """
+    Test inclusion of custom fields in object table views.
+    """
+
     def setUp(self):
         content_type = ContentType.objects.get_for_model(Site)
 
