@@ -131,7 +131,7 @@ class NotesSerializerMixin(BaseModelSerializer):
 
 
 class NautobotModelSerializer(
-    RelationshipModelSerializerMixin, CustomFieldModelSerializer, ValidatedModelSerializer, NotesSerializerMixin
+    RelationshipModelSerializerMixin, CustomFieldModelSerializer, NotesSerializerMixin, ValidatedModelSerializer
 ):
     """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
 

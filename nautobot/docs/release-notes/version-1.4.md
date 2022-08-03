@@ -84,7 +84,7 @@ Primary and Organizational models now support notes. A notes tab has been added 
 
 #### Notes API and additional REST API Enhancements ([#2106](https://github.com/nautobot/nautobot/issues/2106))
 
-Notes support the REST API at endpoint `/api/extras/notes`. Additionally notes can be listed/created per object at the objects `/notes` endpoint.
+Notes support the REST API at endpoint `/api/extras/notes`. Additionally notes can be listed/created per object at the object's `/notes` endpoint.
 
 - For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
 
