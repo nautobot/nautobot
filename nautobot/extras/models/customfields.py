@@ -68,13 +68,7 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
-    template = models.TextField(
-        max_length=500,
-        help_text=mark_safe(
-            "Jinja2 template code for field value.<br>"
-            "Use <code>obj</code> to refer to the object that this computed field is attached to."
-        ),
-    )
+    template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
     fallback_value = models.CharField(
         max_length=500,
         blank=True,

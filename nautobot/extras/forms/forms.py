@@ -165,6 +165,13 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
+    template = forms.CharField(
+        widget=forms.Textarea,
+        help_text=(
+            "Jinja2 template code for field value.<br>"
+            "Use <code>obj</code> to refer to the object that this computed field is attached to."
+        ),
+    )
 
     class Meta:
         model = ComputedField
