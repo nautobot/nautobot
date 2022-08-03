@@ -69,7 +69,7 @@ class NautobotViewSetMixin(
         # given some parameter from the request URL.
         return obj
 
-    def _destroy(self, form):
+    def _process_destroy_form(self, form):
         """
         Helper method to destroy an object after the form is validated successfully.
         """
@@ -87,7 +87,7 @@ class NautobotViewSetMixin(
         messages.success(request, msg)
         self.success_url = self.get_return_url(request)
 
-    def _bulk_destroy(self, form):
+    def _process_bulk_destroy_form(self, form):
         """
         Helper method to destroy objects after the form is validated successfully.
         """
@@ -108,7 +108,7 @@ class NautobotViewSetMixin(
         self.success_url = self.get_return_url(request)
         messages.success(request, msg)
 
-    def _create_or_update(self, form):
+    def _process_create_or_update_form(self, form):
         """
         Helper method to create or update an object after the form is validated successfully.
         """
@@ -139,7 +139,7 @@ class NautobotViewSetMixin(
                 else:
                     self.success_url = self.get_return_url(request, obj)
 
-    def _bulk_update(self, form):
+    def _process_bulk_update_form(self, form):
         """
         Helper method to edit objects in bulk after the form is validated successfully.
         """
@@ -200,7 +200,7 @@ class NautobotViewSetMixin(
             messages.success(self.request, msg)
         self.success_url = self.get_return_url(request)
 
-    def _bulk_create(self, form):
+    def _process_bulk_create_form(self, form):
         """
         Helper method to create objects in bulk after the form is validated successfully.
         """
@@ -237,16 +237,16 @@ class NautobotViewSetMixin(
         request = self.request
 
         if self.action == "destroy":
-            self._destroy(form)
+            self._process_destroy_form(form)
             return super().form_valid(form)
 
         elif self.action == "bulk_destroy":
-            self._bulk_destroy(form)
+            self._process_bulk_destroy_form(form)
             return super().form_valid(form)
 
         elif self.action == "create_or_update":
             try:
-                self._create_or_update(form)
+                self._process_create_or_update_form(form)
                 return super().form_valid(form)
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
@@ -255,7 +255,7 @@ class NautobotViewSetMixin(
 
         elif self.action == "bulk_update":
             try:
-                self._bulk_update(form)
+                self._process_bulk_update_form(form)
                 return super().form_valid(form)
             except ValidationError as e:
                 messages.error(self.request, f"{self.obj} failed validation: {e}")
@@ -266,7 +266,7 @@ class NautobotViewSetMixin(
 
         elif self.action == "bulk_create":
             try:
-                self._bulk_create(form)
+                self._process_bulk_create_form(form)
                 return Response(
                     {
                         "table": self.obj_table,
