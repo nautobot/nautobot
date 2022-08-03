@@ -982,7 +982,6 @@ class JobEditForm(NautobotModelForm):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
-
         return cleaned_data
 
 
