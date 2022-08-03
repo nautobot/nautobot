@@ -711,6 +711,12 @@ class JobModelTest(TestCase):
 
     def test_clean_overrides(self):
         """Verify that cleaning resets non-overridden fields to their appropriate default values."""
+
+        # Can't use validated save cause this field would be ignored
+        self.local_job.has_sensitive_variables = True
+        self.local_job.save()
+        self.local_job.refresh_from_db()
+
         overridden_attrs = {
             "grouping": "Overridden Grouping",
             "name": "Overridden Name",
@@ -784,6 +790,21 @@ class JobModelTest(TestCase):
                 name="Similarly, let us hope that no one really wants to specify a job name that is over 100 characters long, it would be a pain to type at the very least and it won't look good in the UI either",
             ).clean()
         self.assertIn("Name", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="JobClassName",
+                grouping="grouping",
+                has_sensitive_variables=True,
+                approval_required=True,
+                name="Job Class Name",
+            ).clean()
+        self.assertEqual(
+            handler.exception.message_dict["approval_required"][0],
+            "A job with sensitive variables cannot be marked as requiring approval",
+        )
 
 
 class JobResultTest(TestCase):

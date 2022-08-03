@@ -1277,7 +1277,8 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
-            response.data["schedule"]["interval"][0], "Jobs with sensitive variables can only be scheduled immediately"
+            response.data["schedule"]["interval"][0],
+            "Jobs with sensitive variables cannot be scheduled for later execution",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

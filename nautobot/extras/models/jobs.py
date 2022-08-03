@@ -334,6 +334,11 @@ class Job(PrimaryModel):
         if len(self.slug) > JOB_MAX_SLUG_LENGTH:
             raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
 
+        if self.has_sensitive_variables is True and self.approval_required is True:
+            raise ValidationError(
+                {"approval_required": "A job with sensitive variables cannot be marked as requiring approval"}
+            )
+
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})
 
