@@ -1,12 +1,13 @@
 import django_filters
+import logging
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.forms import DateField, IntegerField, NullBooleanField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.constants import FILTER_NUMERIC_BASED_LOOKUP_MAP
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
@@ -60,7 +61,6 @@ __all__ = (
     "ConfigContextFilterSet",
     "ContentTypeFilterSet",
     "CreatedUpdatedFilterSet",
-    "CustomFieldFilter",
     "CustomFieldModelFilterSet",
     "CustomLinkFilterSet",
     "DynamicGroupFilterSet",
@@ -86,6 +86,8 @@ __all__ = (
     "TagFilterSet",
     "WebhookFilterSet",
 )
+
+logger = logging.getLogger(__name__)
 
 
 #
@@ -418,39 +420,29 @@ EXACT_FILTER_TYPES = (
 )
 
 
-class CustomFieldFilter(django_filters.Filter):
+def customfield_filter_factory(custom_field):
     """
-    Filter objects by the presence of a CustomFieldValue. The filter's name is used as the CustomField name.
+    # TODO: document me
+    Given a form field class, return a subclass capable of accepting multiple values. This allows us to OR on multiple
+    filter values while maintaining the field's built-in validation. Example: GET /api/dcim/devices/?name=foo&name=bar
     """
 
-    def __init__(self, custom_field, *args, **kwargs):
-        self.custom_field = custom_field
+    if custom_field.type == CustomFieldTypeChoices.TYPE_INTEGER:
+        filter_class = django_filters.NumberFilter
+    elif custom_field.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+        filter_class = django_filters.BooleanFilter
+    elif custom_field.type == CustomFieldTypeChoices.TYPE_DATE:
+        filter_class = django_filters.DateFilter
 
-        if custom_field.type == CustomFieldTypeChoices.TYPE_INTEGER:
-            self.field_class = IntegerField
-        elif custom_field.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-            self.field_class = NullBooleanField
-        elif custom_field.type == CustomFieldTypeChoices.TYPE_DATE:
-            self.field_class = DateField
+    class CustomFieldBaseFilter(filter_class):
+        def filter(self, qs, value):
+            if value == "null":
+                return self.get_method(qs)(
+                    Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
+                )
+            return super().filter(qs, value)
 
-        super().__init__(*args, **kwargs)
-
-        self.field_name = f"_custom_field_data__{self.field_name}"
-
-        if custom_field.type not in EXACT_FILTER_TYPES:
-            if custom_field.filter_logic == CustomFieldFilterLogicChoices.FILTER_LOOSE:
-                self.lookup_expr = "icontains"
-
-        elif custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-            # Contains handles lists within the JSON data for multi select fields
-            self.lookup_expr = "contains"
-
-    def filter(self, qs, value):
-        if value == "null":
-            return self.get_method(qs)(
-                Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
-            )
-        return super().filter(qs, value)
+    return type("CustomField{}".format(filter_class.__name__), (CustomFieldBaseFilter,), dict())
 
 
 # TODO: should be CustomFieldModelFilterSetMixin
@@ -466,15 +458,67 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             content_types=ContentType.objects.get_for_model(self._meta.model)
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
-            if cf.type == "date":
-                # TODO 2.0: revisit this when we do our filterset streamlining/consolidation for the v2 work
-                self.filters[f"cf_{cf.name}__gte"] = CustomFieldFilter(
-                    field_name=cf.name, custom_field=cf, lookup_expr="gte"
+            new_filter_name = f"cf_{cf.name}"
+            cf_filter_class = customfield_filter_factory(cf)
+            new_filter_field = cf_filter_class(field_name=f"_custom_field_data__{cf.name}")
+            self.filters[new_filter_name] = new_filter_field
+            self.filters.update(
+                self._generate_custom_field_lookup_expression_filters(
+                    filter_name=new_filter_name, filter_field=new_filter_field
                 )
-                self.filters[f"cf_{cf.name}__lte"] = CustomFieldFilter(
-                    field_name=cf.name, custom_field=cf, lookup_expr="lte"
-                )
-            self.filters["cf_{}".format(cf.name)] = CustomFieldFilter(field_name=cf.name, custom_field=cf)
+            )
+
+    @staticmethod
+    def _get_custom_field_filter_lookup_dict(existing_filter):
+        # Choose the lookup expression map based on the filter type
+        if isinstance(
+            existing_filter,
+            (
+                django_filters.NumberFilter,
+                django_filters.DateFilter,
+            ),
+        ):
+            lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
+        else:
+            lookup_map = None
+
+        return lookup_map
+
+    @classmethod
+    def _generate_custom_field_lookup_expression_filters(cls, filter_name, filter_field):
+        """
+        TODO: Document me
+        For specific filter types, new filters are created based on defined lookup expressions in
+        the form `<field_name>__<lookup_expr>`
+        """
+        magic_filters = {}
+        # Choose the lookup expression map based on the filter type
+        lookup_map = cls._get_custom_field_filter_lookup_dict(filter_field)
+        if lookup_map is None:
+            # Do not augment this filter type with more lookup expressions
+            return magic_filters
+
+        # Create new filters for each lookup expression in the map
+        for lookup_name, lookup_expr in lookup_map.items():
+            new_filter_name = f"{filter_name}__{lookup_name}"
+            new_filter = type(filter_field)(
+                field_name=filter_field.field_name,
+                lookup_expr=lookup_expr,
+                label=filter_field.label,
+                exclude=filter_field.exclude,
+                distinct=filter_field.distinct,
+                **filter_field.extra,
+            )
+
+            if lookup_name.startswith("n"):
+                # This is a negation filter which requires a queryset.exclude() clause
+                # Of course setting the negation of the existing filter's exclude attribute handles both cases
+                new_filter.exclude = not filter_field.exclude
+
+            magic_filters[new_filter_name] = new_filter
+
+        logger.debug(f"generated new filters {magic_filters}")
+        return magic_filters
 
 
 class CustomFieldFilterSet(BaseFilterSet):
