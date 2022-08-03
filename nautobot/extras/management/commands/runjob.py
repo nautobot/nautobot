@@ -68,7 +68,7 @@ class Command(BaseCommand):
             job = Job.objects.get_for_class_path(job_class.class_path)
             job_result = JobResult.objects.create(
                 name=job.class_path,
-                obj_type=get_job_content_type(),
+                obj_type=job_content_type,
                 user=user,
                 job_model=job,
                 job_id=uuid.uuid4(),
