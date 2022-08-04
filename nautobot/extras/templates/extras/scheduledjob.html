@@ -70,10 +70,17 @@
                   <td>{{ object.enabled | render_boolean }}</td>
               </tr>
               <tr>
-                  <td>Interval</td>
-                  <td>
-                      {{ object.interval }}
-                  </td>
+                  {% if object.interval == 'custom' %}
+                      <td>Custom Interval</td>
+                      <td>
+                          {{ object.crontab }}
+                      </td>
+                  {% else %}
+                      <td>Interval</td>
+                      <td>
+                          {{ object.interval }}
+                      </td>
+                  {% endif %}
               </tr>
               <tr>
                   <td>One Off?</td>
