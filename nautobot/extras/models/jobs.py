@@ -384,7 +384,7 @@ class JobHook(OrganizationalModel):
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
 
     def get_absolute_url(self):
-        return reverse("extras:jobhook", kwargs={"pk": self.pk})
+        return reverse("extras:jobhook", kwargs={"slug": self.slug})
 
     @classmethod
     def check_for_conflicts(
