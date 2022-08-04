@@ -88,6 +88,16 @@ of the Redis server and port for each sentinel instance to connect to
 Example:
 
 ```python
+# Uncomment the following lines to configure TLS/SSL
+# import ssl
+
+# REDIS_SSL_SETTINGS = {
+#     "ssl_cert_reqs": ssl.CERT_REQUIRED,
+#     "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+#     "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+#     "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+# }
+
 DJANGO_REDIS_CONNECTION_FACTORY = "django_redis.pool.SentinelConnectionFactory"
 CACHES = {
     "default": {
@@ -96,9 +106,17 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.SentinelClient",
             "CONNECTION_POOL_CLASS": "redis.sentinel.SentinelConnectionPool",
+            # Uncomment the following lines to configure TLS/SSL
+            # "CONNECTION_POOL_KWARGS": {
+            #     "ssl": True,
+            #     **REDIS_SSL_SETTINGS,
+            # },
             "PASSWORD": "",
             "SENTINEL_KWARGS": {
                 "password": "",  # likely the same password from above
+                # Uncomment the following lines to configure TLS/SSL
+                # "ssl": True,
+                # **REDIS_SSL_SETTINGS,
             },
             "SENTINELS": [
                 ("mysentinel.redis.example.com", 26379),
@@ -133,6 +151,16 @@ of the Redis server and port for each sentinel instance to connect to
 Example:
 
 ```python
+# Uncomment the following lines to configure TLS/SSL
+# import ssl
+
+# REDIS_SSL_SETTINGS = {
+#     "ssl_cert_reqs": ssl.CERT_REQUIRED,
+#     "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+#     "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+#     "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+# }
+
 CACHEOPS_REDIS = False
 CACHEOPS_SENTINEL = {
     "db": 1,
@@ -145,8 +173,13 @@ CACHEOPS_SENTINEL = {
     "socket_timeout": 10,
     "sentinel_kwargs": {
         "password": ""
+        # Uncomment the following lines to configure TLS/SSL
+        # "ssl": True,
+        # **REDIS_SSL_SETTINGS,
     },
     "password": "",
+    # Uncomment the following line to configure TLS/SSL
+    # **REDIS_SSL_SETTINGS,
     # Everything else is passed to `Sentinel()`
 }
 ```
@@ -168,6 +201,16 @@ Celery Sentinel configuration is controlled by four settings within your `nautob
 By default Nautobot configures the celery broker and results backend with the same settings, so this pattern is mirrored here.
 
 ```python
+# Uncomment the following lines to configure TLS/SSL
+# import ssl
+
+# REDIS_SSL_SETTINGS = {
+#     "ssl_cert_reqs": ssl.CERT_REQUIRED,
+#     "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+#     "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+#     "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+# }
+
 redis_password = ""
 sentinel_password = ""
 
@@ -179,11 +222,20 @@ CELERY_BROKER_URL = (
 )
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     "master_name": "nautobot",
-    "sentinel_kwargs": {"password": sentinel_password},
+    "sentinel_kwargs": {
+        "password": sentinel_password
+        # Uncomment the following lines to configure TLS/SSL
+        # "ssl": True,
+        # **REDIS_SSL_SETTINGS,
+    },
 }
 
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
+
+# Uncomment the following lines to configure TLS/SSL
+CELERY_REDIS_BACKEND_USE_SSL = REDIS_SSL_SETTINGS
+CELERY_BROKER_USE_SSL = REDIS_SSL_SETTINGS
 ```
 
 Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
