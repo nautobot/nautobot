@@ -5,7 +5,6 @@ from django_tables2 import RequestConfig
 from rest_framework import renderers
 
 from nautobot.utilities.forms import (
-    ConfirmationForm,
     TableConfigForm,
     restrict_form_fields,
 )
@@ -93,10 +92,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 }
                 RequestConfig(request, paginate).configure(table)
             elif view.action == "destroy":
-                form = ConfirmationForm(initial=request.GET)
+                form_class = view.get_form_class()
+                form = form_class(initial=request.GET)
             elif view.action == "create_or_update":
                 initial_data = normalize_querydict(request.GET)
-                form = view.form_class(instance=obj, initial=initial_data)
+                form_class = view.get_form_class()
+                form = form_class(instance=obj, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 if request.POST.get("_all"):
@@ -105,24 +106,24 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     else:
                         pk_list = model.objects.values_list("pk", flat=True)
                 else:
-                    form_class = view.get_form()
+                    form_class = view.get_form_class()
                     pk_list = request.POST.getlist("pk")
-                    # form = form_cls(request.POST)
-                    form = form_class(
-                        initial={
-                            "pk": pk_list,
-                            "return_url": view.get_return_url(request),
-                        }
-                    )
+                    initial = {
+                        "pk": pk_list,
+                        "return_url": view.get_return_url(request),
+                    }
+                    form = form_class(initial=initial)
             elif view.action == "bulk_create":
-                form = view._import_form_for_bulk_import()
+                form = view.get_form()
+                form_class = view.get_form_class()
             elif view.action == "bulk_update":
+                form_class = view.get_form_class()
                 if request.POST.get("_all") and view.filterset_class is not None:
                     pk_list = [obj.pk for obj in view.filterset_class(request.GET, view.queryset.only("pk")).qs]
                 else:
                     pk_list = request.POST.getlist("pk")
                 if "_apply" in request.POST:
-                    form = view.bulk_update_form_class(model, request.POST)
+                    form = form_class(model, request.POST)
                     restrict_form_fields(form, request.user)
                 else:
                     # Include the PK list as initial data for the form
@@ -135,7 +136,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     elif "device_type" in request.GET:
                         initial_data["device_type"] = request.GET.get("device_type")
 
-                    form = view.bulk_update_form_class(model, initial=initial_data)
+                    form = form_class(model, initial=initial_data)
                     restrict_form_fields(form, request.user)
 
         context = {
@@ -145,7 +146,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "obj_type_plural": view.queryset.model._meta.verbose_name_plural,
             "editing": obj.present_in_database,
             "form": form,
-            "fields": view.import_form_class().fields,
+            "fields": form_class(model).fields if form_class else None,
             "table": table if table else data.get("table", None),
             "return_url": view.get_return_url(request, instance),
             "verbose_name": view.queryset.model._meta.verbose_name,
@@ -169,5 +170,5 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if data.get("template"):
             self.template = data["template"]
         else:
-            self.template = view.get_template_name(view.action)
+            self.template = view.get_template_name()
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

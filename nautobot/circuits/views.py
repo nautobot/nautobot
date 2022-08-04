@@ -24,7 +24,7 @@ class CircuitTypeDRFViewSet(NautobotDRFViewSet):
     table_class = tables.CircuitTypeTable
     form_class = forms.CircuitTypeForm
     filterset_class = filters.CircuitTypeFilterSet
-    import_form_class = forms.CircuitTypeCSVForm
+    bulk_create_form_class = forms.CircuitTypeCSVForm
     lookup_field = "slug"
 
     def get_extra_context(self, request, instance):
@@ -75,7 +75,7 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
     form_class = forms.ProviderForm
     filterset_form_class = forms.ProviderFilterForm
     filterset_class = filters.ProviderFilterSet
-    import_form_class = forms.ProviderCSVForm
+    bulk_create_form_class = forms.ProviderCSVForm
     bulk_update_form_class = forms.ProviderBulkEditForm
     lookup_field = "slug"
 
@@ -111,7 +111,7 @@ class CircuitDRFViewSet(NautobotDRFViewSet):
     form_class = forms.CircuitForm
     filterset_class = filters.CircuitFilterSet
     filterset_form_class = forms.CircuitFilterForm
-    import_form_class = forms.CircuitCSVForm
+    bulk_create_form_class = forms.CircuitCSVForm
     bulk_update_form_class = forms.CircuitBulkEditForm
     lookup_field = "pk"
 
@@ -165,7 +165,7 @@ class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
     form_class = forms.ProviderNetworkForm
     filterset_form_class = forms.ProviderNetworkFilterForm
     filterset_class = filters.ProviderNetworkFilterSet
-    import_form_class = forms.ProviderNetworkCSVForm
+    bulk_create_form_class = forms.ProviderNetworkCSVForm
     bulk_update_form_class = forms.ProviderNetworkBulkEditForm
     lookup_field = "slug"
 
