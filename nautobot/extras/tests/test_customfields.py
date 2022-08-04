@@ -1218,6 +1218,7 @@ class CustomFieldFilterTest(TestCase):
 
     def test_filter_date(self):
         self.assertEqual(self.filterset({"cf_cf5": "2016-06-26"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf5__n": "2016-06-26"}, self.queryset).qs.count(), 3)
         self.assertEqual(self.filterset({"cf_cf5__lte": "2016-06-28"}, self.queryset).qs.count(), 2)
         self.assertEqual(self.filterset({"cf_cf5__lte": "2016-06-27"}, self.queryset).qs.count(), 2)
         self.assertEqual(self.filterset({"cf_cf5__lte": "2016-06-26"}, self.queryset).qs.count(), 1)
