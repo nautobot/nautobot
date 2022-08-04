@@ -140,7 +140,7 @@ class UserFilter(NautobotFilterSet):
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Provider.objects.all(),
-        label="Provider (slug or ID)",
+        label="Provider (name or ID)",
     )
 ```
 
