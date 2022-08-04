@@ -76,7 +76,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         obj = view.alter_obj_for_edit(instance, request, view.args, view.kwargs)
         form = None
         table = None
-
+        form_class = view.get_form_class()
         if data.get("form"):
             form = data["form"]
         else:
@@ -92,11 +92,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 }
                 RequestConfig(request, paginate).configure(table)
             elif view.action == "destroy":
-                form_class = view.get_form_class()
                 form = form_class(initial=request.GET)
             elif view.action == "create_or_update":
                 initial_data = normalize_querydict(request.GET)
-                form_class = view.get_form_class()
                 form = form_class(instance=obj, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
@@ -106,7 +104,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     else:
                         pk_list = model.objects.values_list("pk", flat=True)
                 else:
-                    form_class = view.get_form_class()
                     pk_list = request.POST.getlist("pk")
                     initial = {
                         "pk": pk_list,
@@ -115,9 +112,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     form = form_class(initial=initial)
             elif view.action == "bulk_create":
                 form = view.get_form()
-                form_class = view.get_form_class()
             elif view.action == "bulk_update":
-                form_class = view.get_form_class()
                 if request.POST.get("_all") and view.filterset_class is not None:
                     pk_list = [obj.pk for obj in view.filterset_class(request.GET, view.queryset.only("pk")).qs]
                 else:
