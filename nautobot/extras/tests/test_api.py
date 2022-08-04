@@ -473,52 +473,6 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         for cf in custom_fields:
             cf.content_types.add(site_ct)
 
-    def test_date_filter(self):
-        self.user.is_superuser = True
-        self.user.save()
-        cf = CustomField.objects.create(name="cfd", type="date")
-        cf.content_types.add(ContentType.objects.get_for_model(Site))
-        Site.objects.create(
-            name="Site 1",
-            slug="site-1",
-            _custom_field_data={
-                "cfd": "2016-06-26",
-            },
-        )
-        Site.objects.create(
-            name="Site 2",
-            slug="site-2",
-            _custom_field_data={
-                "cfd": "2016-06-27",
-            },
-        )
-
-        base_url = reverse("dcim-api:site-list") + "?cf_cfd{filter_logic}"
-
-        # exact lookup
-        response = self.client.get(base_url.format(filter_logic="=2016-06-26"), **self.header)
-        self.assertEqual(1, len(response.data["results"]))
-
-        # lte lookup
-        response = self.client.get(base_url.format(filter_logic="__lte=2016-06-28"), **self.header)
-        self.assertEqual(2, len(response.data["results"]))
-        response = self.client.get(base_url.format(filter_logic="__lte=2016-06-27"), **self.header)
-        self.assertEqual(2, len(response.data["results"]))
-        response = self.client.get(base_url.format(filter_logic="__lte=2016-06-26"), **self.header)
-        self.assertEqual(1, len(response.data["results"]))
-        response = self.client.get(base_url.format(filter_logic="__lte=2016-06-25"), **self.header)
-        self.assertEqual(0, len(response.data["results"]))
-
-        # gte lookup
-        response = self.client.get(base_url.format(filter_logic="__gte=2016-06-25"), **self.header)
-        self.assertEqual(2, len(response.data["results"]))
-        response = self.client.get(base_url.format(filter_logic="__gte=2016-06-26"), **self.header)
-        self.assertEqual(2, len(response.data["results"]))
-        response = self.client.get(base_url.format(filter_logic="__gte=2016-06-27"), **self.header)
-        self.assertEqual(1, len(response.data["results"]))
-        response = self.client.get(base_url.format(filter_logic="__gte=2016-06-28"), **self.header)
-        self.assertEqual(0, len(response.data["results"]))
-
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):
     model = CustomLink
