@@ -2068,7 +2068,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
             {
                 self.relationships[0].slug: {
                     "id": str(self.relationships[0].pk),
-                    "url": reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk}),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk})
+                    ),
                     "name": self.relationships[0].name,
                     "type": self.relationships[0].type,
                     "peer": {
@@ -2079,7 +2082,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 },
                 self.relationships[1].slug: {
                     "id": str(self.relationships[1].pk),
-                    "url": reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk}),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk})
+                    ),
                     "name": self.relationships[1].name,
                     "type": self.relationships[1].type,
                     "destination": {
@@ -2095,7 +2101,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 },
                 self.relationships[2].slug: {
                     "id": str(self.relationships[2].pk),
-                    "url": reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk}),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk})
+                    ),
                     "name": self.relationships[2].name,
                     "type": self.relationships[2].type,
                     "destination": {
@@ -2374,7 +2383,10 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             {
                 self.relationship.slug: {
                     "id": str(self.relationship.pk),
-                    "url": reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk}),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk})
+                    ),
                     "name": self.relationship.name,
                     "type": "many-to-many",
                     "destination": {
