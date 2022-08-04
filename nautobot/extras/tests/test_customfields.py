@@ -1227,6 +1227,8 @@ class CustomFieldFilterTest(TestCase):
         self.assertEqual(self.filterset({"cf_cf5__gte": "2016-06-26"}, self.queryset).qs.count(), 2)
         self.assertEqual(self.filterset({"cf_cf5__gte": "2016-06-27"}, self.queryset).qs.count(), 1)
         self.assertEqual(self.filterset({"cf_cf5__gte": "2016-06-28"}, self.queryset).qs.count(), 0)
+        params = {"cf_cf5__gte": "2016-06-25", "cf_cf5__lt": "2016-06-27"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_filter_url(self):
         self.assertEqual(
