@@ -419,6 +419,11 @@ EXACT_FILTER_TYPES = (
 
 
 class CustomFieldBaseFilter(django_filters.Filter):
+    """
+    Base filter for CustomField to handle CustomField.filter_logic setting
+    and exclude filtering specific to JSONField where CustomField data is stored.
+    """
+
     def __init__(self, custom_field, *args, **kwargs):
         self.custom_field = custom_field
         if custom_field.type not in EXACT_FILTER_TYPES:
@@ -436,8 +441,8 @@ class CustomFieldBaseFilter(django_filters.Filter):
                 Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
             )
 
-        # Custom fields require special handling for exclude querysets. Build a queryset to return
-        # custom fields that do not match the value and null custom fields
+        # Custom fields require special handling for exclude querysets. Queryset returns
+        # custom fields that do not match the value and custom fields that are null
         if self.exclude and value is not None:
             query = Q(**{f"{self.field_name}__isnull": False})
             query &= Q(**{f"{self.field_name}__{self.lookup_expr}": value})
@@ -454,6 +459,10 @@ class CustomFieldDateFilter(CustomFieldBaseFilter):
     field_class = DateField
 
 
+class CustomFieldJSONFilter(CustomFieldBaseFilter):
+    pass
+
+
 class CustomFieldMultiSelectFilter(CustomFieldBaseFilter):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("lookup_expr", "contains")
@@ -467,7 +476,8 @@ class CustomFieldNumberFilter(CustomFieldBaseFilter):
 # TODO: should be CustomFieldModelFilterSetMixin
 class CustomFieldModelFilterSet(django_filters.FilterSet):
     """
-    Dynamically add a Filter for each CustomField applicable to the parent model.
+    Dynamically add a Filter for each CustomField applicable to the parent model. Add filters for
+    extra lookup expressions on supported CustomField types.
     """
 
     def __init__(self, *args, **kwargs):
@@ -477,6 +487,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldDateFilter,
             CustomFieldTypeChoices.TYPE_BOOLEAN: CustomFieldBooleanFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
+            CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
         }
 
@@ -502,7 +513,9 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
         # Choose the lookup expression map based on the filter type
         if isinstance(existing_filter, (CustomFieldNumberFilter, CustomFieldDateFilter)):
             lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
-        elif isinstance(existing_filter, CustomFieldBooleanFilter):
+        elif isinstance(
+            existing_filter, (CustomFieldBooleanFilter, CustomFieldJSONFilter, CustomFieldMultiSelectFilter)
+        ):
             lookup_map = None
         else:
             lookup_map = FILTER_CHAR_BASED_LOOKUP_MAP
@@ -514,9 +527,9 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
     @classmethod
     def _generate_custom_field_lookup_expression_filters(cls, filter_name, filter_field):
         """
-        TODO: Document me
         For specific filter types, new filters are created based on defined lookup expressions in
-        the form `<field_name>__<lookup_expr>`
+        the form `<field_name>__<lookup_expr>`. Copied from nautobot.utilities.filters.BaseFilterSet
+        and updated to work with custom fields.
         """
         magic_filters = {}
         # Choose the lookup expression map based on the filter type
