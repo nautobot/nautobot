@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django_tables2 import RequestConfig
-
 from rest_framework import renderers
 
 from nautobot.utilities.forms import (
@@ -71,7 +70,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view.queryset = view.alter_queryset(request)
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
-        # Construct the objects table
+        # Construct valid actions
         valid_actions = self.validate_action_buttons(view, request)
         obj = view.alter_obj_for_edit(instance, request, view.args, view.kwargs)
         form = None
@@ -110,6 +109,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "return_url": view.get_return_url(request),
                     }
                     form = form_class(initial=initial)
+                    table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
             elif view.action == "bulk_create":
                 form = view.get_form()
             elif view.action == "bulk_update":
@@ -119,6 +119,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     pk_list = request.POST.getlist("pk")
                 if "_apply" in request.POST:
                     form = form_class(model, request.POST)
+                    table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
                     restrict_form_fields(form, request.user)
                 else:
                     # Include the PK list as initial data for the form
@@ -133,7 +134,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
                     form = form_class(model, initial=initial_data)
                     restrict_form_fields(form, request.user)
-
+                    table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
         context = {
             "obj": obj,
             "object": instance,

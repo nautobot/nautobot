@@ -41,7 +41,7 @@ from nautobot.utilities.utils import (
     csv_format,
     prepare_cloned_fields,
 )
-from nautobot.utilities.views import ObjectPermissionRequiredMixin, GetReturnURLMixin
+from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -55,7 +55,7 @@ PERMISSIONS_ACTION_MAP = {
 
 
 class NautobotViewSetMixin(
-    ViewSetMixin, ObjectPermissionRequiredMixin, GetReturnURLMixin, FormView, generics.GenericAPIView
+    ViewSetMixin, GetReturnURLMixin, FormView, generics.GenericAPIView
 ):
     serializer_class = None
     renderer_classes = [NautobotHTMLRenderer]
@@ -285,7 +285,7 @@ class NautobotViewSetMixin(
             return super().form_valid(form)
         else:
             data = {}
-            if self.action in ["bulk_update", "bulk_delete"]:
+            if self.action in ["bulk_update", "bulk_destroy"]:
                 pk_list = self.pk_list
                 table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
                 if not table.rows:
@@ -304,7 +304,7 @@ class NautobotViewSetMixin(
     def form_invalid(self, form):
         data = {}
         request = self.request
-        if self.action in ["bulk_update", "bulk_delete"]:
+        if self.action in ["bulk_update", "bulk_destroy"]:
             pk_list = self.pk_list
             table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
@@ -667,6 +667,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
 
 
 class NautobotDRFViewSet(
+    ObjectPermissionRequiredMixin,
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectEditViewMixin,
@@ -676,4 +677,5 @@ class NautobotDRFViewSet(
     BulkUpdateViewMixin,
 ):
     def get_required_permission(self):
+        self.action = "bulk_destroy"
         return get_permission_for_model(self.queryset.model, PERMISSIONS_ACTION_MAP[self.action])

@@ -30,7 +30,7 @@ urlpatterns = [
     ),
     path(
         "providers/delete/",
-        views.ProviderDRFViewSet.as_view({"post": "bulk_destroy"}),
+        views.ProviderDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="provider_bulk_delete",
     ),
     path(
@@ -76,7 +76,7 @@ urlpatterns = [
     ),
     path(
         "provider-networks/delete/",
-        views.ProviderNetworkDRFViewSet.as_view({"post": "bulk_destroy"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="providernetwork_bulk_delete",
     ),
     path(
@@ -117,7 +117,7 @@ urlpatterns = [
     ),
     path(
         "circuit-types/delete/",
-        views.CircuitTypeDRFViewSet.as_view({"post": "bulk_destroy"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="circuittype_bulk_delete",
     ),
     path(
@@ -163,7 +163,7 @@ urlpatterns = [
     ),
     path(
         "circuits/delete/",
-        views.CircuitDRFViewSet.as_view({"post": "bulk_destroy"}),
+        views.CircuitDRFViewSet.as_view({"get": "bulk_destroy", "post": "bulk_destroy"}),
         name="circuit_bulk_delete",
     ),
     path(
