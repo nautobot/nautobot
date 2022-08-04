@@ -1189,6 +1189,11 @@ class CustomFieldFilterTest(TestCase):
 
     def test_filter_integer(self):
         self.assertEqual(self.filterset({"cf_cf1": 100}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__n": 100}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf1__lte": 101}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__lt": 101}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__gte": 199}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__gt": 199}, self.queryset).qs.count(), 1)
 
     def test_filter_boolean(self):
         self.assertEqual(self.filterset({"cf_cf2": True}, self.queryset).qs.count(), 1)
@@ -1197,6 +1202,19 @@ class CustomFieldFilterTest(TestCase):
     def test_filter_text(self):
         self.assertEqual(self.filterset({"cf_cf3": "foo"}, self.queryset).qs.count(), 1)
         self.assertEqual(self.filterset({"cf_cf4": "foo"}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"cf_cf4__n": "foo"}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__ic": "OOB"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nic": "OOB"}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__iew": "Bar"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__niew": "Bar"}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__isw": "Foob"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nisw": "Foob"}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__ie": "Foo"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nie": "Foo"}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__re": "f.*b"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nre": "f.*b"}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__ire": "F.*b"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nire": "F.*b"}, self.queryset).qs.count(), 3)
 
     def test_filter_date(self):
         self.assertEqual(self.filterset({"cf_cf5": "2016-06-26"}, self.queryset).qs.count(), 1)
