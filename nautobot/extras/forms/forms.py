@@ -1,3 +1,5 @@
+import warnings
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -169,7 +171,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         widget=forms.Textarea,
         help_text=(
             "Jinja2 template code for field value.<br>"
-            "Use <code>obj</code> to refer to the object that this computed field is attached to."
+            "Use <code>obj</code> to refer to the object to which this computed field is attached."
         ),
     )
 
@@ -378,6 +380,14 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
 
 class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
     """No longer needed as a separate class - use CustomFieldBulkEditForm instead."""
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "CustomFieldBulkCreateForm is deprecated and will be removed in a future major release. "
+            "Use CustomFieldBulkEditForm as a base class instead.",
+            DeprecationWarning,
+        )
+        super().__init__(*args, **kwargs)
 
 
 #

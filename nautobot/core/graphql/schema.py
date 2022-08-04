@@ -1,6 +1,7 @@
 """Schema module for GraphQL."""
 from collections import OrderedDict
 import logging
+import warnings
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -165,8 +166,10 @@ def extend_schema_type_null_field_choice(schema_type, model):
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
-                f"Unable to add {field.name} to {schema_type._meta.name} "
-                f"because there is already an attribute with the same name ({field_name})"
+                'Unable to add "%s" to %s because there is already an attribute mapped to the same name ("%s")',
+                field.name,
+                schema_type._meta.name,
+                field_name,
             )
             continue
 
@@ -230,21 +233,21 @@ def extend_schema_type_custom_field(schema_type, model):
         if str_to_var_name(field.name) != field.name:
             # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
             # In 2.0 we should simply omit fields whose names/slugs are invalid in GraphQL, instead of mapping them.
-            logger.warning(
-                'Custom field %s on %s does not have a GraphQL-safe name ("%s"); '
-                "for now it will be mapped to the GraphQL name %s, "
+            warnings.warn(
+                f'Custom field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe name '
+                f'("{field.name}"); for now it will be mapped to the GraphQL name "{field_name}", '
                 "but in a future release this field may fail to appear in GraphQL.",
-                field,
-                model._meta.verbose_name,
-                field.name,
-                field_name,
+                FutureWarning,
             )
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
-                f"Unable to add the custom field {field.name} to {schema_type._meta.name} "
-                f"because there is already an attribute with the same name ({field_name})"
+                'Unable to add the custom field "%s" to %s '
+                'because there is already an attribute mapped to the same name ("%s")',
+                field,
+                schema_type._meta.name,
+                field_name,
             )
             continue
 
@@ -285,21 +288,19 @@ def extend_schema_type_computed_field(schema_type, model):
         if str_to_var_name(field.slug) != field.slug:
             # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
             # In 2.0 we should simply omit fields whose slugs are invalid in GraphQL, instead of mapping them.
-            logger.warning(
-                'Computed field %s on %s does not have a GraphQL-safe slug ("%s"); '
-                "for now it will be mapped to the GraphQL name %s, "
+            warnings.warn(
+                f'Computed field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
+                f'("{field.slug}"); for now it will be mapped to the GraphQL name "{field_name}", '
                 "but in a future release this field may fail to appear in GraphQL.",
-                field,
-                model._meta.verbose_name,
-                field.slug,
-                field_name,
+                FutureWarning,
             )
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
-                "Unable to add the computed field %s to %s because there is already an attribute with the same name (%s)",
-                field.slug,
+                'Unable to add the computed field "%s" to %s because '
+                'there is already an attribute mapped to the same name ("%s")',
+                field,
                 schema_type._meta.name,
                 field_name,
             )
@@ -391,14 +392,11 @@ def extend_schema_type_relationships(schema_type, model):
             if str_to_var_name(relationship.slug) != relationship.slug:
                 # 2.0 TODO: str_to_var_name is lossy, it may cause different relationships to map to the same rel_name
                 # In 2.0 we should simply omit relations whose slugs are invalid in GraphQL, instead of mapping them.
-                logger.warning(
-                    'Relationship %s on %s does not have a GraphQL-safe slug ("%s"); '
-                    "for now it will be mapped to the GraphQL name %s, "
+                warnings.warn(
+                    f'Relationship "{relationship}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
+                    f'("{relationship.slug}"); for now it will be mapped to the GraphQL name "{rel_name}", '
                     "but in a future release this relationship may fail to appear in GraphQL.",
-                    relationship,
-                    model._meta.verbose_name,
-                    relationship.slug,
-                    rel_name,
+                    FutureWarning,
                 )
 
             if hasattr(schema_type, resolver_name):
@@ -406,8 +404,11 @@ def extend_schema_type_relationships(schema_type, model):
                 # Otherwise something is wrong and we should warn
                 if side != "destination" or not relationship.symmetric:
                     logger.warning(
-                        f"Unable to add the custom relationship {relationship.slug} to {schema_type._meta.name} "
-                        f"because there is already an attribute with the same name ({rel_name})"
+                        'Unable to add the custom relationship "%s" to %s '
+                        'because there is already an attribute mapped to the same name ("%s")',
+                        relationship,
+                        schema_type._meta.name,
+                        rel_name,
                     )
                 continue
 
@@ -418,13 +419,13 @@ def extend_schema_type_relationships(schema_type, model):
             if not peer_model:
                 # Could happen if, for example, we have a leftover relationship defined for a model from a plugin
                 # that is no longer installed/enabled
-                logger.warning(f"Unable to find peer model {peer_type} to create GraphQL relationship")
+                logger.warning("Unable to find peer model %s to create GraphQL relationship", peer_type)
                 continue
             type_identifier = f"{peer_model._meta.app_label}.{peer_model._meta.model_name}"
             rel_schema_type = registry["graphql_types"].get(type_identifier)
 
             if not rel_schema_type:
-                logger.warning(f"Unable to identify the GraphQL Object Type for {type_identifier} in the registry.")
+                logger.warning("Unable to identify the GraphQL Object Type for %s in the registry.", type_identifier)
                 continue
 
             if relationship.has_many(peer_side):
@@ -457,15 +458,19 @@ def generate_query_mixin():
 
         if single_item_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema single type '{single_item_name}' in GraphQL, "
-                f"there is already another type {class_attrs[single_item_name]._type} registered under this name"
+                'Unable to register the schema single type "%s" in GraphQL, '
+                'as there is already another type "%s" registered under this name',
+                single_item_name,
+                class_attrs[single_item_name]._type,
             )
             return True
 
         if list_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema list type '{list_name}' in GraphQL, "
-                f"there is already another type {class_attrs[list_name]._type} registered under this name"
+                'Unable to register the schema list type "%s" in GraphQL, '
+                'as there is already another type "%s" registered under this name',
+                list_name,
+                class_attrs[list_name]._type,
             )
             return True
 
@@ -483,8 +488,10 @@ def generate_query_mixin():
                 model = ct.model_class()
             except ContentType.DoesNotExist:
                 logger.warning(
-                    f"Unable to generate a schema type for the model '{app_name}.{model_name}' in GraphQL,"
-                    "this model doesn't have an associated ContentType, please create the Object manually."
+                    'Unable to generate a schema type for the model "%s.%s" in GraphQL, '
+                    "as this model doesn't have an associated ContentType. Please create the Object manually.",
+                    app_name,
+                    model_name,
                 )
                 continue
 
@@ -505,10 +512,11 @@ def generate_query_mixin():
 
         if type_identifier in registry["graphql_types"]:
             logger.warning(
-                f'Unable to load schema type for the model "{type_identifier}" as there is already another type '
+                'Unable to load schema type for the model "%s" as there is already another type '
                 "registered under this name. If you are seeing this message during plugin development, check to "
                 "make sure that you aren't using @extras_features(\"graphql\") on the same model you're also "
-                "defining a custom GraphQL type for."
+                "defining a custom GraphQL type for.",
+                type_identifier,
             )
         else:
             registry["graphql_types"][type_identifier] = schema_type

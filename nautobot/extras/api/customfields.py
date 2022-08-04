@@ -76,9 +76,9 @@ class CustomFieldsDataField(Field):
             # Map slugs to names for the backend data
             # 2.0 TODO: #824 remove this translation
             new_data = {}
-            for slug, value in data.items():
-                cf = CustomField.objects.get(slug=slug)
-                new_data[cf.name] = value
+            custom_fields = CustomField.objects.filter(slug__in=data.keys())
+            for cf in custom_fields.iterator():
+                new_data[cf.name] = data[cf.slug]
             data = new_data
 
         # If updating an existing instance, start with existing _custom_field_data

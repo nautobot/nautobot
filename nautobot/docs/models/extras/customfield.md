@@ -32,7 +32,7 @@ _Changed in version 1.4.0_ Custom fields now have both a `name` and a `slug`; in
     Because custom field data is included in the database, in the REST API and in GraphQL, we strongly recommend that when defining a custom field, you provide a `slug` that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug. Similarly, the provided `name` should also contain only alphanumeric characters and underscores, as it is currently treated in some cases like a slug.
 
 !!! note
-    The name, slug, and type of a custom field cannot be modified once created, so take care in defining these fields. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
+    The name, slug, and type of a custom field cannot be modified once created, so take care in defining these fields. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the data model when defining a new custom field.
 
 Marking a field as required will force the user to provide a value for the field when creating a new object or when saving an existing object. A default value for the field may also be provided. Use "true" or "false" for boolean fields, or the exact value of a choice for selection fields.
 

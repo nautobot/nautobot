@@ -579,7 +579,7 @@ With this code, once your plugin is installed, the Git repository creation/editi
 
 ### Populating Extensibility Features
 
-In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../../models/extras/customfield/) or [relationships](../../models/extras/relationship/). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
+In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../models/extras/customfield.md) or [relationships](../models/extras/relationship.md). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
 
 To make this possible, Nautobot provides a custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/), `nautobot_database_ready`, that plugins can register to listen for. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing a plugin, and provides an opportunity for the plugin to make any desired additions to the database at this time.
 
@@ -708,7 +708,7 @@ The requirements to extend a filter set or a filter form (or both) are:
 
 Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with *not* `icontains` using the `ic` and `nic` expressions respectively.
 
-The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../../rest-api/filtering/#lookup-expressions) for more information.
+The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
 
 !!! tip
     For developers of plugins that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.utilities.filters.BaseFilterSet`.
