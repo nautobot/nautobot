@@ -10,7 +10,7 @@ from nautobot.dcim.forms import DeviceForm, DeviceFilterForm
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
-from nautobot.extras.filters import DynamicGroupFilterSet
+from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.utilities.testing import TestCase
 
 
@@ -686,6 +686,37 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
             "A group with a non-matching filter": 1,  # description
             "dcim": 6,  # content_type__app_label
             "device": 6,  # content_type__model
+        }
+        for value, cnt in tests.items():
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
+
+
+class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
+    """DynamicGroupMembership instance filterset tests."""
+
+    queryset = DynamicGroupMembership.objects.all()
+    filterset = DynamicGroupMembershipFilterSet
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_operator(self):
+        params = {"operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_weight(self):
+        params = {"weight": [10]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        tests = {
+            "intersection": 2,  # operator
+            "First Child": 1,  # group__name
+            "second-child": 1,  # group__slug
+            "Parent": 3,  # parent_group__name,
+            "third-child": 2,  # parent_group__slug OR group__slug,
         }
         for value, cnt in tests.items():
             params = {"q": value}
