@@ -78,7 +78,13 @@ class ExtrasRootView(APIRootView):
         return "Extras"
 
 
-class NotesViewSetMixin(object):
+class NotesViewSetMixin:
+    @extend_schema(methods=["get"], filters=False, responses={200: serializers.NoteSerializer(many=True)})
+    @extend_schema(
+        methods=["post"],
+        request=serializers.NoteInputSerializer,
+        responses={201: serializers.NoteSerializer(many=False)},
+    )
     @action(detail=True, url_path="notes", methods=["get", "post"])
     def notes(self, request, pk=None):
         """
@@ -98,9 +104,10 @@ class NotesViewSetMixin(object):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         else:
-            serializer = serializers.NoteSerializer(obj.notes, many=True, context={"request": request})
+            notes = self.paginate_queryset(obj.notes)
+            serializer = serializers.NoteSerializer(notes, many=True, context={"request": request})
 
-        return Response(serializer.data)
+        return self.get_paginated_response(serializer.data)
 
 
 #

@@ -93,6 +93,7 @@ from .nested_serializers import (  # noqa: F401
     NestedImageAttachmentSerializer,
     NestedJobSerializer,
     NestedJobResultSerializer,
+    NestedNoteSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
     NestedScheduledJobSerializer,
@@ -116,7 +117,7 @@ class NotesSerializerMixin(BaseModelSerializer):
     notes_url = serializers.SerializerMethodField()
 
     def get_field_names(self, declared_fields, info):
-        """Ensure that fields includes "notes" field if applicable."""
+        """Ensure that fields includes "notes_url" field if applicable."""
         fields = list(super().get_field_names(declared_fields, info))
         if hasattr(self.Meta.model, "notes"):
             self.extend_field_names(fields, "notes_url")
@@ -911,7 +912,7 @@ class NoteSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
     user = NestedUserSerializer(read_only=True)
     assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
-    assigned_object = serializers.SerializerMethodField(read_only=True)
+    assigned_object = serializers.SerializerMethodField()
 
     class Meta:
         model = Note
@@ -930,9 +931,16 @@ class NoteSerializer(BaseModelSerializer):
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None
-        serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
-        context = {"request": self.context["request"]}
-        return serializer(obj.assigned_object, context=context).data
+        try:
+            serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
+            context = {"request": self.context["request"]}
+            return serializer(obj.assigned_object, context=context).data
+        except SerializerNotFound:
+            return None
+
+
+class NoteInputSerializer(serializers.Serializer):
+    note = serializers.CharField()
 
 
 #
@@ -1012,8 +1020,6 @@ class RelationshipSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "destination_label",
             "destination_hidden",
             "destination_filter",
-            "created",
-            "last_updated",
         ]
 
 

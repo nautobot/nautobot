@@ -17,7 +17,6 @@ from rest_framework.routers import APIRootView
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.api.views import ModelViewSet
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
@@ -60,7 +59,6 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,
-    NotesViewSetMixin,
     StatusViewSetMixin,
 )
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
@@ -274,7 +272,7 @@ class RackViewSet(StatusViewSetMixin, NautobotModelViewSet):
 #
 
 
-class RackReservationViewSet(ModelViewSet, NotesViewSetMixin):
+class RackReservationViewSet(NautobotModelViewSet):
     queryset = RackReservation.objects.prefetch_related("rack", "user", "tenant")
     serializer_class = serializers.RackReservationSerializer
     filterset_class = filters.RackReservationFilterSet
@@ -735,7 +733,7 @@ class CableViewSet(StatusViewSetMixin, NautobotModelViewSet):
 #
 
 
-class VirtualChassisViewSet(ModelViewSet, NotesViewSetMixin):
+class VirtualChassisViewSet(NautobotModelViewSet):
     queryset = VirtualChassis.objects.prefetch_related("tags").annotate(
         member_count=count_related(Device, "virtual_chassis")
     )
@@ -749,7 +747,7 @@ class VirtualChassisViewSet(ModelViewSet, NotesViewSetMixin):
 #
 
 
-class PowerPanelViewSet(ModelViewSet, NotesViewSetMixin):
+class PowerPanelViewSet(NautobotModelViewSet):
     queryset = PowerPanel.objects.prefetch_related("site", "rack_group").annotate(
         powerfeed_count=count_related(PowerFeed, "power_panel")
     )

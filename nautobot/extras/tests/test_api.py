@@ -1980,17 +1980,12 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
     model = Note
     brief_fields = [
         "assigned_object",
-        "assigned_object_id",
-        "assigned_object_type",
-        "created",
         "display",
         "id",
-        "last_updated",
         "note",
         "slug",
         "url",
         "user",
-        "user_name",
     ]
     choices_fields = ["assigned_object_type"]
 
