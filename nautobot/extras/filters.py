@@ -61,6 +61,12 @@ __all__ = (
     "ConfigContextFilterSet",
     "ContentTypeFilterSet",
     "CreatedUpdatedFilterSet",
+    "CustomFieldBaseFilter",
+    "CustomFieldBooleanFilter",
+    "CustomFieldDateFilter",
+    "CustomFieldJSONFilter",
+    "CustomFieldMultiSelectFilter",
+    "CustomFieldNumberFilter",
     "CustomFieldModelFilterSet",
     "CustomLinkFilterSet",
     "DynamicGroupFilterSet",
@@ -495,13 +501,18 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             content_types=ContentType.objects.get_for_model(self._meta.model)
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
+            # Determine filter class for this CustomField type, default to CustomFieldBaseFilter
             new_filter_name = f"cf_{cf.name}"
             if cf.type in custom_field_filter_classes:
                 filter_class = custom_field_filter_classes[cf.type]
             else:
                 filter_class = CustomFieldBaseFilter
             new_filter_field = filter_class(field_name=cf.name, custom_field=cf)
+
+            # Create base filter (cf_customfieldname)
             self.filters[new_filter_name] = new_filter_field
+
+            # Create extra lookup expression filters (cf_customfieldname__lookup_expr)
             self.filters.update(
                 self._generate_custom_field_lookup_expression_filters(
                     filter_name=new_filter_name, filter_field=new_filter_field
