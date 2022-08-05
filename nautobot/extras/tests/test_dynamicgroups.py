@@ -541,6 +541,24 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotIn(self.nested_child, a_flat)
         self.assertIn(self.parent, a_flat)
 
+    def test_membership_tree(self):
+        """Test `DynamicGroup.membership_tree()`."""
+        group = self.parent
+
+        d_tree = group.flatten_descendants_tree(group.descendants_tree())
+        m_tree = group.membership_tree()
+
+        d_groups = [d.slug for d in d_tree]
+        m_groups = [m.group.slug for m in m_tree]
+
+        d_depths = [d.depth for d in d_tree]
+        m_depths = [m.depth for m in m_tree]
+
+        # Assert same members, same order.
+        self.assertEqual(d_groups, m_groups)
+        # Assert same depths.
+        self.assertEqual(d_depths, m_depths)
+
     def test_ordered_queryset_from_pks(self):
         """Test `DynamicGroup.ordered_queryset_from_pks()`."""
         descendants = self.parent.get_descendants()

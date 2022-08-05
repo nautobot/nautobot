@@ -728,7 +728,7 @@ class DynamicGroup(OrganizationalModel):
 
     def flatten_descendants_tree(self, tree):
         """
-        Recursively flatten a tree mapping of descendants to a list, adding a `depth attribute to each
+        Recursively flatten a tree mapping of descendants to a list, adding a `depth` attribute to each
         instance in the list that can be used for visualizing tree depth.
 
         :param tree:
@@ -766,6 +766,21 @@ class DynamicGroup(OrganizationalModel):
             self._flatten_tree(branches, nodes=nodes, descending=descending, depth=depth + 1)
 
         return nodes
+
+    def membership_tree(self, depth=1):
+        """
+        Recursively return a list of group memberships, adding a `depth` attribute to each instance
+        in the list that can be used for visualizing tree depth.
+        """
+
+        tree = []
+        memberships = DynamicGroupMembership.objects.filter(parent_group=self)
+        for membership in memberships:
+            membership.depth = depth
+            tree.append(membership)
+            tree.extend(membership.group.membership_tree(depth=depth + 1))
+
+        return tree
 
     def _ordered_filter(self, queryset, field_names, values):
         """
