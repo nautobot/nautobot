@@ -1712,7 +1712,7 @@ class JobTestCase(
             self.assertHttpStatus(response, 200, msg=self.run_urls[1])
 
             content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Jobs with sensitive variables cannot be scheduled for later execution.", content)
+            self.assertIn("Unable to schedule job: Job has sensitive input variables.", content)
 
 
 # TODO: Convert to StandardTestCases.Views

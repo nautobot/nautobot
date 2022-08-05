@@ -389,7 +389,7 @@ def _run_job(request, job_model, legacy_response=False):
     if job_model.has_sensitive_variables:
         if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
             raise ValidationError(
-                {"schedule": {"interval": ["Jobs with sensitive variables cannot be scheduled for later execution"]}}
+                {"schedule": {"interval": ["Unable to schedule job: Job has sensitive input variables"]}}
             )
 
     job_class = job_model.job_class
