@@ -168,20 +168,19 @@ urlpatterns = [
         views.CustomFieldBulkDeleteView.as_view(),
         name="customfield_bulk_delete",
     ),
-    # TODO: Migrate custom field model from name to slug #464
-    path("custom-fields/<str:name>/", views.CustomFieldView.as_view(), name="customfield"),
+    path("custom-fields/<slug:slug>/", views.CustomFieldView.as_view(), name="customfield"),
     path(
-        "custom-fields/<str:name>/edit/",
+        "custom-fields/<slug:slug>/edit/",
         views.CustomFieldEditView.as_view(),
         name="customfield_edit",
     ),
     path(
-        "custom-fields/<str:name>/delete/",
+        "custom-fields/<slug:slug>/delete/",
         views.CustomFieldDeleteView.as_view(),
         name="customfield_delete",
     ),
     path(
-        "custom-fields/<str:name>/changelog/",
+        "custom-fields/<slug:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="customfield_changelog",
         kwargs={"model": CustomField},

@@ -136,11 +136,11 @@ class UserFilter(NautobotFilterSet):
         queryset=Provider.objects.all(),
         label="Provider (slug or ID)",
     )
-    # optionally use the natural_key argument to set the field to name instead of slug
+    # optionally use the to_field_name argument to set the field to name instead of slug
     provider = NaturalKeyOrPKMultipleChoiceFilter(
-        natural_key="name",
+        to_field_name="name",
         queryset=Provider.objects.all(),
-        label="Provider (slug or ID)",
+        label="Provider (name or ID)",
     )
 ```
 

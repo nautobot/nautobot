@@ -466,6 +466,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             content_types=ContentType.objects.get_for_model(self._meta.model)
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
+            # 2.0 TODO: #824 cf.slug throughout
             self.filters["cf_{}".format(cf.name)] = CustomFieldFilter(field_name=cf.name, custom_field=cf)
 
 
