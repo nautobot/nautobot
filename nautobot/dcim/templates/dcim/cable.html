@@ -50,12 +50,12 @@
                 <div class="panel-heading">
                     <strong>Termination A</strong>
                 </div>
-                {% include 'dcim/inc/cable_termination.html' with termination=object.termination_a %}
+                {% include 'dcim/inc/cable_termination.html' with terminations=object.a_terminations %}
             </div>
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Termination B</strong>
                 </div>
-                {% include 'dcim/inc/cable_termination.html' with termination=object.termination_b %}
+                {% include 'dcim/inc/cable_termination.html' with terminations=object.b_terminations %}
             </div>
 {% endblock content_right_page %}

@@ -1,41 +1,47 @@
 {% load helpers %}
 <table class="table table-hover panel-body attr-table">
-    {% if termination.device %}
+    {% if terminations.0.device %}
         {# Device component #}
         <tr>
             <td>Device</td>
-            <td>{{ termination.device|hyperlinked_object }}</td>
+            <td>{{ terminations.0.device|hyperlinked_object }}</td>
         </tr>
         <tr>
             <td>Type</td>
             <td>
-                {{ termination|meta:"verbose_name"|capfirst }}
+                {{ terminations.0|meta:"verbose_name"|capfirst }}
             </td>
         </tr>
         <tr>
             <td>Component</td>
-            <td>{{ termination|hyperlinked_object }}</td>
+            <td>
+                {% for termination in terminations %}
+                <a href="{{ termination.get_absolute_url }}">{{ termination }}</a>{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            </td>
         </tr>
     {% elif termination.power_panel %}
         {# Power panel #}
         <tr>
             <td>Power Panel</td>
-            <td>{{ termination.power_panel|hyperlinked_object }}</td>
+            <td>{{ terminations.0.power_panel|hyperlinked_object }}</td>
         </tr>
         <tr>
             <td>Power Feed</td>
-            <td>{{ termination|hyperlinked_object }}</td>
+            <td>{{ terminations.0|hyperlinked_object }}</td>
         </tr>
     {% else %}
         {# Circuit termination #}
         <tr>
             <td>Provider</td>
-            <td>{{ termination.circuit.provider|hyperlinked_object }}</td>
+            <td>{{ terminations.0.circuit.provider|hyperlinked_object }}</td>
         </tr>
         <tr>
             <td>Circuit</td>
             <td>
-                {{ termination.circuit|hyperlinked_object }} ({{ termination }})
+                {% for termination in terminations %}
+                {{ termination.circuit|hyperlinked_object }} ({{ termination }}){% if not forloop.last %},{% endif %}
+                {% endfor %}
             </td>
         </tr>
     {% endif %}
