@@ -710,6 +710,18 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
         params = {"weight": [10]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_group(self):
+        group_pk = self.queryset.first().group.pk  # expecting 1
+        group_slug = self.queryset.last().group.slug  # expecting 1
+        params = {"group": [group_pk, group_slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_parent_group(self):
+        parent_group_pk = self.queryset.first().parent_group.pk  # expecting 3
+        parent_group_slug = self.queryset.last().parent_group.slug  # expecting 1
+        params = {"parent_group": [parent_group_pk, parent_group_slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
     def test_search(self):
         tests = {
             "intersection": 2,  # operator

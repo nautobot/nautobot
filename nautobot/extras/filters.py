@@ -583,6 +583,14 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
             "parent_group__slug": "icontains",
         },
     )
+    group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        label="Group (slug or ID)",
+    )
+    parent_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        label="Parent Group (slug or ID)",
+    )
 
     class Meta:
         model = DynamicGroupMembership
