@@ -77,7 +77,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         # Try POST without permission
         with disable_warnings("django.request"):
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 403)
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 403)
 
 
 class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -206,7 +206,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         # Try POST without permission
         with disable_warnings("django.request"):
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 403)
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 403)
 
 
 class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -276,7 +276,7 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         # Try POST without permission
         with disable_warnings("django.request"):
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 403)
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 403)
 
 
 class CircuitTerminationTestCase(NautobotTestCase):

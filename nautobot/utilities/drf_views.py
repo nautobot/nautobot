@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import (
     FieldDoesNotExist,
     ObjectDoesNotExist,
@@ -35,13 +36,13 @@ from nautobot.utilities.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.utilities.permissions import get_permission_for_model
+from nautobot.utilities.permissions import get_permission_for_model, resolve_permission
 from nautobot.utilities.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
     prepare_cloned_fields,
 )
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.utilities.views import GetReturnURLMixin
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -682,7 +683,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
 
 
 class NautobotDRFViewSet(
-    ObjectPermissionRequiredMixin,
+    AccessMixin,
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectEditViewMixin,
@@ -693,6 +694,20 @@ class NautobotDRFViewSet(
 ):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, PERMISSIONS_ACTION_MAP[self.action])
+
+    def has_permission(self):
+        user = self.request.user
+        permission_required = self.get_required_permission()
+        # Check that the user has been granted the required permission(s).
+        if user.has_perms([permission_required]):
+
+            # Update the view's QuerySet to filter only the permitted objects
+            action = resolve_permission(permission_required)[1]
+            self.queryset = self.queryset.restrict(user, action)
+
+            return True
+
+        return False
 
     def check_permissions(self, request):
         """
