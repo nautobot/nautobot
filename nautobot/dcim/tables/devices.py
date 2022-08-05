@@ -273,15 +273,15 @@ class DeviceComponentTable(BaseTable):
 
 class CableTerminationTable(BaseTable):
     cable = tables.Column(linkify=True)
-    cable_peer = tables.TemplateColumn(
-        accessor="_cable_peer",
+    cable_peers = tables.TemplateColumn(
+        accessor="cable_peers",
         template_code=CABLETERMINATION,
         orderable=False,
-        verbose_name="Cable Peer",
+        verbose_name="Cable Peers",
     )
 
 
-class PathEndpointTable(CableTerminationTable):
+class PathEndpointTable(CableTerminationTable):  # TODO(mzb)
     connection = tables.TemplateColumn(
         accessor="_path",
         template_code=PATHENDPOINT,
@@ -303,7 +303,7 @@ class ConsolePortTable(DeviceComponentTable, PathEndpointTable):
             "type",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
         )
@@ -330,7 +330,7 @@ class DeviceConsolePortTable(ConsolePortTable):
             "type",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
             "actions",
@@ -363,7 +363,7 @@ class ConsoleServerPortTable(DeviceComponentTable, PathEndpointTable):
             "type",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
         )
@@ -391,7 +391,7 @@ class DeviceConsoleServerPortTable(ConsoleServerPortTable):
             "type",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
             "actions",
@@ -426,7 +426,7 @@ class PowerPortTable(DeviceComponentTable, PathEndpointTable):
             "maximum_draw",
             "allocated_draw",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
         )
@@ -461,7 +461,7 @@ class DevicePowerPortTable(PowerPortTable):
             "allocated_draw",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
             "actions",
@@ -497,7 +497,7 @@ class PowerOutletTable(DeviceComponentTable, PathEndpointTable):
             "power_port",
             "feed_leg",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
         )
@@ -535,7 +535,7 @@ class DevicePowerOutletTable(PowerOutletTable):
             "feed_leg",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
             "actions",
@@ -590,7 +590,7 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
             "mac_address",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
             "ip_addresses",
@@ -640,7 +640,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "mac_address",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "connection",
             "tags",
             "ip_addresses",
@@ -688,7 +688,7 @@ class FrontPortTable(DeviceComponentTable, CableTerminationTable):
             "rear_port_position",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "tags",
         )
         default_columns = (
@@ -722,7 +722,7 @@ class DeviceFrontPortTable(FrontPortTable):
             "rear_port_position",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "tags",
             "actions",
         )
@@ -735,7 +735,7 @@ class DeviceFrontPortTable(FrontPortTable):
             "rear_port_position",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "actions",
         )
         row_attrs = {"style": cable_status_color_css}
@@ -755,7 +755,7 @@ class RearPortTable(DeviceComponentTable, CableTerminationTable):
             "positions",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "tags",
         )
         default_columns = ("pk", "device", "name", "label", "type", "description")
@@ -779,7 +779,7 @@ class DeviceRearPortTable(RearPortTable):
             "positions",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "tags",
             "actions",
         )
@@ -791,7 +791,7 @@ class DeviceRearPortTable(RearPortTable):
             "positions",
             "description",
             "cable",
-            "cable_peer",
+            "cable_peers",
             "actions",
         )
         row_attrs = {"style": cable_status_color_css}
