@@ -1,7 +1,7 @@
 from django.urls import path
 
 from nautobot.dcim.views import CableCreateView, PathTraceView
-from nautobot.extras.views import ObjectChangeLogView
+from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
 from . import views
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
@@ -55,6 +55,12 @@ urlpatterns = [
         kwargs={"model": Provider},
     ),
     path(
+        "providers/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="provider_notes",
+        kwargs={"model": Provider},
+    ),
+    path(
         "provider-networks/",
         views.ProviderNetworkDRFViewSet.as_view({"get": "list"}),
         name="providernetwork_list",
@@ -88,6 +94,12 @@ urlpatterns = [
         "provider-networks/<slug:slug>/edit/",
         views.ProviderNetworkDRFViewSet.as_view({"get": "update", "post": "update"}),
         name="providernetwork_edit",
+    ),
+    path(
+        "provider-networks/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="providernetwork_notes",
+        kwargs={"model": ProviderNetwork},
     ),
     path(
         "provider-networks/<slug:slug>/delete/",
@@ -142,6 +154,12 @@ urlpatterns = [
         kwargs={"model": CircuitType},
     ),
     path(
+        "circuit-types/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="circuittype_notes",
+        kwargs={"model": CircuitType},
+    ),
+    path(
         "circuits/",
         views.CircuitDRFViewSet.as_view({"get": "list"}),
         name="circuit_list",
@@ -188,6 +206,12 @@ urlpatterns = [
         kwargs={"model": Circuit},
     ),
     path(
+        "circuits/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="circuit_notes",
+        kwargs={"model": Circuit},
+    ),
+    path(
         "circuits/<uuid:pk>/terminations/swap/",
         views.CircuitSwapTerminations.as_view(),
         name="circuit_terminations_swap",
@@ -228,6 +252,12 @@ urlpatterns = [
         "circuit-terminations/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="circuittermination_changelog",
+        kwargs={"model": CircuitTermination},
+    ),
+    path(
+        "circuit-terminations/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="circuittermination_notes",
         kwargs={"model": CircuitTermination},
     ),
 ]

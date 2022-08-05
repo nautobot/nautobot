@@ -162,6 +162,22 @@ menu_items = (
                         ],
                         buttons=(),
                     ),
+                    NavMenuItem(
+                        link="extras:jobhook_list",
+                        name="Job Hooks",
+                        weight=500,
+                        permissions=[
+                            "extras.view_jobhook",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:jobhook_add",
+                                permissions=[
+                                    "extras.add_jobhook",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
         ),

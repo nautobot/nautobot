@@ -1,7 +1,6 @@
 import json
 import uuid
 from copy import deepcopy
-from unittest import mock
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -14,13 +13,13 @@ from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.dcim.models.sites import Region
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.context_managers import change_logging
+from nautobot.extras.context_managers import ORMChangeContext, change_logging
 from nautobot.extras.models import Webhook
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
-from nautobot.extras.webhooks import get_snapshots
 from nautobot.utilities.testing import APITestCase
+from nautobot.utilities.utils import get_changes_for_model
 
 
 User = get_user_model()
@@ -78,7 +77,7 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["event"], "created")
             self.assertEqual(body["timestamp"], timestamp)
             self.assertEqual(body["model"], "site")
-            self.assertEqual(body["username"], "testuser")
+            self.assertEqual(body["username"], "nautobotuser")
             self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Site Update")
             self.assertEqual(body["data"]["status"]["value"], self.planned_status.slug)
@@ -102,11 +101,9 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            request = mock.MagicMock()
-            request.user = self.user
-            request.id = request_id
+            change_context = ORMChangeContext(self.user, id=request_id)
 
-            with change_logging(request):
+            with change_logging(change_context):
                 site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
                 site.save()
 
@@ -116,7 +113,8 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+                oc = get_changes_for_model(site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -125,12 +123,11 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    request_id,
+                    change_context.id,
                     snapshots,
                 )
 
     def test_webhooks_snapshot_on_create(self):
-        request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
         timestamp = str(timezone.now())
 
@@ -152,16 +149,15 @@ class WebhookTest(APITestCase):
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
 
-            request = mock.MagicMock()
-            request.user = self.user
-            request.id = request_id
+            change_context = ORMChangeContext(self.user)
 
-            with change_logging(request):
+            with change_logging(change_context):
                 site = Site(name="Site 1", slug="site-1")
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_CREATE)
+                oc = get_changes_for_model(site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -170,12 +166,11 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    request_id,
+                    change_context.id,
                     snapshots,
                 )
 
     def test_webhooks_snapshot_on_delete(self):
-        request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
         timestamp = str(timezone.now())
 
@@ -196,11 +191,10 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-            request = mock.MagicMock()
-            request.user = self.user
-            request.id = request_id
 
-            with change_logging(request):
+            change_context = ORMChangeContext(self.user)
+
+            with change_logging(change_context):
                 site = Site(name="Site 1", slug="site-1")
                 site.save()
 
@@ -209,7 +203,8 @@ class WebhookTest(APITestCase):
                 site.delete()
 
                 serializer = SiteSerializer(temp_site, context={"request": None})
-                snapshots = get_snapshots(temp_site, ObjectChangeActionChoices.ACTION_DELETE)
+                oc = get_changes_for_model(temp_site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -218,7 +213,7 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    request_id,
+                    change_context.id,
                     snapshots,
                 )
 
@@ -229,7 +224,6 @@ class WebhookTest(APITestCase):
 
         get_serializer_for_model.side_effect = get_serializer
 
-        request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
         timestamp = str(timezone.now())
 
@@ -255,11 +249,9 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            request = mock.MagicMock()
-            request.user = self.user
-            request.id = request_id
+            change_context = ORMChangeContext(self.user)
 
-            with change_logging(request):
+            with change_logging(change_context):
                 site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
                 site.save()
 
@@ -269,7 +261,8 @@ class WebhookTest(APITestCase):
                 site.save()
 
                 serializer = SiteSerializer(site, context={"request": None})
-                snapshots = get_snapshots(site, ObjectChangeActionChoices.ACTION_UPDATE)
+                oc = get_changes_for_model(site).first()
+                snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
@@ -278,7 +271,7 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    request_id,
+                    change_context.id,
                     snapshots,
                 )
 

@@ -2,20 +2,25 @@ import copy
 import datetime
 import inspect
 import json
+import uuid
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+from django.utils.tree import Node
+
 from django.template import engines
 from django.utils.module_loading import import_string
+from django.utils.text import slugify
+from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.extras.utils import is_taggable
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 
 
@@ -61,7 +66,7 @@ def get_route_for_model(model, action):
     Returns:
         str: return the name of the view for the model/action provided.
     Examples:
-        >>> viewname(Device, "list")
+        >>> get_route_for_model(Device, "list")
         "dcim:device_list"
     """
 
@@ -133,6 +138,16 @@ def count_related(model, field):
     return Coalesce(subquery, 0)
 
 
+def is_taggable(obj):
+    """
+    Return True if the instance can have Tags assigned to it; False otherwise.
+    """
+    if hasattr(obj, "tags"):
+        if issubclass(obj.tags.__class__, _TaggableManager):
+            return True
+    return False
+
+
 def serialize_object(obj, extra=None, exclude=None):
     """
     Return a generic JSON representation of an object using Django's built-in serializer. (This is used for things like
@@ -187,6 +202,16 @@ def serialize_object_v2(obj):
     return data
 
 
+def slugify_dots_to_dashes(content):
+    """Custom slugify_function - convert '.' to '-' instead of removing dots outright."""
+    return slugify(content.replace(".", "-"))
+
+
+def slugify_dashes_to_underscores(content):
+    """Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name."""
+    return slugify(content).replace("-", "_")
+
+
 def dict_to_filter_params(d, prefix=""):
     """
     Translate a dictionary of attributes to a nested set of parameters suitable for QuerySet filtering. For example:
@@ -232,6 +257,8 @@ def normalize_querydict(querydict):
     This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
     values.
     """
+    if not querydict:
+        return {}
     return {k: v if len(v) > 1 else v[0] for k, v in querydict.lists()}
 
 
@@ -444,6 +471,23 @@ def get_model_from_name(model_name):
         raise TypeError(exc) from exc
 
 
+def get_changes_for_model(model):
+    """
+    Return a queryset of ObjectChanges for a model or instance. The queryset will be filtered
+    by the model class. If an instance is provided, the queryset will also be filtered by the instance id.
+    """
+    from nautobot.extras.models import ObjectChange  # prevent circular import
+
+    if isinstance(model, Model):
+        return ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(model._meta.model),
+            changed_object_id=model.pk,
+        )
+    if issubclass(model, Model):
+        return ObjectChange.objects.filter(changed_object_type=ContentType.objects.get_for_model(model._meta.model))
+    raise TypeError(f"{model!r} is not a Django Model class or instance")
+
+
 def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
@@ -531,3 +575,80 @@ def get_table_for_model(model):
 
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
+
+# namedtuple accepts versions(list of API versions) and serializer(Related Serializer for versions).
+SerializerForAPIVersions = namedtuple("SerializersVersions", ("versions", "serializer"))
+
+
+def get_api_version_serializer(serializer_choices, api_version):
+    """Returns the serializer of an api_version
+
+    Args:
+        serializer_choices (tuple): list of SerializerVersions
+        api_version (str): Request API version
+
+    Returns:
+        returns the serializer for the api_version if found in serializer_choices else None
+    """
+    for versions, serializer in serializer_choices:
+        if api_version in versions:
+            return serializer
+    return None
+
+
+def versioned_serializer_selector(obj, serializer_choices, default_serializer):
+    """Returns appropriate serializer class depending on request api_version, brief and swagger_fake_view
+
+    Args:
+        obj (ViewSet instance):
+        serializer_choices (tuple): Tuple of SerializerVersions
+        default_serializer (Serializer): Default Serializer class
+    """
+    if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
+        api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
+        serializer = get_api_version_serializer(serializer_choices, api_version)
+        if serializer is not None:
+            return serializer
+    return default_serializer
+
+
+def is_uuid(value):
+    try:
+        if isinstance(value, uuid.UUID) or uuid.UUID(value):
+            return True
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return False
+
+
+def pretty_print_query(query):
+    """
+    Given a `Q` object, display it in a more human-readable format.
+
+    :param query:
+        Q instance
+    """
+
+    def pretty_str(self, node=None):
+        """Improvement to default `Node.__str__` with a more human-readable style."""
+        template = "(NOT %s)" if self.negated else "(%s)"
+        children = []
+
+        # If we don't have a node, we are the node!
+        if node is None:
+            node = self
+
+        # Iterate over children. They will be either a Q object (a Node subclass) or a 2-tuple.
+        for child in node.children:
+            # Trust that we can stringify the child if it is a Node instance.
+            if isinstance(child, Node):
+                children.append(pretty_str(child))
+            # If a 2-tuple, stringify to key=value
+            else:
+                key, value = child
+                children.append(f"{key}={value!r}")
+
+        return template % (f" {self.connector} ".join(children))
+
+    # Use pretty_str() as the string generator vs. just stringify the `Q` object.
+    return pretty_str(query)

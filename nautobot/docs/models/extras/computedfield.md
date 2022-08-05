@@ -1,6 +1,6 @@
 # Computed Fields
 
-Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./custom-fields.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in its database and merging it into a Jinja2 template and associated filters.
+Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./customfield.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in its database and merging it into a Jinja2 template and associated filters.
 
 As an example, within your automation system, you may want to be able to have an automatically generated field on the Device model that combines the name of the device and the site name in uppercase. To do that, you would define a Jinja2 template for this field that looks like such:
 
@@ -19,6 +19,9 @@ Each computed field must have a slug and a label.
 
 - Slug must be a simple, database-friendly string, e.g. `device_with_site`
 - Label is used as the human-friendly display name for this field in the UI, for example, `Device With Site`.
+
+!!! tip
+    Because computed field data can be included in the REST API and in GraphQL, we strongly recommend that when defining a computed field, you provide a slug that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug.
 
 Similar to custom fields, the weight value is used to order computed fields within a form. A description can also be provided, and will appear beneath the field in a form.
 
@@ -44,7 +47,7 @@ Computed field templates can also utilize built-in Jinja2 filters or custom ones
 {{ obj.site.name | leet_speak }}
 ```
 
-See the documentation on [built-in filters](./template-filters.md) or [registering custom Jinja2 filters](../plugins/development.md#including-jinja2-filters) in plugins.
+See the documentation on [built-in filters](../../additional-features/template-filters.md) or [registering custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters) in plugins.
 
 ## Computed Fields and the REST API
 

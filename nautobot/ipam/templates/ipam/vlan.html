@@ -5,6 +5,11 @@
                 {% if object.site %}
                     <li><a href="{% url 'ipam:vlan_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
                 {% endif %}
+                {% if object.location %}
+                    <li><a href="{% url 'ipam:vlan_list' %}?location={{ object.location.slug }}">
+                        {{ object.location }}
+                    </a></li>
+                {% endif %}
                 {% if object.group %}
                     <li><a href="{% url 'ipam:vlan_list' %}?group={{ object.group.slug }}">{{ object.group }}</a></li>
                 {% endif %}
@@ -28,25 +33,19 @@
                     <tr>
                         <td>Site</td>
                         <td>
-                            {% if object.site %}
-                                {% if object.site.region %}
-                                    <a href="{{ object.site.region.get_absolute_url }}">{{ object.site.region }}</a> /
-                                {% endif %}
-                                <a href="{% url 'dcim:site' slug=object.site.slug %}">{{ object.site }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
+                            {% if object.site and object.site.region %}
+                                {{ object.site.region|hyperlinked_object }} /
                             {% endif %}
+                            {{ object.site|hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
+                        <td>Location</td>
+                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                    </tr>
+                    <tr>
                         <td>Group</td>
-                        <td>
-                            {% if object.group %}
-                                <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.group|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>VLAN ID</td>
@@ -59,14 +58,10 @@
                     <tr>
                         <td>Tenant</td>
                         <td>
-                            {% if object.tenant %}
-                                {% if object.tenant.group %}
-                                    <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                                {% endif %}
-                                <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
+                            {% if object.tenant and object.tenant.group %}
+                                {{ object.tenant.group|hyperlinked_object }} /
                             {% endif %}
+                            {{ object.tenant|hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
@@ -77,13 +72,7 @@
                     </tr>
                     <tr>
                         <td>Role</td>
-                        <td>
-                            {% if object.role %}
-                                <a href="{{ object.role.get_absolute_url }}">{{ object.role }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.role|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Description</td>
@@ -101,7 +90,7 @@
                 {% include 'responsive_table.html' with table=prefix_table %}
                 {% if perms.ipam.add_prefix %}
                     <div class="panel-footer text-right noprint">
-                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}site={{ object.site.pk }}&vlan={{ object.pk }}" class="btn btn-primary btn-xs">
+                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&vlan={{ object.pk }}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add a prefix
                         </a>

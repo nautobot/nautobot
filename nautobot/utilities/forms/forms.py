@@ -92,7 +92,10 @@ class ConfirmationForm(BootstrapMixin, ReturnURLForm):
 
 class BulkEditForm(forms.Form):
     """
-    Base form for editing multiple objects in bulk
+    Base form for editing multiple objects in bulk.
+
+    Note that for models supporting custom fields and relationships, nautobot.extras.forms.NautobotBulkEditForm is
+    a more powerful subclass and should be used instead of directly inheriting from this class.
     """
 
     def __init__(self, model, *args, **kwargs):

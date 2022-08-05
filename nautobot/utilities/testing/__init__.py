@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from celery.contrib.testing.worker import start_worker
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import tag, TransactionTestCase as _TransactionTestCase
+from django.test import Client, tag, TransactionTestCase as _TransactionTestCase
 
 from nautobot.core.celery import app
 from nautobot.extras.context_managers import web_request_context
@@ -13,8 +13,10 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 
 from .api import APITestCase, APIViewTestCases
+from .filters import FilterTestCases
 from .utils import (
     post_data,
     create_test_user,
@@ -32,17 +34,21 @@ from .views import (
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
-    "post_data",
-    "create_test_user",
-    "extract_form_failures",
-    "extract_page_body",
-    "disable_warnings",
-    "TestCase",
+    "FilterTestCases",
     "ModelTestCase",
     "ModelViewTestCase",
+    "TestCase",
     "ViewTestCases",
+    "create_test_user",
+    "disable_warnings",
+    "extract_form_failures",
+    "extract_page_body",
+    "post_data",
     "run_job_for_testing",
 )
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 def run_job_for_testing(job, data=None, commit=True, username="test-user", request=None):
@@ -71,12 +77,12 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
     if request and request.user:
         user_instance = request.user
     else:
-        User = get_user_model()
         user_instance, _ = User.objects.get_or_create(
             username=username, defaults={"is_superuser": True, "password": "password"}
         )
     job_result = JobResult.objects.create(
         name=job.class_path,
+        job_kwargs={"data": data, "commit": commit},
         obj_type=get_job_content_type(),
         user=user_instance,
         job_model=job,
@@ -96,7 +102,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
 
 
 @tag("unit")
-class TransactionTestCase(_TransactionTestCase):
+class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
     """
     Base test case class using the TransactionTestCase for unit testing
     """
@@ -113,6 +119,16 @@ class TransactionTestCase(_TransactionTestCase):
 
         # Re-populate status choices after database truncation by TransactionTestCase
         populate_status_choices(apps, None)
+
+        # Create the test user and assign permissions
+        self.user = User.objects.create_user(username="testuser")
+        self.add_permissions(*self.user_permissions)
+
+        # Initialize the test client
+        self.client = Client()
+
+        # Force login explicitly with the first-available backend
+        self.client.force_login(self.user)
 
 
 class CeleryTestCase(TransactionTestCase):

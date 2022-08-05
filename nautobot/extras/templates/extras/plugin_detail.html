@@ -275,6 +275,20 @@
                                     {% endif %}
                                 </td>
                             </tr>
+                            <tr>
+                                <td>Core View Overrides</td>
+                                <td>
+                                    {% if features.overridden_views %}
+                                        <ul class="list-unstyled">
+                                            {% for override in features.overridden_views %}
+                                                <li>{{ override.0 }} <code>{{ override.1 }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ False | render_boolean }}
+                                    {% endif %}
+                                </td>
+                            </tr>
                         {% endwith %}
                     </table>
                 </div>

@@ -4,14 +4,15 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
     TagFilter,
 )
@@ -20,6 +21,7 @@ from .choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobResultStatusChoices,
+    RelationshipSideChoices,
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -37,6 +39,7 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -90,6 +93,7 @@ __all__ = (
 #
 
 
+# TODO: should be CreatedUpdatedFilterSetMixin.
 class CreatedUpdatedFilterSet(django_filters.FilterSet):
     created = django_filters.DateFilter()
     created__gte = django_filters.DateFilter(field_name="created", lookup_expr="gte")
@@ -97,6 +101,114 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
     last_updated = django_filters.DateTimeFilter()
     last_updated__gte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="gte")
     last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
+
+
+class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter objects by the presence of associations on a given Relationship.
+    """
+
+    def __init__(self, side, relationship=None, queryset=None, qs=None, *args, **kwargs):
+        self.relationship = relationship
+        self.qs = qs
+        self.side = side
+        super().__init__(queryset=queryset, *args, **kwargs)
+
+    def filter(self, qs, value):
+        value = [entry.id for entry in value]
+        # Check if value is empty or a DynamicChoiceField that is empty.
+        if not value or "" in value:
+            # if value is empty we return the entire unmodified queryset
+            return qs
+        else:
+            if self.side == "source":
+                values = RelationshipAssociation.objects.filter(
+                    destination_id__in=value,
+                    source_type=self.relationship.source_type,
+                    relationship=self.relationship,
+                ).values_list("source_id", flat=True)
+            elif self.side == "destination":
+                values = RelationshipAssociation.objects.filter(
+                    source_id__in=value,
+                    destination_type=self.relationship.destination_type,
+                    relationship=self.relationship,
+                ).values_list("destination_id", flat=True)
+            else:
+                destinations = RelationshipAssociation.objects.filter(
+                    source_id__in=value,
+                    destination_type=self.relationship.destination_type,
+                    relationship=self.relationship,
+                ).values_list("destination_id", flat=True)
+
+                sources = RelationshipAssociation.objects.filter(
+                    destination_id__in=value,
+                    source_type=self.relationship.source_type,
+                    relationship=self.relationship,
+                ).values_list("source_id", flat=True)
+
+                values = list(destinations) + list(sources)
+            qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
+            return qs
+
+
+class RelationshipModelFilterSet(django_filters.FilterSet):
+    """
+    Filterset for  applicable to the parent model.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        super().__init__(*args, **kwargs)
+        self.relationships = []
+        self._append_relationships(model=self._meta.model)
+
+    def _append_relationships(self, model):
+        """
+        Append form fields for all Relationships assigned to this model.
+        """
+        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
+        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE, model)
+
+        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
+        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION, model)
+
+    def _append_relationships_side(self, relationships, initial_side, model):
+        """
+        Helper method to _append_relationships, for processing one "side" of the relationships for this model.
+        """
+        for relationship in relationships:
+            if relationship.symmetric:
+                side = RelationshipSideChoices.SIDE_PEER
+            else:
+                side = initial_side
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+
+            # If this model is on the "source" side of the relationship, then the field will be named
+            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
+            field_name = f"cr_{relationship.slug}__{peer_side}"
+
+            if field_name in self.relationships:
+                # This is a symmetric relationship that we already processed from the opposing "initial_side".
+                # No need to process it a second time!
+                continue
+            if peer_side == "source":
+                choice_model = relationship.source_type.model_class()
+            elif peer_side == "destination":
+                choice_model = relationship.destination_type.model_class()
+            else:
+                choice_model = model
+            # Check for invalid_relationship unit test
+            if choice_model:
+                self.filters[field_name] = RelationshipFilter(
+                    relationship=relationship,
+                    side=side,
+                    field_name=field_name,
+                    queryset=choice_model.objects.all(),
+                    qs=model.objects.all(),
+                )
+            self.relationships.append(field_name)
 
 
 #
@@ -107,11 +219,12 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
 class ComputedFieldFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
-            "target_url": "icontains",
-            "text": "icontains",
+            "label": "icontains",
+            "description": "icontains",
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
+            "template": "icontains",
+            "fallback_value": "icontains",
         },
     )
     content_type = ContentTypeFilter()
@@ -162,6 +275,16 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
+    )
+    location_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="locations",
+        queryset=Location.objects.all(),
+        label="Location (ID)",
+    )
+    location = django_filters.ModelMultipleChoiceFilter(
+        field_name="locations__slug",
+        queryset=Location.objects.all(),
+        label="Location (slug)",
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
         field_name="roles",
@@ -275,7 +398,7 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
 #
 
 
-class ContentTypeFilterSet(django_filters.FilterSet):
+class ContentTypeFilterSet(BaseFilterSet):
     class Meta:
         model = ContentType
         fields = ["id", "app_label", "model"]
@@ -330,6 +453,7 @@ class CustomFieldFilter(django_filters.Filter):
         return super().filter(qs, value)
 
 
+# TODO: should be CustomFieldModelFilterSetMixin
 class CustomFieldModelFilterSet(django_filters.FilterSet):
     """
     Dynamically add a Filter for each CustomField applicable to the parent model.
@@ -342,6 +466,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             content_types=ContentType.objects.get_for_model(self._meta.model)
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
+            # 2.0 TODO: #824 cf.slug throughout
             self.filters["cf_{}".format(cf.name)] = CustomFieldFilter(field_name=cf.name, custom_field=cf)
 
 
@@ -386,10 +511,10 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 #
 
 
-class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet, CustomFieldModelFilterSet):
     """
     This class exists to combine common functionality and is used as a base class throughout the
-    codebase where all three of BaseFilterSet, CreatedUpdatedFilterSet and CustomFieldModelFilterSet
+    codebase where all of BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet and CustomFieldModelFilterSet
     are needed.
     """
 
@@ -565,6 +690,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "commit_default",
             "hidden",
             "read_only",
+            "is_job_hook_receiver",
             "soft_time_limit",
             "time_limit",
             "grouping_override",
@@ -576,6 +702,30 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "read_only_override",
             "soft_time_limit_override",
             "time_limit_override",
+        ]
+
+
+class JobHookFilterSet(BaseFilterSet):
+    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=ChangeLoggedModelsQuery().get_choices,
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (slug or ID)",
+    )
+
+    class Meta:
+        model = JobHook
+        fields = [
+            "name",
+            "content_types",
+            "enabled",
+            "job",
+            "slug",
+            "type_create",
+            "type_update",
+            "type_delete",
         ]
 
 
@@ -653,6 +803,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
 #
 
 
+# TODO: should be LocalContextFilterSetMixin
 class LocalContextFilterSet(django_filters.FilterSet):
     local_context_data = django_filters.BooleanFilter(
         method="_local_context_data",
@@ -713,6 +864,12 @@ class ObjectChangeFilterSet(BaseFilterSet):
 
 
 class RelationshipFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        }
+    )
 
     source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
     destination_type = ContentTypeMultipleChoiceFilter(
@@ -721,7 +878,7 @@ class RelationshipFilterSet(BaseFilterSet):
 
     class Meta:
         model = Relationship
-        fields = ["id", "name", "type", "source_type", "destination_type"]
+        fields = ["id", "name", "slug", "type", "source_type", "destination_type"]
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
@@ -858,7 +1015,12 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         # e.g. `status__slug`
         to_field_name = self.field.to_field_name
         name = f"{self.field_name}__{to_field_name}"
-        return {name: getattr(value, to_field_name)}
+        # Sometimes the incoming value is an instance. This block of logic comes from the base
+        # `get_filter_predicate()` and was added here to support this.
+        try:
+            return {name: getattr(value, to_field_name)}
+        except (AttributeError, TypeError):
+            return {name: value}
 
 
 class StatusFilterSet(NautobotFilterSet):

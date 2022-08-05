@@ -172,6 +172,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
     site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_role = ColoredLabelColumn(verbose_name="Role")
     device_type = tables.LinkColumn(
@@ -203,6 +204,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "serial",
             "asset_tag",
             "site",
+            "location",
             "rack",
             "position",
             "face",
@@ -222,6 +224,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "status",
             "tenant",
             "site",
+            "location",
             "rack",
             "device_role",
             "device_type",
@@ -567,7 +570,7 @@ class BaseInterfaceTable(BaseTable):
     )
 
 
-class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
 
@@ -577,6 +580,7 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
             "pk",
             "device",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
@@ -597,6 +601,7 @@ class InterfaceTable(DeviceComponentTable, BaseInterfaceTable, PathEndpointTable
             "pk",
             "device",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
@@ -611,6 +616,8 @@ class DeviceInterfaceTable(InterfaceTable):
         '{% endif %}"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
+    parent_interface = tables.Column(linkify=True, verbose_name="Parent")
+    bridge = tables.Column(linkify=True)
     lag = tables.Column(linkify=True, verbose_name="LAG")
     actions = ButtonsColumn(model=Interface, buttons=("edit", "delete"), prepend_template=INTERFACE_BUTTONS)
 
@@ -619,10 +626,13 @@ class DeviceInterfaceTable(InterfaceTable):
         fields = (
             "pk",
             "name",
+            "status",
             "device",
             "label",
             "enabled",
             "type",
+            "parent_interface",
+            "bridge",
             "lag",
             "mgmt_only",
             "mtu",
@@ -641,9 +651,11 @@ class DeviceInterfaceTable(InterfaceTable):
         default_columns = [
             "pk",
             "name",
+            "status",
             "label",
             "enabled",
             "type",
+            "parent_interface",
             "lag",
             "mtu",
             "mode",
