@@ -49,6 +49,7 @@ from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
+from nautobot.utilities.utils import slugify_dashes_to_underscores
 
 
 # Use the proper swappable User model
@@ -65,6 +66,8 @@ class ComputedFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = ComputedField
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -118,7 +121,6 @@ class ComputedFieldTestCase(
             "weight": 100,
         }
 
-        cls.slug_source = "label"
         cls.slug_test_object = "Computed Field Five"
 
 
@@ -348,15 +350,18 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
+    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
-    reverse_url_attribute = "name"
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -381,7 +386,15 @@ class CustomFieldTestCase(
                 label="Custom Field Integer",
                 default="",
             ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_TEXT,
+                # https://github.com/nautobot/nautobot/issues/1962
+                name="Custom field? With special / unusual characters!",
+                default="",
+            ),
         ]
+
+        cls.slug_test_object = "Custom Field Integer"
 
         for custom_field in custom_fields:
             custom_field.validated_save()
@@ -389,8 +402,8 @@ class CustomFieldTestCase(
 
         cls.form_data = {
             "content_types": [obj_type.pk],
-            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-            "name": "Custom Field Boolean",
+            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,  # type is mandatory but cannot be changed once set.
+            "slug": "custom_field_boolean",  # slug is mandatory but cannot be changed once set.
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
@@ -403,21 +416,25 @@ class CustomFieldTestCase(
         }
 
     def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
+        instance = self._get_queryset().get(slug="custom_field_boolean_2")
+        # 2.0 TODO: #824 removal of `name` field altogether
+        # Assure that `name` was auto-populated from the given slug
+        self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
 
 
@@ -1784,6 +1801,8 @@ class RelationshipTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
+    slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -1826,7 +1845,6 @@ class RelationshipTestCase(
             "destination_filter": None,
         }
 
-        cls.slug_source = "name"
         cls.slug_test_object = "Primary Interface"
 
 

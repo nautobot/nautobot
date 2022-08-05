@@ -1,3 +1,5 @@
+import warnings
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -161,7 +163,17 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         required=True,
         label="Content Type",
     )
-    slug = SlugField(slug_source="label")
+    slug = SlugField(
+        slug_source="label",
+        help_text="Internal name of this field. Please use underscores rather than dashes.",
+    )
+    template = forms.CharField(
+        widget=forms.Textarea,
+        help_text=(
+            "Jinja2 template code for field value.<br>"
+            "Use <code>obj</code> to refer to the object to which this computed field is attached."
+        ),
+    )
 
     class Meta:
         model = ComputedField
@@ -319,9 +331,12 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
-    # TODO: Migrate custom field model from name to slug #464
-    # Once that's done we can set "name" as a proper (Auto)SlugField,
-    # but for the moment, that field only works with fields specifically named "slug"
+    label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
+    slug = SlugField(
+        max_length=50,
+        slug_source="label",
+        help_text="Internal name of this field. Please use underscores rather than dashes.",
+    )
     description = forms.CharField(
         required=False,
         help_text="Also used as the help text when editing models using this custom field.<br>"
@@ -335,16 +350,16 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = CustomField
         fields = (
-            "content_types",
-            "type",
             "label",
-            "name",
+            "slug",
+            "type",
+            "weight",
             "description",
             "required",
-            "advanced_ui",
-            "filter_logic",
             "default",
-            "weight",
+            "filter_logic",
+            "advanced_ui",
+            "content_types",
             "validation_minimum",
             "validation_maximum",
             "validation_regex",
@@ -356,7 +371,7 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
 
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = "cf_{}".format(cf.name)
+            field_name = "cf_{}".format(cf.slug)
             self.fields[field_name] = cf.to_form_field(for_csv_import=True)
 
             # Annotate the field in the list of CustomField form fields
@@ -364,14 +379,15 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
 
 
 class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
-    """
-    Adaptation of CustomFieldBulkEditForm which uses prefixed field names
-    """
+    """No longer needed as a separate class - use CustomFieldBulkEditForm instead."""
 
-    @staticmethod
-    def _get_field_name(name):
-        # Return a prefixed version of the name
-        return "cf_{}".format(name)
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "CustomFieldBulkCreateForm is deprecated and will be removed in a future major release. "
+            "Use CustomFieldBulkEditForm as a base class instead.",
+            DeprecationWarning,
+        )
+        super().__init__(*args, **kwargs)
 
 
 #
@@ -1047,7 +1063,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
-    slug = SlugField()
+    slug = SlugField(help_text="Internal name of this relationship. Please use underscores rather than dashes.")
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         help_text="The source object type to which this relationship applies.",

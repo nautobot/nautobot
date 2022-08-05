@@ -35,7 +35,7 @@ class BaseTable(tables.Table):
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
         for cf in CustomField.objects.filter(content_types=obj_type):
-            name = "cf_{}".format(cf.name)
+            name = "cf_{}".format(cf.slug)
             self.base_columns[name] = CustomFieldColumn(cf)
 
         for cpf in ComputedField.objects.filter(content_type=obj_type):
@@ -356,6 +356,7 @@ class CustomFieldColumn(tables.Column):
 
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
+        # 2.0 TODO: #824 replace customfield.name with customfield.slug
         kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.name}")
         kwargs["verbose_name"] = customfield.label or customfield.name
 

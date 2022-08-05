@@ -58,6 +58,7 @@ from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
+from nautobot.utilities.utils import slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -122,6 +123,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -431,8 +433,11 @@ class CreatedUpdatedFilterTest(APITestCase):
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
 
-class CustomFieldTest(APIViewTestCases.APIViewTestCase):
+class CustomFieldTestVersion12(APIViewTestCases.APIViewTestCase):
+    """Tests for the API version 1.2/1.3 CustomField REST API."""
+
     model = CustomField
+    api_version = "1.2"
     brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
@@ -449,6 +454,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.site"],
             "name": "cf6",
             "type": "select",
+            "label": "Custom Field 6",
         },
     ]
     update_data = {
@@ -460,18 +466,102 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["filter_logic", "type"]
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
         site_ct = ContentType.objects.get_for_model(Site)
 
         custom_fields = (
-            CustomField.objects.create(name="cf1", type="text"),
-            CustomField.objects.create(name="cf2", type="integer"),
-            CustomField.objects.create(name="cf3", type="boolean"),
+            CustomField(name="cf1", type="text"),
+            CustomField(name="cf2", type="integer"),
+            CustomField(name="cf3", type="boolean"),
         )
         for cf in custom_fields:
+            cf.validated_save()
             cf.content_types.add(site_ct)
+
+    def test_create_object(self):
+        super(APIViewTestCases.APIViewTestCase, self).test_create_object()
+        # Verify that label is auto-populated when not specified
+        for create_data in self.create_data:
+            instance = self._get_queryset().get(name=create_data["name"])
+            self.assertEqual(instance.label, create_data.get("label", instance.name))
+
+
+class CustomFieldTestVersion14(CustomFieldTestVersion12):
+    """Tests for the API version 1.4+ CustomField REST API."""
+
+    api_version = "1.4"
+    create_data = [
+        {
+            "content_types": ["dcim.site"],
+            "label": "Custom Field 4",
+            "slug": "cf4",
+            "type": "date",
+            "weight": 100,
+        },
+        {
+            "content_types": ["dcim.site", "dcim.device"],
+            "label": "Custom Field 5",
+            "slug": "cf5",
+            "type": "url",
+            "default": "http://example.com",
+            "weight": 200,
+        },
+        {
+            "content_types": ["dcim.site"],
+            "label": "Custom Field 6",
+            "slug": "cf6",
+            "type": "select",
+            "description": "A select custom field",
+            "weight": 300,
+        },
+    ]
+    update_data = {
+        "content_types": ["dcim.site"],
+        "description": "New description",
+        "label": "Non-unique label",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        site_ct = ContentType.objects.get_for_model(Site)
+
+        custom_fields = (
+            CustomField(slug="cf1", label="Custom Field 1", type="text"),
+            CustomField(slug="cf2", label="Custom Field 2", type="integer"),
+            CustomField(slug="cf3", label="Custom Field 3", type="boolean"),
+        )
+        for cf in custom_fields:
+            cf.validated_save()
+            cf.content_types.add(site_ct)
+
+    def test_create_object(self):
+        super(APIViewTestCases.APIViewTestCase, self).test_create_object()
+        # 2.0 TODO: #824 remove name entirely
+        # For now, check that name is correctly populated in the model even though it's not an API field.
+        for create_data in self.create_data:
+            instance = self._get_queryset().get(slug=create_data["slug"])
+            self.assertEqual(instance.name, instance.slug)
+
+    def test_create_object_required_fields(self):
+        """For this API version, `label` and `slug` are required fields."""
+        self.add_permissions("extras.add_customfield")
+
+        incomplete_data = {
+            "content_types": ["dcim.site"],
+            "type": "date",
+        }
+
+        response = self.client.post(self._get_list_url(), incomplete_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.maxDiff = None
+        self.assertEqual(
+            response.data,
+            {"slug": ["This field is required."], "label": ["This field is required."]},
+        )
 
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):
@@ -2018,6 +2108,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     }
     choices_fields = ["destination_type", "source_type", "type"]
     slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):

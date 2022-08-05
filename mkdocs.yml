@@ -69,9 +69,9 @@ nav:
     - Additional Features:
         - Caching: 'additional-features/caching.md'
         - Change Logging: 'additional-features/change-logging.md'
-        - Computed Fields: 'additional-features/computed-fields.md'
+        - Computed Fields: 'models/extras/computedfield.md'
         - Context Data: 'additional-features/config-contexts.md'
-        - Custom Fields: 'additional-features/custom-fields.md'
+        - Custom Fields: 'models/extras/customfield.md'
         - Custom Links: 'models/extras/customlink.md'
         - Dynamic Groups: 'additional-features/dynamic-groups.md'
         - Export Templates: 'models/extras/exporttemplate.md'

@@ -103,6 +103,7 @@ class ComputedFieldView(generic.ObjectView):
 class ComputedFieldEditView(generic.ObjectEditView):
     queryset = ComputedField.objects.all()
     model_form = forms.ComputedFieldForm
+    template_name = "extras/computedfield_edit.html"
 
 
 class ComputedFieldDeleteView(generic.ObjectDeleteView):
@@ -382,6 +383,7 @@ class CustomFieldEditView(generic.ObjectEditView):
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
 
+                    # ---> BEGIN difference from ObjectEditView.post()
                     # Process the formsets for choices
                     ctx = self.get_extra_context(request, obj)
                     choices = ctx["choices"]
@@ -389,6 +391,7 @@ class CustomFieldEditView(generic.ObjectEditView):
                         choices.save()
                     else:
                         raise RuntimeError(choices.errors)
+                    # <--- END difference from ObjectEditView.post()
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",
@@ -420,6 +423,7 @@ class CustomFieldEditView(generic.ObjectEditView):
                 msg = "Object save failed due to object-level permissions violation"
                 logger.debug(msg)
                 form.add_error(None, msg)
+            # ---> BEGIN difference from ObjectEditView.post()
             except RuntimeError:
                 msg = "Errors encountered when saving custom field choices. See below."
                 logger.debug(msg)
@@ -430,6 +434,7 @@ class CustomFieldEditView(generic.ObjectEditView):
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
+            # <--- END difference from ObjectEditView.post()
 
         else:
             logger.debug("Form validation failed")
@@ -461,6 +466,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
         """
         tasks = [
+            # 2.0 TODO: #824 use obj.slug instead of obj.name
             delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
             for obj in queryset
         ]
@@ -476,8 +482,9 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
             )
             return
         tasks = self.construct_custom_field_delete_tasks(queryset)
-        # Executing the tasks in the background sequentially using chain() aligns with how a single CustomField object is deleted.
-        # We decided to not check the result because it needs at least one worker to be active and comes with extra performance penalty.
+        # Executing the tasks in the background sequentially using chain() aligns with how a single
+        # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
+        # to be active and comes with extra performance penalty.
         chain(*tasks).apply_async()
 
 
@@ -1691,6 +1698,7 @@ class RelationshipView(generic.ObjectView):
 class RelationshipEditView(generic.ObjectEditView):
     queryset = Relationship.objects.all()
     model_form = forms.RelationshipForm
+    template_name = "extras/relationship_edit.html"
 
 
 class RelationshipBulkDeleteView(generic.BulkDeleteView):
