@@ -39,7 +39,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if "/" not in options["job"]:
-            raise CommandError('Job must be specified in the class path form: "<grouping_name>/<module_name>/<JobClassName>"')
+            raise CommandError(
+                'Job must be specified in the class path form: "<grouping_name>/<module_name>/<JobClassName>"'
+            )
         job_class = get_job(options["job"])
         if not job_class:
             raise CommandError('Job "%s" not found' % options["job"])
