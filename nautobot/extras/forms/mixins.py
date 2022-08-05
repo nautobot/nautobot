@@ -29,16 +29,16 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = (
-    "AddRemoveTagsForm",
-    "CustomFieldFilterForm",
-    "CustomFieldModelForm",
-    "CustomFieldBulkEditForm",
+    "CustomFieldModelBulkEditFormMixin",
+    "CustomFieldModelFilterFormMixin",
+    "CustomFieldModelFormMixin",
     "RelationshipModelBulkEditFormMixin",
-    "RelationshipModelFormMixin",
     "RelationshipModelFilterFormMixin",
-    "StatusBulkEditFormMixin",
-    "StatusFilterFormMixin",
+    "RelationshipModelFormMixin",
+    "StatusModelBulkEditFormMixin",
+    "StatusModelFilterFormMixin",
     "StatusModelCSVFormMixin",
+    "TagsBulkEditFormMixin",
 )
 
 
@@ -47,16 +47,7 @@ __all__ = (
 #
 
 
-class AddRemoveTagsForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Add add/remove tags fields
-        self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-
-
-class CustomFieldFilterForm(forms.Form):
+class CustomFieldModelFilterFormMixin(forms.Form):
     def __init__(self, *args, **kwargs):
 
         self.obj_type = ContentType.objects.get_for_model(self.model)
@@ -77,7 +68,7 @@ class CustomFieldFilterForm(forms.Form):
                 self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
 
 
-class CustomFieldModelForm(forms.ModelForm):
+class CustomFieldModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
 
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
@@ -117,7 +108,7 @@ class CustomFieldModelForm(forms.ModelForm):
         return super().clean()
 
 
-class CustomFieldBulkEditForm(BulkEditForm):
+class CustomFieldModelBulkEditFormMixin(BulkEditForm):
     # Note that this is a form mixin for bulk-editing custom-field-having models, not for the CustomField model itself!
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -169,7 +160,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         - For one-to-many (from the source, "one", side) we likewise want it clearable/nullable but not settable.
         - For one-to-many (from the destination, "many", side) a single value can be set, or it can be nulled.
         - For many-to-many (symmetric or non-symmetric) we provide "add" and "remove" multi-select fields,
-          similar to the AddRemoveTagsForm behavior. No nullability is provided here.
+          similar to the TagsBulkEditFormMixin behavior. No nullability is provided here.
         """
         for relationship in relationships:
             if relationship.symmetric:
@@ -543,7 +534,7 @@ class RelationshipModelFilterFormMixin(forms.Form):
             self.relationships.append(field_name)
 
 
-class StatusBulkEditFormMixin(forms.Form):
+class StatusModelBulkEditFormMixin(forms.Form):
     """Mixin to add non-required `status` choice field to forms."""
 
     def __init__(self, *args, **kwargs):
@@ -556,7 +547,7 @@ class StatusBulkEditFormMixin(forms.Form):
         self.order_fields(self.field_order)  # Reorder fields again
 
 
-class StatusFilterFormMixin(forms.Form):
+class StatusModelFilterFormMixin(forms.Form):
     """
     Mixin to add non-required `status` multiple-choice field to filter forms.
     """
@@ -580,3 +571,12 @@ class StatusModelCSVFormMixin(CSVModelForm):
         to_field_name="slug",
         help_text="Operational status",
     )
+
+
+class TagsBulkEditFormMixin(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Add add/remove tags fields
+        self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)

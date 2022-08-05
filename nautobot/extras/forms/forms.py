@@ -77,12 +77,12 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from .base import (
     NautobotBulkEditForm,
+    NautobotFilterForm,
     NautobotModelForm,
 )
 from .mixins import (
-    CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
-    CustomFieldModelForm,
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelFormMixin,
     RelationshipModelFormMixin,
 )
 
@@ -366,7 +366,9 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         )
 
 
-class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
+class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
+    """Base class for CSV export of models that support custom fields."""
+
     def _append_customfield_fields(self):
 
         # Append form fields
@@ -378,7 +380,7 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
             self.custom_fields.append(field_name)
 
 
-class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
+class CustomFieldBulkCreateForm(CustomFieldModelBulkEditFormMixin):
     """No longer needed as a separate class - use CustomFieldBulkEditForm instead."""
 
     def __init__(self, *args, **kwargs):
@@ -1181,7 +1183,7 @@ def provider_choices_with_blank():
     return add_blank_choice(sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()]))
 
 
-class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class SecretFilterForm(NautobotFilterForm):
     model = Secret
     q = forms.CharField(required=False, label="Search")
     provider = forms.MultipleChoiceField(
@@ -1218,7 +1220,7 @@ class SecretsGroupForm(NautobotModelForm):
         ]
 
 
-class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class SecretsGroupFilterForm(NautobotFilterForm):
     model = SecretsGroup
     q = forms.CharField(required=False, label="Search")
 
@@ -1262,7 +1264,7 @@ class StatusCSVForm(CustomFieldModelCSVForm):
         }
 
 
-class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class StatusFilterForm(NautobotFilterForm):
     """Filtering/search form for `Status` objects."""
 
     model = Status
@@ -1325,7 +1327,7 @@ class TagCSVForm(CustomFieldModelCSVForm):
         }
 
 
-class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class TagFilterForm(NautobotFilterForm):
     model = Tag
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(
