@@ -1,5 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
+from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import Cable
 from nautobot.extras.tables import StatusTableMixin
@@ -17,32 +18,63 @@ __all__ = ("CableTable",)
 #
 # Cables
 #
+class CableTerminationsColumn(tables.Column):
+    """
+    Args:
+        cable_side: Which side of the cable to report on (A or B)
+        attr: The CableTermination attribute to return for each instance (returns the termination object by default)
+    """
+    def __init__(self, attr, cable_side, *args, **kwargs):
+        self.cable_side = cable_side
+        self.attr = attr
+        super().__init__(accessor=Accessor('endpoints'), *args, **kwargs)
+
+    def _get_terminations(self, manager):
+        terminations = set()
+        for cable_endpoint in manager.all():
+            if cable_endpoint.cable_side == self.cable_side:
+                if termination := getattr(cable_endpoint, self.attr, None):
+                    terminations.add(termination)
+
+        return terminations
+
+    def render(self, value):
+        links = [
+            f'<a href="{term.get_absolute_url()}">{term}</a>' for term in self._get_terminations(value)
+        ]
+        return mark_safe('<br />'.join(links) or '&mdash;')
+
+    def value(self, value):
+        return ','.join([str(t) for t in self._get_terminations(value)])
 
 
 class CableTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     id = tables.Column(linkify=True, verbose_name="ID")
-    termination_a_parent = tables.TemplateColumn(
-        template_code=CABLE_TERMINATION_PARENT,
-        accessor=Accessor("termination_a"),
+
+    a_terminations = CableTerminationsColumn(
+        cable_side='A',
+        attr="termination",
         orderable=False,
-        verbose_name="Side A",
+        verbose_name='Termination A',
     )
-    termination_a = tables.LinkColumn(
-        accessor=Accessor("termination_a"),
+    b_terminations = CableTerminationsColumn(
+        cable_side='B',
+        attr="termination",
         orderable=False,
-        verbose_name="Termination A",
+        verbose_name='Termination B',
     )
-    termination_b_parent = tables.TemplateColumn(
-        template_code=CABLE_TERMINATION_PARENT,
-        accessor=Accessor("termination_b"),
+    device_a = CableTerminationsColumn(
+        cable_side='A',
+        attr='_device',
         orderable=False,
-        verbose_name="Side B",
+        verbose_name='Device A'
     )
-    termination_b = tables.LinkColumn(
-        accessor=Accessor("termination_b"),
+    device_b = CableTerminationsColumn(
+        cable_side='B',
+        attr='_device',
         orderable=False,
-        verbose_name="Termination B",
+        verbose_name='Device B'
     )
     length = tables.TemplateColumn(template_code=CABLE_LENGTH, order_by="_abs_length")
     color = ColorColumn()
@@ -54,10 +86,10 @@ class CableTable(StatusTableMixin, BaseTable):
             "pk",
             "id",
             "label",
-            "termination_a_parent",
-            "termination_a",
-            "termination_b_parent",
-            "termination_b",
+            "device_a",
+            "device_b",
+            "a_terminations",
+            "b_terminations",
             "status",
             "type",
             "color",
@@ -68,10 +100,8 @@ class CableTable(StatusTableMixin, BaseTable):
             "pk",
             "id",
             "label",
-            "termination_a_parent",
-            "termination_a",
-            "termination_b_parent",
-            "termination_b",
+            "a_terminations",
+            "b_terminations",
             "status",
             "type",
         )
