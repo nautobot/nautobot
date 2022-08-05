@@ -47,7 +47,8 @@ PERMISSIONS_ACTION_MAP = {
     "list": "view",
     "retrieve": "view",
     "destroy": "delete",
-    "create_or_update": "change",
+    "create": "add",
+    "update": "change",
     "bulk_create": "add",
     "bulk_destroy": "delete",
     "bulk_update": "change",
@@ -247,7 +248,7 @@ class NautobotViewSetMixin(ViewSetMixin, GetReturnURLMixin, FormView, generics.G
 
         elif self.action == "bulk_destroy":
             self._process_bulk_destroy_form(form)
-        elif self.action == "create_or_update":
+        elif self.action in ["create", "update"]:
             try:
                 self._process_create_or_update_form(form)
             except ObjectDoesNotExist:
@@ -351,6 +352,8 @@ class NautobotViewSetMixin(ViewSetMixin, GetReturnURLMixin, FormView, generics.G
         model_opts = self.model._meta
         app_label = model_opts.app_label
         action = self.action
+        if action in ["create", "update"]:
+            action = "create_or_update"
         try:
             select_template([f"{app_label}/{model_opts.model_name}_{action}.html"])
             return f"{app_label}/{model_opts.model_name}_{action}.html"
@@ -375,7 +378,7 @@ class NautobotViewSetMixin(ViewSetMixin, GetReturnURLMixin, FormView, generics.G
         return form
 
     def get_form_class(self, **kwargs):
-        if self.action == "create_or_update":
+        if self.action in ["create", "update"]:
             form_class = getattr(self, "form_class", None)
         else:
             form_class = getattr(self, f"{self.action}_form_class", None)
@@ -545,13 +548,29 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
 class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin):
     logger = logging.getLogger("nautobot.views.ObjectEditView")
 
-    def create_or_update(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         context = {}
         if request.method == "POST":
-            return self.perform_create_or_update(request, *args, **kwargs)
+            return self.perform_create(request, *args, **kwargs)
         return Response(context)
 
-    def perform_create_or_update(self, request, *args, **kwargs):
+    def perform_create(self, request, *args, **kwargs):
+        self.obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
+        form_class = self.get_form_class()
+        form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
+        restrict_form_fields(form, request.user)
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def update(self, request, *args, **kwargs):
+        context = {}
+        if request.method == "POST":
+            return self.perform_update(request, *args, **kwargs)
+        return Response(context)
+
+    def perform_update(self, request, *args, **kwargs):
         self.obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
         form_class = self.get_form_class()
         form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
@@ -679,5 +698,9 @@ class NautobotDRFViewSet(
         """
         Using ObjectPermissionRequiredMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
+        if not self.has_permission():
+            self.handle_no_permission()
+
+    def check_object_permissions(self, request, obj):
         if not self.has_permission():
             self.handle_no_permission()

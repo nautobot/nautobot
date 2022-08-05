@@ -15,7 +15,7 @@ urlpatterns = [
     ),
     path(
         "providers/add/",
-        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.ProviderDRFViewSet.as_view({"get": "create", "post": "create"}),
         name="provider_add",
     ),
     path(
@@ -40,7 +40,7 @@ urlpatterns = [
     ),
     path(
         "providers/<slug:slug>/edit/",
-        views.ProviderDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.ProviderDRFViewSet.as_view({"get": "update", "post": "update"}),
         name="provider_edit",
     ),
     path(
@@ -61,7 +61,7 @@ urlpatterns = [
     ),
     path(
         "provider-networks/add/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "create", "post": "create"}),
         name="providernetwork_add",
     ),
     path(
@@ -86,7 +86,7 @@ urlpatterns = [
     ),
     path(
         "provider-networks/<slug:slug>/edit/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.ProviderNetworkDRFViewSet.as_view({"get": "update", "post": "update"}),
         name="providernetwork_edit",
     ),
     path(
@@ -107,7 +107,7 @@ urlpatterns = [
     ),
     path(
         "circuit-types/add/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "create", "post": "create"}),
         name="circuittype_add",
     ),
     path(
@@ -127,7 +127,7 @@ urlpatterns = [
     ),
     path(
         "circuit-types/<slug:slug>/edit/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.CircuitTypeDRFViewSet.as_view({"get": "update", "post": "update"}),
         name="circuittype_edit",
     ),
     path(
@@ -148,7 +148,7 @@ urlpatterns = [
     ),
     path(
         "circuits/add/",
-        views.CircuitDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.CircuitDRFViewSet.as_view({"get": "create", "post": "create"}),
         name="circuit_add",
     ),
     path(
@@ -173,7 +173,7 @@ urlpatterns = [
     ),
     path(
         "circuits/<uuid:pk>/edit/",
-        views.CircuitDRFViewSet.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.CircuitDRFViewSet.as_view({"get": "update", "post": "update"}),
         name="circuit_edit",
     ),
     path(
@@ -194,7 +194,7 @@ urlpatterns = [
     ),
     path(
         "circuits/<uuid:circuit>/terminations/add/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.CircuitTerminationDRFViewset.as_view({"get": "create", "post": "create"}),
         name="circuittermination_add",
     ),
     path(
@@ -204,7 +204,7 @@ urlpatterns = [
     ),
     path(
         "circuit-terminations/<uuid:pk>/edit/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "create_or_update", "post": "create_or_update"}),
+        views.CircuitTerminationDRFViewset.as_view({"get": "update", "post": "update"}),
         name="circuittermination_edit",
     ),
     path(

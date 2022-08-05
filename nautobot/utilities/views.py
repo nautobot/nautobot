@@ -123,7 +123,6 @@ class ObjectPermissionRequiredMixin(AccessMixin):
     def has_permission(self):
         user = self.request.user
         permission_required = self.get_required_permission()
-
         # Check that the user has been granted the required permission(s).
         if user.has_perms((permission_required, *self.additional_permissions)):
 

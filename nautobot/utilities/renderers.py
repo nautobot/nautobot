@@ -92,7 +92,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 RequestConfig(request, paginate).configure(table)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
-            elif view.action == "create_or_update":
+            elif view.action in ["create", "update"]:
                 initial_data = normalize_querydict(request.GET)
                 form = form_class(instance=obj, initial=initial_data)
                 restrict_form_fields(form, request.user)
