@@ -146,7 +146,7 @@ Next, we will setup the `systemd` units for the Celery worker and Celery Beat sc
 
 The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
 Nautobot features including [Jobs](../additional-features/jobs.md), [Custom
-Fields](../additional-features/custom-fields.md), and [Git Repositories](../models/extras/gitrepository.md), among others.
+Fields](../models/extras/customfield.md), and [Git Repositories](../models/extras/gitrepository.md), among others.
 
 To establish the `systemd` unit file for the Celery worker, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 

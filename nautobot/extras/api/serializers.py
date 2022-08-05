@@ -2,8 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
-from nautobot.core.api.serializers import BaseModelSerializer
-from nautobot.extras.models.secrets import SecretsGroupAssociation
 from rest_framework import serializers
 
 from nautobot.core.api import (
@@ -13,6 +11,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceRoleSerializer,
@@ -24,6 +23,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedSiteSerializer,
 )
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Rack, Region, Site
+from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -53,11 +53,11 @@ from nautobot.extras.models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
 )
-from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
@@ -66,11 +66,13 @@ from nautobot.tenancy.api.nested_serializers import (
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.utils import slugify_dashes_to_underscores
 from nautobot.virtualization.api.nested_serializers import (
     NestedClusterGroupSerializer,
     NestedClusterSerializer,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
+
 from .customfields import CustomFieldModelSerializer
 from .fields import MultipleChoiceJSONField
 from .relationships import RelationshipModelSerializerMixin
@@ -391,6 +393,11 @@ class CustomFieldSerializer(ValidatedModelSerializer):
     )
     type = ChoiceField(choices=CustomFieldTypeChoices)
     filter_logic = ChoiceField(choices=CustomFieldFilterLogicChoices, required=False)
+    # Laying groundwork for 2.0:
+    # - in 1.4 `label` is not required at the model level due to backward compatibility, but in 2.0 it will be.
+    # - in 1.4 `name` is required at the model level, but in 2.0 it will be removed entirely.
+    # Since the API is versioned we can go ahead and adopt the future here.
+    label = serializers.CharField(max_length=50, required=True)
 
     class Meta:
         model = CustomField
@@ -398,8 +405,8 @@ class CustomFieldSerializer(ValidatedModelSerializer):
             "url",
             "content_types",
             "type",
-            "name",
             "label",
+            "slug",
             "description",
             "required",
             "filter_logic",
@@ -409,6 +416,37 @@ class CustomFieldSerializer(ValidatedModelSerializer):
             "validation_maximum",
             "validation_regex",
         ]
+
+    def validate(self, data):
+        # 2.0 TODO: #824 remove `name` entirely from the model; for now it's required.
+        if self.instance is None:
+            if "slug" in data and "name" not in data:
+                data["name"] = data["slug"]
+
+        return super().validate(data)
+
+
+class CustomFieldSerializerVersion12(CustomFieldSerializer):
+    # In older versions of the REST API, neither `label` nor `slug` were required fields. See also validate() below.
+    label = serializers.CharField(max_length=50, required=False)
+    slug = serializers.CharField(max_length=50, required=False)
+
+    class Meta(CustomFieldSerializer.Meta):
+        fields = CustomFieldSerializer.Meta.fields.copy()
+        fields.insert(4, "name")
+
+    def validate(self, data):
+        # Logic copied from CustomField.clean_fields(), since this needs to happen *before* the instance is created
+        if self.instance is None:
+            # 2.0 TODO: this is to fix up existing usage when caller specifies a name but not a label;
+            # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
+            if "name" in data and "label" not in data:
+                data["label"] = data["name"]
+
+            if "label" in data and "slug" not in data:
+                data["slug"] = slugify_dashes_to_underscores(data["label"])
+
+        return super().validate(data)
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):

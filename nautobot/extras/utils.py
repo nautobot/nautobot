@@ -13,7 +13,8 @@ from django.db.models import Q
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
-from nautobot.core.fields import slugify_dots_to_dashes
+# 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
+from nautobot.utilities.utils import is_taggable, slugify_dots_to_dashes  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -32,16 +33,6 @@ logger = logging.getLogger(__name__)
 def get_job_content_type():
     """Return a cached instance of the `ContentType` for `extras.Job`."""
     return ContentType.objects.get(app_label="extras", model="job")
-
-
-def is_taggable(obj):
-    """
-    Return True if the instance can have Tags assigned to it; False otherwise.
-    """
-    if hasattr(obj, "tags"):
-        if issubclass(obj.tags.__class__, _TaggableManager):
-            return True
-    return False
 
 
 def image_upload(instance, filename):

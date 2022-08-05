@@ -15,7 +15,7 @@ from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideCho
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.utilities.utils import get_filterset_for_model
+from nautobot.utilities.utils import get_filterset_for_model, slugify_dashes_to_underscores
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -236,8 +236,12 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
-    name = models.CharField(max_length=100, unique=True, help_text="Internal relationship name")
-    slug = AutoSlugField(populate_from="name")
+    name = models.CharField(max_length=100, unique=True, help_text="Name of the relationship as displayed to users")
+    slug = AutoSlugField(
+        populate_from="name",
+        slugify_function=slugify_dashes_to_underscores,
+        help_text="Internal relationship name. Please use underscores rather than dashes in this slug.",
+    )
     description = models.CharField(max_length=200, blank=True)
     type = models.CharField(
         max_length=50,
