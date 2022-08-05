@@ -1,8 +1,10 @@
 CABLETERMINATION = """
 {% if value %}
-    <a href="{{ value.parent.get_absolute_url }}">{{ value.parent }}</a>
-    <i class="mdi mdi-chevron-right"></i>
-    <a href="{{ value.get_absolute_url }}">{{ value }}</a>
+    {% for cable_peer in value %}
+        <a href="{{ cable_peer.parent.get_absolute_url }}">{{ cable_peer.parent }}</a>
+        <i class="mdi mdi-chevron-right"></i>
+        <a href="{{ cable_peer.get_absolute_url }}">{{ cable_peer }}</a>{% if not forloop.last %}<br />{% endif %}
+    {% endfor %}
 {% else %}
     &mdash;
 {% endif %}
@@ -137,9 +139,9 @@ CONSOLEPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Console Server Port</a></li>
-            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.consoleport&a_terminations={{ record.pk }}&b_terminations_type=dcim.consoleserverport&return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Console Server Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.consoleport&a_terminations={{ record.pk }}&b_terminations_type=dcim.frontport&return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Front Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.consoleport&a_terminations={{ record.pk }}&b_terminations_type=dcim.rearport&return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Rear Port</a></li>
         </ul>
     </span>
 {% endif %}
@@ -157,13 +159,16 @@ CONSOLESERVERPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Console Port</a></li>
-            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.consoleserverport&a_terminations={{ record.pk }}&b_terminations_type=dcim.consoleport&return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Console Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.consoleserverport&a_terminations={{ record.pk }}&b_terminations_type=dcim.frontport&return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Front Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.consoleserverport&a_terminations={{ record.pk }}&b_terminations_type=dcim.rearport&return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Rear Port</a></li>
         </ul>
     </span>
 {% endif %}
 """
+
+
+# TODO(mzb) powerports.
 
 POWERPORT_BUTTONS = """
 {% if record.cable %}
@@ -183,6 +188,8 @@ POWERPORT_BUTTONS = """
     </span>
 {% endif %}
 """
+
+# TODO(mzb) powerports.
 
 POWEROUTLET_BUTTONS = """
 {% if record.cable %}
@@ -214,10 +221,10 @@ INTERFACE_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Interface</a></li>
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Rear Port</a></li>
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Circuit Termination</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.interface&a_terminations={{ record.pk }}&b_terminations_type=dcim.interface&return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Interface</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.interface&a_terminations={{ record.pk }}&b_terminations_type=dcim.frontport&return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Front Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.interface&a_terminations={{ record.pk }}&b_terminations_type=dcim.rearport&return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.interface&a_terminations={{ record.pk }}&b_terminations_type=dcim.circuittermination&return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Circuit Termination</a></li>
         </ul>
     </span>
 {% endif %}
@@ -235,12 +242,12 @@ FRONTPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Interface</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Console Server Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Console Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Rear Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Circuit Termination</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.frontport&a_terminations={{ record.pk }}&b_terminations_type=dcim.interface&return_url={% url 'dcim:device_frontports' pk=object.pk %}">Interface</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.frontport&a_terminations={{ record.pk }}&b_terminations_type=dcim.consoleserverport&return_url={% url 'dcim:device_frontports' pk=object.pk %}">Console Server Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.frontport&a_terminations={{ record.pk }}&b_terminations_type=dcim.consoleport&return_url={% url 'dcim:device_frontports' pk=object.pk %}">Console Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.frontport&a_terminations={{ record.pk }}&b_terminations_type=dcim.frontport&return_url={% url 'dcim:device_frontports' pk=object.pk %}">Front Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.frontport&a_terminations={{ record.pk }}&b_terminations_type=dcim.rearport&return_url={% url 'dcim:device_frontports' pk=object.pk %}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.frontport&a_terminations={{ record.pk }}&b_terminations_type=circuits.circuittermination&return_url={% url 'dcim:device_frontports' pk=object.pk %}">Circuit Termination</a></li>
         </ul>
     </span>
 {% endif %}
@@ -258,10 +265,10 @@ REARPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Interface</a></li>
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Rear Port</a></li>
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Circuit Termination</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.rearport&a_terminations={{ record.pk }}&b_terminations_type=dcim.interface&return_url={% url 'dcim:device_rearports' pk=object.pk %}">Interface</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.rearport&a_terminations={{ record.pk }}&b_terminations_type=dcim.frontport&return_url={% url 'dcim:device_rearports' pk=object.pk %}">Front Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.rearport&a_terminations={{ record.pk }}&b_terminations_type=dcim.rearport&return_url={% url 'dcim:device_rearports' pk=object.pk %}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:cable_add' %}?a_terminations_type=dcim.rearport&a_terminations={{ record.pk }}&b_terminations_type=circuits.circuittermination&return_url={% url 'dcim:device_rearports' pk=object.pk %}">Circuit Termination</a></li>
         </ul>
     </span>
 {% endif %}
