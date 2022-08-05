@@ -54,9 +54,7 @@ PERMISSIONS_ACTION_MAP = {
 }
 
 
-class NautobotViewSetMixin(
-    ViewSetMixin, GetReturnURLMixin, FormView, generics.GenericAPIView
-):
+class NautobotViewSetMixin(ViewSetMixin, GetReturnURLMixin, FormView, generics.GenericAPIView):
     serializer_class = None
     renderer_classes = [NautobotHTMLRenderer]
 
@@ -383,6 +381,7 @@ class NautobotViewSetMixin(
             form_class = getattr(self, f"{self.action}_form_class", None)
         if not form_class:
             if self.action == "bulk_destroy":
+
                 class BulkDestroyForm(ConfirmationForm):
                     pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
 
@@ -672,7 +671,7 @@ class NautobotDRFViewSet(
     BulkDestroyViewMixin,
     BulkCreateViewMixin,
     BulkUpdateViewMixin,
-):  
+):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, PERMISSIONS_ACTION_MAP[self.action])
 
