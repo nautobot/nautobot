@@ -572,7 +572,7 @@ class WebhookFormTestCase(TestCase):
         )
 
 
-class JobFormTestCase(TestCase):
+class JobEditFormTestCase(TestCase):
     def test_update_job_with_approval_required_and_has_has_sensitive_variables_is_true(self):
         form_data = {
             "grouping_override": True,
