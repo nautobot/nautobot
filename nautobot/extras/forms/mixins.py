@@ -12,6 +12,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.models import (
     CustomField,
+    Note,
     Relationship,
     RelationshipAssociation,
     Status,
@@ -19,6 +20,7 @@ from nautobot.extras.models import (
 )
 from nautobot.utilities.forms import (
     BulkEditForm,
+    CommentField,
     CSVModelChoiceField,
     CSVModelForm,
     DynamicModelChoiceField,
@@ -33,6 +35,7 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldModelForm",
     "CustomFieldBulkEditForm",
+    "NoteModelBulkEditFormMixin",
     "RelationshipModelBulkEditFormMixin",
     "RelationshipModelFormMixin",
     "RelationshipModelFilterFormMixin",
@@ -134,6 +137,49 @@ class CustomFieldBulkEditForm(BulkEditForm):
     def _get_field_name(name):
         # Return the desired field name
         return name
+
+
+class NoteModelBulkEditFormMixin(BulkEditForm):
+    """Bulk-edit form mixin for models that support Notes."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+
+        self.fields["object_note"] = CommentField()
+        self.fields["object_note"].label = "Note"
+
+    def save_note(self, *, instance, user):
+        if "object_note" in self.cleaned_data:
+            value = self.cleaned_data.get("object_note")
+            note = Note.objects.create(
+                note=value,
+                assigned_object_type=self.obj_type,
+                assigned_object_id=instance.pk,
+                user=user,
+            )
+            logger.debug("Created %s", note)
+
+
+class NoteModelFormMixin(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+
+        super().__init__(*args, **kwargs)
+
+        self.fields["object_note"] = CommentField()
+        self.fields["object_note"].label = "Note"
+
+    def save_note(self, *, instance, user):
+        if "object_note" in self.cleaned_data:
+            value = self.cleaned_data.get("object_note")
+            note = Note.objects.create(
+                note=value,
+                assigned_object_type=self.obj_type,
+                assigned_object_id=instance.pk,
+                user=user,
+            )
+            logger.debug("Created %s", note)
 
 
 class RelationshipModelBulkEditFormMixin(BulkEditForm):

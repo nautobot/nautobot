@@ -3,6 +3,8 @@ from .mixins import (
     CustomFieldBulkEditForm,
     CustomFieldModelForm,
     CustomFieldFilterForm,
+    NoteModelBulkEditFormMixin,
+    NoteModelFormMixin,
     RelationshipModelBulkEditFormMixin,
     RelationshipModelFormMixin,
     RelationshipModelFilterFormMixin,
@@ -21,10 +23,10 @@ __all__ = (
 #
 
 
-class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFormMixin):
+class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFormMixin, NoteModelFormMixin):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
-    codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are
+    codebase where all four of BootstrapMixin, CustomFieldModelForm, RelationshipModelForm and NoteModelForm are
     needed.
     """
 
@@ -37,5 +39,7 @@ class NautobotFilterForm(BootstrapMixin, CustomFieldFilterForm, RelationshipMode
     """
 
 
-class NautobotBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm, RelationshipModelBulkEditFormMixin):
-    """Base class for bulk-edit forms for models that support relationships and custom fields."""
+class NautobotBulkEditForm(
+    BootstrapMixin, CustomFieldBulkEditForm, RelationshipModelBulkEditFormMixin, NoteModelBulkEditFormMixin
+):
+    """Base class for bulk-edit forms for models that support relationships, custom fields and notes."""
