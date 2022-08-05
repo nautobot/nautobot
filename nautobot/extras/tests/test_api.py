@@ -1465,7 +1465,7 @@ class JobTestVersion13(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_update_mark_job_with_sensitive_variables_for_approval(self):
+    def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
         job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
         job_model.has_sensitive_variables = True
         job_model.has_sensitive_variables_override = True
@@ -1483,7 +1483,7 @@ class JobTestVersion13(
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data["approval_required"][0],
-            "A job with sensitive variables cannot be marked as requiring approval",
+            "A job with sensitive variables cannot also be marked as requiring approval",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1504,7 +1504,8 @@ class JobTestVersion13(
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
-            response.data["has_sensitive_variables"][0], "A job marked for approval cannot have sensitive variables"
+            response.data["has_sensitive_variables"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
