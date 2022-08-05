@@ -108,16 +108,6 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "Circuit Type 8"
 
-    def test_bulk_edit_objects_without_permission(self):
-        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
-        data = {
-            "pk": pk_list,
-            "_apply": True,  # Form button
-        }
-        # Try POST without permission
-        with disable_warnings("django.request"):
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 403)
-
     def test_bulk_delete_objects_without_permission(self):
         pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
         data = {
@@ -126,7 +116,7 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
         # Try POST without permission
         with disable_warnings("django.request"):
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 403)
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 403)
 
 
 class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
