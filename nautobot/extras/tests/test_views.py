@@ -1362,7 +1362,7 @@ class JobTestCase(
 
     def _get_queryset(self):
         """Don't include hidden or non-installed Jobs as they won't appear in the UI by default."""
-        return self.model.objects.filter(installed=True, hidden=False, has_sensitive_variables=False)
+        return self.model.objects.filter(installed=True, hidden=False)
 
     @classmethod
     def setUpTestData(cls):
@@ -1428,6 +1428,8 @@ class JobTestCase(
             "soft_time_limit": 350,
             "time_limit_override": True,
             "time_limit": 650,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
         }
 
     #
