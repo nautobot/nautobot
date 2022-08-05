@@ -1032,6 +1032,15 @@ class PortTypeChoices(ChoiceSet):
 #
 # Cables
 #
+class CableEndpointSideChoices(ChoiceSet):
+
+    SIDE_A = "A"
+    SIDE_B = "B"
+
+    CHOICES = (
+        (SIDE_A, "A"),
+        (SIDE_B, "B"),
+    )
 
 
 class CableTypeChoices(ChoiceSet):
