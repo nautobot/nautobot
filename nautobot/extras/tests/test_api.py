@@ -1248,23 +1248,13 @@ class JobAPIRunTestMixin:
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job(
-            source="local",
-            module_name="sensitivejob_module",
-            job_class_name="SensitiveJob",
-            grouping="Sensitive Module",
-            name="Job With Sensitive Variable",
-            installed=True,
-            enabled=True,
-            has_sensitive_variables=True,
-        )
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
         job_model.validated_save()
 
-        url = self.get_run_url("local/sensitivejob_module/SensitiveJob")
-
-        d = DeviceRole.objects.create(name="role", slug="role")
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
         data = {
-            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "data": {},
             "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
