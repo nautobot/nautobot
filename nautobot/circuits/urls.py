@@ -1,7 +1,7 @@
 from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.dcim.views import CableCreateView, PathTraceView
+from nautobot.dcim.views import PathTraceView
 from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
 from . import views
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
@@ -74,12 +74,24 @@ urlpatterns = [
         views.CircuitTerminationUIViewSet.as_view({"get": "create", "post": "create"}),
         name="circuittermination_add",
     ),
+    path("circuit-terminations/<uuid:pk>/", views.CircuitTerminationView.as_view(), name="circuittermination"),
     path(
-        "circuit-terminations/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
-        CableCreateView.as_view(),
-        name="circuittermination_connect",
-        kwargs={"termination_a_type": CircuitTermination},
+        "circuit-terminations/<uuid:pk>/edit/",
+        views.CircuitTerminationEditView.as_view(),
+        name="circuittermination_edit",
     ),
+    path(
+        "circuit-terminations/<uuid:pk>/delete/",
+        views.CircuitTerminationDeleteView.as_view(),
+        name="circuittermination_delete",
+    ),
+    # TODO(mzb)
+    # path(
+    #     "circuit-terminations/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
+    #     CableCreateView.as_view(),
+    #     name="circuittermination_connect",
+    #     kwargs={"termination_a_type": CircuitTermination},
+    # ),
     path(
         "circuit-terminations/<uuid:pk>/trace/",
         PathTraceView.as_view(),
