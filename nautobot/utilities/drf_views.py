@@ -83,7 +83,7 @@ class NautobotViewSetMixin(
         Helper method to destroy objects after the form is validated successfully.
         """
         request = self.request
-        pk_list = self.pk_list
+        pk_list = self.request.POST.getlist("pk")
         model = self.queryset.model
         # Delete objects
         queryset = self.queryset.filter(pk__in=pk_list)
@@ -249,7 +249,6 @@ class NautobotViewSetMixin(
 
         elif self.action == "bulk_destroy":
             self._process_bulk_destroy_form(form)
-
         elif self.action == "create_or_update":
             try:
                 self._process_create_or_update_form(form)
@@ -286,7 +285,7 @@ class NautobotViewSetMixin(
         else:
             data = {}
             if self.action in ["bulk_update", "bulk_destroy"]:
-                pk_list = self.pk_list
+                pk_list = self.request.POST.getlist("pk")
                 table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
                 if not table.rows:
                     messages.warning(
@@ -305,7 +304,7 @@ class NautobotViewSetMixin(
         data = {}
         request = self.request
         if self.action in ["bulk_update", "bulk_destroy"]:
-            pk_list = self.pk_list
+            pk_list = self.request.POST.getlist("pk")
             table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
                 messages.warning(
@@ -384,7 +383,6 @@ class NautobotViewSetMixin(
             form_class = getattr(self, f"{self.action}_form_class", None)
         if not form_class:
             if self.action == "bulk_destroy":
-
                 class BulkDestroyForm(ConfirmationForm):
                     pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
 
@@ -583,7 +581,6 @@ class BulkDestroyViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMix
                 self.pk_list = model.objects.values_list("pk", flat=True)
         else:
             self.pk_list = request.POST.getlist("pk")
-
         form_class = self.get_form_class(**kwargs)
         data = {}
         if "_confirm" in request.POST:
@@ -675,7 +672,13 @@ class NautobotDRFViewSet(
     BulkDestroyViewMixin,
     BulkCreateViewMixin,
     BulkUpdateViewMixin,
-):
+):  
     def get_required_permission(self):
-        self.action = "bulk_destroy"
         return get_permission_for_model(self.queryset.model, PERMISSIONS_ACTION_MAP[self.action])
+
+    def check_permissions(self, request):
+        """
+        Using ObjectPermissionRequiredMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
+        """
+        if not self.has_permission():
+            self.handle_no_permission()
