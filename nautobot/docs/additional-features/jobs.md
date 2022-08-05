@@ -537,14 +537,17 @@ When providing input data, it is possible to specify complex values contained in
 
 ### Via the CLI
 
-Jobs that do not require user input can be run from the CLI by invoking the management command:
+Jobs can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob [--username <username>] [--commit] <class_path>
+nautobot-server runjob [--username <username>] [--commit] [--data <data>] <class_path>
 ```
 
 !!! note
     [See above](#jobs-and-class_path) for `class_path` definitions.
+
+!!! note
+    The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 
 Using the same example shown in the API:
 
