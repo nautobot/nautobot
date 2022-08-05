@@ -72,15 +72,6 @@ class CustomFieldFilterForm(forms.Form):
                 self.fields[field_name] = cf.to_form_field(
                     set_initial=False, enforce_required=False, simple_json_filter=True
                 )
-            elif cf.type == "date":
-                # TODO 2.0: revisit this when we do our filterset streamlining/consolidation for the v2 work
-                self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
-                self.fields[f"{field_name}__gte"] = cf.to_form_field(
-                    label=f"{str(cf)} (on or after this date)", set_initial=False, enforce_required=False
-                )
-                self.fields[f"{field_name}__lte"] = cf.to_form_field(
-                    label=f"{str(cf)} (on or before this date)", set_initial=False, enforce_required=False
-                )
             else:
                 self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
 
