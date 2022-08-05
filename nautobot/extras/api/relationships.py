@@ -2,10 +2,10 @@ import logging
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.fields import JSONField
+from rest_framework.reverse import reverse
 from rest_framework.serializers import ValidationError
 
 from nautobot.core.api import ValidatedModelSerializer
@@ -110,7 +110,11 @@ class RelationshipsDataField(JSONField):
                     relationship.slug,
                     {
                         "id": str(relationship.id),
-                        "url": reverse("extras-api:relationship-detail", kwargs={"pk": relationship.id}),
+                        "url": reverse(
+                            "extras-api:relationship-detail",
+                            kwargs={"pk": relationship.id},
+                            request=self.parent.context.get("request"),
+                        ),
                         "name": relationship.name,
                         "type": relationship.type,
                     },
