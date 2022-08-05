@@ -342,7 +342,7 @@ Invalidating cache...
 
 `nautobot-server remove_stale_scheduled_jobs [max-age of days]`
 
-Delete all existing scheduled jobs that are stale.
+Delete non-recurring scheduled jobs that were scheduled to run more than `max-age` days ago.
 
 ### `renaturalize`
 
