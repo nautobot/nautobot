@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.choices import IPAddressRoleChoices
+from nautobot.ipam.choices import IPAddressRoleChoices, IPAddressStatusChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
 
 
@@ -500,6 +500,11 @@ class TestIPAddress(TestCase):
             assigned_object_type=ContentType.objects.get_for_model(Interface),
         )
         self.assertIsNone(ipaddress_2.clean())
+
+    def test_create_ip_address_without_slaac_status(self):
+        Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
+        IPAddress.objects.create(address="1.1.1.1/32")
+        self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
 
 
 class TestVLANGroup(TestCase):

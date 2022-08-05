@@ -284,7 +284,7 @@ A particular object within Nautobot. Each ObjectVar must specify a particular mo
 
 * `model` - The model class
 * `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
-* `query_params` - A dictionary of query parameters to use when retrieving available options (optional)
+* `query_params` - A dictionary of REST API query parameters to use when retrieving available options (optional)
 * `null_option` - A label representing a "null" or empty choice (optional)
 
 The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
@@ -307,16 +307,20 @@ device = ObjectVar(
 )
 ```
 
-Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name.
+Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Site` `ObjectVar` for its `tenant_group_id`.
 
 ```python
 region = ObjectVar(
     model=Region
 )
+tenant_group = ObjectVar(
+    model=TenantGroup
+)
 site = ObjectVar(
     model=Site,
     query_params={
-        'region_id': '$region'
+        'region_id': '$region',
+        'tenant_group_id': '$tenant_group'
     }
 )
 ```
@@ -533,14 +537,17 @@ When providing input data, it is possible to specify complex values contained in
 
 ### Via the CLI
 
-Jobs that do not require user input can be run from the CLI by invoking the management command:
+Jobs can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob [--username <username>] [--commit] [--local] <class_path>
+nautobot-server runjob [--username <username>] [--commit] [--local] [--data <data>] <class_path>
 ```
 
 !!! note
     [See above](#jobs-and-class_path) for `class_path` definitions.
+
+!!! note
+    The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 
 Using the same example shown in the API:
 

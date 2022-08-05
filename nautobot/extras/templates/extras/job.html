@@ -153,6 +153,12 @@
             $("#id__schedule_start_date").parent().parent().show();
             $("#id__schedule_start_time").parent().parent().show();
         }
+        // Toggle custom crontab field
+        if ($("#id__schedule_type").val() != "custom") {
+            $("#id__recurrence_custom_time").parent().parent().hide();
+        } else {
+            $("#id__recurrence_custom_time").parent().parent().show();
+        }
     }
 
     $(document).ready(function() {

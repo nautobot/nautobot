@@ -1,3 +1,4 @@
+import json
 import time
 import uuid
 
@@ -17,7 +18,7 @@ class Command(BaseCommand):
     help = "Run a job (script, report) to validate or update data in Nautobot"
 
     def add_arguments(self, parser):
-        parser.add_argument("job", help="Job to run")
+        parser.add_argument("job", help="Job in the class path form: `<grouping_name>/<module_name>/<JobClassName>`")
         parser.add_argument(
             "--commit",
             action="store_true",
@@ -34,10 +35,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Run the job on the local system and not on a worker.",
         )
+        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
         if "/" not in options["job"]:
-            raise CommandError('Job must be specified in the form "<grouping_name>/<module_name>/<JobClassName>"')
+            raise CommandError('Job must be specified in the class path form: "<grouping_name>/<module_name>/<JobClassName>"')
         job_class = get_job(options["job"])
         if not job_class:
             raise CommandError('Job "%s" not found' % options["job"])
@@ -59,6 +61,13 @@ class Command(BaseCommand):
             request.id = uuid.uuid4()
             request.user = user
 
+        data = {}
+        try:
+            if options.get("data"):
+                data = json.loads(options["data"])
+        except json.decoder.JSONDecodeError as error:
+            raise CommandError(f"Invalid JSON data:\n{str(error)}")
+
         job_content_type = get_job_content_type()
 
         # Run the job and create a new JobResult
@@ -74,7 +83,7 @@ class Command(BaseCommand):
                 job_id=uuid.uuid4(),
             )
             run_job(
-                data={},
+                data=data,
                 request=copy_safe_request(request) if request else None,
                 commit=options["commit"],
                 job_result_pk=job_result.pk,
@@ -87,7 +96,7 @@ class Command(BaseCommand):
                 job_class.class_path,
                 job_content_type,
                 user,
-                data={},
+                data=data,
                 request=copy_safe_request(request) if request else None,
                 commit=options["commit"],
             )

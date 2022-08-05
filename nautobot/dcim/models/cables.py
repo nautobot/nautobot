@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -29,6 +30,8 @@ __all__ = (
     "Cable",
     "CablePath",
 )
+
+logger = logging.getLogger(__name__)
 
 
 #
@@ -135,7 +138,12 @@ class Cable(PrimaryModel, StatusModel):
     def STATUS_CONNECTED(cls):
         """Return a cached "connected" `Status` object for later reference."""
         if getattr(cls, "__status_connected", None) is None:
-            cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
+            try:
+                cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
+            except Status.DoesNotExist:
+                logger.warning("Status 'connected' not found for dcim.cable")
+                return None
+
         return cls.__status_connected
 
     def clean(self):

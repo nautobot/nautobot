@@ -1,7 +1,6 @@
 import time
 
 from django.urls import reverse
-from selenium.webdriver.common.keys import Keys
 from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.dcim.models import Interface
@@ -42,43 +41,48 @@ class CableConnectFormTestCase(SeleniumTestCase):
             "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
         )
         self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
-        self.browser.find_by_xpath("(//label[contains(text(),'Device')])[2]").click()
 
-        # select the first device in the device drop-down
-        active_web_element = self.browser.driver.switch_to.active_element
-        active_web_element.send_keys(Keys.ENTER)
-        active_web_element.send_keys(Keys.ENTER)
-        # wait for API call to complete
-        time.sleep(0.1)
-        active_web_element.send_keys(Keys.ENTER)
+        # Find Device selection drop-down label, clicking sets the drop-down as active element
+        self.browser.find_by_xpath("//label[@for='id_termination_b_device']").click()
+        # Trigger Select2 drop-down loading by clicking it
+        self.browser.driver.switch_to.active_element.click()
+        # Wait for Select2 to load choices
+        time.sleep(0.2)
+        # Find 'Device 1' in drop-down and click it
+        self.browser.find_by_xpath(
+            "//ul[@id='select2-id_termination_b_device-results']/li[contains(@class,'select2-results__option') and contains(text(),'Device 1')]"
+        ).click()
 
-        # select the first interface in the termination_b_id drop-down
-        # this should be "Interface 2"'s PK, as Interface 1 should be excluded
-        self.browser.find_by_xpath("(//label[contains(text(),'Name')])[2]").click()
-        active_web_element = self.browser.driver.switch_to.active_element
-        active_web_element.send_keys(Keys.ENTER)
-        active_web_element.send_keys(Keys.ENTER)
-        # wait for API call to complete
-        time.sleep(0.1)
-        select2_results = self.browser.find_by_xpath("//span[@class='select2-results']/ul/li")
+        # Similar to Device drop-down, find and trigger Interface Select2 drop-down
+        self.browser.find_by_xpath("//label[@for='id_termination_b_id']").click()
+        self.browser.driver.switch_to.active_element.click()
+        time.sleep(0.2)
+
+        # Find the drop-down choices and confirm expected filtered output
+        select2_results = self.browser.find_by_xpath(
+            "//ul[@id='select2-id_termination_b_id-results']/li[contains(@class,'select2-results__option')]"
+        )
         self.assertEqual(2, len(select2_results))
         self.assertEqual("Interface 2", select2_results[0].text)
         self.assertEqual("Interface 3", select2_results[1].text)
-        active_web_element.send_keys(Keys.ENTER)
 
-        # wait for DOM to update
-        time.sleep(0.1)
+        # Find 'Interface 2' in drop-down and click it
+        self.browser.find_by_xpath(
+            "//ul[@id='select2-id_termination_b_id-results']/li[contains(@class,'select2-results__option') and contains(text(),'Interface 2')]"
+        ).click()
 
+        # Ensure correct value was selected
         selected = self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first
         self.assertEqual("Interface 2", selected.text)
 
-        # test to see whether options are cleared for termination_b_id when another drop-down is changed
-        # in this case, from device 1 to device 2
-        self.browser.find_by_xpath("(//label[contains(text(),'Device')])[2]").click()
-        active_web_element = self.browser.driver.switch_to.active_element
-        active_web_element.send_keys(Keys.ENTER)
-        active_web_element.send_keys(Keys.DOWN)
-        active_web_element.send_keys(Keys.ENTER)
+        # Change Device selection to "Device 2"
+        self.browser.find_by_xpath("//label[@for='id_termination_b_device']").click()
+        self.browser.driver.switch_to.active_element.click()
+        self.browser.find_by_xpath(
+            "//ul[@id='select2-id_termination_b_device-results']/li[contains(@class,'select2-results__option') and contains(text(),'Device 2')]"
+        ).click()
+
+        # Device 2 has no interface, ensure that is filtered properly
         with self.assertRaises(ElementDoesNotExist) as context:
             selected = self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first
         self.assertIn("no elements could be found", str(context.exception))

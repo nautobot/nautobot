@@ -164,7 +164,7 @@ class NestedScheduledJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.ScheduledJob
-        fields = ["name", "start_time", "interval"]
+        fields = ["name", "start_time", "interval", "crontab"]
 
     def validate(self, data):
         data = super().validate(data)
@@ -173,12 +173,23 @@ class NestedScheduledJobSerializer(serializers.ModelSerializer):
             if "name" not in data:
                 raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
 
-            if "start_time" not in data or data["start_time"] < models.ScheduledJob.earliest_possible_time():
+            if ("start_time" not in data and data["interval"] != choices.JobExecutionType.TYPE_CUSTOM) or (
+                "start_time" in data and data["start_time"] < models.ScheduledJob.earliest_possible_time()
+            ):
                 raise serializers.ValidationError(
                     {
                         "start_time": "Please enter a valid date and time greater than or equal to the current date and time."
                     }
                 )
+
+            if data["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
+
+                if data.get("crontab") is None:
+                    raise serializers.ValidationError({"crontab": "Please enter a valid crontab."})
+                try:
+                    models.ScheduledJob.get_crontab(data["crontab"])
+                except Exception as e:
+                    raise serializers.ValidationError({"crontab": e})
 
         return data
 

@@ -24,7 +24,7 @@
         <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Source</td>
-                <td>{{ object.source | split:"." | first | bettertitle }}</td>
+                <td>{{ object.source | bettertitle }}</td>
             </tr>
             {% if object.source == "git" %}
                 <tr>
@@ -43,6 +43,17 @@
             <tr>
                 <td>Job Class</td>
                 <td><code>{{ object.job_class_name }}</code></td>
+            </tr>
+            <tr>
+                <td>Class Path</td>
+                <td>
+                    <span class="hover_copy">
+                        <span id="job_class_path_copy"><code>{{ object.class_path }}</code></span>
+                        <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#job_class_path_copy">
+                            <span class="mdi mdi-content-copy"></span>
+                        </button>
+                    </span>
+                </td>
             </tr>
             <tr>
                 <td>Installed</td>
