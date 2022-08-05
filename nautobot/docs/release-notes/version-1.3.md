@@ -41,6 +41,10 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
+#### Jobs With Sensitive Parameters ([#2125](https://github.com/nautobot/nautobot/issues/2125))
+
+Jobs model now includes [`has_sensitive_variables`](../additional-features/jobs.md#has_sensitive_variables) field which unless set to False prevents the job's input parameters from being saved to the database. This is important to set correctly if the job's input parameters include sensitive data such as passwords or other user credentials.
+
 #### JSON Type for Custom Fields ([#897](https://github.com/nautobot/nautobot/issues/897))
 
 Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
@@ -74,6 +78,10 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 [New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
 
 The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
+
+#### Remove Stale Scheduled Jobs ([#2125](https://github.com/nautobot/nautobot/issues/2125))
+
+[remove_stale_scheduled_jobs](../administration/nautobot-server.md#remove_stale_scheduled_jobs) management command has been added to delete non-recurring scheduled jobs that were scheduled to run more than a specified days ago.
 
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
 
@@ -151,6 +159,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
+- [#2125](https://github.com/nautobot/nautobot/issues/2125) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
 
 ### Changed
 
