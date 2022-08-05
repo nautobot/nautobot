@@ -845,7 +845,7 @@ class DynamicGroupMembership(BaseModel):
         ordering = ["parent_group", "weight", "group"]
 
     def __str__(self):
-        return f"{self.group}: {self.operator} ({self.weight})"
+        return f"{self.parent_group} > {self.operator} ({self.weight}) > {self.group}"
 
     def natural_key(self):
         return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
@@ -898,6 +898,14 @@ class DynamicGroupMembership(BaseModel):
 
     def clean(self):
         super().clean()
+
+        # Enforce mutual exclusivity between filter & children.
+        if self.parent_group.filter:
+            raise ValidationError(
+                {
+                    "parent_group": "A parent group may have either a filter or child groups, but not both. Clear the parent filter and try again."
+                }
+            )
 
         # Enforce matching content_type
         if self.parent_group.content_type != self.group.content_type:

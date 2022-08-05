@@ -56,7 +56,6 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
-    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,

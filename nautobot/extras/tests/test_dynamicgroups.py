@@ -404,6 +404,30 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         )
         self.assertTrue(self.parent.children.filter(slug=self.invalid_filter.slug).exists())
 
+    def test_clean_child_validation(self):
+        """Test various ways in which adding a child group should fail."""
+        parent = self.parent
+        parent.filter = {"site": ["site-1"]}
+        child = self.invalid_filter
+
+        # parent.add_child() should fail
+        with self.assertRaises(ValidationError):
+            parent.add_child(
+                child=child,
+                operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+                weight=10,
+            )
+
+        # parent.children.add() should fail
+        with self.assertRaises(ValidationError):
+            parent.children.add(
+                child,
+                through_defaults=dict(
+                    operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+                    weight=10,
+                ),
+            )
+
     def test_remove_child(self):
         """Test `DynamicGroup.remove_child()`."""
         self.parent.remove_child(self.third_child)
@@ -658,6 +682,16 @@ class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
         with self.assertRaises(ValidationError):
             self.third_child.add_child(
                 child=self.nested_child,
+                weight=10,
+                operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            )
+
+    def test_clean_parent_filter_exclusivity(self):
+        """Assert that if `parent_group.filter` is set that it blocks creation."""
+        with self.assertRaises(ValidationError):
+            DynamicGroupMembership.objects.create(
+                parent_group=self.first_child,
+                group=self.invalid_filter,
                 weight=10,
                 operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
             )
