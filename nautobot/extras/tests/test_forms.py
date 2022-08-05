@@ -959,9 +959,11 @@ class DeprecatedAliasesTestCase(TestCase):
             (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
             (StatusFilterFormMixin, StatusModelFilterFormMixin),
         ):
-            with self.subTest(msg="Replace {deprecated_form_class.__name__} with {replacement_form_class.__name__}"):
+            with self.subTest(msg=f"Replace {deprecated_form_class.__name__} with {replacement_form_class.__name__}"):
                 # Subclassing the deprecated class should raise a DeprecationWarning
                 with warnings.catch_warnings(record=True) as warn_list:
+                    # Ensure that warnings are always triggered
+                    warnings.simplefilter("always")
 
                     class MyForm(deprecated_form_class):
                         pass
@@ -975,6 +977,8 @@ class DeprecatedAliasesTestCase(TestCase):
 
                 # Subclassing the replacement class should not warn
                 with warnings.catch_warnings(record=True) as warn_list:
+                    # Ensure that warnings are always triggered
+                    warnings.simplefilter("always")
 
                     class MyBetterForm(replacement_form_class):
                         pass
