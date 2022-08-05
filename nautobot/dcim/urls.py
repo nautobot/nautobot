@@ -1006,12 +1006,6 @@ urlpatterns = [
         kwargs={"model": PowerPort},
     ),
     path(
-        "power-ports/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
-        views.CableCreateView.as_view(),
-        name="powerport_connect",
-        kwargs={"termination_a_type": PowerPort},
-    ),
-    path(
         "devices/power-ports/add/",
         views.DeviceBulkAddPowerPortView.as_view(),
         name="device_bulk_add_powerport",
@@ -1076,12 +1070,6 @@ urlpatterns = [
         views.PathTraceView.as_view(),
         name="poweroutlet_trace",
         kwargs={"model": PowerOutlet},
-    ),
-    path(
-        "power-outlets/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
-        views.CableCreateView.as_view(),
-        name="poweroutlet_connect",
-        kwargs={"termination_a_type": PowerOutlet},
     ),
     path(
         "devices/power-outlets/add/",
@@ -1581,11 +1569,5 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="powerfeed_notes",
         kwargs={"model": PowerFeed},
-    ),
-    path(
-        "power-feeds/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
-        views.CableCreateView.as_view(),
-        name="powerfeed_connect",
-        kwargs={"termination_a_type": PowerFeed},
     ),
 ]
