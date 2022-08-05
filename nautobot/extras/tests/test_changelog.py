@@ -22,7 +22,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         # Create a custom field on the Site model
         ct = ContentType.objects.get_for_model(Site)
         cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="my_field", required=False)
-        cf.save()
+        cf.validated_save()
         cf.content_types.set([ct])
 
         # Create a select custom field on the Site model
@@ -31,7 +31,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             name="my_field_select",
             required=False,
         )
-        cf_select.save()
+        cf_select.validated_save()
         cf_select.content_types.set([ct])
 
         CustomFieldChoice.objects.create(field=cf_select, value="Bar")

@@ -33,7 +33,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.templatetags.helpers import render_markdown
-from nautobot.utilities.utils import render_jinja2
+from nautobot.utilities.utils import render_jinja2, slugify_dashes_to_underscores
 from nautobot.utilities.validators import validate_regex
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,11 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
     )
-    slug = AutoSlugField(populate_from="label", help_text="Internal field name")
+    slug = AutoSlugField(
+        populate_from="label",
+        help_text="Internal field name. Please use underscores rather than dashes in this slug.",
+        slugify_function=slugify_dashes_to_underscores,
+    )
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
@@ -154,11 +158,13 @@ class CustomFieldModel(models.Model):
         fields = CustomField.objects.get_for_model(self)
         if advanced_ui is not None:
             fields = fields.filter(advanced_ui=advanced_ui)
+        # 2.0 TODO: #824 field.slug rather than field.name
         return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
     def clean(self):
         super().clean()
 
+        # 2.0 TODO: #824 replace cf.name with cf.slug
         custom_fields = {cf.name: cf for cf in CustomField.objects.get_for_model(self)}
 
         # Validate all field values
@@ -174,6 +180,7 @@ class CustomFieldModel(models.Model):
 
         # Check for missing required values
         for cf in custom_fields.values():
+            # 2.0 TODO: #824 replace cf.name with cf.slug
             if cf.required and cf.name not in self._custom_field_data:
                 raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
@@ -250,12 +257,19 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         default=CustomFieldTypeChoices.TYPE_TEXT,
         help_text="The type of value(s) allowed for this field.",
     )
-    # TODO: Migrate custom field model from name to slug #464
-    name = models.CharField(max_length=50, unique=True, verbose_name="Slug", help_text="URL-friendly unique shorthand.")
+    # 2.0 TODO: #824 remove `name` field as redundant, make `label` mandatory, populate `slug` from `label` field.
+    name = models.CharField(max_length=50, unique=True, help_text="Human-readable unique name of this field.")
     label = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Name of the field as displayed to users (if not provided, the field's slug will be used.)",
+        help_text="Name of the field as displayed to users (if not provided, the field's name will be used.)",
+    )
+    slug = AutoSlugField(
+        blank=False,
+        max_length=50,
+        populate_from="label",
+        help_text="Internal field name. Please use underscores rather than dashes in this slug.",
+        slugify_function=slugify_dashes_to_underscores,
     )
     description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
     required = models.BooleanField(
@@ -317,10 +331,29 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.label or self.name.replace("_", " ").capitalize()
 
-    # TODO: Migrate property to actual model attribute #464
-    @property
-    def slug(self):
-        return self.name
+    def _fixup_empty_fields(self):
+        """Handle the case when a new instance is created and some fields are left blank."""
+        if self.present_in_database:
+            return
+
+        # 2.0 TODO: this is to handle the UI case where `name` is no longer a directly configured form.
+        # Once `name` is no longer a model field, we can remove this.
+        if self.slug and not self.name:
+            self.name = self.slug
+
+        # 2.0 TODO: this is to fixup existing ORM usage when caller specifies a name but not a label;
+        # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
+        if self.name and not self.label:
+            self.label = self.name
+
+        # This is to fix up existing ORM usage when caller doesn't specify a slug since it wasn't a field before.
+        if not self.slug:
+            self.slug = slugify_dashes_to_underscores(self.label or self.name)
+
+    def clean_fields(self, exclude=None):
+        # Ensure now-mandatory fields are correctly populated, as otherwise cleaning will fail.
+        self._fixup_empty_fields()
+        super().clean_fields(exclude=exclude)
 
     def clean(self):
         super().clean()
@@ -329,8 +362,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
 
+            # 2.0 TODO: #824 once self.name is no longer used as a dict key, can remove this constraint
             if self.name != database_object.name:
                 raise ValidationError({"name": "Name cannot be changed once created"})
+
+            if self.slug != database_object.slug:
+                raise ValidationError({"slug": "Slug cannot be changed once created"})
 
             if self.type != database_object.type:
                 raise ValidationError({"type": "Type cannot be changed once created"})
@@ -377,10 +414,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
-    def get_changelog_url(self):
-        """Overloaded from ChangeLoggedModel.get_changelog_url as custom fields route on name, not PK or slug."""
-        route = "extras:customfield_changelog"
-        return reverse(route, kwargs={"name": self.name})
+    def save(self, **kwargs):
+        # Prior to Nautobot 1.4, `slug` was a non-existent field, but now it's mandatory.
+        # Protect against get_or_create() or other ORM usage where callers aren't calling clean() before saving.
+        # Normally we'd just say "Don't do that!" but we know there are some cases of this in the wild.
+        self._fixup_empty_fields()
+        super().save(**kwargs)
 
     def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
         """
@@ -543,10 +582,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         super().delete(*args, **kwargs)
 
+        # 2.0 TODO: #824 use self.slug as key instead of self.name
         delete_custom_field_data.delay(self.name, content_types)
 
     def get_absolute_url(self):
-        return reverse("extras:customfield", args=[self.name])
+        return reverse("extras:customfield", args=[self.slug])
 
 
 @extras_features(
@@ -618,6 +658,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             # Check if this value is in active use in a select field
             for ct in self.field.content_types.all():
                 model = ct.model_class()
+                # 2.0 TODO: #824 self.field.slug instead of self.field.name
                 if model.objects.filter(**{f"_custom_field_data__{self.field.name}": self.value}).exists():
                     raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
 
@@ -625,6 +666,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             # Check if this value is in active use in a multi-select field
             for ct in self.field.content_types.all():
                 model = ct.model_class()
+                # 2.0 TODO: #824 self.field.slug instead of self.field.name
                 if model.objects.filter(**{f"_custom_field_data__{self.field.name}__contains": self.value}).exists():
                     raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
 

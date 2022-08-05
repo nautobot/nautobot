@@ -14,7 +14,7 @@ from nautobot.dcim.form_mixins import (
 from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldBulkCreateForm,
+    CustomFieldBulkEditForm,
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
@@ -750,7 +750,7 @@ class VMInterfaceFilterForm(NautobotFilterForm, StatusFilterFormMixin):
 #
 
 
-class VirtualMachineBulkAddComponentForm(CustomFieldBulkCreateForm, BootstrapMixin, forms.Form):
+class VirtualMachineBulkAddComponentForm(CustomFieldBulkEditForm, BootstrapMixin, forms.Form):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     name_pattern = ExpandableNameField(label="Name")
 
