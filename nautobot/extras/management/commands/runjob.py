@@ -8,7 +8,7 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
-from nautobot.extras.models import JobLogEntry, JobResult
+from nautobot.extras.models import Job, JobLogEntry, JobResult
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.utils import get_job_content_type
 from nautobot.utilities.utils import copy_safe_request
@@ -29,11 +29,19 @@ class Command(BaseCommand):
             "--username",
             help="User account to impersonate as the requester of this job",
         )
+        parser.add_argument(
+            "-l",
+            "--local",
+            action="store_true",
+            help="Run the job on the local system and not on a worker.",
+        )
         parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
         if "/" not in options["job"]:
-            raise CommandError('Job in the class path form: "<grouping_name>/<module_name>/<JobClassName>"')
+            raise CommandError(
+                'Job must be specified in the class path form: "<grouping_name>/<module_name>/<JobClassName>"'
+            )
         job_class = get_job(options["job"])
         if not job_class:
             raise CommandError('Job "%s" not found' % options["job"])
@@ -67,20 +75,38 @@ class Command(BaseCommand):
         # Run the job and create a new JobResult
         self.stdout.write("[{:%H:%M:%S}] Running {}...".format(timezone.now(), job_class.class_path))
 
-        job_result = JobResult.enqueue_job(
-            run_job,
-            job_class.class_path,
-            job_content_type,
-            user,
-            data=data,
-            request=copy_safe_request(request) if request else None,
-            commit=options["commit"],
-        )
+        if options["local"]:
+            job = Job.objects.get_for_class_path(job_class.class_path)
+            job_result = JobResult.objects.create(
+                name=job.class_path,
+                obj_type=job_content_type,
+                user=user,
+                job_model=job,
+                job_id=uuid.uuid4(),
+            )
+            run_job(
+                data=data,
+                request=copy_safe_request(request) if request else None,
+                commit=options["commit"],
+                job_result_pk=job_result.pk,
+            )
+            job_result.refresh_from_db()
 
-        # Wait on the job to finish
-        while job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-            time.sleep(1)
-            job_result = JobResult.objects.get(pk=job_result.pk)
+        else:
+            job_result = JobResult.enqueue_job(
+                run_job,
+                job_class.class_path,
+                job_content_type,
+                user,
+                data=data,
+                request=copy_safe_request(request) if request else None,
+                commit=options["commit"],
+            )
+
+            # Wait on the job to finish
+            while job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+                time.sleep(1)
+                job_result.refresh_from_db()
 
         # Report on success/failure
         groups = set(JobLogEntry.objects.filter(job_result=job_result).values_list("grouping", flat=True))

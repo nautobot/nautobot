@@ -540,7 +540,7 @@ When providing input data, it is possible to specify complex values contained in
 Jobs can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob [--username <username>] [--commit] [--data <data>] <class_path>
+nautobot-server runjob [--username <username>] [--commit] [--local] [--data <data>] <class_path>
 ```
 
 !!! note
