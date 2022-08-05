@@ -466,25 +466,17 @@ class CustomFieldFilterMixin:
 class CustomFieldBooleanFilter(CustomFieldFilterMixin, django_filters.BooleanFilter):
     """Custom field single value filter for backwards compatibility"""
 
-    pass
-
 
 class CustomFieldCharFilter(CustomFieldFilterMixin, django_filters.Filter):
     """Custom field single value filter for backwards compatibility"""
-
-    pass
 
 
 class CustomFieldDateFilter(CustomFieldFilterMixin, django_filters.DateFilter):
     """Custom field single value filter for backwards compatibility"""
 
-    pass
-
 
 class CustomFieldJSONFilter(CustomFieldFilterMixin, django_filters.Filter):
     """Custom field single value filter for backwards compatibility"""
-
-    pass
 
 
 class CustomFieldMultiSelectFilter(CustomFieldFilterMixin, django_filters.Filter):
@@ -504,19 +496,13 @@ class CustomFieldNumberFilter(CustomFieldFilterMixin, django_filters.Filter):
 class CustomFieldMultiValueCharFilter(CustomFieldFilterMixin, MultiValueCharFilter):
     """Custom field multi value char filter for extended lookup expressions"""
 
-    pass
-
 
 class CustomFieldMultiValueDateFilter(CustomFieldFilterMixin, MultiValueDateFilter):
     """Custom field multi value date filter for extended lookup expressions"""
 
-    pass
-
 
 class CustomFieldMultiValueNumberFilter(CustomFieldFilterMixin, MultiValueNumberFilter):
     """Custom field multi value number filter for extended lookup expressions"""
-
-    pass
 
 
 # TODO: should be CustomFieldModelFilterSetMixin
@@ -542,11 +528,9 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
             # Determine filter class for this CustomField type, default to CustomFieldBaseFilter
+            # 2.0 TODO: #824 use cf.slug instead
             new_filter_name = f"cf_{cf.name}"
-            if cf.type in custom_field_filter_classes:
-                filter_class = custom_field_filter_classes[cf.type]
-            else:
-                filter_class = CustomFieldCharFilter
+            filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
             new_filter_field = filter_class(field_name=cf.name, custom_field=cf)
 
             # Create base filter (cf_customfieldname)
