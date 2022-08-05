@@ -1,3 +1,5 @@
+# TODO(mzb): cable_terminations decorator
+
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -7,6 +9,7 @@ from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from taggit.managers import TaggableManager
+from nautobot.dcim.choices import CableEndpointSideChoices
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -60,6 +63,7 @@ __all__ = (
     "RearPort",
 )
 
+from functools import cached_property
 
 class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin):
     """
@@ -108,9 +112,7 @@ class CableTermination(models.Model):
     An abstract model inherited by all models to which a Cable can terminate (certain device components, PowerFeed, and
     CircuitTermination instances). The `cable` field indicates the Cable instance which is terminated to this instance.
 
-    `_cable_peer` is a GenericForeignKey used to cache the far-end CableTermination on the local instance; this is a
-    shortcut to referencing `cable.termination_b`, for example. `_cable_peer` is set or cleared by the receivers in
-    dcim.signals when a Cable instance is created or deleted, respectively.
+    Provides `cable` and `cable_side` for caching.
     """
 
     cable = models.ForeignKey(
@@ -120,36 +122,46 @@ class CableTermination(models.Model):
         blank=True,
         null=True,
     )
-    _cable_peer_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.SET_NULL,
-        related_name="+",
+    cable_side = models.CharField(
+        max_length=1,
         blank=True,
-        null=True,
+        choices=CableEndpointSideChoices
     )
-    _cable_peer_id = models.UUIDField(blank=True, null=True)
-    _cable_peer = GenericForeignKey(ct_field="_cable_peer_type", fk_field="_cable_peer_id")
 
-    # Generic relations to Cable. These ensure that an attached Cable is deleted if the terminated object is deleted.
-    _cabled_as_a = GenericRelation(
-        to="dcim.Cable",
-        content_type_field="termination_a_type",
-        object_id_field="termination_a_id",
+    cable_endpoints = GenericRelation(
+        to='dcim.CableEndpoint',
+        content_type_field='termination_type',
+        object_id_field='termination_id',
+        related_query_name='%(class)s',
     )
-    _cabled_as_b = GenericRelation(
-        to="dcim.Cable",
-        content_type_field="termination_b_type",
-        object_id_field="termination_b_id",
-    )
+
+    @property  # TODO(mzb) cached ?
+    def cable_peers(self):
+        if self.cable:
+            peers = self.cable.endpoints.exclude(cable_side=self.cable_side).prefetch_related('termination')
+            return [peer.termination for peer in peers]
+        return []
 
     class Meta:
         abstract = True
 
-    def get_cable_peer(self):
-        return self._cable_peer
+    def clean(self):
+        super().clean()
+
+        if self.cable and not self.cable_side:
+            raise ValidationError({
+                "cable_side": "Must specify cable side (A or B) when attaching a cable."
+            })
+        if self.cable_side and not self.cable:
+            raise ValidationError({
+                "cable_side": "Cable side must not be set without a cable."
+            })
+
+    # def get_cable_peer(self):  # TODO(mzb)
+    #     return self._cable_peer
 
 
-class PathEndpoint(models.Model):
+class PathEndpoint(models.Model):  # TODO(mzb)
     """
     An abstract model inherited by any CableTermination subclass which represents the end of a CablePath; specifically,
     these include ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, PowerFeed, and CircuitTermination.
