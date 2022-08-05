@@ -151,6 +151,9 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
+- [#2073](https://github.com/nautobot/nautobot/pull/2073) - Added `--local` option to `nautobot-server runjob` command.
+- [#2080](https://github.com/nautobot/nautobot/pull/2080) - Added `--data` parameter to `nautobot-server runjob` command.
+- [#2143](https://github.com/nautobot/nautobot/pull/2143) - Scheduled Job detail view now includes details of any custom interval.
 
 ### Changed
 
