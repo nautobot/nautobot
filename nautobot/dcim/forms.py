@@ -20,7 +20,7 @@ from nautobot.dcim.form_mixins import (
 )
 from nautobot.extras.forms import (
     AddRemoveTagsForm,
-    CustomFieldBulkCreateForm,
+    CustomFieldBulkEditForm,
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
@@ -2263,7 +2263,7 @@ class ComponentCreateForm(ComponentForm):
     description = forms.CharField(max_length=100, required=False)
 
 
-class DeviceBulkAddComponentForm(ComponentForm, CustomFieldBulkCreateForm):
+class DeviceBulkAddComponentForm(ComponentForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=100, required=False)
 

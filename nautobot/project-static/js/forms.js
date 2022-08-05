@@ -39,6 +39,10 @@ function jsify_form(context) {
         s = s.replace(/^[\s\.]+|[\s\.]+$/g, '');    // Trim leading/trailing spaces
         s = s.replace(/[\-\.\s]+/g, '-');           // Convert spaces and decimals to hyphens
         s = s.toLowerCase();                        // Convert to lowercase
+        // Declare `const slugify_prefer_underscores = true` globally if you want to use underscores instead of hyphens
+        if (typeof slugify_prefer_underscores !== "undefined") {
+            s = s.replace(/-/g, '_');
+        }
         return s.substring(0, num_chars);           // Trim to first num_chars chars
     }
     var slug_field = $('#id_slug');

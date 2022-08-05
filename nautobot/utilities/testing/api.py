@@ -375,6 +375,7 @@ class APIViewTestCases:
         create_data = []
         validation_excluded_fields = []
         slug_source = None
+        slugify_function = staticmethod(slugify)
 
         def test_create_object_without_permission(self):
             """
@@ -402,7 +403,7 @@ class APIViewTestCases:
                 if val:
                     if expected_slug != "":
                         expected_slug += "-"
-                    expected_slug += slugify(val)
+                    expected_slug += self.slugify_function(val)
 
             self.assertNotEqual(expected_slug, "")
             self.assertEqual(obj.slug, expected_slug)

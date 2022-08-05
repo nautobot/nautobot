@@ -17,9 +17,10 @@ from django.utils.tree import Node
 
 from django.template import engines
 from django.utils.module_loading import import_string
+from django.utils.text import slugify
+from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.extras.utils import is_taggable
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 
 
@@ -137,6 +138,16 @@ def count_related(model, field):
     return Coalesce(subquery, 0)
 
 
+def is_taggable(obj):
+    """
+    Return True if the instance can have Tags assigned to it; False otherwise.
+    """
+    if hasattr(obj, "tags"):
+        if issubclass(obj.tags.__class__, _TaggableManager):
+            return True
+    return False
+
+
 def serialize_object(obj, extra=None, exclude=None):
     """
     Return a generic JSON representation of an object using Django's built-in serializer. (This is used for things like
@@ -189,6 +200,16 @@ def serialize_object_v2(obj):
         data = serialize_object(obj)
 
     return data
+
+
+def slugify_dots_to_dashes(content):
+    """Custom slugify_function - convert '.' to '-' instead of removing dots outright."""
+    return slugify(content.replace(".", "-"))
+
+
+def slugify_dashes_to_underscores(content):
+    """Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name."""
+    return slugify(content).replace("-", "_")
 
 
 def dict_to_filter_params(d, prefix=""):

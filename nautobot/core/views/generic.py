@@ -187,7 +187,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
         """
         csv_data = []
-        custom_fields = []
+        custom_field_names = []
 
         # Start with the column headers
         headers = self.queryset.model.csv_headers.copy()
@@ -195,8 +195,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append("cf_" + custom_field.name)
-                custom_fields.append(custom_field.name)
+                headers.append("cf_" + custom_field.slug)
+                # 2.0 TODO: #824 custom_field.slug
+                custom_field_names.append(custom_field.name)
 
         csv_data.append(",".join(headers))
 
@@ -204,8 +205,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         for obj in self.queryset:
             data = obj.to_csv()
 
-            for custom_field in custom_fields:
-                data += (obj.cf.get(custom_field, ""),)
+            # 2.0 TODO: #824 use custom_field_slug
+            for custom_field_name in custom_field_names:
+                data += (obj.cf.get(custom_field_name, ""),)
 
             csv_data.append(csv_format(data))
 
@@ -961,12 +963,15 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                custom_fields = getattr(form, "custom_fields", [])
-                relationships = getattr(form, "relationships", [])
+                form_custom_fields = getattr(form, "custom_fields", [])
+                form_relationships = getattr(form, "relationships", [])
                 standard_fields = [
-                    field for field in form.fields if field not in custom_fields + relationships + ["pk"]
+                    field for field in form.fields if field not in form_custom_fields + form_relationships + ["pk"]
                 ]
                 nullified_fields = request.POST.getlist("_nullify")
+
+                # 2.0 TODO: #824 this won't really be needed once obj.cf is indexed by slug rather than by name
+                form_cf_to_key = {f"cf_{cf.slug}": cf.name for cf in CustomField.objects.get_for_model(model)}
 
                 try:
 
@@ -1002,11 +1007,12 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     setattr(obj, name, form.cleaned_data[name])
 
                             # Update custom fields
-                            for name in custom_fields:
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    obj.cf[name] = None
-                                elif form.cleaned_data.get(name) not in (None, ""):
-                                    obj.cf[name] = form.cleaned_data[name]
+                            for field_name in form_custom_fields:
+                                # 2.0 TODO: #824 when we use slug in obj.cf we can just do obj.cf[field_name[3:]]
+                                if field_name in form.nullable_fields and field_name in nullified_fields:
+                                    obj.cf[form_cf_to_key[field_name]] = None
+                                elif form.cleaned_data.get(field_name) not in (None, ""):
+                                    obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
 
                             obj.full_clean()
                             obj.save()
