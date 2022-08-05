@@ -60,6 +60,7 @@ router.register(
 
 # Cables
 router.register("cables", views.CableViewSet)
+router.register("cable-endpoints", views.CableEndpointViewSet)
 
 # Virtual chassis
 router.register("virtual-chassis", views.VirtualChassisViewSet)

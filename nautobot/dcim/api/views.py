@@ -21,6 +21,7 @@ from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
+    CableEndpoint,
     CablePath,
     ConsolePort,
     ConsolePortTemplate,
@@ -696,13 +697,13 @@ class InventoryItemViewSet(NautobotModelViewSet):
 
 
 class ConsoleConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = ConsolePort.objects.prefetch_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = ConsolePort.objects.prefetch_related("device", "_path").filter(_path__isnull=False)
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsoleConnectionFilterSet
 
 
 class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = PowerPort.objects.prefetch_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = PowerPort.objects.prefetch_related("device", "_path").filter(_path__isnull=False)
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerConnectionFilterSet
 
@@ -710,8 +711,8 @@ class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
 class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = Interface.objects.prefetch_related("device", "_path").filter(
         # Avoid duplicate connections by only selecting the lower PK in a connected pair
-        _path__destination_id__isnull=False,
-        pk__lt=F("_path__destination_id"),
+        _path__isnull=False,
+        #pk__lt=F("_path__destination_id"),  # TODO(mzb)
     )
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
@@ -722,11 +723,16 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 #
 
 
-class CableViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    queryset = Cable.objects.prefetch_related("status", "termination_a", "termination_b")
+class CableViewSet(StatusViewSetMixin, ModelViewSet):
+    queryset = Cable.objects.prefetch_related("endpoints__termination")
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
+
+class CableEndpointViewSet(StatusViewSetMixin, ModelViewSet):
+    queryset = CableEndpoint.objects.prefetch_related('cable', 'termination')
+    serializer_class = serializers.CableEndpointSerializer
+    filterset_class = filters.CableEndpointFilterSet
 
 #
 # Virtual chassis
@@ -766,7 +772,7 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
         "rack",
         "_path__destination",
         "cable",
-        "_cable_peer",
+        "cable__endpoints",
         "status",
         "tags",
     )
@@ -779,7 +785,7 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
 #
 
 
-class ConnectedDeviceViewSet(ViewSet):
+class ConnectedDeviceViewSet(ViewSet):  # TODO(mzb)
     """
     This endpoint allows a user to determine what device (if any) is connected to a given peer device and peer
     interface. This is useful in a situation where a device boots with no configuration, but can detect its neighbors

@@ -1,11 +1,16 @@
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
-from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
+from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer, ContentTypeField, ChoiceField
 from nautobot.dcim import models
+from nautobot.dcim.constants import CABLE_TERMINATION_MODELS
+from nautobot.utilities.api import get_serializer_for_model
+from nautobot.dcim.choices import CableEndpointSideChoices
 
 __all__ = [
     "NestedCableSerializer",
+    "NestedCableEndpointSerializer",
     "NestedConsolePortSerializer",
     "NestedConsolePortTemplateSerializer",
     "NestedConsoleServerPortSerializer",
@@ -364,6 +369,35 @@ class NestedCableSerializer(BaseModelSerializer):
     class Meta:
         model = models.Cable
         fields = ["id", "url", "label"]
+
+
+class NestedCableEndpointSerializer(BaseModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cableendpoint-detail")
+    termination_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))  # -> get
+    termination = serializers.SerializerMethodField(read_only=True)
+    cable_side = ChoiceField(choices=CableEndpointSideChoices, allow_blank=False, required=True)
+
+    class Meta:
+        model = models.CableEndpoint
+        fields = [
+            "id",
+            "url",
+            "termination_type",
+            "termination_id",
+            "termination",
+            "cable_side",
+        ]
+
+    def get_termination(self, obj):
+        """
+        Serialize a nested representation of a termination.
+        """
+        termination = obj.termination
+        serializer = get_serializer_for_model(termination, prefix="Nested")
+        context = {"request": self.context["request"]}
+        data = serializer(termination, context=context).data
+
+        return data
 
 
 #
