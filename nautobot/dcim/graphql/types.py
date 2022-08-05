@@ -69,7 +69,8 @@ class CableType(gql_optimizer.OptimizedDjangoObjectType):
     class Meta:
         model = Cable
         filterset_class = CableFilterSet
-        exclude = ["_termination_a_device", "_termination_b_device"]
+        # TODO(mzb)
+        # exclude = ["_termination_a_device", "_termination_b_device"]
 
     termination_a_type = graphene.String()
     termination_b_type = graphene.String()
