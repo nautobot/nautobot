@@ -1,5 +1,3 @@
-import warnings
-
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -11,6 +9,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.deprecation import DeprecatedClassMixin
 from nautobot.utilities.forms import (
     add_blank_choice,
     APISelect,
@@ -99,7 +98,7 @@ __all__ = (
     "ConfigContextSchemaFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
-    "CustomFieldBulkCreateForm",
+    "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldChoiceFormSet",
     "CustomLinkForm",
     "CustomLinkFilterForm",
@@ -380,16 +379,9 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
             self.custom_fields.append(field_name)
 
 
-class CustomFieldBulkCreateForm(CustomFieldModelBulkEditFormMixin):
-    """No longer needed as a separate class - use CustomFieldBulkEditForm instead."""
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "CustomFieldBulkCreateForm is deprecated and will be removed in a future major release. "
-            "Use CustomFieldBulkEditForm as a base class instead.",
-            DeprecationWarning,
-        )
-        super().__init__(*args, **kwargs)
+# 2.0 TODO: remove this class
+class CustomFieldBulkCreateForm(DeprecatedClassMixin, CustomFieldModelBulkEditFormMixin):
+    """No longer needed as a separate class - use CustomFieldModelBulkEditFormMixin instead."""
 
 
 #

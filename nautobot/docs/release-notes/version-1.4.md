@@ -103,17 +103,18 @@ Dynamic Groups may now be nested in parent/child relationships. The Dynamic Grou
 
 #### Renamed Mixin Classes ([#2135](https://github.com/nautobot/nautobot/issues/2135))
 
-A number of mixin classes have been renamed for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but these aliases will be removed in a future major release.
+A number of mixin classes have been renamed for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these mixins will raise a `DeprecationWarning`, and these aliases will be removed in a future major release.
 
-| Former Name               | New Name                            |
-| ------------------------- | ----------------------------------- |
-| `AddRemoveTagsForm`       | `TagsBulkEditFormMixin`             |
-| `CustomFieldBulkEditForm` | `CustomFieldModelBulkEditFormMixin` |
-| `CustomFieldFilterForm`   | `CustomFieldModelFilterFormMixin`   |
-| `CustomFieldModelForm`    | `CustomFieldModelFormMixin`         |
-| `RelationshipModelForm`   | `RelationshipModelFormMixin`        |
-| `StatusBulkEditFormMixin` | `StatusModelBulkEditFormMixin`      |
-| `StatusFilterFormMixin`   | `StatusModelFilterFormMixin`        |
+| Former Name                 | New Name                            |
+| --------------------------- | ----------------------------------- |
+| `AddRemoveTagsForm`         | `TagsBulkEditFormMixin`             |
+| `CustomFieldBulkCreateForm` | `CustomFieldModelBulkEditFormMixin` |
+| `CustomFieldBulkEditForm`   | `CustomFieldModelBulkEditFormMixin` |
+| `CustomFieldFilterForm`     | `CustomFieldModelFilterFormMixin`   |
+| `CustomFieldModelForm`      | `CustomFieldModelFormMixin`         |
+| `RelationshipModelForm`     | `RelationshipModelFormMixin`        |
+| `StatusBulkEditFormMixin`   | `StatusModelBulkEditFormMixin`      |
+| `StatusFilterFormMixin`     | `StatusModelFilterFormMixin`        |
 
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
 

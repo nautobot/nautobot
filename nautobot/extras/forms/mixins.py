@@ -17,6 +17,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.utilities.deprecation import DeprecatedClassMixin
 from nautobot.utilities.forms import (
     BulkEditForm,
     CSVModelChoiceField,
@@ -39,6 +40,14 @@ __all__ = (
     "StatusModelFilterFormMixin",
     "StatusModelCSVFormMixin",
     "TagsBulkEditFormMixin",
+    # 2.0 TODO: remove the below deprecated aliases
+    "AddRemoveTagsForm",
+    "CustomFieldBulkEditForm",
+    "CustomFieldFilterForm",
+    "CustomFieldModelForm",
+    "RelationshipModelForm",
+    "StatusBulkEditFormMixin",
+    "StatusFilterFormMixin",
 )
 
 
@@ -580,3 +589,34 @@ class TagsBulkEditFormMixin(forms.Form):
         # Add add/remove tags fields
         self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
         self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+
+# 2.0 TODO: Names below are only for backward compatibility with Nautobot 1.3 and earlier. Remove in 2.0
+
+
+class AddRemoveTagsForm(DeprecatedClassMixin, TagsBulkEditFormMixin):
+    pass
+
+
+class CustomFieldBulkEditForm(DeprecatedClassMixin, CustomFieldModelBulkEditFormMixin):
+    pass
+
+
+class CustomFieldFilterForm(DeprecatedClassMixin, CustomFieldModelFilterFormMixin):
+    pass
+
+
+class CustomFieldModelForm(DeprecatedClassMixin, CustomFieldModelFormMixin):
+    pass
+
+
+class RelationshipModelForm(DeprecatedClassMixin, RelationshipModelFormMixin):
+    pass
+
+
+class StatusBulkEditFormMixin(DeprecatedClassMixin, StatusModelBulkEditFormMixin):
+    pass
+
+
+class StatusFilterFormMixin(DeprecatedClassMixin, StatusModelFilterFormMixin):
+    pass
