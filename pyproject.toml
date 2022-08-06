@@ -172,7 +172,6 @@ requests = "~2.27.1"
 # Selenium web drivers for live integration testing
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
-splinter = "~0.17.0"
 djangorestframework-bulk = "^0.2.1"
 splinter = "~0.18.0"
 
