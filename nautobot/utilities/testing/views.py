@@ -598,7 +598,9 @@ class ViewTestCases:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             if self.model._meta.app_label == "circuits":
                 self.assertEqual(
-                    [cm.output[0],],
+                    [
+                        cm.output[0],
+                    ],
                     [
                         f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
                         'Unknown filter field "ice_cream_flavor"',
