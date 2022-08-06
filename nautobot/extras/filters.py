@@ -34,6 +34,7 @@ from .models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -64,6 +65,7 @@ __all__ = (
     "CustomFieldModelFilterSet",
     "CustomLinkFilterSet",
     "DynamicGroupFilterSet",
+    "DynamicGroupMembershipFilterSet",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
@@ -570,6 +572,30 @@ class DynamicGroupFilterSet(NautobotFilterSet):
     class Meta:
         model = DynamicGroup
         fields = ("id", "name", "slug", "description")
+
+
+class DynamicGroupMembershipFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "operator": "icontains",
+            "group__name": "icontains",
+            "group__slug": "icontains",
+            "parent_group__name": "icontains",
+            "parent_group__slug": "icontains",
+        },
+    )
+    group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        label="Group (slug or ID)",
+    )
+    parent_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        label="Parent Group (slug or ID)",
+    )
+
+    class Meta:
+        model = DynamicGroupMembership
+        fields = ("id", "group", "parent_group", "operator", "weight")
 
 
 #

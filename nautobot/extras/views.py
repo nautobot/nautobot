@@ -56,7 +56,6 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
-    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -535,14 +534,6 @@ class DynamicGroupListView(generic.ObjectListView):
 class DynamicGroupView(generic.ObjectView):
     queryset = DynamicGroup.objects.all()
 
-    def get_descendants_memberships(self, instance):
-        """Return topologically-ordered memberships objects for all descendants."""
-        return instance._ordered_filter(
-            queryset=DynamicGroupMembership.objects,
-            field_names=["group__pk"],
-            values=[d.pk for d in instance.get_descendants()],
-        )
-
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         model = instance.content_type.model_class()
@@ -558,12 +549,12 @@ class DynamicGroupView(generic.ObjectView):
             RequestConfig(request, paginate).configure(members_table)
 
             # Descendants table
-            descendants_memberships = self.get_descendants_memberships(instance)
+            descendants_memberships = instance.membership_tree()
             descendants_table = tables.NestedDynamicGroupDescendantsTable(
                 descendants_memberships,
                 orderable=False,
             )
-            descendants_tree = instance.flatten_descendants_tree(instance.descendants_tree())
+            descendants_tree = {m.pk: m.depth for m in descendants_memberships}
 
             # Ancestors table
             ancestors = instance.get_ancestors()

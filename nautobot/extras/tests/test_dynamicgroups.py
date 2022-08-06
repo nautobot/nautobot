@@ -10,7 +10,7 @@ from nautobot.dcim.forms import DeviceForm, DeviceFilterForm
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
-from nautobot.extras.filters import DynamicGroupFilterSet
+from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.utilities.testing import TestCase
 
 
@@ -404,6 +404,30 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         )
         self.assertTrue(self.parent.children.filter(slug=self.invalid_filter.slug).exists())
 
+    def test_clean_child_validation(self):
+        """Test various ways in which adding a child group should fail."""
+        parent = self.parent
+        parent.filter = {"site": ["site-1"]}
+        child = self.invalid_filter
+
+        # parent.add_child() should fail
+        with self.assertRaises(ValidationError):
+            parent.add_child(
+                child=child,
+                operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+                weight=10,
+            )
+
+        # parent.children.add() should fail
+        with self.assertRaises(ValidationError):
+            parent.children.add(
+                child,
+                through_defaults=dict(
+                    operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+                    weight=10,
+                ),
+            )
+
     def test_remove_child(self):
         """Test `DynamicGroup.remove_child()`."""
         self.parent.remove_child(self.third_child)
@@ -541,6 +565,24 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotIn(self.nested_child, a_flat)
         self.assertIn(self.parent, a_flat)
 
+    def test_membership_tree(self):
+        """Test `DynamicGroup.membership_tree()`."""
+        group = self.parent
+
+        d_tree = group.flatten_descendants_tree(group.descendants_tree())
+        m_tree = group.membership_tree()
+
+        d_groups = [d.slug for d in d_tree]
+        m_groups = [m.group.slug for m in m_tree]
+
+        d_depths = [d.depth for d in d_tree]
+        m_depths = [m.depth for m in m_tree]
+
+        # Assert same members, same order.
+        self.assertEqual(d_groups, m_groups)
+        # Assert same depths.
+        self.assertEqual(d_depths, m_depths)
+
     def test_ordered_queryset_from_pks(self):
         """Test `DynamicGroup.ordered_queryset_from_pks()`."""
         descendants = self.parent.get_descendants()
@@ -644,6 +686,16 @@ class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
                 operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
             )
 
+    def test_clean_parent_filter_exclusivity(self):
+        """Assert that if `parent_group.filter` is set that it blocks creation."""
+        with self.assertRaises(ValidationError):
+            DynamicGroupMembership.objects.create(
+                parent_group=self.first_child,
+                group=self.invalid_filter,
+                weight=10,
+                operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            )
+
     def test_group_attributes(self):
         """Test passthrough attributes to `self.group`."""
         mem = self.memberships[0]
@@ -686,6 +738,49 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
             "A group with a non-matching filter": 1,  # description
             "dcim": 6,  # content_type__app_label
             "device": 6,  # content_type__model
+        }
+        for value, cnt in tests.items():
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
+
+
+class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
+    """DynamicGroupMembership instance filterset tests."""
+
+    queryset = DynamicGroupMembership.objects.all()
+    filterset = DynamicGroupMembershipFilterSet
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_operator(self):
+        params = {"operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_weight(self):
+        params = {"weight": [10]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_group(self):
+        group_pk = self.queryset.first().group.pk  # expecting 1
+        group_slug = self.queryset.last().group.slug  # expecting 1
+        params = {"group": [group_pk, group_slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_parent_group(self):
+        parent_group_pk = self.queryset.first().parent_group.pk  # expecting 3
+        parent_group_slug = self.queryset.last().parent_group.slug  # expecting 1
+        params = {"parent_group": [parent_group_pk, parent_group_slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+    def test_search(self):
+        tests = {
+            "intersection": 2,  # operator
+            "First Child": 1,  # group__name
+            "second-child": 1,  # group__slug
+            "Parent": 3,  # parent_group__name,
+            "third-child": 2,  # parent_group__slug OR group__slug,
         }
         for value, cnt in tests.items():
             params = {"q": value}

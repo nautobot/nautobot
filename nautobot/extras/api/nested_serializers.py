@@ -86,6 +86,16 @@ class NestedDynamicGroupSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name", "slug", "content_type"]
 
 
+class NestedDynamicGroupMembershipSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
+    group = NestedDynamicGroupSerializer()
+    parent_group = NestedDynamicGroupSerializer()
+
+    class Meta:
+        model = models.DynamicGroupMembership
+        fields = ["id", "url", "group", "parent_group", "operator", "weight"]
+
+
 class NestedExportTemplateSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:exporttemplate-detail")
 
