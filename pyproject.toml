@@ -133,6 +133,7 @@ social-auth-core = {version = "~4.3.0", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
+djangorestframework-bulk = "^0.2.1"
 
 
 [tool.poetry.extras]
@@ -172,7 +173,6 @@ requests = "~2.27.1"
 # Selenium web drivers for live integration testing
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
-djangorestframework-bulk = "^0.2.1"
 splinter = "~0.18.0"
 
 [tool.poetry.scripts]
