@@ -161,8 +161,11 @@ class NoteModelFormTestCase(TestCase):
             instance=obj,
             user=self.user,
         )
+        note = Note.objects.first()
         self.assertEqual(1, Note.objects.count())
-        self.assertEqual("This is a test.", Note.objects.first().note)
+        self.assertEqual("This is a test.", note.note)
+        self.assertEqual(obj, note.assigned_object)
+        self.assertEqual(self.user, note.user)
 
 
 class NoteModelBulkEditFormMixinTestCase(TestCase):

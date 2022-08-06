@@ -140,47 +140,42 @@ class CustomFieldBulkEditForm(BulkEditForm):
             self.custom_fields.append(field_name)
 
 
-class NoteModelBulkEditFormMixin(BulkEditForm):
+class NoteFormBase:
+    """Base fore the NoteModelFormMixin and NoteModelBulkEditFormMixin."""
+
+    def append_field(self):
+        self.fields["object_note"] = CommentField()
+        self.fields["object_note"].label = "Note"
+
+    def save_note(self, *, instance, user):
+        if "object_note" in self.cleaned_data:
+            value = self.cleaned_data.get("object_note")
+            note = Note.objects.create(
+                note=value,
+                assigned_object_type=self.obj_type,
+                assigned_object_id=instance.pk,
+                user=user,
+            )
+            logger.debug("Created %s", note)
+
+
+class NoteModelBulkEditFormMixin(BulkEditForm, NoteFormBase):
     """Bulk-edit form mixin for models that support Notes."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.obj_type = ContentType.objects.get_for_model(self.model)
 
-        self.fields["object_note"] = CommentField()
-        self.fields["object_note"].label = "Note"
-
-    def save_note(self, *, instance, user):
-        if "object_note" in self.cleaned_data:
-            value = self.cleaned_data.get("object_note")
-            note = Note.objects.create(
-                note=value,
-                assigned_object_type=self.obj_type,
-                assigned_object_id=instance.pk,
-                user=user,
-            )
-            logger.debug("Created %s", note)
+        self.append_field()
 
 
-class NoteModelFormMixin(forms.ModelForm):
+class NoteModelFormMixin(forms.ModelForm, NoteFormBase):
     def __init__(self, *args, **kwargs):
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
 
         super().__init__(*args, **kwargs)
 
-        self.fields["object_note"] = CommentField()
-        self.fields["object_note"].label = "Note"
-
-    def save_note(self, *, instance, user):
-        if "object_note" in self.cleaned_data:
-            value = self.cleaned_data.get("object_note")
-            note = Note.objects.create(
-                note=value,
-                assigned_object_type=self.obj_type,
-                assigned_object_id=instance.pk,
-                user=user,
-            )
-            logger.debug("Created %s", note)
+        self.append_field()
 
 
 class RelationshipModelBulkEditFormMixin(BulkEditForm):
