@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
@@ -16,6 +17,13 @@ from nautobot.utilities.utils import (
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
+    def get_filter_params(self, view, request):
+        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
+        filter_params = request.GET.copy()
+        for non_filter_param in view.non_filter_params:
+            filter_params.pop(non_filter_param, None)
+        return filter_params
+
     def get_filter_form(self, view, request, *args, **kwargs):
         if view.filterset_form_class:
             return view.filterset_form_class(request.GET, label_suffix="", *args, **kwargs)
@@ -80,6 +88,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             form = data["form"]
         else:
             if view.action == "list":
+                filter_params = self.get_filter_params(view, request)
+                if view.filterset_class:
+                    filterset = view.filterset_class(filter_params, view.queryset)
+                    view.queryset = filterset.qs
+                    if not filterset.is_valid():
+                        messages.error(
+                            request,
+                            mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                        )
+                        view.queryset = view.queryset.none()
                 table = view.table_class(view.queryset, user=request.user)
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")

@@ -326,15 +326,13 @@ class NautobotViewSetMixin(ViewSetMixin, GetReturnURLMixin, FormView, generics.G
         queryset lookups.  Eg if objects are referenced using multiple
         keyword arguments in the url conf.
         """
-        queryset = self.filter_queryset(self.get_queryset())
-
+        queryset = self.queryset
         # Perform the lookup filtering.
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         if lookup_url_kwarg not in self.kwargs:
             return self.queryset.model()
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = get_object_or_404(queryset, **filter_kwargs)
-
         # May raise a permission denied
         self.check_object_permissions(self.request, obj)
 
@@ -449,6 +447,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     action_buttons = ("add", "import", "export")
     filterset_class = None
     filterset_form_class = None
+    non_filter_params = (
+        "export",  # trigger for CSV/export-template/YAML export
+        "page",  # used by django-tables2.RequestConfig
+        "per_page",  # used by get_paginate_count
+        "sort",  # table sorting
+    )
 
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
