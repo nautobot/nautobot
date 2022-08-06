@@ -596,24 +596,13 @@ class ViewTestCases:
             instance1, instance2 = self._get_queryset().all()[:2]
             with self.assertLogs("nautobot.utilities.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
-            if self.model._meta.app_label == "circuits":
-                self.assertEqual(
-                    [
-                        cm.output[0],
-                    ],
-                    [
-                        f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
-                        'Unknown filter field "ice_cream_flavor"',
-                    ],
-                )
-            else:
-                self.assertEqual(
-                    cm.output,
-                    [
-                        f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
-                        'Unknown filter field "ice_cream_flavor"',
-                    ],
-                )
+            self.assertEqual(
+                cm.output,
+                [
+                    f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
+                    'Unknown filter field "ice_cream_flavor"',
+                ],
+            )
             self.assertHttpStatus(response, 200)
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content

@@ -73,8 +73,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         instance = view.get_object()
         model = view.queryset.model
         content_type = ContentType.objects.get_for_model(model)
-        if view.filterset_class:
-            view.queryset = view.filterset_class(request.GET, view.queryset).qs
         view.queryset = view.alter_queryset(request)
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
