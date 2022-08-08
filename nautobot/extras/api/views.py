@@ -987,7 +987,7 @@ class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
     filterset_class = filters.RelationshipFilterSet
 
 
-class RelationshipAssociationViewSet(ModelViewSet, NotesViewSetMixin):
+class RelationshipAssociationViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
